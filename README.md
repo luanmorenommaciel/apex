@@ -91,3 +91,25 @@ https://github.com/luanmorenommaciel/apex
 ```
 
 Issues relacionadas: #9, #10, #16, #17, #19, #21, #23 e #25.
+
+## Relacao com AgentSpec
+
+Este slice segue o estilo do AgentSpec, projeto do Commander Luan:
+
+```text
+https://github.com/luanmorenommaciel/agentspec
+```
+
+Aplicamos a mesma ideia de trabalho orientado por especificacao:
+
+```text
+brainstorm -> define -> design -> build -> ship
+```
+
+No Apex, isso aparece como:
+
+- `scenarios/skew_on_join_30x.yaml`: contrato declarativo;
+- `docs/specs/skew-slice-v4.md`: especificacao tecnica;
+- `docs/playbooks/skew-slice-v4.md`: operacao e verificacao;
+- `docs/apex-v4-lineage.md`: evidencia e linhagem;
+- `tests/test_slice.py`: quality gate executavel.
