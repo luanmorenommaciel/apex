@@ -29,6 +29,12 @@ O documento de linhagem explica o caminho completo da melhoria:
 docs/apex-v4-lineage.md
 ```
 
+Para apresentar ao time e conduzir a validacao:
+
+```text
+docs/team-validation-guide.md
+```
+
 ## Estrutura do slice
 
 ```text
@@ -41,6 +47,21 @@ tests/test_slice.py              # 21 testes: parser, provenance, watcher, oracl
 scenarios/skew_on_join_30x.yaml  # contrato declarativo do anti-pattern
 .github/workflows/scenario-gate.yml
 ```
+
+## Fluxo didatico
+
+```mermaid
+flowchart TD
+    A["Scenario YAML<br/>contrato do problema"] --> B["Plan Generator<br/>event log sintetico"]
+    A --> C["Code Generator<br/>job PySpark e manifesto"]
+    B --> D["Watcher<br/>detecta skew"]
+    D --> E["Finding<br/>causa, evidencia e recomendacao"]
+    B --> F["Oraculo<br/>compara com log real"]
+    G["real_log.ndjson<br/>execucao Spark real"] --> F
+    F --> H["Validacao<br/>fiel ou divergente"]
+```
+
+Leitura curta: o `scenario.yaml` diz qual problema queremos simular; o gerador cria um log sintetico; o Watcher encontra o skew; o Oraculo confere se o sintetico bate com um log real.
 
 ## Como rodar
 
