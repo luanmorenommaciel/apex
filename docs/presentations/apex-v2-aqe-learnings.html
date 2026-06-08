@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Apex · V2 Técnico · Achados do AQE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060608;--sf2:#12141A;--sf3:#181B23;--bd:#1F2335;--bd2:#272B3D;
+  --gold:#C8943A;--gol2:#E8AE4A;--gol3:#F5C668;
+  --red2:#C04040;--grn2:#2A8A58;--bl3:#4A82D4;--or2:#D4724A;
+  --tx:#E8E4D8;--tx2:#8A8C9E;--tx3:#4A4D62;
+  --serif:'Playfair Display',Georgia,serif;--mono:'Space Mono',monospace;--sans:'Inter',system-ui,sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--sans)}
+.shell{display:flex;flex-direction:column;height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-bottom:.5px solid var(--bd);background:rgba(6,6,8,.95);flex-shrink:0;gap:12px}
+.brand{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase}
+.acts{display:flex;gap:3px;flex-wrap:wrap}
+.act-btn{font-size:10px;padding:3px 10px;border-radius:20px;cursor:pointer;border:.5px solid transparent;color:var(--tx3);background:none;transition:all .18s;font-family:var(--mono);letter-spacing:.04em}
+.act-btn:hover{color:var(--tx2);background:var(--sf2)}
+.act-btn.on{background:rgba(200,148,58,.12);color:var(--gol2);border-color:rgba(200,148,58,.3)}
+.sc{font-family:var(--mono);font-size:10px;color:var(--tx3)}
+.area{flex:1;overflow:hidden;position:relative}
+.slide{position:absolute;inset:0;padding:30px 44px 22px;overflow-y:auto;opacity:0;pointer-events:none;transform:translateY(14px);transition:opacity .25s,transform .25s}
+.slide.active{opacity:1;pointer-events:auto;transform:translateY(0)}
+.slide::-webkit-scrollbar{width:3px}.slide::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.botbar{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-top:.5px solid var(--bd);background:rgba(6,6,8,.95);flex-shrink:0;gap:16px}
+.navbtn{width:32px;height:32px;border-radius:50%;border:.5px solid var(--bd2);background:var(--sf2);color:var(--tx2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+.navbtn:hover{border-color:var(--gold);color:var(--gold)}.navbtn:disabled{opacity:.25;cursor:default}
+.progress{flex:1;height:2px;background:var(--bd);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:var(--gold);transition:width .3s}
+.tag{font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;margin-bottom:14px}
+h1{font-family:var(--serif);font-size:clamp(2rem,4.2vw,3rem);font-weight:400;line-height:1.06;margin-bottom:14px}
+h1 em{font-style:italic;color:var(--gol2)}
+h2{font-family:var(--serif);font-size:clamp(1.5rem,3vw,2.2rem);font-weight:400;line-height:1.12;margin-bottom:12px}
+h2 em{font-style:italic;color:var(--gol2)}
+p.lead{font-size:13px;color:var(--tx2);line-height:1.65;max-width:720px;margin-bottom:10px}
+p.lead strong{color:var(--tx)}
+p.lead code{font-family:var(--mono);font-size:11px;color:var(--gol3);background:rgba(200,148,58,.08);padding:1px 5px;border-radius:3px}
+.defect{background:var(--sf2);border:.5px solid rgba(192,64,64,.25);border-left:2px solid var(--red2);border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.defect-num{font-family:var(--mono);font-size:9px;color:var(--red2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.defect-title{font-size:13.5px;font-weight:500;color:var(--tx);margin-bottom:4px}
+.defect-body{font-size:12px;color:var(--tx2);line-height:1.6}
+.defect-body code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+.defect-body strong{color:var(--tx)}
+.fix{background:var(--sf2);border:.5px solid rgba(42,138,88,.25);border-left:2px solid var(--grn2);border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.fix-num{font-family:var(--mono);font-size:9px;color:var(--grn2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.fix-title{font-size:13.5px;font-weight:500;color:var(--tx);margin-bottom:4px}
+.fix-body{font-size:12px;color:var(--tx2);line-height:1.6}
+.fix-body code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+.fix-body strong{color:var(--tx)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px}
+.card{background:var(--sf2);border:.5px solid var(--bd);border-radius:8px;padding:14px 16px}
+.card-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.13em;text-transform:uppercase;margin-bottom:6px}
+.card-body{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.card-body strong{color:var(--tx)}
+.card-body code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+.stat-row{display:flex;gap:12px;margin:14px 0}
+.stat{background:var(--sf2);border:.5px solid var(--bd);border-radius:6px;padding:12px 16px;flex:1;text-align:center}
+.stat-val{font-family:var(--serif);font-size:1.6rem;display:block;margin-bottom:2px}
+.stat-val.ok{color:var(--grn2)}.stat-val.warn{color:var(--gol2)}.stat-val.bad{color:var(--red2)}
+.stat-label{font-family:var(--mono);font-size:9px;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase}
+.pod-row{display:flex;align-items:baseline;gap:14px;padding:9px 0;border-bottom:.5px solid var(--bd)}
+.pod-row:last-child{border:none}
+.pod-name{font-family:var(--mono);font-size:11px;color:var(--gold);width:80px;flex-shrink:0}
+.pod-status{font-family:var(--mono);font-size:9px;width:60px;flex-shrink:0;letter-spacing:.04em}
+.s-green{color:var(--grn2)}.s-yellow{color:var(--gol2)}.s-open{color:var(--tx3)}
+.pod-text{font-size:12px;color:var(--tx2);line-height:1.5;flex:1}
+.pod-text strong{color:var(--tx)}
+.terminal{background:#0a0b0f;border:.5px solid var(--bd2);border-radius:6px;padding:12px 14px;font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--tx2);margin:8px 0;overflow-x:auto}
+.terminal .ok{color:var(--grn2)}.terminal .bad{color:var(--red2)}.terminal .dim{color:var(--tx3)}
+.figwrap{margin:12px 0;background:var(--sf2);border:.5px solid var(--bd);border-radius:10px;padding:16px}
+.figcap{font-family:var(--mono);font-size:10px;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-top:8px;text-align:center}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand">Apex · V2 Técnico · Achados do AQE</div>
+    <div class="acts" id="acts"></div>
+    <div class="sc" id="sc">1 / 6</div>
+  </div>
+  <div class="area" id="area">
+
+    <!-- 1 COVER -->
+    <div class="slide active" data-act="0">
+      <div class="tag">O que mudou · e o que o Spark real ensinou</div>
+      <h1>v1 → v2:<br><em>três defeitos corrigidos,<br>três achados do AQE.</em></h1>
+      <p class="lead">O pacote de geradores v1 provou o desacoplamento estrutural — a lição de casa do Commander está respondida. Mas validar rodando o código revelou defeitos que quebravam justamente a tese central de correlação código↔telemetria. Esta apresentação mostra o que foi consertado, e o que <strong>rodar Spark 4.1.2 de verdade ensinou sobre AQE</strong> — algo que muda como cada Watcher deve ser escrito.</p>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-val bad">3</span><span class="stat-label">defeitos no v1 (provados)</span></div>
+        <div class="stat"><span class="stat-val ok">3</span><span class="stat-label">correções na v2</span></div>
+        <div class="stat"><span class="stat-val ok">3</span><span class="stat-label">achados do AQE (novos)</span></div>
+        <div class="stat"><span class="stat-val ok">🟢</span><span class="stat-label">slice vertical verde</span></div>
+      </div>
+    </div>
+
+    <!-- 2 DEFECTS -->
+    <div class="slide" data-act="1">
+      <div class="tag">Diagnóstico v1 · o que estava quebrado (rodamos e provamos)</div>
+      <h2>Os três defeitos<br><em>que quebravam a tese.</em></h2>
+      <div class="defect">
+        <div class="defect-num">Defeito 1 · linha do anti-pattern era ficção</div>
+        <div class="defect-title">Contrato: linha 58. Código gerado: linha 29. Arquivo tem 34 linhas.</div>
+        <div class="defect-body">A tese central do Luan é correlacionar a coordenada do log (<code>job.py:linha</code>) com a linha no repositório. O contrato mentia sobre a linha — a correlação já nascia quebrada.</div>
+      </div>
+      <div class="defect">
+        <div class="defect-num">Defeito 2 · campos do log sintético não existem no Spark real</div>
+        <div class="defect-title"><code>taskMetrics.shuffleReadMetrics.recordsRead</code> não existe no Spark.</div>
+        <div class="defect-body">O campo real é <code>Task Metrics → Shuffle Read Metrics → Total Records Read</code> (JsonProtocol, capitalizado). Um Watcher feito contra o v1 não leria log de produção. O oráculo nunca conseguiria comparar.</div>
+      </div>
+      <div class="defect">
+        <div class="defect-num">Defeito 3 · sem distribuição, não há skew</div>
+        <div class="defect-title">1 task no log sintético. Skew é a cauda — não a média.</div>
+        <div class="defect-body">O Aguimar explicitou no deck: "não a média, mas a cauda." Com uma task só, não há com quem comparar. Nenhum detector de skew poderia funcionar contra esse log.</div>
+      </div>
+    </div>
+
+    <!-- 3 FIXES -->
+    <div class="slide" data-act="2">
+      <div class="tag">V2 · o que foi corrigido e o slice rodando verde</div>
+      <h2>O que a v2<br><em>entrega rodando.</em></h2>
+      <div class="fix">
+        <div class="fix-num">Correção 1 · Guard de linha (nunca mais divergência silenciosa)</div>
+        <div class="fix-title">O gerador calcula a linha real e FALHA se divergir do contrato.</div>
+        <div class="fix-body">Se alguém mexer no template e a linha mudar, o <code>code_generator</code> aborta com mensagem clara. Contrato e código são mantidos em sincronia por CI, não por combinado verbal.</div>
+      </div>
+      <div class="fix">
+        <div class="fix-num">Correção 2 · Schema fiel ao Spark (JsonProtocol real)</div>
+        <div class="fix-title">Log sintético usa os nomes de campo REAIS do Spark 4.1.2.</div>
+        <div class="fix-body">Baseado no mapeamento do Gabriel (119/119 linhas validadas no plat-v0). Um Watcher escrito contra o sintético lê log de produção também — sem adaptação.</div>
+      </div>
+      <div class="fix">
+        <div class="fix-num">Correção 3 + Skew Watcher · distribuição derivada e loop fechado</div>
+        <div class="fix-title">8 tasks com cauda real: 27.9× de skew ratio, derivado dos dados.</div>
+        <div class="fix-body">O <code>skew_watcher</code> detecta pela cauda, emite Finding com confiança da evidência, e valida contra o <code>acceptance</code>. O gate de CI sai <span style="color:var(--grn2)">verde</span>. Isso é o que o Luan chamou de "simples demonstração desse pedaço" — o escopo funcional.</div>
+      </div>
+      <div class="terminal">
+        <span class="dim">▶ run_slice.sh</span><br>
+        <span class="ok">✅ job_demo.py gerado. Anti-pattern na linha 21 (== contrato). Guard OK.</span><br>
+        <span class="ok">✅ synthetic_log.ndjson: 13 eventos, schema fiel, distribuição derivada.</span><br>
+        <span class="ok">  skew ratio 27.9x · SortMergeJoin · confiança 0.9</span><br>
+        <span class="ok">✅ GATE VERDE 🟢</span>
+      </div>
+    </div>
+
+    <!-- 4 AQE LEARNINGS -->
+    <div class="slide" data-act="3">
+      <div class="tag">Achados do Spark real · AQE muda tudo em pleno voo</div>
+      <h2>O que o Spark 4.1.2<br><em>ensinou sobre AQE.</em></h2>
+      <p class="lead" style="margin-bottom:10px">Rodamos o job gerado no Spark 4.1.2 real com event log. Três comportamentos do AQE se manifestaram — o Aguimar já havia alertado no deck ("o plano inicial não é o executado"). Agora temos a prova empírica.</p>
+      <div class="figwrap">
+        <svg width="100%" viewBox="0 0 720 200" role="img">
+          <defs><marker id="aq" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#8A8C9E" stroke-width="1.5" stroke-linecap="round"/></marker></defs>
+          <!-- Achado 1: Coalesce -->
+          <rect x="10" y="20" width="210" height="160" rx="6" fill="#12141A" stroke="#272B3D" stroke-width=".5"/>
+          <text x="115" y="42" text-anchor="middle" fill="#C8943A" font-size="10" font-family="'Space Mono',monospace">AQE COALESCE</text>
+          <rect x="25" y="55" width="70" height="32" rx="4" fill="#1F2335" stroke="#4A4D62" stroke-width=".5"/>
+          <text x="60" y="66" text-anchor="middle" fill="#8A8C9E" font-size="9" font-family="'Space Mono',monospace">8 partições</text>
+          <text x="60" y="78" text-anchor="middle" fill="#8A8C9E" font-size="9" font-family="'Space Mono',monospace">1 quente</text>
+          <line x1="100" y1="71" x2="126" y2="71" stroke="#8A8C9E" stroke-width="1" marker-end="url(#aq)"/>
+          <text x="113" y="67" text-anchor="middle" fill="#C04040" font-size="9" font-family="'Space Mono',monospace">AQE</text>
+          <rect x="130" y="55" width="70" height="32" rx="4" fill="#1F2335" stroke="#C04040" stroke-width=".5"/>
+          <text x="165" y="66" text-anchor="middle" fill="#C04040" font-size="9" font-family="'Space Mono',monospace">1 partição</text>
+          <text x="165" y="78" text-anchor="middle" fill="#C04040" font-size="9" font-family="'Space Mono',monospace">skew oculto</text>
+          <text x="115" y="108" text-anchor="middle" fill="#4A4D62" font-size="10">Config: <tspan fill="#E8AE4A">coalescePartitions=false</tspan></text>
+          <text x="115" y="125" text-anchor="middle" fill="#4A4D62" font-size="10">no fixture</text>
+          <!-- Achado 2: Runtime broadcast -->
+          <rect x="255" y="20" width="210" height="160" rx="6" fill="#12141A" stroke="#272B3D" stroke-width=".5"/>
+          <text x="360" y="42" text-anchor="middle" fill="#C8943A" font-size="10" font-family="'Space Mono',monospace">RUNTIME BROADCAST</text>
+          <rect x="270" y="55" width="72" height="32" rx="4" fill="#1F2335" stroke="#4A4D62" stroke-width=".5"/>
+          <text x="306" y="66" text-anchor="middle" fill="#8A8C9E" font-size="9" font-family="'Space Mono',monospace">SMJ plano</text>
+          <text x="306" y="78" text-anchor="middle" fill="#8A8C9E" font-size="9" font-family="'Space Mono',monospace">inicial</text>
+          <line x1="345" y1="71" x2="371" y2="71" stroke="#8A8C9E" stroke-width="1" marker-end="url(#aq)"/>
+          <text x="358" y="67" text-anchor="middle" fill="#C04040" font-size="9" font-family="'Space Mono',monospace">AQE</text>
+          <rect x="375" y="55" width="72" height="32" rx="4" fill="#1F2335" stroke="#C04040" stroke-width=".5"/>
+          <text x="411" y="66" text-anchor="middle" fill="#C04040" font-size="9" font-family="'Space Mono',monospace">Broadcast</text>
+          <text x="411" y="78" text-anchor="middle" fill="#C04040" font-size="9" font-family="'Space Mono',monospace">sem shuffle</text>
+          <text x="360" y="108" text-anchor="middle" fill="#4A4D62" font-size="10">Config: <tspan fill="#E8AE4A">autoBroadcastJoin</tspan></text>
+          <text x="360" y="125" text-anchor="middle" fill="#E8AE4A" font-size="10">Threshold=-1 (AQE)</text>
+          <!-- Achado 3: Plan divergence -->
+          <rect x="500" y="20" width="210" height="160" rx="6" fill="#12141A" stroke="#272B3D" stroke-width=".5"/>
+          <text x="605" y="42" text-anchor="middle" fill="#C8943A" font-size="10" font-family="'Space Mono',monospace">PLANO MUTA</text>
+          <rect x="515" y="55" width="72" height="32" rx="4" fill="#1F2335" stroke="#4A4D62" stroke-width=".5"/>
+          <text x="551" y="66" text-anchor="middle" fill="#8A8C9E" font-size="9" font-family="'Space Mono',monospace">description</text>
+          <text x="551" y="78" text-anchor="middle" fill="#8A8C9E" font-size="9" font-family="'Space Mono',monospace">inicial</text>
+          <line x1="590" y1="71" x2="616" y2="71" stroke="#8A8C9E" stroke-width="1" marker-end="url(#aq)"/>
+          <text x="603" y="67" text-anchor="middle" fill="#C04040" font-size="9" font-family="'Space Mono',monospace">AQE</text>
+          <rect x="620" y="55" width="72" height="32" rx="4" fill="#1F2335" stroke="#C04040" stroke-width=".5"/>
+          <text x="656" y="66" text-anchor="middle" fill="#C04040" font-size="9" font-family="'Space Mono',monospace">plano final</text>
+          <text x="656" y="78" text-anchor="middle" fill="#C04040" font-size="9" font-family="'Space Mono',monospace">≠ inicial</text>
+          <text x="605" y="108" text-anchor="middle" fill="#4A4D62" font-size="10">Watcher: ler o</text>
+          <text x="605" y="125" text-anchor="middle" fill="#E8AE4A" font-size="10">plano final (AdaptiveUpdate)</text>
+        </svg>
+        <div class="figcap">três comportamentos confirmados rodando Spark 4.1.2 real com event log</div>
+      </div>
+      <p class="lead" style="margin-top:4px">Isso confirma empiricamente o alerta do Aguimar: <strong>o plano executado não é o plano inicial.</strong> O Watcher que ler só o <code>physicalPlanDescription</code> do evento de início estará lendo o plano <em>antes</em> do AQE agir.</p>
+    </div>
+
+    <!-- 5 WATCHER IMPLICATIONS -->
+    <div class="slide" data-act="4">
+      <div class="tag">Implicação direta · como os Watchers devem ser escritos</div>
+      <h2>O que o AQE<br><em>muda no Watcher.</em></h2>
+      <div class="grid3">
+        <div class="card">
+          <div class="card-label">Ler o plano certo</div>
+          <div class="card-body"><strong>Não:</strong> <code>physicalPlanDescription</code> do início.<br><strong>Sim:</strong> <code>physicalPlanDescription</code> do último <code>SparkListenerSQLAdaptiveExecutionUpdate</code>.<br>O plano inicial é a intenção; o final é a verdade.</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Detectar pela distribuição</div>
+          <div class="card-body"><strong>Não:</strong> "task X leu N registros".<br><strong>Sim:</strong> "task X leu <em>K vezes</em> a mediana das outras tasks do mesmo stage".<br>Skew só existe em relação às outras. Uma task isolada não tem com quem comparar.</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Filtrar pelo stage certo</div>
+          <div class="card-body"><strong>Não:</strong> todas as tasks do job.<br><strong>Sim:</strong> tasks do stage com o maior shuffle read.<br>Tasks de scan têm <code>Total Records Read = 0</code> e distorcem a mediana se incluídas.</div>
+        </div>
+      </div>
+      <div style="background:rgba(200,148,58,.07);border:.5px solid rgba(200,148,58,.2);border-radius:8px;padding:14px 18px;margin-top:12px">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">O fixture foi endurecido com base nesses achados</div>
+        <div style="font-size:13px;color:var(--tx2);line-height:1.65">O <code>scenarios/skew_on_join_30x.yaml</code> agora inclui configs que garantem que o skew se manifesta: <code>coalescePartitions.enabled=false</code>, ambos os thresholds de broadcast em <code>-1</code>, e um <code>hint("shuffle_merge")</code> no join. Cada config veio de uma falha real no run — não são parâmetros arbitrários.</div>
+      </div>
+    </div>
+
+    <!-- 6 POD STATE -->
+    <div class="slide" data-act="5">
+      <div class="tag">Estado atual · o que cada pod faz agora</div>
+      <h2>Onde estamos<br><em>e o próximo movimento.</em></h2>
+      <p class="lead" style="margin-bottom:12px">O slice sintético vertical está verde e empacotado. O oracle está pronto. A distribuição multi-task com Spark real precisa do plat-v0.</p>
+      <div style="padding:4px 0">
+        <div class="pod-row"><div class="pod-name">Pod 1</div><div class="pod-status s-green">✓ existe</div><div class="pod-text"><strong>eventlog-loader Go + schema ClickHouse (plat-v0).</strong> Próximo: fingerprint de plano (<code>sha256</code> do plano final pós-AQE), fallback REST API para apps sem event log.</div></div>
+        <div class="pod-row"><div class="pod-name">Pod 2</div><div class="pod-status s-green">✓ v2</div><div class="pod-text"><strong>Geradores v2: code_generator + plan_generator com schema fiel.</strong> Próximo: expandir o <code>code_generator</code> para outros <code>anti_pattern.class</code> (um template por classe), alcançar os 11 cenários.</div></div>
+        <div class="pod-row"><div class="pod-name">Pod 3</div><div class="pod-status s-yellow">⏳ pronto</div><div class="pod-text"><strong>Oracle comparador real (<code>compare.py</code>).</strong> Pendente: rodar no plat-v0 (multi-core) para capturar o event log com distribuição de tasks de verdade e rodar o comparador contra o log sintético.</div></div>
+        <div class="pod-row"><div class="pod-name">Pod A1</div><div class="pod-status s-green">✓ slice</div><div class="pod-text"><strong><code>skew_watcher.py</code> funciona contra o log sintético fiel.</strong> Já incorpora os 3 achados do AQE (plano final, cauda, stage certo). Gate verde.</div></div>
+        <div class="pod-row"><div class="pod-name">Pod A2</div><div class="pod-status s-open">— open</div><div class="pod-text"><strong>Watcher de Memory/Cost.</strong> Deve seguir o mesmo padrão: lê o schema fiel, detecta <code>Memory Bytes Spilled</code> + <code>JVM GC Time</code> por stage, emite Finding com confiança da evidência.</div></div>
+        <div class="pod-row"><div class="pod-name">Pod A3</div><div class="pod-status s-open">— open</div><div class="pod-text"><strong>Classifier (AST do repo).</strong> Lê o repositório, não a telemetria. Usa o <code>call_site</code> (coordenada do log) pra localizar o código. Acesso ao repo: bloqueio de PR ainda não resolvido — é o pré-requisito.</div></div>
+        <div class="pod-row"><div class="pod-name">Pod A4</div><div class="pod-status s-open">— open</div><div class="pod-text"><strong>Coordinator + Judge.</strong> Espera os Watchers A1 e A2 emitirem Findings no formato do <code>watcher.contract</code>. Pode começar a spec do Coordinator enquanto os Watchers amadurecem.</div></div>
+      </div>
+    </div>
+
+  </div>
+  <div class="botbar">
+    <button class="navbtn" id="prev">‹</button>
+    <div class="progress"><div class="progress-fill" id="pf"></div></div>
+    <button class="navbtn" id="next">›</button>
+  </div>
+</div>
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+const acts=['Capa','Defeitos v1','V2 Fixes','AQE','Watcher','Por Pod'];
+let cur=0;
+const ae=document.getElementById('acts');
+acts.forEach((n,i)=>{const b=document.createElement('button');b.className='act-btn'+(i===0?' on':'');b.textContent=n;b.onclick=()=>go(i);ae.appendChild(b);});
+const ab=[...ae.children];
+function go(i){if(i<0||i>=slides.length)return;slides[cur].classList.remove('active');ab[cur].classList.remove('on');cur=i;slides[cur].classList.add('active');ab[cur].classList.add('on');document.getElementById('sc').textContent=(cur+1)+' / '+slides.length;document.getElementById('pf').style.width=((cur+1)/slides.length*100)+'%';document.getElementById('prev').disabled=cur===0;document.getElementById('next').disabled=cur===slides.length-1;}
+document.getElementById('prev').onclick=()=>go(cur-1);
+document.getElementById('next').onclick=()=>go(cur+1);
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')go(cur+1);if(e.key==='ArrowLeft')go(cur-1);});
+document.getElementById('pf').style.width=(1/slides.length*100)+'%';
+document.getElementById('prev').disabled=true;
+</script>
+</body>
+</html>
