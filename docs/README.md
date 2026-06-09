@@ -15,10 +15,11 @@ estudo empirico da fronteira de observabilidade do Spark event log.
 8. [Apresentacao AQE](presentations/apex-v2-aqe-learnings.html) preserva os achados apresentados.
 9. [Spec do inventario](specs/event-log-coverage-inventory-v1.md) define o contrato de cobertura.
 10. [Proposta de validation criteria](specs/scenario-validation-criteria-v1.md) define o gate de qualidade da evidencia.
-11. [Fronteira de observabilidade](architecture/event-log-observability-boundary.md) explica limites e fontes.
-12. [Drill-down completo](architecture/apex-solution-drilldown.md) vai do contexto do produto ate task metrics e sequencias.
-13. [Guia do inventario](coverage/README.md) ensina a executar e interpretar.
-14. [Relatorio v1](coverage/apex-coverage-report-v1.md) registra o corpus atual.
+11. [Fluxo de validacao e cadeia de evidencia](architecture/validation-evidence-flow.md) mantem arquitetura, sequencia, valor e rupturas sincronizados.
+12. [Fronteira de observabilidade](architecture/event-log-observability-boundary.md) explica limites e fontes.
+13. [Drill-down completo](architecture/apex-solution-drilldown.md) vai do contexto do produto ate task metrics e sequencias.
+14. [Guia do inventario](coverage/README.md) ensina a executar e interpretar.
+15. [Relatorio v1](coverage/apex-coverage-report-v1.md) registra o corpus atual.
 
 ## Papel de cada documento
 
@@ -34,6 +35,7 @@ estudo empirico da fronteira de observabilidade do Spark event log.
 | `presentations/apex-v2-aqe-learnings.html` | Apresentacao para alinhamento com o time |
 | `specs/event-log-coverage-inventory-v1.md` | Contrato, classificacao A-F e limites do inventario |
 | `specs/scenario-validation-criteria-v1.md` | Proposta de gate para validar evidencia antes do Watcher |
+| `architecture/validation-evidence-flow.md` | Visao canonica do fluxo, arquitetura, sequencia, valor, gargalos e rupturas |
 | `architecture/event-log-observability-boundary.md` | Arquitetura Spark, fronteira do event log e fontes complementares |
 | `architecture/apex-solution-drilldown.md` | Visao L0-L5, sequencia validada, arquitetura alvo e matriz de comprovacao |
 | `coverage/README.md` | Guia de execucao e leitura do relatorio |
@@ -69,6 +71,11 @@ podem sustentar os proximos casos.
 
 Para apresentar a solucao do macro ao detalhe, use o
 [drill-down completo](architecture/apex-solution-drilldown.md).
+
+Para revisar qualquer mudanca em validacao, use o
+[fluxo de validacao e cadeia de evidencia](architecture/validation-evidence-flow.md).
+Esse documento deve ser atualizado junto com o contrato para impedir que codigo,
+issues e desenhos descrevam arquiteturas diferentes.
 
 ## Evidencia principal
 

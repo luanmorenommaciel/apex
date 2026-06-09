@@ -53,7 +53,7 @@ flowchart LR
 | AQE | Atualizacoes de plano emitidas pelo runtime | Calculo completo que motivou cada decisao |
 | Scheduler | Jobs, stages, tasks, dependencias, attempts e locality | Intencao de negocio do codigo |
 | Executors | Run time, CPU time, GC, spill, memoria e resultado | Locks, profiling de metodo e heap detalhado |
-| Shuffle e storage | Bytes, records, fetch wait, input e output | Valor das linhas e identidade da hot key |
+| Shuffle e storage | Bytes, records, fetch wait, input e output | Valor das linhas e identidade da hot key, salvo quando o valor aparece incidentalmente no plano |
 | Cluster | Executor add/remove e perfis registrados | Saturacao do host e causa externa conclusiva |
 
 ## Fronteira da evidencia
@@ -108,6 +108,10 @@ O time deve priorizar tres movimentos:
 
 Essa ordem preserva a coleta nao-intrusiva e separa evidencia direta de
 inferencia.
+
+O fluxo completo para transformar esses sinais em evidencia valida, invalida ou
+indeterminada esta em
+[`validation-evidence-flow.md`](validation-evidence-flow.md).
 
 ## Referencias tecnicas
 

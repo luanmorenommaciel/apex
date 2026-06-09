@@ -165,9 +165,9 @@ spill, CPU time, GC, input e shuffle write ja estao no log;
 o trabalho futuro e parsing, Watcher e validacao.
 ```
 
-O corpus atual ainda nao exercita UDF, streaming, AQE update, spill real, retry
-ou perda de executor. O time precisa criar scenarios antes de afirmar cobertura
-para esses casos.
+O corpus real atual ainda nao exercita UDF, streaming, AQE update, spill real,
+retry ou perda de executor. Retries, speculation e zeros possuem testes
+adversariais deterministas, mas ainda precisam de corpus real.
 
 ## Estado das skills e componentes futuros
 
@@ -195,11 +195,13 @@ um gate que rejeite logs incompletos ou distribuicoes artificiais antes do
 Watcher.
 
 ```mermaid
-flowchart LR
+flowchart TD
     S["Scenario"] --> L["Event log"]
-    L --> V["Validation criteria"]
-    V -->|"evidencia valida"| W["Watcher"]
-    V -->|"evidencia invalida"| E["Falha antes do diagnostico"]
+    L --> C["Correlacao de evidencia"]
+    C --> V["Validation criteria"]
+    V -->|"valid"| W["Watcher"]
+    V -->|"invalid"| E["Falha antes do diagnostico"]
+    V -->|"indeterminate"| I["Finding: evidencia insuficiente"]
 ```
 
 Exemplos de criterios em discussao:
@@ -208,13 +210,23 @@ Exemplos de criterios em discussao:
 - exigir oito tasks com trabalho no stage alvo;
 - rejeitar colapso em uma unica task;
 - exigir mediana fria maior que zero;
+- deduplicar retry e tentativa especulativa;
+- preservar particoes com zero para nao criar falso colapso;
+- correlacionar operador e stage por IDs e acumuladores;
+- isolar eventos por aplicacao e manter agregacao incremental;
+- comparar particao quente e tipo de task entre sintetico e real;
 - confirmar o operador `SortMergeJoin`;
 - exigir ratio minimo no scenario de skew;
 - exigir ratio maximo no baseline sem skew.
 
 A proposta completa esta em
 [`specs/scenario-validation-criteria-v1.md`](specs/scenario-validation-criteria-v1.md).
-Ela ainda nao altera o scenario nem o Watcher.
+O schema ainda nao altera o scenario, mas attempts, zeros, estados de evidencia
+e correlacao por acumuladores ja executam no `apexlib` e no Watcher.
+
+Os desenhos completos de fluxo, arquitetura, sequencia, cadeia de valor,
+gargalos e pontos de ruptura estao em
+[`architecture/validation-evidence-flow.md`](architecture/validation-evidence-flow.md).
 
 ## Visao visual para a reuniao
 
@@ -261,6 +273,7 @@ Use esta ordem na reuniao:
 8. Mostrar o inventario e separar campo disponivel de ponto cego real.
 9. Abrir o drill-down e marcar o que esta validado, observado ou proposto.
 10. Revisar a proposta de `validation_criteria` e decidir quem implementa o gate.
+11. Revisar os pontos de ruptura e atribuir cada controle a um pod.
 
 ## O que esta provado
 
@@ -268,12 +281,15 @@ Use esta ordem na reuniao:
 |---|---|
 | Scenario declarativo para skew | Provado no slice atual |
 | Event log sintetico gerado sem Spark | Provado no slice atual |
-| Watcher deterministico de skew | Provado no slice atual |
+| Watcher deterministico de skew | Provado em confirmacao controlada; descoberta cega ainda nao |
 | Comparacao com log real | Provado no slice atual |
 | Testes automatizados | Provado no slice atual |
 | Gate inicial de CI | Provado no slice atual |
 | Inventario reproduzivel de campos | Provado sobre o corpus v1 |
 | Campos de spill presentes no log | Observados com valor zero; falta scenario com spill real |
+| Attempts e zeros | Provados por testes adversariais |
+| Correlacao operador-stage | Provada no log real pelo acumulador 45 do `SortMergeJoin` |
+| Portabilidade dos CLIs | Provada com output `cp1252` sem erro Unicode |
 
 ## O que ainda nao esta provado
 
@@ -281,6 +297,11 @@ Use esta ordem na reuniao:
 |---|---|
 | Todos os anti-patterns do Apex | O slice cobre apenas skew em join. |
 | Falso positivo sem skew | Falta `no_skew_baseline.yaml`. |
+| Retries e tasks especulativas reais | A regra esta testada, mas o corpus real nao contem esses eventos. |
+| Correlacao em logs sem acumuladores | O fallback e exposto, mas nao resolve o vinculo. |
+| Processamento streaming ponta a ponta | O reader possui iterador, mas Watcher e Oraculo materializam o log. |
+| Fidelidade estrutural do sintetico | O real usa hot partition 3 e `ResultTask`; o sintetico usa 0 e `ShuffleMapTask`. |
+| Descoberta cega | O Watcher atual le chave e valor do scenario. |
 | Confidence madura | A confianca atual ainda e simples. |
 | Persistencia em ClickHouse | A prova atual usa arquivos versionados. |
 | Comentario automatico em PR | Existe gate inicial, mas nao comentario de review. |
@@ -326,12 +347,15 @@ Manter coleta nao-intrusiva como regra de arquitetura.
 Priorizar depois da validacao:
 
 1. Criar `scenarios/no_skew_baseline.yaml`.
-2. Adicionar `validation_criteria` ao scenario.
-3. Melhorar `confidence` com evidencia real.
-4. Criar Action semanal do Oraculo contra log real versionado.
-5. Desenhar schema ClickHouse para Findings.
-6. Montar corpus com join, RDD, UDF, streaming, falha e spill.
-7. Priorizar os sinais B* antes de criar nova coleta.
+2. Aprovar o schema e extrair o gate para `Evidence Validator`.
+3. Tornar Watcher e Oraculo incrementais e isolados por aplicacao.
+4. Corrigir ou declarar a divergencia de hot partition e task type no sintetico.
+5. Separar descoberta cega de confirmacao por scenario.
+6. Melhorar `confidence` com qualidade e cobertura da evidencia.
+7. Criar Action semanal do Oraculo contra logs reais versionados.
+8. Desenhar schema ClickHouse para referencias, evidencias e Findings.
+9. Montar corpus real com retry, speculation, RDD, UDF, streaming, falha e spill.
+10. Priorizar os sinais B* antes de criar nova coleta.
 
 ## Roteiro para apresentacao
 

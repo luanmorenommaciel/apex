@@ -73,11 +73,11 @@ def generate_job(scenario_path, output_path):
     declared = config["code_generator"].get("anti_pattern_line")
     if declared is not None and declared != actual_line:
         print(
-            f"⚠️  scenario declara anti_pattern_line={declared}, mas caiu na {actual_line}. "
+            f"[WARN] scenario declara anti_pattern_line={declared}, mas caiu na {actual_line}. "
             f"Manifesto registra a linha real ({actual_line}).",
             file=sys.stderr,
         )
-    print(f"✅ {output_path} gerado. Anti-pattern na linha {actual_line}. "
+    print(f"[OK] {output_path} gerado. Anti-pattern na linha {actual_line}. "
           f"Manifesto: {meta_path} (hash {manifest['scenario_hash']})")
 
 

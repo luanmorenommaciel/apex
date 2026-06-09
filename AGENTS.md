@@ -18,7 +18,7 @@ pip install -r requirements.txt
 ## Verificar
 
 ```bash
-python3 -m pytest tests/test_slice.py -q
+python3 -m pytest tests -q
 bash run_slice.sh
 python3 generators/plan_generator.py scenarios/skew_on_join_30x.yaml /tmp/apex-synthetic.ndjson
 python3 watchers/skew_watcher.py scenarios/skew_on_join_30x.yaml /tmp/apex-synthetic.ndjson
@@ -28,7 +28,7 @@ python3 oracle/compare.py scenarios/skew_on_join_30x.yaml /tmp/apex-synthetic.nd
 Resultado esperado:
 
 ```text
-tests: s.................... [100%]
+tests: 40 passed
 watcher: GATE VERDE
 oracle: sintetico fiel ao Spark real dentro da tolerancia
 ```
@@ -40,11 +40,16 @@ oracle: sintetico fiel ao Spark real dentro da tolerancia
 - Se um teste nao cobre um caso, diga.
 - Antes de escrever codigo novo, rode o baseline e confirme o resultado.
 - Nao inclua arquivos `.bak`, logs temporarios ou jobs gerados no commit principal sem decisao explicita.
+- Toda mudanca de validacao, fonte, estado de evidencia ou responsabilidade deve revisar
+  `docs/architecture/validation-evidence-flow.md`.
+- O mesmo PR deve manter atualizados: fluxo, arquitetura, sequencia, cadeia de valor,
+  gargalos e pontos de ruptura. Se uma visao nao mudar, registre que ela foi revisada.
 
 ## Proximo trabalho
 
 1. Criar `scenarios/no_skew_baseline.yaml`.
-2. Adicionar `validation_criteria` ao scenario.
-3. Substituir a formula de confianca `ratio/(ratio+3)` por confianca baseada em evidencia.
-4. Criar Action semanal do Oraculo contra log real versionado.
-5. Avaliar `watchers/memory_watcher.py` como proximo watcher.
+2. Extrair o gate atual para `Evidence Validator` dirigido por `validation_criteria`.
+3. Tornar Watcher e Oracle incrementais e isolados por aplicacao.
+4. Substituir a confianca residual por score de qualidade e cobertura.
+5. Criar Action semanal do Oraculo contra log real versionado.
+6. Avaliar `watchers/memory_watcher.py` como proximo watcher.

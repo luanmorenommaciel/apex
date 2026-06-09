@@ -4,8 +4,8 @@ apexlib (v4) — funcoes compartilhadas para ler e analisar event logs do Spark.
 Correcoes nesta versao (sobre a v3):
 - read_events / iter_events : streaming zstd (sem OOM) + leitura de diretorio de
                               rolling logs (events_1_, events_2_, ...).        [P0 #1, #3]
-- hottest_reduce_stage      : cruza com o nome do stage do join, nao so o maior
-                              volume — evita analisar o stage errado.          [P0 #2]
+- hottest_reduce_stage      : prefere acumuladores do operador, depois nome,
+                              e expoe fallback de maior volume.                [P0 #2]
 - join_operator             : associa o plano final ao executionId correto.    [P1 #6]
 - compute_scenario_hash     : assinatura sha256 do contrato (cadeia de custodia).
 - validate_provenance       : rejeita log sintetico gerado de scenario diferente.
@@ -171,48 +171,237 @@ def _stage_names(events):
     return names
 
 
-def shuffle_read_by_stage(events):
-    """{stage_id: [records lidos por task]} — somente tasks que leram shuffle (>0)."""
-    by = defaultdict(list)
-    for e in events:
-        if e.get("Event") == "SparkListenerTaskEnd":
-            recs = (e.get("Task Metrics") or {}).get("Shuffle Read Metrics", {}).get(
-                "Total Records Read", 0
+def _task_succeeded(event):
+    task_info = event.get("Task Info") or {}
+    if task_info.get("Failed") is True:
+        return False
+
+    reason = (event.get("Task End Reason") or {}).get("Reason")
+    if reason is None:
+        return True
+    return reason == "Success"
+
+
+def _task_partition(event):
+    task_info = event.get("Task Info") or {}
+    return task_info.get("Index", task_info.get("Partition ID", task_info.get("Task ID")))
+
+
+def _task_accumulator_ids(event):
+    task_info = event.get("Task Info") or {}
+    ids = set()
+    for accumulable in task_info.get("Accumulables") or []:
+        value = accumulable.get("ID", accumulable.get("id"))
+        if value is not None:
+            ids.add(value)
+    return ids
+
+
+def _effective_task(candidates):
+    successful = [event for event in candidates if _task_succeeded(event)]
+    if not successful:
+        return None
+
+    def completion_key(event):
+        task_info = event.get("Task Info") or {}
+        finish_time = task_info.get("Finish Time")
+        return (
+            finish_time if isinstance(finish_time, (int, float)) else float("inf"),
+            task_info.get("Attempt", 0),
+            task_info.get("Task ID", 0),
+        )
+
+    return min(successful, key=completion_key)
+
+
+def shuffle_tasks_by_stage(events):
+    """Return one effective task per stage partition, preserving zero-record tasks."""
+    by_stage_attempt = defaultdict(lambda: defaultdict(list))
+    for event in events:
+        if event.get("Event") != "SparkListenerTaskEnd":
+            continue
+        stage_id = event.get("Stage ID")
+        if stage_id is None:
+            continue
+        stage_attempt = event.get("Stage Attempt ID", 0)
+        by_stage_attempt[stage_id][stage_attempt].append(event)
+
+    result = {}
+    for stage_id, attempts in by_stage_attempt.items():
+        stage_attempt = max(attempts)
+        by_partition = defaultdict(list)
+        for event in attempts[stage_attempt]:
+            partition = _task_partition(event)
+            if partition is not None:
+                by_partition[partition].append(event)
+
+        effective = []
+        for partition, candidates in by_partition.items():
+            event = _effective_task(candidates)
+            if event is None:
+                continue
+            task_info = event.get("Task Info") or {}
+            shuffle_read = (event.get("Task Metrics") or {}).get("Shuffle Read Metrics") or {}
+            effective.append(
+                {
+                    "stage_id": stage_id,
+                    "stage_attempt": stage_attempt,
+                    "partition": partition,
+                    "task_attempt": task_info.get("Attempt", 0),
+                    "task_id": task_info.get("Task ID"),
+                    "finish_time": task_info.get("Finish Time"),
+                    "records": shuffle_read.get("Total Records Read", 0) or 0,
+                    "task_type": event.get("Task Type"),
+                    "accumulator_ids": _task_accumulator_ids(event),
+                }
             )
-            if recs and recs > 0:
-                by[e["Stage ID"]].append(recs)
-    return dict(by)
+        result[stage_id] = sorted(effective, key=lambda task: task["partition"])
+    return result
+
+
+def shuffle_read_by_stage(events):
+    """{stage_id: [records by partition]}, using only the effective successful attempt."""
+    return {
+        stage_id: [task["records"] for task in tasks]
+        for stage_id, tasks in shuffle_tasks_by_stage(events).items()
+    }
+
+
+def _operator_accumulator_ids(events, join_op):
+    ids = set()
+
+    def visit(node):
+        if not isinstance(node, dict):
+            return
+        if join_op in str(node.get("nodeName", "")):
+            for metric in node.get("metrics") or []:
+                value = metric.get("accumulatorId", metric.get("accumulatorID"))
+                if value is not None:
+                    ids.add(value)
+        for child in node.get("children") or []:
+            visit(child)
+
+    for event in events:
+        visit(event.get("sparkPlanInfo"))
+    return ids
+
+
+def hottest_reduce_stage_details(events, join_op=None):
+    """Select a reduce stage and expose the evidence used for that selection."""
+    by = shuffle_tasks_by_stage(events)
+    if not by:
+        return {
+            "stage_id": None,
+            "tasks": [],
+            "records": [],
+            "correlation_method": "none",
+        }
+
+    if join_op:
+        operator_accumulators = _operator_accumulator_ids(events, join_op)
+        if operator_accumulators:
+            matches = {}
+            for stage_id, tasks in by.items():
+                matched_tasks = sum(
+                    bool(task["accumulator_ids"] & operator_accumulators)
+                    for task in tasks
+                )
+                if matched_tasks:
+                    matches[stage_id] = matched_tasks
+            if matches:
+                stage_id = max(
+                    matches,
+                    key=lambda value: (matches[value], sum(task["records"] for task in by[value])),
+                )
+                tasks = sorted(by[stage_id], key=lambda task: task["records"], reverse=True)
+                return {
+                    "stage_id": stage_id,
+                    "tasks": tasks,
+                    "records": [task["records"] for task in tasks],
+                    "correlation_method": "operator_accumulator",
+                }
+
+        names = _stage_names(events)
+        joinish = [stage_id for stage_id in by if join_op in names.get(stage_id, "")]
+        if joinish:
+            stage_id = max(
+                joinish,
+                key=lambda value: sum(task["records"] for task in by[value]),
+            )
+            tasks = sorted(by[stage_id], key=lambda task: task["records"], reverse=True)
+            return {
+                "stage_id": stage_id,
+                "tasks": tasks,
+                "records": [task["records"] for task in tasks],
+                "correlation_method": "stage_name",
+            }
+
+    stage_id = max(by, key=lambda value: sum(task["records"] for task in by[value]))
+    tasks = sorted(by[stage_id], key=lambda task: task["records"], reverse=True)
+    return {
+        "stage_id": stage_id,
+        "tasks": tasks,
+        "records": [task["records"] for task in tasks],
+        "correlation_method": "largest_shuffle_fallback",
+    }
 
 
 def hottest_reduce_stage(events, join_op=None):
     """
-    Isola o stage de reduce do join. Em vez de pegar so o maior volume (que pode ser
-    um sort, nao o join), prefere o stage cujo NOME referencia o operador de join. [P0 #2]
-    Cai para o maior volume de shuffle se nao houver match por nome.
+    Isola o stage de reduce do join. Prefere acumuladores do operador, depois
+    nome de stage, e por fim o maior volume como fallback explicito.
     Retorna (stage_id, [records desc]).
     """
-    by = shuffle_read_by_stage(events)
-    if not by:
-        return None, []
-    if join_op:
-        names = _stage_names(events)
-        joinish = [sid for sid in by if join_op in names.get(sid, "")]
-        if joinish:
-            sid = max(joinish, key=lambda s: sum(by[s]))
-            return sid, sorted(by[sid], reverse=True)
-    sid = max(by, key=lambda s: sum(by[s]))
-    return sid, sorted(by[sid], reverse=True)
+    selected = hottest_reduce_stage_details(events, join_op=join_op)
+    return selected["stage_id"], selected["records"]
 
 
 def skew_metrics(records):
-    """hot, median_cold, ratio, n_tasks, collapsed — trata 1 task (colapso) sem /0."""
+    """Compute skew metrics and classify whether the distribution is usable evidence."""
     if not records:
-        return {"hot": 0, "median_cold": 0, "ratio": 0.0, "n_tasks": 0, "collapsed": False}
+        return {
+            "hot": 0,
+            "median_cold": 0,
+            "ratio": 0.0,
+            "n_tasks": 0,
+            "n_nonzero_tasks": 0,
+            "n_zero_tasks": 0,
+            "collapsed": False,
+            "evidence_status": "indeterminate",
+            "quality_issues": ["no_task_records"],
+        }
     n = len(records)
     hot = max(records)
+    n_nonzero = sum(record > 0 for record in records)
+    n_zero = n - n_nonzero
     if n == 1:
-        return {"hot": hot, "median_cold": 0, "ratio": float("inf"), "n_tasks": 1, "collapsed": True}
-    cold = [r for r in records if r != hot]
-    median_cold = statistics.median(cold) if cold else hot
+        return {
+            "hot": hot,
+            "median_cold": 0,
+            "ratio": float("inf"),
+            "n_tasks": 1,
+            "n_nonzero_tasks": n_nonzero,
+            "n_zero_tasks": n_zero,
+            "collapsed": True,
+            "evidence_status": "invalid",
+            "quality_issues": ["single_task_collapse"],
+        }
+
+    ordered = sorted(records, reverse=True)
+    cold = ordered[1:]
+    median_cold = statistics.median(cold)
     ratio = round(hot / median_cold, 1) if median_cold else float("inf")
-    return {"hot": hot, "median_cold": median_cold, "ratio": ratio, "n_tasks": n, "collapsed": False}
+    quality_issues = []
+    if median_cold == 0:
+        quality_issues.append("zero_cold_median")
+    return {
+        "hot": hot,
+        "median_cold": median_cold,
+        "ratio": ratio,
+        "n_tasks": n,
+        "n_nonzero_tasks": n_nonzero,
+        "n_zero_tasks": n_zero,
+        "collapsed": False,
+        "evidence_status": "invalid" if quality_issues else "valid",
+        "quality_issues": quality_issues,
+    }

@@ -98,7 +98,7 @@ def generate_plan(scenario_path, output_path):
     with open(output_path, "w") as f:
         for e in events:
             f.write(json.dumps(e) + "\n")
-    print(f"✅ {output_path} gerado: {len(events)} eventos, scenario_hash {scenario_hash} embutido.")
+    print(f"[OK] {output_path} gerado: {len(events)} eventos, scenario_hash {scenario_hash} embutido.")
 
 
 if __name__ == "__main__":

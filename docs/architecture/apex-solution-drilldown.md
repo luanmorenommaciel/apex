@@ -16,9 +16,9 @@ observado e o que ainda pertence a arquitetura alvo.
 ## Estado atual em uma frase
 
 ```text
-O Apex validou um slice deterministico de skew em join.
+O Apex calibrou um slice controlado de skew em join.
 O inventario encontrou outros sinais no event log.
-Os demais diagnosticos e integracoes ainda precisam de scenarios e testes.
+A descoberta cega, o gate de evidencia e as integracoes ainda precisam de implementacao.
 ```
 
 ## Visao visual geral
@@ -72,6 +72,8 @@ flowchart LR
 
     subgraph Evidence["Camada de evidencia"]
         PARSER["Parser de event log"]
+        CORR["Evidence Correlator"]
+        VALIDATOR["Evidence Validator"]
         AST["Analisador AST"]
         ADAPTER["Adapters de runtime"]
         STORE["ClickHouse e corpus historico"]
@@ -79,6 +81,7 @@ flowchart LR
 
     subgraph Diagnosis["Camada de diagnostico"]
         WATCHER["Watchers deterministicos"]
+        REF["Reference Selector"]
         ORACLE["Oraculo e quality gates"]
         TIER2["Classifier Tier 2"]
     end
@@ -93,11 +96,15 @@ flowchart LR
     CODE -.-> AST
     INFRA -.-> ADAPTER
     PROFILE -.-> ADAPTER
-    PARSER --> WATCHER
+    PARSER --> CORR
+    CORR -.-> VALIDATOR
+    VALIDATOR -.-> WATCHER
     PARSER -.-> STORE
     AST -.-> WATCHER
     ADAPTER -.-> WATCHER
-    STORE -.-> ORACLE
+    STORE -.-> REF
+    REF -.-> ORACLE
+    WATCHER --> ORACLE
     WATCHER --> FINDING
     WATCHER -.-> TIER2
     TIER2 -.-> FINDING
@@ -108,13 +115,16 @@ flowchart LR
     classDef validated fill:#dff3df,stroke:#2f7d32,color:#172417
     classDef observed fill:#fff3cd,stroke:#b58105,color:#332701
     classDef proposed fill:#eeeeee,stroke:#777777,color:#222222
-    class EL,PARSER,WATCHER,ORACLE,FINDING validated
+    class EL,PARSER validated
+    class WATCHER,ORACLE,FINDING observed
     class STORE observed
-    class CODE,INFRA,PROFILE,AST,ADAPTER,TIER2,CI,HISTORY proposed
+    class CORR,VALIDATOR,REF,CODE,INFRA,PROFILE,AST,ADAPTER,TIER2,CI,HISTORY proposed
 ```
 
 As linhas continuas representam o caminho exercitado no estudo. As linhas
-tracejadas representam integracoes propostas.
+tracejadas representam integracoes propostas. Watcher, Oraculo e Finding estao
+marcados como observados porque funcionam no scenario controlado, mas ainda nao
+possuem o gate e a descoberta cega propostos.
 
 ## Nivel 2 - Componentes e responsabilidades
 
@@ -124,10 +134,12 @@ tracejadas representam integracoes propostas.
 | Code Generator | Gerar job PySpark e manifesto a partir do scenario | Validado para skew |
 | Plan Generator | Gerar event log sintetico com provenance | Validado para skew |
 | Spark real | Produzir o log de referencia | Validado para um job de skew |
-| `apexlib` | Ler logs, plano, stages, tasks e provenance | Validado no corpus atual |
+| `apexlib` | Ler logs, attempts, plano, stages, tasks e provenance | Correlacao por acumuladores validada; app scope e streaming dos consumidores pendentes |
 | Coverage Inventory | Listar Spark emite x Apex consome x falta | Validado em uma aplicacao |
-| Skew Watcher | Detectar shuffle skew e emitir Finding | Validado |
-| Oraculo | Comparar sintetico com log real | Validado para skew |
+| Evidence Validator | Classificar evidencia como valid, invalid ou indeterminate | Proposto na issue #32 |
+| Evidence Correlator | Ligar execution, job, stage, operador, acumulador e task | Proposto |
+| Skew Watcher | Detectar shuffle skew e emitir Finding | Validado em confirmacao controlada |
+| Oraculo | Comparar sinais sinteticos com log real | Validado para tres sinais do skew |
 | ClickHouse | Persistir eventos, evidencias e historico | Proposto para este slice |
 | RAG | Recuperar casos e documentacao semelhantes | Proposto; nao substitui comparacao numerica |
 | AST Classifier | Detectar UDF, RDD e `collect()` no codigo | Proposto |
@@ -135,7 +147,7 @@ tracejadas representam integracoes propostas.
 | Tier 2 | Analisar casos ambiguos ou fora das regras | Proposto; ADR continua bloqueada |
 | CI Review | Executar Apex e comentar no PR | Gate inicial existe; comentario nao validado |
 
-## Nivel 3 - Caminho validado do slice de skew
+## Nivel 3 - Caminho executado do slice controlado
 
 ```mermaid
 flowchart TD
@@ -153,7 +165,7 @@ flowchart TD
 
     SYN --> O["11. Oraculo"]
     REAL --> O
-    O --> RESULT["12. Fidelidade dentro da tolerancia"]
+    O --> RESULT["12. Calibracao dos sinais dentro da tolerancia"]
 
     F --> TEST["13. Testes e gate"]
     RESULT --> TEST
@@ -165,7 +177,7 @@ flowchart TD
     class REVIEW review
 ```
 
-### Sequencia detalhada validada
+### Sequencia detalhada do modo de confirmacao
 
 ```mermaid
 sequenceDiagram
@@ -197,30 +209,38 @@ sequenceDiagram
 
     Captain->>Watcher: Informa scenario e log sintetico
     Watcher->>Parser: Solicita eventos, plano e metricas
-    Parser->>Synthetic: Le eventos de forma incremental
+    Parser->>Synthetic: Materializa eventos via read_events
     Synthetic-->>Parser: SQLExecution, stages e TaskEnd
     Parser-->>Watcher: Join, stage, tasks e provenance
     Watcher->>Watcher: Calcula ratio 27.9x
     Watcher->>Watcher: Valida acceptance
-    Watcher-->>Captain: Finding e GATE VERDE
+    Watcher-->>Captain: Finding esperado e GATE VERDE
 
     Captain->>Oracle: Informa scenario, sintetico e real
     Oracle->>Parser: Solicita metricas comparaveis
-    Parser->>Synthetic: Le operador, hot task e ratio
-    Parser->>Real: Le operador, hot task e ratio
+    Parser->>Synthetic: Le operador, hot records e ratio
+    Parser->>Real: Le operador, hot records e ratio
     Parser-->>Oracle: Sintetico 27.9x e real 29.5x
     Oracle->>Oracle: Aplica tolerancia do scenario
-    Oracle-->>Captain: Sintetico fiel ao real
+    Oracle-->>Captain: Sinais agregados calibrados contra o real
 
     Captain->>Tests: Executa a suite
     Tests->>Parser: Testa formatos e selecao de stage
     Tests->>Watcher: Testa Finding, acceptance e provenance
     Tests->>Oracle: Testa fidelidade e divergencias
-    Tests-->>Captain: 29 testes aprovados
+    Tests-->>Captain: 40 testes aprovados
 
     Captain->>Crew: Publica branch e solicita revisao
     Crew-->>Captain: Reproduz, questiona e decide o proximo slice
 ```
+
+Esta sequencia confirma que o scenario gerou e detectou o comportamento
+esperado. Ela nao representa descoberta cega, porque o Watcher atual ainda le
+chave e valor quente do scenario.
+
+Ela tambem nao prova processamento streaming ponta a ponta: `iter_events`
+existe, mas Watcher e Oraculo chamam `read_events` e materializam o log.
+Os CLIs agora usam status ASCII e possuem teste explicito com output `cp1252`.
 
 ## Nivel 4 - Arquitetura alvo com persistencia e Tier 2
 
@@ -314,7 +334,7 @@ flowchart TD
     REASON --> PARTIAL["Causa parcial"]
 
     CODE["Corpo de UDF ou closure RDD"] --> OUTSIDE["Fora do event log"]
-    HOTKEY["Valor da hot key"] --> OUTSIDE
+    HOTKEY["Valor da hot key<br/>normalmente ausente"] --> OUTSIDE
     HOST["CPU, disco e rede do host"] --> OUTSIDE
 ```
 
@@ -324,8 +344,24 @@ No slice validado, o Watcher usa:
 physicalPlanDescription
 Stage ID e Stage Name
 Shuffle Read Total Records Read por task
+sparkPlanInfo.accumulatorId e TaskInfo.Accumulables
+partition index, attempt efetivo e task type
 scenario_hash e provenance
 ```
+
+No log real versionado, os nomes de stage sao genericos. O stage 2 agora e
+correlacionado pelo acumulador `45` do `SortMergeJoin`, presente nas
+`TaskInfo.Accumulables`. Quando esses dados nao existem, o fallback de maior
+volume permanece explicito e o Watcher retorna evidencia indeterminada. O
+caminho alvo ainda deve completar `executionId`, DAG, escopo por aplicacao e
+processamento incremental, conforme o
+[fluxo de validacao e cadeia de evidencia](validation-evidence-flow.md).
+
+No mesmo corpus, o acumulador `45` do `SortMergeJoin` aparece nas tasks do stage
+2, mostrando que a correlacao estruturada e executavel. O log real concentra a
+hot key na particao 3 com `ResultTask`; o sintetico fixa a particao 0 e usa
+`ShuffleMapTask`. O Oraculo agora compara essas dimensoes e emite warnings; o
+gerador ainda nao reproduz essa estrutura.
 
 O inventario observou outros campos, como CPU, GC, spill, input e shuffle
 write. Esses campos ainda nao sustentam novos Findings testados.
@@ -352,8 +388,13 @@ componentes do Apex. O resultado validado continua sendo o slice de skew.
 | Capacidade | Evidencia atual | Estado |
 |---|---|---|
 | Gerar scenario de skew | YAML, geradores e testes | Validado |
-| Detectar skew | Finding e GATE VERDE | Validado |
-| Comparar sintetico com real | 27.9x contra 29.5x | Validado |
+| Detectar skew em scenario controlado | Finding e GATE VERDE | Validado |
+| Descobrir chave e causa sem scenario | Nao implementado | Proposto |
+| Comparar sinais agregados com real | operador, hot records e ratio | Validado |
+| Detectar divergencia estrutural | particao, task type e stage correlation | Validado como warning |
+| Processar logs grandes incrementalmente | Watcher e Oraculo materializam eventos | Nao validado |
+| Validar attempts, zeros e colapso | testes adversariais e `evidence_status` | Validado |
+| Evidence Validator dirigido por YAML | Spec e issue #32 | Proposto |
 | Inventariar event log | 57 eventos e 18 tipos | Validado em um corpus |
 | Detectar spill | Campos existem, valores zero | Observado |
 | Classificar CPU-bound | CPU e run time existem | Observado; sem regra validada |
@@ -381,3 +422,7 @@ flowchart LR
 Salvar um arquivo cria uma alteracao local. O commit cria a versao. O push
 publica essa versao. A issue deve apontar para um commit ou para arquivos ja
 publicados, evitando links para material que existe apenas na maquina do autor.
+
+Toda mudanca no contrato de validacao deve revisar tambem o
+[fluxo de validacao e cadeia de evidencia](validation-evidence-flow.md), que
+mantem fluxo, arquitetura, sequencia, valor, gargalos e rupturas na mesma versao.

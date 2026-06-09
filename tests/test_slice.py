@@ -20,10 +20,42 @@ SCENARIO = str(ROOT / "scenarios" / "skew_on_join_30x.yaml")
 
 
 # ---------- fixtures helpers ----------
-def task_end(stage, tid, records):
-    return {"Event": "SparkListenerTaskEnd", "Stage ID": stage,
-            "Task Info": {"Task ID": tid},
-            "Task Metrics": {"Shuffle Read Metrics": {"Total Records Read": records}}}
+def task_end(
+    stage,
+    tid,
+    records,
+    *,
+    partition=None,
+    attempt=0,
+    stage_attempt=0,
+    reason="Success",
+    failed=False,
+    finish_time=None,
+    task_type=None,
+    accumulator_ids=(),
+):
+    task_info = {
+        "Task ID": tid,
+        "Index": tid if partition is None else partition,
+        "Attempt": attempt,
+        "Failed": failed,
+    }
+    if finish_time is not None:
+        task_info["Finish Time"] = finish_time
+    if accumulator_ids:
+        task_info["Accumulables"] = [{"ID": value} for value in accumulator_ids]
+
+    event = {
+        "Event": "SparkListenerTaskEnd",
+        "Stage ID": stage,
+        "Stage Attempt ID": stage_attempt,
+        "Task End Reason": {"Reason": reason},
+        "Task Info": task_info,
+        "Task Metrics": {"Shuffle Read Metrics": {"Total Records Read": records}},
+    }
+    if task_type is not None:
+        event["Task Type"] = task_type
+    return event
 
 
 def stage_submitted(stage, name):
@@ -106,6 +138,80 @@ def test_hottest_stage_fallback_without_join_op():
     assert sid == 4
 
 
+def test_shuffle_read_preserves_zero_record_partitions():
+    events = [task_end(4, i, 1000 if i == 0 else 0) for i in range(8)]
+
+    assert apexlib.shuffle_read_by_stage(events)[4] == [1000, 0, 0, 0, 0, 0, 0, 0]
+
+
+def test_shuffle_read_uses_only_successful_retry_per_partition():
+    events = [
+        task_end(
+            4,
+            10,
+            100000,
+            partition=0,
+            attempt=0,
+            reason="ExceptionFailure",
+            failed=True,
+        ),
+        task_end(4, 11, 100, partition=0, attempt=1),
+        *[task_end(4, 20 + i, 100, partition=i) for i in range(1, 8)],
+    ]
+
+    records = apexlib.shuffle_read_by_stage(events)[4]
+    assert records == [100] * 8
+    assert apexlib.skew_metrics(records)["ratio"] == 1.0
+
+
+def test_shuffle_read_deduplicates_successful_speculative_attempts():
+    events = [
+        task_end(4, 10, 100, partition=0, attempt=0, finish_time=200),
+        task_end(4, 11, 90000, partition=0, attempt=1, finish_time=300),
+        task_end(4, 12, 100, partition=1, finish_time=250),
+    ]
+
+    assert apexlib.shuffle_read_by_stage(events)[4] == [100, 100]
+
+
+def test_stage_selection_prefers_join_accumulator_correlation():
+    plan = {
+        "Event": "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart",
+        "executionId": 1,
+        "physicalPlanDescription": "SortMergeJoin [customer_id], [customer_id], Inner",
+        "sparkPlanInfo": {
+            "nodeName": "SortMergeJoin",
+            "metrics": [{"name": "number of output rows", "accumulatorId": 45}],
+            "children": [],
+        },
+    }
+    events = [
+        plan,
+        stage_submitted(3, "generic stage"),
+        stage_submitted(4, "generic stage"),
+        task_end(3, 0, 500000, accumulator_ids=(99,)),
+        task_end(3, 1, 400000, accumulator_ids=(99,)),
+        task_end(4, 2, 160000, partition=0, accumulator_ids=(45,)),
+        task_end(4, 3, 5000, partition=1, accumulator_ids=(45,)),
+    ]
+
+    selected = apexlib.hottest_reduce_stage_details(events, join_op="SortMergeJoin")
+    assert selected["stage_id"] == 4
+    assert selected["correlation_method"] == "operator_accumulator"
+
+
+def test_versioned_real_log_uses_accumulator_correlation():
+    events = apexlib.read_events(str(ROOT / "real_log.ndjson"))
+    op, _ = apexlib.join_operator(events)
+
+    selected = apexlib.hottest_reduce_stage_details(events, join_op=op)
+
+    assert selected["stage_id"] == 2
+    assert selected["correlation_method"] == "operator_accumulator"
+    assert selected["tasks"][0]["partition"] == 3
+    assert selected["tasks"][0]["task_type"] == "ResultTask"
+
+
 # ---------- P1 #6: associacao por executionId ----------
 def test_join_operator_prefers_final_plan():
     events = [sql_start("SortMergeJoin ...", 1), aqe_update("BroadcastHashJoin ...", 1)]
@@ -140,6 +246,15 @@ def test_plan_generator_ratio_is_realistic(tmp_path):
 def test_skew_metrics_single_task_collapse():
     m = apexlib.skew_metrics([200100])
     assert m["collapsed"] is True and m["n_tasks"] == 1
+    assert m["evidence_status"] == "invalid"
+
+
+def test_skew_metrics_rejects_zero_cold_median():
+    m = apexlib.skew_metrics([165297, 0, 0, 0, 0, 0, 0, 0])
+
+    assert m["collapsed"] is False
+    assert m["evidence_status"] == "invalid"
+    assert "zero_cold_median" in m["quality_issues"]
 
 
 # ---------- cadeia de custodia (scenario_hash) ----------
@@ -207,11 +322,64 @@ def test_watcher_rejects_stale_log(tmp_path):
     assert r.returncode == 2 and "PROVENANCE ERROR" in r.stdout
 
 
-def test_watcher_detects_real_collapse(tmp_path):
+def test_watcher_rejects_real_collapse_as_invalid_evidence(tmp_path):
     real = write_ndjson(tmp_path, "real.ndjson",
                         [sql_start("SortMergeJoin"), task_end(0, 0, 0), task_end(4, 0, 200100)])
     r = run("watchers/skew_watcher.py", SCENARIO, real)
-    assert "GATE VERDE" in r.stdout and "colapsada" in r.stdout
+    assert r.returncode == 2
+    assert "EVIDENCE INVALID" in r.stdout
+
+
+def test_watcher_rejects_stage_name_only_on_real_log(tmp_path):
+    real = write_ndjson(
+        tmp_path,
+        "real.ndjson",
+        [
+            sql_start("SortMergeJoin"),
+            stage_submitted(4, "SortMergeJoin at job.py:20"),
+            *[task_end(4, i, 160000 if i == 0 else 5400) for i in range(8)],
+        ],
+    )
+
+    r = run("watchers/skew_watcher.py", SCENARIO, real)
+    assert r.returncode == 2
+    assert "EVIDENCE INDETERMINATE" in r.stdout
+    assert "stage_name_only_correlation" in r.stdout
+
+
+def test_watcher_rejects_operator_mismatch_as_invalid_evidence(tmp_path):
+    real = write_ndjson(
+        tmp_path,
+        "real.ndjson",
+        [
+            sql_start("BroadcastHashJoin"),
+            stage_submitted(4, "BroadcastHashJoin at job.py:20"),
+            *[task_end(4, i, 160000 if i == 0 else 5400) for i in range(8)],
+        ],
+    )
+
+    r = run("watchers/skew_watcher.py", SCENARIO, real)
+    assert r.returncode == 2
+    assert "EVIDENCE INVALID" in r.stdout
+    assert "join_operator_mismatch" in r.stdout
+
+
+def test_cli_runs_with_cp1252_output_encoding(tmp_path):
+    syn = str(tmp_path / "syn.ndjson")
+    env = os.environ.copy()
+    env.pop("PYTHONUTF8", None)
+    env["PYTHONIOENCODING"] = "cp1252"
+
+    r = subprocess.run(
+        [sys.executable, str(ROOT / "generators/plan_generator.py"), SCENARIO, syn],
+        capture_output=True,
+        text=True,
+        encoding="cp1252",
+        env=env,
+    )
+
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "UnicodeEncodeError" not in r.stderr
 
 
 # ---------- oracle ----------
@@ -232,6 +400,31 @@ def test_oracle_warns_on_real_collapse(tmp_path):
     real = write_ndjson(tmp_path, "real.ndjson", [sql_start("SortMergeJoin"), task_end(4, 0, 200100)])
     r = run("oracle/compare.py", SCENARIO, syn, real)
     assert "colapsou" in r.stdout and "fiel ao Spark real" in r.stdout
+
+
+def test_oracle_reports_structural_mismatch(tmp_path):
+    syn = str(tmp_path / "syn.ndjson")
+    run("generators/plan_generator.py", SCENARIO, syn)
+    real = write_ndjson(
+        tmp_path,
+        "real.ndjson",
+        [
+            sql_start("SortMergeJoin"),
+            *[
+                task_end(
+                    4,
+                    i,
+                    160000 if i == 3 else 5400,
+                    task_type="ResultTask",
+                )
+                for i in range(8)
+            ],
+        ],
+    )
+
+    r = run("oracle/compare.py", SCENARIO, syn, real)
+    assert "hot partition divergiu" in r.stdout
+    assert "task type divergiu" in r.stdout
 
 
 def test_oracle_catches_join_mismatch(tmp_path):

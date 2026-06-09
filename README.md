@@ -6,21 +6,22 @@ Slice vertical do diagnostico de performance Spark. Um contrato declarativo
 - `generators/code_generator.py` gera um job PySpark com sentinela e manifesto.
 - `generators/plan_generator.py` gera um event log sintetico sem executar Spark.
 
-O Watcher detecta o anti-pattern. O Oraculo compara o sintetico contra um log real do
-Spark e valida se o comportamento continua fiel.
+O Watcher confirma o anti-pattern no scenario controlado depois de validar a
+distribuicao e a tentativa efetiva das tasks. O Oraculo compara sinais agregados
+e informa divergencias estruturais contra um log real do Spark.
 
 ## Evidencia atual
 
 Validado no Ubuntu/WSL sobre o `dataship-spark-plat-v0`:
 
 ```text
-python -m pytest tests/test_slice.py -q
-s.................... [100%]
+python -m pytest tests -q
+40 passed
 
 watcher: GATE VERDE
 synthetic ratio: 27.9x
 real ratio:      29.5x
-oracle: sintetico fiel ao Spark real dentro da tolerancia
+oracle: sinais agregados calibrados; divergencias estruturais viram warnings
 ```
 
 O documento de linhagem explica o caminho completo da melhoria:
@@ -43,7 +44,7 @@ generators/code_generator.py     # scenario -> job.py + manifesto com scenario_h
 generators/plan_generator.py     # scenario -> event log sintetico com ratio realista
 watchers/skew_watcher.py         # detecta skew e valida acceptance do scenario
 oracle/compare.py                # compara sintetico vs log real
-tests/test_slice.py              # 21 testes: parser, provenance, watcher, oracle
+tests/test_slice.py              # parser, attempts, correlacao, provenance, watcher e oracle
 scenarios/skew_on_join_30x.yaml  # contrato declarativo do anti-pattern
 .github/workflows/scenario-gate.yml
 ```
@@ -54,7 +55,8 @@ scenarios/skew_on_join_30x.yaml  # contrato declarativo do anti-pattern
 flowchart TD
     A["Scenario YAML<br/>contrato do problema"] --> B["Plan Generator<br/>event log sintetico"]
     A --> C["Code Generator<br/>job PySpark e manifesto"]
-    B --> D["Watcher<br/>detecta skew"]
+    B --> Q["Qualidade da evidencia<br/>attempts, zeros e correlacao"]
+    Q --> D["Watcher<br/>detecta skew"]
     D --> E["Finding<br/>causa, evidencia e recomendacao"]
     B --> F["Oraculo<br/>compara com log real"]
     G["real_log.ndjson<br/>execucao Spark real"] --> F
@@ -89,19 +91,24 @@ bash run_slice.sh
 | Antes | v4 corrigido |
 |---|---|
 | Sintetico gerava ratio `15392.3x` | Sintetico gera ratio `27.9x`, perto do real `29.5x` |
-| `read_events` carregava arquivo inteiro | `iter_events` permite leitura em streaming |
+| Tasks falhas, retries e speculation podiam duplicar metricas | Uma tentativa efetiva por particao |
+| Tasks zero eram removidas | Zeros preservados; mediana fria zero invalida a evidencia |
+| `read_events` carregava arquivo inteiro | `iter_events` existe; migrar Watcher e Oracle ainda esta pendente |
 | Um arquivo de log por vez | Aceita diretorio de rolling logs |
-| Stage escolhido por maior volume | Stage do join escolhido por nome + operador |
+| Stage escolhido por maior volume | Correlacao por acumuladores; fallback fica explicito |
 | Plano podia misturar execucoes | Plano associado por `executionId` |
 | Provenance parcial | `scenario_hash` compartilhado entre manifesto e log sintetico |
-| Oraculo apenas avisava divergencia | Oraculo declara fidelidade ou divergencia dentro da tolerancia |
+| Oraculo comparava apenas volume e ratio | Tambem informa hot partition, task type e correlacao |
+| CLIs quebravam em Windows `cp1252` | Saida de status ASCII portavel |
 
 ## Limite honesto
 
-Este slice prova o anti-pattern `skew_on_join_30x` e valida um event log real versionado.
-Ele ainda nao cobre todos os anti-patterns do Apex. Os proximos passos estao documentados
-em `docs/apex-v4-lineage.md`: baseline sem skew, `validation_criteria`, confianca baseada
-em evidencia e Action semanal do Oraculo.
+Este slice calibra o anti-pattern `skew_on_join_30x` contra um event log real
+versionado. A correlacao por acumuladores foi provada no stage 2 do log real.
+Ele ainda nao prova descoberta cega, falso positivo sem skew, processamento
+incremental ou isolamento por aplicacao. Os proximos passos estao documentados
+em `docs/apex-v4-lineage.md` e
+`docs/architecture/validation-evidence-flow.md`.
 
 ## Relacao com o Apex
 

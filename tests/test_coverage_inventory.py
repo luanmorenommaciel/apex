@@ -185,3 +185,34 @@ def test_zero_metrics_do_not_count_as_exercised_scenarios(tmp_path):
 
     assert "spill efetivo (> 0)" in text
     assert "falha, retry ou tentativa especulativa real" in text
+
+
+def test_validation_architecture_keeps_required_views():
+    doc = (
+        ROOT
+        / "docs"
+        / "architecture"
+        / "validation-evidence-flow.md"
+    ).read_text(encoding="utf-8")
+
+    required_sections = [
+        "## Fluxo de validacao",
+        "## Arquitetura proposta",
+        "## Diagrama de sequencia",
+        "## Cadeia de valor",
+        "## Gargalos e pontos de ruptura",
+    ]
+
+    for section in required_sections:
+        assert section in doc
+    assert doc.count("```mermaid") >= 5
+
+    required_validation_concepts = [
+        "Attempts efetivos e zeros",
+        "applicationId e leitura incremental",
+        "Sintetico preserva estrutura observada?",
+        "fidelidade apenas agregada",
+        "saida ASCII portavel",
+    ]
+    for concept in required_validation_concepts:
+        assert concept in doc
