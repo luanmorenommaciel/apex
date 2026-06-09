@@ -22,6 +22,12 @@ watcher:         GATE VERDE
 oracle:          sintetico fiel ao Spark real dentro da tolerancia
 ```
 
+O estudo de cobertura acrescenta uma segunda pergunta para o time:
+
+```text
+Quais diagnosticos o event log consegue sustentar, e quais precisam de outra fonte?
+```
+
 ## Glossario rapido
 
 | Termo | Explicacao simples |
@@ -35,6 +41,10 @@ oracle:          sintetico fiel ao Spark real dentro da tolerancia
 | Oraculo | Comparador que valida se o sintetico parece fiel ao log real. |
 | Provenance | Cadeia de custodia que prova que o log veio do scenario esperado. |
 | Skew | Quando uma particao recebe trabalho muito maior que as outras. |
+| Inventario de cobertura | Script que lista o que o Spark emitiu e o que o Apex usa. |
+| Catalyst | Componente do Spark que analisa e otimiza planos SQL/DataFrame. |
+| AQE | Adaptive Query Execution; ajusta o plano durante a execucao. |
+| AST | Estrutura do codigo usada para localizar padroes sem executar o job. |
 
 ## Fluxo do slice
 
@@ -108,6 +118,84 @@ O slice preserva o contrato nao-intrusivo:
 - sem alterar `SparkSession` do cliente;
 - sem acoplar Apex ao ciclo de vida do job Spark.
 
+## O que o event log permite observar
+
+```mermaid
+flowchart LR
+    CODE["Codigo do usuario"] --> CAT["Catalyst"]
+    CAT --> AQE["AQE"]
+    AQE --> SCH["Scheduler"]
+    SCH --> EXE["Executors"]
+    EXE --> LOG["Event log"]
+    LOG --> APEX["Apex"]
+
+    CODE -.-> BLIND["Corpo de UDF, closure RDD<br/>e codigo local"]
+    EXE -.-> HOST["CPU, disco e rede<br/>do host"]
+    BLIND --> AST["AST ou profiler opt-in"]
+    HOST --> INFRA["Telemetria de infraestrutura"]
+```
+
+O event log captura bem jobs, stages, tasks, planos e metricas. Ele mostra a
+presenca de uma UDF, mas nao o corpo da funcao. Em RDD, ele registra lineage,
+scope e callsite, mas nao a closure executada.
+
+Para a leitura completa, use a
+[fronteira de observabilidade](architecture/event-log-observability-boundary.md).
+Para navegar do produto ate cada metrica e chamada do slice, use o
+[drill-down completo](architecture/apex-solution-drilldown.md).
+
+## O que o inventario v1 descobriu
+
+O script analisou uma aplicacao com 57 eventos e 18 tipos de evento:
+
+| Classe | Resultado | Leitura |
+|---|---:|---|
+| A | 7 campos | O Apex atual ja consome |
+| B* | 32 caminhos | Sinais valiosos presentes, ainda sem consumo |
+| B | 254 caminhos | Outros campos observados |
+
+Os 32 caminhos B* nao representam 32 features. Eles agrupam sinais como spill,
+CPU, GC, shuffle write, RDD Info e `sparkPlanInfo`.
+
+O achado mais pratico para a Crew A:
+
+```text
+spill, CPU time, GC, input e shuffle write ja estao no log;
+o trabalho futuro e parsing, Watcher e validacao.
+```
+
+O corpus atual ainda nao exercita UDF, streaming, AQE update, spill real, retry
+ou perda de executor. O time precisa criar scenarios antes de afirmar cobertura
+para esses casos.
+
+## Estado das skills e componentes futuros
+
+O estudo cita WarpGrep, AST Classifier, CodeGrounder, RAG e Tier 2. Esses nomes
+nao representam diagnosticos validados.
+
+| Item | Estado correto |
+|---|---|
+| WarpGrep | Ferramenta instalada para apoiar busca; nao testada como parte do Apex |
+| stop-slop | Usada para revisar o texto da documentacao |
+| Mermaid e imagegen | Usados para produzir material visual |
+| AST Classifier | Proposta para analisar UDF, RDD e `collect()` no codigo |
+| CodeGrounder | Proposta para ligar evidencia a arquivo e linha |
+| RAG no ClickHouse | Sugestao para recuperar casos e contexto |
+| Tier 2 | Proposto e ainda bloqueado por falta de evidencia |
+
+O diagnostico comprovado continua sendo `skew_on_join_30x`. O inventario de
+cobertura tambem foi executado, mas ele mede campos; ele nao diagnostica novos
+anti-patterns.
+
+## Visao visual para a reuniao
+
+![Apex - fronteira de observabilidade do Spark](architecture/assets/spark-event-log-observability-boundary.png)
+
+Use esta imagem para explicar as camadas do Spark e a fronteira do event log. Em
+seguida, abra o
+[drill-down completo](architecture/apex-solution-drilldown.md) para mostrar os
+fluxos macro, os componentes, a sequencia validada e a arquitetura alvo.
+
 ## O que a v4 corrigiu
 
 A versao anterior detectava skew, mas o sintetico exagerava o problema:
@@ -141,6 +229,8 @@ Use esta ordem na reuniao:
 5. Ler o Finding emitido pelo Watcher.
 6. Comparar `27.9x` sintetico contra `29.5x` real.
 7. Separar o que esta provado do que ainda e proximo passo.
+8. Mostrar o inventario e separar campo disponivel de ponto cego real.
+9. Abrir o drill-down e marcar o que esta validado, observado ou proposto.
 
 ## O que esta provado
 
@@ -152,6 +242,8 @@ Use esta ordem na reuniao:
 | Comparacao com log real | Provado no slice atual |
 | Testes automatizados | Provado no slice atual |
 | Gate inicial de CI | Provado no slice atual |
+| Inventario reproduzivel de campos | Provado sobre o corpus v1 |
+| Campos de spill presentes no log | Observados com valor zero; falta scenario com spill real |
 
 ## O que ainda nao esta provado
 
@@ -163,6 +255,9 @@ Use esta ordem na reuniao:
 | Persistencia em ClickHouse | A prova atual usa arquivos versionados. |
 | Comentario automatico em PR | Existe gate inicial, mas nao comentario de review. |
 | Core em Go | A prova atual usa Python como laboratorio e spec executavel. |
+| Cobertura completa do event log | O corpus atual contem uma aplicacao. |
+| Diagnostico da logica interna de UDF | O event log nao inclui o corpo executado. |
+| Cobertura de Serverless | Exige Query Profile ou system tables. |
 
 ## Decisoes que o time precisa tomar
 
@@ -205,10 +300,12 @@ Priorizar depois da validacao:
 3. Melhorar `confidence` com evidencia real.
 4. Criar Action semanal do Oraculo contra log real versionado.
 5. Desenhar schema ClickHouse para Findings.
+6. Montar corpus com join, RDD, UDF, streaming, falha e spill.
+7. Priorizar os sinais B* antes de criar nova coleta.
 
 ## Roteiro para apresentacao
 
-Tempo sugerido: 15 a 20 minutos.
+Tempo sugerido: 20 a 25 minutos.
 
 | Tempo | Tema | Mensagem |
 |---|---|---|
@@ -218,6 +315,7 @@ Tempo sugerido: 15 a 20 minutos.
 | 4 min | Evidencia | Ratio sintetico 27.9x contra real 29.5x. |
 | 3 min | Arquitetura | Apex fica externo, lendo event log nativo. |
 | 4 min | Decisao | Time decide se segue com slices pequenos e validados. |
+| 4 min | Cobertura | Separar sinais disponiveis, lacunas do corpus e pontos cegos. |
 
 ## Como o capitao pode conduzir
 
@@ -234,4 +332,3 @@ Frase boa para fechar:
 ```text
 Se o time concordar com esta abordagem, o proximo passo nao e aumentar o escopo. O proximo passo e repetir o mesmo padrao com baseline sem skew e criterios de validacao mais claros.
 ```
-

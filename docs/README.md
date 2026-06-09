@@ -1,17 +1,23 @@
 # Apex Docs
 
-Este diretorio organiza o material do slice `skew_on_join_30x` v4 corrigido.
+Este diretorio organiza o material do slice `skew_on_join_30x` v4 corrigido e o
+estudo empirico da fronteira de observabilidade do Spark event log.
 
 ## Leitura recomendada
 
-1. `team-validation-guide.md` guia a revisao com a Crew A: fluxo, arquitetura, evidencia e decisoes.
-2. `adr-review-drafts.md` organiza a leitura das ADRs para revisao antes de comentar oficialmente.
-3. `github-issue-comment-drafts.md` guarda rascunhos de issue e comentarios para validacao antes de publicar no GitHub.
-4. `apex-v4-lineage.md` explica a linhagem da melhoria: baseline antigo, falhas, correcao e evidencia.
-5. `specs/skew-slice-v4.md` define o contrato tecnico do slice.
-6. `playbooks/skew-slice-v4.md` mostra como rodar, validar e interpretar o resultado.
-7. `agentspec-alignment.md` mostra como o slice segue o estilo AgentSpec.
-8. `presentations/apex-v2-aqe-learnings.html` preserva a apresentacao tecnica usada para explicar os achados do AQE.
+1. [Guia de validacao](team-validation-guide.md) orienta a revisao com a Crew A.
+2. [Rascunhos de ADR](adr-review-drafts.md) organiza a leitura antes de comentar oficialmente.
+3. [Rascunhos de issues](github-issue-comment-drafts.md) guarda comentarios para validacao.
+4. [Linhagem da v4](apex-v4-lineage.md) explica baseline, falhas, correcao e evidencia.
+5. [Spec do slice de skew](specs/skew-slice-v4.md) define o contrato tecnico.
+6. [Playbook do slice](playbooks/skew-slice-v4.md) mostra como rodar e interpretar.
+7. [Alinhamento com AgentSpec](agentspec-alignment.md) registra o modelo de organizacao.
+8. [Apresentacao AQE](presentations/apex-v2-aqe-learnings.html) preserva os achados apresentados.
+9. [Spec do inventario](specs/event-log-coverage-inventory-v1.md) define o contrato de cobertura.
+10. [Fronteira de observabilidade](architecture/event-log-observability-boundary.md) explica limites e fontes.
+11. [Drill-down completo](architecture/apex-solution-drilldown.md) vai do contexto do produto ate task metrics e sequencias.
+12. [Guia do inventario](coverage/README.md) ensina a executar e interpretar.
+13. [Relatorio v1](coverage/apex-coverage-report-v1.md) registra o corpus atual.
 
 ## Papel de cada documento
 
@@ -25,6 +31,11 @@ Este diretorio organiza o material do slice `skew_on_join_30x` v4 corrigido.
 | `playbooks/skew-slice-v4.md` | Passo a passo para operar e validar |
 | `agentspec-alignment.md` | Encaixe com Spec-Driven Data Engineering |
 | `presentations/apex-v2-aqe-learnings.html` | Apresentacao para alinhamento com o time |
+| `specs/event-log-coverage-inventory-v1.md` | Contrato, classificacao A-F e limites do inventario |
+| `architecture/event-log-observability-boundary.md` | Arquitetura Spark, fronteira do event log e fontes complementares |
+| `architecture/apex-solution-drilldown.md` | Visao L0-L5, sequencia validada, arquitetura alvo e matriz de comprovacao |
+| `coverage/README.md` | Guia de execucao e leitura do relatorio |
+| `coverage/apex-coverage-report-v1.md` | Evidencia produzida pelo corpus atual |
 
 ## Fluxo mental do slice
 
@@ -39,6 +50,23 @@ flowchart LR
 ```
 
 Para uma leitura menos tecnica, comece pelo `team-validation-guide.md`. Para revisao de engenharia, use a spec e o playbook.
+
+## Fluxo do estudo de cobertura
+
+```mermaid
+flowchart LR
+    A["Event logs reais"] --> B["Inventario"]
+    B --> C["Campos A-F"]
+    C --> D["Parser e Watchers"]
+    C --> E["Novos scenarios"]
+    C --> F["AST ou adapter complementar"]
+```
+
+O slice de skew prova um caso de diagnostico. O inventario mede quais sinais
+podem sustentar os proximos casos.
+
+Para apresentar a solucao do macro ao detalhe, use o
+[drill-down completo](architecture/apex-solution-drilldown.md).
 
 ## Evidencia principal
 

@@ -1,8 +1,11 @@
 # Rascunhos de Comentarios para Issues e ADRs
 
-Este documento guarda os rascunhos de comentarios que podem ser usados depois nas issues e ADRs do Apex.
+Este documento guarda textos publicados no inicio do estudo e novos rascunhos
+que ainda dependem de revisao.
 
-Nada aqui foi publicado nas issues. O objetivo e permitir revisao da Crew A antes de registrar qualquer comentario oficial no GitHub.
+A issue #29 ja existe. Os blocos marcados como rascunho abaixo nao foram
+publicados. O objetivo e revisar o texto na branch antes de alterar o historico
+oficial das issues.
 
 Contexto correto:
 
@@ -15,6 +18,82 @@ Branch de referencia:
 
 ```text
 gustocezar/feature/desacoplamento-geradores
+```
+
+## Rascunho de atualizacao da issue #29
+
+Publicar este comentario somente depois que os novos documentos receberem commit
+e push na branch.
+
+```md
+## Atualizacao do material para validacao
+
+O estudo ganhou uma camada de cobertura e arquitetura sem ampliar o que
+consideramos validado.
+
+### O que foi acrescentado
+
+- inventario executavel de campos do Spark event log;
+- relatorio empirico sobre o corpus atual;
+- fronteira de observabilidade do event log;
+- drill-down da solucao do contexto do produto ate task metrics;
+- sequencia detalhada do slice atual;
+- sequencia da arquitetura alvo com ClickHouse, AST e Tier 2.
+
+### Estado correto da validacao
+
+| Capacidade | Estado |
+|---|---|
+| `skew_on_join_30x` | Validado localmente |
+| Watcher e Oraculo de skew | Validados |
+| Inventario do event log | Executado sobre uma aplicacao |
+| Spill, CPU, GC e shuffle write | Campos observados; sem diagnostico validado |
+| UDF, RDD, AST Classifier e CodeGrounder | Propostos; nao testados |
+| ClickHouse, RAG e Tier 2 | Arquitetura em discussao |
+
+O unico anti-pattern diagnosticado de ponta a ponta continua sendo skew em
+join. O inventario mostra oportunidades de parsing e novos scenarios; ele nao
+prova que esses novos diagnosticos funcionam.
+
+### Novos documentos para revisao
+
+- `docs/specs/event-log-coverage-inventory-v1.md`
+- `docs/coverage/apex-coverage-report-v1.md`
+- `docs/architecture/event-log-observability-boundary.md`
+- `docs/architecture/apex-solution-drilldown.md`
+- `docs/coverage/README.md`
+
+Peco que a Crew A revise principalmente:
+
+1. se a separacao entre validado, observado e proposto esta correta;
+2. se o fluxo macro representa a arquitetura desejada;
+3. se ClickHouse deve armazenar logs brutos, modelo normalizado e Findings;
+4. qual scenario deve ampliar o corpus depois do baseline sem skew.
+```
+
+## Rascunho de resposta ao comentario sobre RAG e ClickHouse
+
+Resposta sugerida para o comentario de Josenyldo na issue #29:
+
+```md
+Obrigado, Josenyldo. A ideia de manter no ClickHouse um corpus de execucoes de
+referencia faz sentido para dar historico, rastreabilidade e uma base comum ao
+Oraculo.
+
+Eu separaria duas responsabilidades:
+
+1. O Oraculo compara metricas de forma deterministica, por exemplo operador de
+join, hot task, skew ratio, volume e tolerancia.
+2. Uma RAG recupera execucoes semelhantes, Findings anteriores e documentacao
+para enriquecer a explicacao.
+
+Assim, a RAG ajuda com contexto, mas nao decide sozinha se o log sintetico e fiel
+ao real. Antes disso, precisamos definir no ClickHouse a identidade do scenario,
+versao do Spark/runtime, provenance, metricas comparaveis e criterio para marcar
+uma execucao como referencia confiavel.
+
+Vou levar esse ponto para a revisao da Crew A como parte da arquitetura alvo. No
+slice atual, a comparacao continua usando o `real_log.ndjson` versionado.
 ```
 
 ## Issue do slice
@@ -305,4 +384,3 @@ Em vez de cada pessoa seguir por um caminho isolado, o estudo gerou uma fatia re
 
 Isso nao encerra a discussao, mas ajuda o time a avaliar a decisao com artefato concreto em vez de apenas intencao.
 ```
-

@@ -212,3 +212,8 @@ Este slice cobre skew em join. Ele nao implementa ainda:
 - confidence baseada em evidencia;
 - Action semanal do Oraculo;
 - integracao com comentario automatico em PR.
+
+Consulte a [spec do inventario](event-log-coverage-inventory-v1.md) para os
+sinais disponiveis no Spark event log. A
+[fronteira de observabilidade](../architecture/event-log-observability-boundary.md)
+explica os pontos cegos e as fontes complementares.
