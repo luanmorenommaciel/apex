@@ -26,6 +26,10 @@ Campos principais:
 | `oracle.tolerance` | Tolerancia para comparar sintetico e real |
 | `acceptance.root_cause_includes` | Termos obrigatorios no Finding |
 
+O scenario ainda nao implementa `validation_criteria`. A
+[proposta para validacao da Crew A](scenario-validation-criteria-v1.md) define
+um gate de qualidade da evidencia antes do Watcher.
+
 ## Fluxo
 
 ```text
@@ -208,6 +212,7 @@ Coberturas obrigatorias:
 Este slice cobre skew em join. Ele nao implementa ainda:
 
 - baseline sem skew;
+- `validation_criteria` aprovado e executavel;
 - watchers de memory/cost;
 - confidence baseada em evidencia;
 - Action semanal do Oraculo;

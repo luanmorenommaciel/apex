@@ -45,6 +45,7 @@ Quais diagnosticos o event log consegue sustentar, e quais precisam de outra fon
 | Catalyst | Componente do Spark que analisa e otimiza planos SQL/DataFrame. |
 | AQE | Adaptive Query Execution; ajusta o plano durante a execucao. |
 | AST | Estrutura do codigo usada para localizar padroes sem executar o job. |
+| Validation criteria | Regras que confirmam se o log possui qualidade suficiente antes do Watcher. |
 
 ## Fluxo do slice
 
@@ -187,6 +188,34 @@ O diagnostico comprovado continua sendo `skew_on_join_30x`. O inventario de
 cobertura tambem foi executado, mas ele mede campos; ele nao diagnostica novos
 anti-patterns.
 
+## Proposta de `validation_criteria`
+
+O scenario atual ja declara o comportamento esperado e o Finding minimo. Falta
+um gate que rejeite logs incompletos ou distribuicoes artificiais antes do
+Watcher.
+
+```mermaid
+flowchart LR
+    S["Scenario"] --> L["Event log"]
+    L --> V["Validation criteria"]
+    V -->|"evidencia valida"| W["Watcher"]
+    V -->|"evidencia invalida"| E["Falha antes do diagnostico"]
+```
+
+Exemplos de criterios em discussao:
+
+- exigir os eventos de SQL, stage e task;
+- exigir oito tasks com trabalho no stage alvo;
+- rejeitar colapso em uma unica task;
+- exigir mediana fria maior que zero;
+- confirmar o operador `SortMergeJoin`;
+- exigir ratio minimo no scenario de skew;
+- exigir ratio maximo no baseline sem skew.
+
+A proposta completa esta em
+[`specs/scenario-validation-criteria-v1.md`](specs/scenario-validation-criteria-v1.md).
+Ela ainda nao altera o scenario nem o Watcher.
+
 ## Visao visual para a reuniao
 
 ![Apex - fronteira de observabilidade do Spark](architecture/assets/spark-event-log-observability-boundary.png)
@@ -231,6 +260,7 @@ Use esta ordem na reuniao:
 7. Separar o que esta provado do que ainda e proximo passo.
 8. Mostrar o inventario e separar campo disponivel de ponto cego real.
 9. Abrir o drill-down e marcar o que esta validado, observado ou proposto.
+10. Revisar a proposta de `validation_criteria` e decidir quem implementa o gate.
 
 ## O que esta provado
 

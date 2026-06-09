@@ -14,10 +14,11 @@ estudo empirico da fronteira de observabilidade do Spark event log.
 7. [Alinhamento com AgentSpec](agentspec-alignment.md) registra o modelo de organizacao.
 8. [Apresentacao AQE](presentations/apex-v2-aqe-learnings.html) preserva os achados apresentados.
 9. [Spec do inventario](specs/event-log-coverage-inventory-v1.md) define o contrato de cobertura.
-10. [Fronteira de observabilidade](architecture/event-log-observability-boundary.md) explica limites e fontes.
-11. [Drill-down completo](architecture/apex-solution-drilldown.md) vai do contexto do produto ate task metrics e sequencias.
-12. [Guia do inventario](coverage/README.md) ensina a executar e interpretar.
-13. [Relatorio v1](coverage/apex-coverage-report-v1.md) registra o corpus atual.
+10. [Proposta de validation criteria](specs/scenario-validation-criteria-v1.md) define o gate de qualidade da evidencia.
+11. [Fronteira de observabilidade](architecture/event-log-observability-boundary.md) explica limites e fontes.
+12. [Drill-down completo](architecture/apex-solution-drilldown.md) vai do contexto do produto ate task metrics e sequencias.
+13. [Guia do inventario](coverage/README.md) ensina a executar e interpretar.
+14. [Relatorio v1](coverage/apex-coverage-report-v1.md) registra o corpus atual.
 
 ## Papel de cada documento
 
@@ -32,6 +33,7 @@ estudo empirico da fronteira de observabilidade do Spark event log.
 | `agentspec-alignment.md` | Encaixe com Spec-Driven Data Engineering |
 | `presentations/apex-v2-aqe-learnings.html` | Apresentacao para alinhamento com o time |
 | `specs/event-log-coverage-inventory-v1.md` | Contrato, classificacao A-F e limites do inventario |
+| `specs/scenario-validation-criteria-v1.md` | Proposta de gate para validar evidencia antes do Watcher |
 | `architecture/event-log-observability-boundary.md` | Arquitetura Spark, fronteira do event log e fontes complementares |
 | `architecture/apex-solution-drilldown.md` | Visao L0-L5, sequencia validada, arquitetura alvo e matriz de comprovacao |
 | `coverage/README.md` | Guia de execucao e leitura do relatorio |
