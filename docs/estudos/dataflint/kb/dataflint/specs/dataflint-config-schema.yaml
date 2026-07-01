@@ -1,0 +1,134 @@
+# DataFlint Plugin Config Schema
+# MCP Validated: Full-source validation 2026-06-22 (GitHub README + GitBook docs + dataflint.io)
+# Machine-readable reference for the spark.plugins (DataFlint value) and spark.dataflint.* configs.
+# Values confirmed against github.com/dataflint/spark + dataflint.gitbook.io (OSS plugin).
+
+schema_version: "1.0"
+domain: dataflint
+file_type: config-reference
+last_validated: "2026-06-22"
+source: "DataFlint OSS docs: github.com/dataflint/spark + dataflint.gitbook.io/dataflint-for-spark"
+
+# Current artifact version observed at validation time (CONFIRM on Maven Central before pinning).
+current_version: "0.9.9"
+
+artifacts:
+  spark_3x_scala_2_12:
+    coordinate: "io.dataflint:spark_2.12:<ver>"
+    applies_to: "Spark 3.2 - 3.5.x built with Scala 2.12 (default Spark 3.5 build; this repo)"
+  spark_3x_scala_2_13:
+    coordinate: "io.dataflint:spark_2.13:<ver>"
+    applies_to: "Spark 3.2 - 3.5.x built with Scala 2.13"
+  spark_4x:
+    coordinate: "io.dataflint:dataflint-spark4_2.13:<ver>"
+    applies_to: "Spark 4.x (separate artifact line; Scala 2.13). Canonical artifactId uses a HYPHEN; GitBook underscore variant dataflint_spark4_2.13 appears to be a docs typo."
+  databricks_17_3_plus:
+    coordinate: "io.dataflint:dataflint-spark4-databricks_2.13:<ver>"
+    applies_to: "Databricks Runtime 17.3+ (ships javax.servlet instead of jakarta.servlet). SAME plugin class; only the coordinate differs."
+
+records:
+  plugin_registration:
+    description: "spark.plugins — the single config that activates DataFlint (in-process)."
+    fields:
+      spark.plugins:
+        default: "(unset)"
+        type: string
+        allowed_values: "comma-separated SparkPlugin FQCNs"
+        dataflint_value: "io.dataflint.spark.SparkDataflintPlugin"
+        notes: "Set to io.dataflint.spark.SparkDataflintPlugin to enable. Comma-append if other plugins are already registered; do not overwrite. Removing this line cleanly removes DataFlint (diagnose-only, no execution impact)."
+      spark.jars.packages:
+        default: "(unset)"
+        type: string
+        allowed_values: "Maven coordinates"
+        notes: "Resolves the jar from Maven at RUNTIME. Fails on egress-blocked K8s pods. Use spark.jars (pre-staged) or bake the jar into the image instead. Example: io.dataflint:spark_2.12:0.9.9"
+      spark.jars:
+        default: "(unset)"
+        type: string
+        allowed_values: "paths/URIs to already-resolved jars"
+        notes: "Supply a pre-staged DataFlint jar (e.g. s3a://artifacts/dataflint-spark_2.12-0.9.9.jar) without Maven resolution. Preferred on egress-blocked pods."
+
+  dataflint_options:
+    description: "spark.dataflint.* — DataFlint OSS plugin behaviour flags."
+    fields:
+      spark.dataflint.telemetry.enabled:
+        default: "true"
+        type: boolean
+        allowed_values: "true | false"
+        notes: "Anonymous MixPanel telemetry; collects ONLY Spark version + App id (no job data). Set FALSE for internal/regulated data (recommended default on this platform). Off => in-process only."
+      spark.dataflint.iceberg.autoCatalogDiscovery:
+        default: "false"
+        type: boolean
+        allowed_values: "true | false"
+        notes: "CONFIRMED. Enables Apache Iceberg WRITE metrics (auto-discovers the Iceberg catalog)."
+
+  native_spark_recommended:
+    description: "Native Spark configs DataFlint recommends (NOT spark.dataflint.* keys)."
+    fields:
+      spark.sql.maxMetadataStringLength:
+        default: "(Spark default, typically 100)"
+        type: int
+        allowed_values: "positive integer"
+        notes: "Native Spark. Recommend 1000 so the full filter predicate is logged untruncated, supporting the 'Long Filter Conditions' alert."
+
+  instrumentation:
+    description: >
+      CONFIRMED. Query-plan instrumentation wraps physical-plan nodes in a TimedExec wrapper
+      that adds 'duration' + 'rddId' SQL metrics (Spark does not report these by default).
+      OPTIONAL, opt-in, EXPERIMENTAL — instruments your physical plan, use with caution.
+      ALL flags default to false. Requires spark.plugins=io.dataflint.spark.SparkDataflintPlugin.
+    source: "dataflint.gitbook.io/dataflint-for-spark integrations/spark-instrumentation (+ 3 sub-pages), delta-lake-integration"
+    fields:
+      spark.dataflint.instrument.spark.enabled:
+        default: "false"
+        type: boolean
+        notes: "GLOBAL toggle — enables ALL Spark instrumentation below (UDF + window + sqlNodes)."
+      spark.dataflint.instrument.spark.mapInPandas.enabled:
+        default: "false"
+        notes: "MapInPandasExec (DataFrame.mapInPandas). Spark 3.3–4.1."
+      spark.dataflint.instrument.spark.mapInArrow.enabled:
+        default: "false"
+        notes: "PythonMapInArrowExec/MapInArrowExec (DataFrame.mapInArrow). Spark 3.3–4.1."
+      spark.dataflint.instrument.spark.arrowEvalPython.enabled:
+        default: "false"
+        notes: "ArrowEvalPythonExec — scalar / scalar-iterator pandas_udf. Spark 3.2–4.1."
+      spark.dataflint.instrument.spark.batchEvalPython.enabled:
+        default: "false"
+        notes: "BatchEvalPythonExec — regular pickle-based @udf. Spark 3.0–4.1."
+      spark.dataflint.instrument.spark.flatMapGroupsInPandas.enabled:
+        default: "false"
+        notes: "FlatMapGroupsInPandasExec — GroupedData.applyInPandas(). Spark 3.0–4.1."
+      spark.dataflint.instrument.spark.flatMapCoGroupsInPandas.enabled:
+        default: "false"
+        notes: "FlatMapCoGroupsInPandasExec — PandasCogroupedOps.applyInPandas(). Spark 3.0–4.1."
+      spark.dataflint.instrument.spark.window.enabled:
+        default: "false"
+        notes: "WindowExec / WindowInPandasExec / ArrowWindowPythonExec. Spark 3.x–4.x."
+      spark.dataflint.instrument.spark.sqlNodes.enabled:
+        default: "false"
+        notes: >
+          Core SQL nodes: Filter/Project/Expand/Generate, Sort/SortAggregate/HashAggregate,
+          SortMergeJoin/BroadcastHashJoin/BroadcastNestedLoopJoin/CartesianProduct,
+          FileSourceScan/RowDataSourceScan/BatchScan/RDDScan/WindowGroupLimit, DataWritingCommand.
+          NEVER wraps InMemoryTableScanExec or any Exchange node. Spark 3.x–4.x.
+      spark.dataflint.instrument.deltalake.enabled:
+        default: "false"
+        notes: "Delta Lake metadata (partition / liquid-clustering / Z-Order columns). v0.7.0+, experimental; flaky on Databricks."
+      spark.dataflint.instrument.deltalake.collectZindexFields:
+        default: "false"
+        notes: "Scan Delta history to detect Z-Order columns (overhead on first access; result cached)."
+      spark.dataflint.instrument.deltalake.cacheZindexFieldsToProperties:
+        default: "true"
+        notes: "Cache discovered Z-Order cols in table property 'dataflint.zorderFields'. Set false in read-only envs."
+      spark.dataflint.instrument.deltalake.historyLimit:
+        default: "1000"
+        type: int
+        notes: "Max Delta history entries scanned for Z-Order detection."
+
+security:
+  oss_in_process: "OSS plugin runs in-process and reads the same metrics the Spark UI exposes. With telemetry off it adds a UI surface, not new data collection. Removable by deleting spark.plugins (+ the jar config)."
+  saas_separate: "The SaaS/cloud product is a SEPARATE opt-in that ships run data EXTERNALLY. It must NOT be enabled on this platform's agricultural + customer data without explicit authorization. Treat enabling external egress as a CRITICAL (0.98) decision."
+
+prerequisites_history_server:
+  spark.eventLog.enabled: "true (set on jobs; otherwise no event log exists to replay)"
+  spark.eventLog.dir: "s3a://<bucket>/spark-events (MinIO; set on jobs)"
+  spark.history.fs.logDirectory: "s3a://<bucket>/spark-events (MUST equal spark.eventLog.dir; #1 cause of an empty DataFlint-on-SHS view when mismatched)"
