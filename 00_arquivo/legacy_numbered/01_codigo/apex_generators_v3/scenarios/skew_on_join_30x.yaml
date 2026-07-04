@@ -1,0 +1,43 @@
+scenario_id: skew_on_join_30x
+version: 3
+owner: pod-a1
+status: prototype
+
+anti_pattern:
+  class: data_skew_on_join_key
+  severity: high
+
+code_generator:
+  language: pyspark
+  emits: job.py
+  # anti_pattern_line e agora um OUTPUT (vai pro manifesto). Se declarado aqui, o gerador
+  # apenas AVISA na divergencia, nao quebra o build. Deixe ausente para nao precisar manter.
+  data:
+    orders:    { rows: 200000, distinct_keys: 100, hot_key: 7, hot_share: 0.80 }
+    customers: { rows: 100, distinct_keys: 100 }
+  spark_config:
+    spark.sql.adaptive.enabled: "false"
+    spark.sql.adaptive.skewJoin.enabled: "false"
+    spark.sql.shuffle.partitions: "8"
+    spark.sql.adaptive.coalescePartitions.enabled: "false"
+    spark.sql.adaptive.autoBroadcastJoinThreshold: "-1"
+
+plan_generator:
+  emits: event-log.ndjson
+  strategy: synthesize
+  expected_signals:
+    join_operator: SortMergeJoin
+    hot_stage: 4
+    skew_ratio_min: 10
+    # volume da task quente observado no plat-v0 (200000 orders + 100 customers)
+    hot_partition: { single_task_shuffle_read_records: 200100 }
+
+oracle:
+  enabled: true
+  cadence: weekly
+  tolerance: { skew_ratio: 0.30, records: 0.25 }
+  on_divergence: fail_and_open_issue
+
+acceptance:
+  root_cause_includes: ["data skew", "customer_id", "SortMergeJoin"]
+  min_recommendations: 1

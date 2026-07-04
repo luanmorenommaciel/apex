@@ -1,0 +1,33 @@
+# CODEOWNERS — quem revisa o quê
+#
+# Quando alguem abre um PR que toca uma pasta, o GitHub pede review do dono dela
+# AUTOMATICAMENTE. Isso garante que ninguem mergeia mudanca numa pasta sem o dono
+# daquele componente olhar. E a forma de fazer "cada um cuida do seu pedaco" virar
+# regra, nao so combinado verbal.
+#
+# Formato:  <caminho>   <responsavel(eis)>
+# (substitua os @handles pelos usuarios reais do GitHub quando o acesso for liberado)
+
+# A costura: mudanca em contrato exige review de TODO MUNDO afetado.
+/contracts/                @augusto-captain @gabriel @guilherme
+
+# Substrato compartilhado
+/platform/                 @gabriel
+
+# Move a telemetria (Go)
+/collector/                @guilherme
+
+# Detectores
+/watchers/shuffle/         @pod-a1
+/watchers/memory/          @pod-a2
+/classifier/               @pod-a3
+/coordinator/              @pod-a4
+/judge/                    @pod-a4
+/recommendation/           @pod-a4
+
+# Cenarios de teste (golden fixtures) — o time todo cuida
+/scenarios/                @augusto-captain
+
+# CI e governanca — Captain
+/.github/                  @augusto-captain
+/CODEOWNERS                @augusto-captain

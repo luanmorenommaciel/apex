@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Apex · Alinhamento dos Pods</title><style>body{background:#060608;color:#E8E4D8;font-family:sans-serif;padding:40px}</style></head>
+<body>
+<h1>Divisão de Pods e Alinhamento</h1>
+<h2>Pods principais</h2>
+<ul><li><strong>Pod 1 (Data Collection)</strong> – Gabriel: eventlog-loader, ClickHouse, fingerprint do plano.</li>
+<li><strong>Pod 2 (Geradores)</strong> – Augusto: scenarios, code_generator, plan_generator, CLI.</li>
+<li><strong>Pod 3 (Oráculo/CI)</strong> – (a definir): workflows, comparação automática, gate de PR.</li>
+<li><strong>Watcher A1–A4</strong> – (a definir): detectores de skew, memória, AST, coordinator.</li></ul>
+<h2>Workflow de contribuição</h2>
+<pre>Issue → Branch → Código → PR → CI (plan_generator + validação) → Revisão → Merge</pre>
+<h2>CODEOWNERS (proposto)</h2>
+<pre>/contracts/        @luan @gustocezar
+/generators/       @gustocezar
+/platform/         @Gabriel-Philot
+/watchers/shuffle/ @pod-a1-lead</pre>
+<h2>Sincronização</h2>
+<ul><li>Daily (15min) – cada pod atualiza</li>
+<li>Weekly (1h) – revisão de issues/ADRs</li>
+<li>Sync com Luan – quinzenal</li></ul>
+</body>
+</html>

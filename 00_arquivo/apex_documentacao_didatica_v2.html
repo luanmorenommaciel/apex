@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Apex · Documentação Didática v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060608;--sf2:#12141A;--bd:#1F2335;--bd2:#272B3D;
+  --gold:#C8943A;--gol2:#E8AE4A;--gol3:#F5C668;
+  --red2:#C04040;--grn2:#2A8A58;--bl3:#4A82D4;--or2:#D4724A;
+  --tx:#E8E4D8;--tx2:#8A8C9E;--tx3:#4A4D62;
+  --serif:'Playfair Display',Georgia,serif;--mono:'Space Mono',monospace;--sans:'Inter',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);line-height:1.6}
+.page{max-width:860px;margin:0 auto;padding:40px 40px 80px}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;margin-bottom:32px;border-bottom:.5px solid var(--bd)}
+.brand{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase}
+.meta{display:flex;gap:16px;flex-wrap:wrap}
+.mi{font-family:var(--mono);font-size:10px;color:var(--tx3)}.mi span{color:var(--tx2)}
+h1{font-family:var(--serif);font-size:2.4rem;font-weight:400;line-height:1.05;margin-bottom:8px}
+h1 em{font-style:italic;color:var(--gol2)}
+.sub{font-size:13.5px;color:var(--tx2);max-width:700px;margin-bottom:28px}
+h2{font-family:var(--serif);font-size:1.5rem;font-weight:400;margin:36px 0 10px;padding-top:32px;border-top:.5px solid var(--bd)}
+h2 em{font-style:italic;color:var(--gol2)}
+h3{font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 7px}
+p{font-size:13px;color:var(--tx2);line-height:1.68;margin-bottom:7px}
+p strong{color:var(--tx)}p code,td code,li code{font-family:var(--mono);font-size:11px;color:var(--gol3);background:rgba(200,148,58,.08);padding:1px 5px;border-radius:3px}
+pre{background:var(--sf2);border:.5px solid var(--bd2);border-radius:6px;padding:13px 15px;font-family:var(--mono);font-size:11px;color:var(--tx2);line-height:1.5;overflow-x:auto;margin:8px 0}
+pre .ok{color:var(--grn2)}pre .bad{color:var(--red2)}pre .dim{color:var(--tx3)}pre .hl{color:var(--gol3)}
+.box{background:var(--sf2);border:.5px solid var(--bd);border-left:2px solid var(--gold);border-radius:6px;padding:11px 15px;margin:8px 0}
+.box.grn{border-left-color:var(--grn2)}.box.red{border-left-color:var(--red2)}.box.blu{border-left-color:var(--bl3)}
+.bl{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.box.grn .bl{color:var(--grn2)}.box.red .bl{color:var(--red2)}.box.blu .bl{color:var(--bl3)}
+.bb{font-size:12.5px;color:var(--tx2);line-height:1.6}.bb strong{color:var(--tx)}.bb code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+.concept{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+.c{background:var(--sf2);border:.5px solid var(--bd);border-radius:7px;padding:12px 14px}
+.ct{font-family:var(--mono);font-size:10px;color:var(--gold);margin-bottom:5px;letter-spacing:.05em}
+.cb{font-size:12px;color:var(--tx2);line-height:1.5}.cb strong{color:var(--tx)}.cb code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+th{font-family:var(--mono);font-size:9px;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;padding:5px 9px;border-bottom:.5px solid var(--bd2);text-align:left}
+td{padding:7px 9px;border-bottom:.5px solid var(--bd);color:var(--tx2);vertical-align:top;line-height:1.45}
+td strong{color:var(--tx)}
+ol,ul{padding-left:20px;margin:8px 0}
+li{font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:3px}
+li strong{color:var(--tx)}li code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+.ex{background:rgba(200,148,58,.06);border:.5px solid rgba(200,148,58,.2);border-radius:6px;padding:12px 15px;margin:8px 0}
+.ex-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.ex-body{font-size:12.5px;color:var(--tx2);line-height:1.6}.ex-body strong{color:var(--tx)}.ex-body code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+footer{margin-top:44px;padding-top:14px;border-top:.5px solid var(--bd);font-family:var(--mono);font-size:10px;color:var(--tx3);text-align:center}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="topbar">
+  <div class="brand">Apex · Documentação Didática v2</div>
+  <div class="meta">
+    <div class="mi">versão <span>2.0</span></div>
+    <div class="mi">data <span>06 jun 2026</span></div>
+    <div class="mi">público <span>engenheiros de dados · novos membros · revisão técnica</span></div>
+  </div>
+</div>
+
+<h1>Documentação Didática<br><em>Apex v3</em></h1>
+<p class="sub">Material de estudo e referência técnica atualizado para o v3. Cobre a jornada completa v1→v3, incluindo os conceitos do AQE, a arquitetura da apexlib, e os 12 pontos de falha como lições aprendidas — não como erros a esconder.</p>
+
+<h2>1 · <em>Conceitos</em> fundamentais</h2>
+<div class="concept">
+  <div class="c"><div class="ct">Contrato (scenario.yaml)</div><div class="cb">Arquivo YAML que descreve um anti-pattern. Ambos os geradores leem o mesmo contrato de forma independente — nenhum chama o outro. É o que torna o desacoplamento possível.<br><strong>Analogia:</strong> uma tomada elétrica — a usina e a geladeira nunca se falam, mas seguem o mesmo padrão.</div></div>
+  <div class="c"><div class="ct">Gerador de código</div><div class="cb">Lê o contrato e produz um job PySpark com o anti-pattern. Usa um <strong>sentinela</strong> (<code># APEX::ANTIPATTERN</code>) para marcar a linha exata — a linha é calculada após a renderização, não hardcoded.</div></div>
+  <div class="c"><div class="ct">Gerador de plano (sintético)</div><div class="cb">Lê o mesmo contrato e produz um event log fiel ao Spark, <strong>sem executar Spark</strong>. Geração em milissegundos.<br><strong>Analogia:</strong> simulador de voo — treina os procedimentos sem decolar.</div></div>
+  <div class="c"><div class="ct">apexlib</div><div class="cb">Biblioteca compartilhada (<code>apex/apexlib.py</code>) com as funções que o Watcher e o Oráculo precisam. Evita duplicação de lógica e garante que os dois sempre leem logs do mesmo jeito.</div></div>
+  <div class="c"><div class="ct">Stage de reduce do join</div><div class="cb">O estágio onde o SortMergeJoin lê os dados shuffled e os mescla. É <strong>aqui</strong> que o skew aparece — uma partição lê muito mais que as outras. Isolar este estágio é fundamental para não confundir com tasks de scan.</div></div>
+  <div class="c"><div class="ct">Colapso de 1 task (AQE)</div><div class="cb">Em ambientes de 1 core, o AQE pode coalescer as 8 partições de shuffle em 1. O resultado: 1 task lê tudo (200100 records), as outras leem 0. Não é ausência de skew — é skew extremo. O sistema reporta isso honestamente.</div></div>
+  <div class="c"><div class="ct">Oráculo</div><div class="cb">Roda periodicamente (semanal), executa o job real no Spark, e compara o log real com o sintético. Se divergirem além da tolerância, abre uma issue automática.<br><strong>Analogia:</strong> relógio atômico que calibra todos os outros.</div></div>
+  <div class="c"><div class="ct">Sentinela vs linha hardcoded</div><div class="cb">v1/v2: <code>anti_pattern_line: 58</code> no contrato — frágil, qualquer mudança de config desloca a linha. v3: <code># APEX::ANTIPATTERN</code> no template — a linha é calculada e gravada num manifesto (<code>job.meta.json</code>). Nunca diverge.</div></div>
+</div>
+
+<h2>2 · <em>O AQE</em> — o que muda os planos em pleno voo</h2>
+<p>O AQE (Adaptive Query Execution) é ativo por padrão no Databricks e no Spark 3+. Ele <strong>muda o plano de execução durante o job</strong> com base nos dados reais. Isso cria três armadilhas que o Apex aprendeu rodando Spark real:</p>
+<table>
+  <tr><th>Comportamento do AQE</th><th>O que acontece</th><th>Como o Apex lida</th></tr>
+  <tr><td><strong>Coalesce de partições</strong></td><td>Junta as N partições de shuffle em menos — em dados pequenos, pode virar 1. O skew desaparece do log.</td><td>Config <code>coalescePartitions=false</code> no fixture. Watcher sinaliza colapso explicitamente.</td></tr>
+  <tr><td><strong>Broadcast em tempo de execução</strong></td><td>Converte SortMergeJoin em BroadcastHashJoin se o lado pequeno cabe — mesmo com <code>autoBroadcastJoinThreshold=-1</code> estático.</td><td>Config <code>adaptive.autoBroadcastJoinThreshold=-1</code> + <code>hint("shuffle_merge")</code> no fixture.</td></tr>
+  <tr><td><strong>Plano inicial ≠ plano final</strong></td><td>O <code>physicalPlanDescription</code> no início do log mostra o plano intencionado, não o executado.</td><td><code>join_operator()</code> prefere o último <code>SparkListenerSQLAdaptiveExecutionUpdate</code>.</td></tr>
+</table>
+<div class="box blu"><div class="bl">Regra prática</div><div class="bb">Nunca leia só o plano inicial. Sempre procure o <code>SparkListenerSQLAdaptiveExecutionUpdate</code> — se existir, ele é o plano executado de verdade.</div></div>
+
+<h2>3 · <em>Passo a passo</em> — do zero ao slice verde</h2>
+<h3>3.1 Subir o ambiente</h3>
+<pre>cd /mnt/c/Users/Guest/projetos/dataship-spark-plat-v0
+make compose   <span class="dim"># Spark + MinIO + ClickHouse</span></pre>
+
+<h3>3.2 Instalar dependências</h3>
+<pre>sudo apt install python3-yaml python3-pytest zstd -y
+pip3 install zstandard --break-system-packages</pre>
+
+<h3>3.3 Rodar o slice sintético (sem Spark)</h3>
+<pre>bash run_slice.sh
+<span class="ok"># Saída esperada:</span>
+<span class="ok">✅ job_demo.py gerado. Anti-pattern na linha 21. Manifesto: job_demo.meta.json</span>
+<span class="ok">✅ synthetic_log.ndjson gerado: 13 eventos, schema fiel ao Spark.</span>
+<span class="ok">✅ Anti-pattern detectado E Finding satisfaz o acceptance. GATE VERDE.</span>
+<span class="ok">🟢 SLICE COMPLETO</span></pre>
+
+<h3>3.4 Rodar os 25 testes</h3>
+<pre>pytest tests/ -v
+<span class="ok"># 13 testes do slice + 12 do plat-v0 = 25 passed</span></pre>
+
+<h3>3.5 Rodar o job no cluster real</h3>
+<pre>python3 generators/code_generator.py scenarios/skew_on_join_30x.yaml job.py
+docker cp job.py spv0-spark-master:/opt/spark/
+docker exec spv0-spark-master /opt/spark/bin/spark-submit \
+  --master spark://spv0-spark-master:7077 /opt/spark/job.py</pre>
+
+<h3>3.6 Baixar e processar o log real</h3>
+<pre><span class="dim"># MinIO: http://127.0.0.1:29001 (spv0minio / spv0minio123)</span>
+<span class="dim"># spark-logs → events → eventlog_v2_app-... → baixar events_1_...</span>
+mv real_log.ndjson real_log.zstd   <span class="dim"># o MinIO entrega comprimido</span>
+zstd -d real_log.zstd -o real_log.ndjson
+<span class="dim"># v3: read_events() descomprime automaticamente se tiver zstandard instalado</span>
+python3 watchers/skew_watcher.py scenarios/skew_on_join_30x.yaml real_log.ndjson
+python3 oracle/compare.py scenarios/skew_on_join_30x.yaml synthetic_log.ndjson real_log.ndjson</pre>
+
+<h2>4 · <em>O que pode falhar</em> — lições aprendidas (12 pontos)</h2>
+<p>Estes pontos foram identificados na revisão pós-v3. Não são falhas a esconder — são o mapa de onde melhorar. <strong>P0 antes da próxima sync.</strong></p>
+
+<h3>P0 — Quebra em produção</h3>
+<ol>
+  <li><strong>Memória:</strong> <code>_decompress_zstd</code> lê o arquivo inteiro antes de descomprimir. Em logs grandes, dá OOM. Fix: streaming reader.</li>
+  <li><strong>Stage errado:</strong> <code>hottest_reduce_stage</code> pega pelo maior volume de shuffle — num job complexo, pode analisar o estágio errado. Fix: cruzar com o operador de join no plano.</li>
+  <li><strong>Log multi-arquivo:</strong> só lê 1 arquivo. Spark gera rolling logs em jobs longos (<code>events_1_</code>, <code>events_2_</code>...). Fix: aceitar diretório.</li>
+  <li><strong>CI com <code>python</code>:</strong> <code>scenario-gate.yml</code> usa <code>python</code> — não existe em Ubuntu limpo. Fix: <code>python3</code>.</li>
+</ol>
+
+<h3>P1 — Incorreção lógica</h3>
+<ol start="5">
+  <li><strong><code>hot_records &gt; rows</code>:</strong> 200100 &gt; 200000 faz cold distribution colapsar — o ratio vira 15392x, não 30x. O nome do cenário mente. Fix: validar <code>hot_records ≤ rows</code>.</li>
+  <li><strong>AQE update errado:</strong> <code>join_operator()</code> pega o último update de qualquer SQL execution. Fix: associar ao <code>executionId</code> correto.</li>
+  <li><strong><code>root_cause</code> hardcoded:</strong> sempre diz "customer_id" mesmo que o cenário use outra chave. Fix: ler do <code>scenario["code_generator"]["data"]</code>.</li>
+</ol>
+
+<h3>P2 — Qualidade</h3>
+<ol start="8">
+  <li>Confiança calculada por fórmula ad hoc (<code>ratio/(ratio+3)</code>) — não defensável.</li>
+  <li>Nenhum teste cobre o manifesto (<code>job.meta.json</code>).</li>
+  <li>Só 1 cenário — loop multi-cenário do CI nunca exercitado.</li>
+  <li><code>status: prototype</code> sem critério de progressão.</li>
+  <li>Sem job de CI agendado para o oráculo — drift silencioso.</li>
+</ol>
+
+<h2>5 · <em>Problemas comuns</em> e soluções</h2>
+<table>
+  <tr><th>Problema</th><th>Solução</th></tr>
+  <tr><td><code>pip not found</code></td><td><code>pip3</code> ou <code>sudo apt install python3-pip</code></td></tr>
+  <tr><td><code>ModuleNotFoundError: yaml</code></td><td><code>sudo apt install python3-yaml</code></td></tr>
+  <tr><td><code>pytest not found</code></td><td><code>sudo apt install python3-pytest</code></td></tr>
+  <tr><td><code>externally-managed-environment</code></td><td>Adicionar <code>--break-system-packages</code></td></tr>
+  <tr><td>Docker não encontrado no WSL</td><td>Docker Desktop → Settings → WSL Integration → ativar distro</td></tr>
+  <tr><td><code>Timed out waiting for ClickHouse</code></td><td>Cosmético — containers estão ok; aguardar 30s</td></tr>
+  <tr><td>UnicodeDecodeError no log</td><td>Log comprimido com zstd — <code>mv log.ndjson log.zstd && zstd -d</code> (v3 auto-descomprime)</td></tr>
+  <tr><td>ZeroDivisionError no Watcher</td><td>v3 corrigido: <code>skew_metrics()</code> trata colapso de 1 task explicitamente</td></tr>
+  <tr><td>Watcher detecta com ratio 15392x (≠ 30x)</td><td>Ponto de falha P1 #5 — <code>hot_records &gt; rows</code> no scenario</td></tr>
+</table>
+
+<h2>6 · <em>Exercícios</em> de fixação</h2>
+<div class="ex"><div class="ex-label">Exercício 1 — corrigir o P0 #3 (log multi-arquivo)</div><div class="ex-body">Modifique <code>apex/apexlib.py</code> para que <code>read_events(path)</code> aceite um diretório. Se receber um diretório, leia todos os arquivos <code>events_*</code> em ordem e concatene. Escreva um teste para esse comportamento em <code>tests/test_slice.py</code>.</div></div>
+<div class="ex"><div class="ex-label">Exercício 2 — corrigir o P1 #5 (hot_records > rows)</div><div class="ex-body">Adicione uma validação em <code>generators/plan_generator.py</code> que falha com mensagem clara se <code>hot_records &gt; rows</code>. Atualize o <code>scenario.yaml</code> para que <code>hot_partition.single_task_shuffle_read_records ≤ rows</code>. Atualize o teste correspondente.</div></div>
+<div class="ex"><div class="ex-label">Exercício 3 — segundo cenário</div><div class="ex-body">Crie <code>scenarios/no_skew_baseline.yaml</code>: um join equilibrado (sem hot key), com <code>skew_ratio_min: 2</code> no acceptance. O Watcher <strong>não deve</strong> detectar skew. Verifique que o CI gate passa para os dois cenários.</div></div>
+<div class="ex"><div class="ex-label">Exercício 4 — Watcher de Memory/Cost (Pod A2)</div><div class="ex-body">Crie <code>scenarios/memory_spill_heavy.yaml</code> com um anti-pattern de spill (<code>Memory Bytes Spilled &gt; threshold</code>). Crie <code>watchers/memory_watcher.py</code> seguindo o mesmo padrão do <code>skew_watcher.py</code> — lê via <code>apexlib</code>, isola o estágio, emite Finding, valida acceptance.</div></div>
+
+<h2>7 · <em>Glossário</em> atualizado</h2>
+<table>
+  <tr><th>Termo</th><th>Definição</th></tr>
+  <tr><td><strong>apexlib</strong></td><td>Biblioteca Python compartilhada entre Watcher e Oráculo. Auto-descomprime zstd, valida schema, lê plano final pós-AQE, isola o stage de reduce.</td></tr>
+  <tr><td><strong>Sentinela</strong></td><td>Comentário <code># APEX::ANTIPATTERN</code> no template do job. A linha é calculada após a renderização e gravada no manifesto. Substitui a linha hardcoded no contrato (v1/v2).</td></tr>
+  <tr><td><strong>Manifesto</strong></td><td>Arquivo <code>job.meta.json</code> gerado junto com o job. Contém a linha real do anti-pattern — o CodeGrounder usa essa coordenada na correlação código↔log (Lane 2).</td></tr>
+  <tr><td><strong>Colapso de 1 task</strong></td><td>Quando o AQE coalesce as N partições de shuffle em 1. O Watcher v3 detecta e reporta explicitamente em vez de calcular um ratio sem sentido.</td></tr>
+  <tr><td><strong>Stage de reduce</strong></td><td>O estágio onde as tasks leem os dados shuffled e executam o join. É aqui que o skew aparece. A <code>hottest_reduce_stage()</code> o isola pelo maior shuffle read total.</td></tr>
+  <tr><td><strong>Oráculo</strong></td><td>Compara log sintético vs log real. Passa se join_op bate e hot_records está dentro da tolerância. Avisa (não falha) quando um lado colapsou em 1 task.</td></tr>
+  <tr><td><strong>Lane 1 / Lane 2</strong></td><td>Lane 1: listener in-process (Day 1, mais intrusivo). Lane 2: event-log tail out-of-process (não-intrusivo, serverless-ready). O v3 prova a Lane 2.</td></tr>
+</table>
+
+<footer>Apex · Documentação Didática v2 · Crew A · DataShip 2026 · Augusto (Captain) · 06 jun 2026</footer>
+</div>
+</body>
+</html>

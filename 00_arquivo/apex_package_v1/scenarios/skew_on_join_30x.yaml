@@ -1,0 +1,42 @@
+scenario_id: skew_on_join_30x
+version: 1
+owner: pod-a1
+status: validated
+
+anti_pattern:
+  class: data_skew_on_join_key
+  severity: high
+
+code_generator:
+  language: pyspark
+  emits: job.py
+  anti_pattern_line: 58
+  data:
+    orders:
+      rows: 200000
+      distinct_keys: 100
+      hot_key: 7
+      hot_share: 0.80
+    customers:
+      rows: 100
+      distinct_keys: 100
+  spark_config:
+    spark.sql.adaptive.enabled: "true"
+    spark.sql.adaptive.skewJoin.enabled: "false"
+    spark.sql.autoBroadcastJoinThreshold: "-1"
+    spark.sql.shuffle.partitions: "8"
+
+plan_generator:
+  emits: event-log.ndjson
+  strategy: synthesize
+  expected_signals:
+    join_operator: SortMergeJoin
+    hot_partition: { stage: 4, single_task_shuffle_read_records: 200100 }
+
+oracle:
+  enabled: true
+  cadence: weekly
+  on_divergence: fail_and_open_issue
+
+acceptance:
+  root_cause_includes: ["data skew", "customer_id", "SortMergeJoin"]

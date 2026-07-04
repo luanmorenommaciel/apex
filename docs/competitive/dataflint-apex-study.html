@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataFlint × Apex — Fluxo de Estudo</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #21253a;
+    --border: #2e3350;
+    --accent: #6c8ef5;
+    --accent2: #f5a623;
+    --green: #3ecf8e;
+    --red: #f56565;
+    --yellow: #f6c90e;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --df-color: #f5a623;
+    --apex-color: #6c8ef5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.6; }
+
+  /* HEADER */
+  .header { background: linear-gradient(135deg, #1a1d27 0%, #12162a 100%); border-bottom: 1px solid var(--border); padding: 24px 32px; display: flex; align-items: center; gap: 16px; }
+  .header h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+  .header .subtitle { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
+  .badge-df { background: rgba(245,166,35,0.15); color: var(--df-color); border: 1px solid rgba(245,166,35,0.3); }
+  .badge-apex { background: rgba(108,142,245,0.15); color: var(--apex-color); border: 1px solid rgba(108,142,245,0.3); }
+
+  /* NAV TABS */
+  .nav { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 32px; background: var(--surface); overflow-x: auto; }
+  .nav-tab { padding: 12px 20px; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* CONTENT */
+  .content { padding: 28px 32px; max-width: 1200px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* CARDS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 10px; }
+  .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+  /* FLOW DIAGRAM */
+  .flow { display: flex; align-items: stretch; gap: 0; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; }
+  .flow-step { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; min-width: 160px; flex: 1; position: relative; }
+  .flow-step.df { border-top: 3px solid var(--df-color); }
+  .flow-step.apex { border-top: 3px solid var(--apex-color); }
+  .flow-step.gap { border-top: 3px solid var(--red); }
+  .flow-arrow { display: flex; align-items: center; padding: 0 8px; color: var(--muted); font-size: 20px; flex-shrink: 0; }
+  .flow-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 6px; }
+  .flow-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .flow-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+  th { background: var(--surface2); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid rgba(46,51,80,0.5); vertical-align: top; }
+  tr:hover td { background: rgba(108,142,245,0.03); }
+  .yes { color: var(--green); font-weight: 600; }
+  .no { color: var(--red); font-weight: 600; }
+  .partial { color: var(--yellow); font-weight: 600; }
+
+  /* ALERT PILLS */
+  .alert-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .alert-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .alert-name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .alert-route { font-size: 11px; color: var(--muted); }
+  .alert-apex { font-size: 11px; padding: 2px 8px; border-radius: 4px; display: inline-block; width: fit-content; }
+  .alert-apex.has { background: rgba(62,207,142,0.1); color: var(--green); }
+  .alert-apex.planned { background: rgba(246,201,14,0.1); color: var(--yellow); }
+  .alert-apex.gap { background: rgba(245,101,101,0.1); color: var(--red); }
+
+  /* LEARNING PATH */
+  .path { display: flex; flex-direction: column; gap: 12px; }
+  .path-level { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; display: flex; gap: 16px; align-items: flex-start; }
+  .path-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+  .path-num.l1 { background: rgba(62,207,142,0.15); color: var(--green); }
+  .path-num.l2 { background: rgba(108,142,245,0.15); color: var(--accent); }
+  .path-num.l3 { background: rgba(245,166,35,0.15); color: var(--df-color); }
+  .path-num.l4 { background: rgba(245,101,101,0.15); color: var(--red); }
+  .path-content h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .path-content p { font-size: 12px; color: var(--muted); }
+  .path-files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .file-tag { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-family: monospace; color: var(--muted); }
+
+  /* ARCHITECTURE */
+  .arch { display: flex; flex-direction: column; gap: 12px; }
+  .arch-row { display: flex; gap: 12px; align-items: stretch; }
+  .arch-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; flex: 1; }
+  .arch-box.highlight-df { border-color: var(--df-color); background: rgba(245,166,35,0.05); }
+  .arch-box.highlight-apex { border-color: var(--apex-color); background: rgba(108,142,245,0.05); }
+  .arch-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .df-label { color: var(--df-color); }
+  .apex-label { color: var(--apex-color); }
+  .arch-code { font-family: monospace; font-size: 11px; color: var(--green); background: rgba(0,0,0,0.3); border-radius: 4px; padding: 8px; margin-top: 6px; white-space: pre; }
+
+  /* DECISION */
+  .decision-tree { display: flex; flex-direction: column; gap: 10px; }
+  .decision-node { padding: 14px 18px; border-radius: 8px; display: flex; align-items: flex-start; gap: 12px; }
+  .decision-node.q { background: var(--surface2); border: 1px solid var(--border); }
+  .decision-node.a-df { background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.3); }
+  .decision-node.a-apex { background: rgba(108,142,245,0.08); border: 1px solid rgba(108,142,245,0.3); }
+  .decision-node.a-both { background: rgba(62,207,142,0.08); border: 1px solid rgba(62,207,142,0.3); }
+  .decision-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .decision-text h4 { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+  .decision-text p { font-size: 12px; color: var(--muted); }
+
+  h2 { font-size: 17px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+  h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--text); }
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+  .note { background: rgba(108,142,245,0.08); border: 1px solid rgba(108,142,245,0.2); border-radius: 8px; padding: 12px 16px; font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+  .note strong { color: var(--accent); }
+  code { font-family: monospace; background: var(--surface2); padding: 1px 5px; border-radius: 3px; font-size: 12px; color: var(--green); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>DataFlint × Apex — Análise Competitiva & Fluxo de Estudo</h1>
+    <div class="subtitle">Base de conhecimento extraída do repositório oficial · Validada 22 Jun 2026 · Crew A / DataShip</div>
+  </div>
+  <span class="badge badge-df">DataFlint v0.9.9</span>
+  <span class="badge badge-apex">Apex v4</span>
+</div>
+
+<div class="nav">
+  <div class="nav-tab active" onclick="show('overview')">Visão Geral</div>
+  <div class="nav-tab" onclick="show('architecture')">Arquitetura</div>
+  <div class="nav-tab" onclick="show('alerts')">14 Alertas</div>
+  <div class="nav-tab" onclick="show('competitive')">Comparativo</div>
+  <div class="nav-tab" onclick="show('decision')">Decisão Estratégica</div>
+  <div class="nav-tab" onclick="show('learning')">Fluxo de Estudo</div>
+</div>
+
+<!-- ============================== OVERVIEW ============================== -->
+<div id="overview" class="content section active">
+  <h2>O que é cada produto</h2>
+
+  <div class="grid-2">
+    <div class="card" style="border-top:3px solid var(--df-color)">
+      <div class="card-title">DataFlint OSS</div>
+      <h3 style="color:var(--df-color)">Drop-in Spark UI Replacement</h3>
+      <p>"Spark Performance Made Simple" — plugin que adiciona uma aba ao Spark UI existente com alertas nomeados de performance. Diagnóstico apenas. Nunca altera o plano de execução.</p>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:12px"><span style="color:var(--muted)">Intrusividade:</span> <span style="color:var(--df-color)">JAR + spark.plugins obrigatório</span></div>
+        <div style="font-size:12px"><span style="color:var(--muted)">Quando age:</span> <span>Live (driver:4040) + History Server</span></div>
+        <div style="font-size:12px"><span style="color:var(--muted)">Output:</span> <span>14 alertas nomeados na UI</span></div>
+        <div style="font-size:12px"><span style="color:var(--muted)">Quem age:</span> <span>Humano lê, humano decide</span></div>
+        <div style="font-size:12px"><span style="color:var(--muted)">SaaS paralelo:</span> <span>"Production-Aware AI Agents" (pago)</span></div>
+      </div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--apex-color)">
+      <div class="card-title">Apex v4</div>
+      <h3 style="color:var(--apex-color)">Agentic Diagnostic Engine</h3>
+      <p>Sistema de diagnóstico em 4 tiers que lê event logs do Spark via MinIO REST. Detecta anti-patterns, classifica com LLM, orquestra diagnóstico e julga com alta confiança. Zero injeção.</p>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:12px"><span style="color:var(--muted)">Intrusividade:</span> <span style="color:var(--green)">Zero JAR · Zero listener · Zero SparkSession</span></div>
+        <div style="font-size:12px"><span style="color:var(--muted)">Quando age:</span> <span>Pós-execução (event log MinIO)</span></div>
+        <div style="font-size:12px"><span style="color:var(--text)">Output:</span> <span>Finding nomeado + root_cause + recomendações</span></div>
+        <div style="font-size:12px"><span style="color:var(--muted)">Quem age:</span> <span>Apex raciocina e entrega diagnóstico</span></div>
+        <div style="font-size:12px"><span style="color:var(--muted)">Validação:</span> <span>oracle.py valida sintético vs real</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Fluxo de dados comparado</h2>
+
+  <div style="margin-bottom:8px;font-size:12px;color:var(--muted)">DataFlint</div>
+  <div class="flow" style="margin-bottom:20px">
+    <div class="flow-step df">
+      <div class="flow-label df-label">Entrada</div>
+      <div class="flow-name">Spark Job</div>
+      <div class="flow-desc">PySpark / Spark SQL</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step df">
+      <div class="flow-label df-label">Requisito</div>
+      <div class="flow-name">JAR + Plugin</div>
+      <div class="flow-desc">spark.plugins= SparkDataflintPlugin</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step df">
+      <div class="flow-label df-label">Coleta</div>
+      <div class="flow-name">Event/Metric Stream</div>
+      <div class="flow-desc">In-process no driver</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step df">
+      <div class="flow-label df-label">Output</div>
+      <div class="flow-name">14 Alertas na UI</div>
+      <div class="flow-desc">Candidato → humano decide</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step gap">
+      <div class="flow-label" style="color:var(--red)">Loop</div>
+      <div class="flow-name">Humano</div>
+      <div class="flow-desc">Triagem + roteamento manual</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px;font-size:12px;color:var(--muted)">Apex</div>
+  <div class="flow">
+    <div class="flow-step apex">
+      <div class="flow-label apex-label">Entrada</div>
+      <div class="flow-name">Event Log</div>
+      <div class="flow-desc">MinIO REST (zstd/ndjson)</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step apex">
+      <div class="flow-label apex-label">Tier 1</div>
+      <div class="flow-name">Watcher</div>
+      <div class="flow-desc">Determinístico, sem LLM</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step apex">
+      <div class="flow-label apex-label">Tier 2</div>
+      <div class="flow-name">Classifier</div>
+      <div class="flow-desc">LLM nomeia o Finding</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step apex">
+      <div class="flow-label apex-label">Tier 3</div>
+      <div class="flow-name">Coordinator</div>
+      <div class="flow-desc">Sonnet orquestra</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step apex">
+      <div class="flow-label apex-label">Tier 4</div>
+      <div class="flow-name">Judge</div>
+      <div class="flow-desc">Opus se conf &lt; 0.6</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-top:3px solid var(--green)">
+      <div class="flow-label" style="color:var(--green)">Output</div>
+      <div class="flow-name">Diagnóstico</div>
+      <div class="flow-desc">root_cause + recomendação</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== ARCHITECTURE ============================== -->
+<div id="architecture" class="content section">
+  <h2>Arquitetura DataFlint</h2>
+
+  <div class="note"><strong>Premissa central:</strong> DataFlint usa a interface <code>SparkPlugin</code> (nativa desde Spark 3.0) para se registrar in-process no driver. Lê o <strong>mesmo</strong> event/metric stream da Spark UI — não altera planos, não injeta código no executors.</div>
+
+  <div class="arch">
+    <div class="arch-row">
+      <div class="arch-box highlight-df">
+        <div class="arch-label df-label">Hook de Ativação</div>
+        <p style="font-size:12px;color:var(--muted)">Dois configs — sem mais nada:</p>
+        <div class="arch-code">spark.jars.packages   io.dataflint:spark_2.12:0.9.9
+spark.plugins         io.dataflint.spark.SparkDataflintPlugin</div>
+      </div>
+      <div class="arch-box">
+        <div class="arch-label" style="color:var(--muted)">Pipeline Interno</div>
+        <div class="arch-code">SparkContext start
+  └─ instantiate SparkDataflintPlugin
+        └─ attach to event/metric stream
+        └─ serve via Spark UI endpoint
+        └─ evaluate metrics → named alerts</div>
+      </div>
+    </div>
+    <div class="arch-row">
+      <div class="arch-box">
+        <div class="arch-label" style="color:var(--muted)">Dois Modos</div>
+        <table style="margin:0">
+          <tr><th>Modo</th><th>Feed</th><th>URL</th></tr>
+          <tr><td>Live Driver</td><td>Listener bus ativo</td><td>:4040/DataFlint</td></tr>
+          <tr><td>History Server</td><td>Event logs replay</td><td>:18080/DataFlint</td></tr>
+        </table>
+      </div>
+      <div class="arch-box">
+        <div class="arch-label" style="color:var(--muted)">Segurança / Remoção</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Remove limpamente: deletar os dois configs. Zero migração, zero estado residual.</p>
+        <p style="font-size:12px;color:var(--muted)">Telemetria: MixPanel anônimo (Spark ver + App ID apenas). Desabilitar: <code>spark.dataflint.telemetry.enabled=false</code></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <h2>Arquitetura Apex (comparada)</h2>
+
+  <div class="arch">
+    <div class="arch-row">
+      <div class="arch-box highlight-apex">
+        <div class="arch-label apex-label">Premissa Absoluta</div>
+        <p style="font-size:12px;color:var(--muted)">Zero JAR · Zero listener · Zero modificação de SparkSession<br>Leitura passiva do event log via MinIO REST</p>
+        <div class="arch-code">python watchers/skew_watcher.py \
+  scenarios/skew_on_join_30x.yaml \
+  s3a://spark-logs/events/app-id</div>
+      </div>
+      <div class="arch-box">
+        <div class="arch-label" style="color:var(--muted)">4-Tier Pipeline</div>
+        <div class="arch-code">Tier 1  Watcher     → determinístico
+Tier 2  Classifier  → LLM nomeia
+Tier 3  Coordinator → Sonnet orquestra
+Tier 4  Judge       → Opus (conf &lt; 0.6)</div>
+      </div>
+    </div>
+    <div class="arch-row">
+      <div class="arch-box">
+        <div class="arch-label" style="color:var(--muted)">Contrato scenario.yaml</div>
+        <p style="font-size:12px;color:var(--muted)">Cada anti-pattern definido em YAML. Desacopla code_generator de plan_generator. Oracle valida sintético vs real.</p>
+      </div>
+      <div class="arch-box">
+        <div class="arch-label" style="color:var(--muted)">Cadeia de Custódia</div>
+        <p style="font-size:12px;color:var(--muted)"><code>scenario_hash</code> (sha256:16) embutido no log sintético e no manifesto do job. Watcher rejeita log stale automaticamente.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== ALERTS ============================== -->
+<div id="alerts" class="content section">
+  <h2>Catálogo Oficial — 14 Alertas DataFlint</h2>
+  <div class="note">DataFlint <strong>nomeia o padrão</strong>, não emite um veredito. Cada alerta é um candidato — confirme a métrica real antes de agir. "Diagnose-only" é a premissa central.</div>
+
+  <div class="alert-grid">
+    <div class="alert-item">
+      <div class="alert-name">📄 Reading Small Files</div>
+      <div class="alert-route">spark-specialist</div>
+      <div class="alert-apex has">✓ Apex: detectável via scan metrics</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">📝 Writing Small Files</div>
+      <div class="alert-route">spark-specialist</div>
+      <div class="alert-apex planned">◎ Apex: planejado (output file count)</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">🧊 Iceberg – Inefficient Replace</div>
+      <div class="alert-route">spark-specialist</div>
+      <div class="alert-apex gap">✗ Apex: fora do escopo atual</div>
+    </div>
+    <div class="alert-item" style="border-color:var(--apex-color)">
+      <div class="alert-name">⚡ Partition Skew</div>
+      <div class="alert-route">spark-skew-specialist</div>
+      <div class="alert-apex has">✓ Apex: IMPLEMENTADO v4 (Skew Watcher)</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">🔢 Large Number Of Small Tasks</div>
+      <div class="alert-route">spark-shuffle-specialist</div>
+      <div class="alert-apex planned">◎ Apex: planejado (task count + duration)</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">🧠 Memory Over-Provisioning</div>
+      <div class="alert-route">spark-manager-specialist</div>
+      <div class="alert-apex gap">✗ Apex: Tier 2+ (não Tier 1)</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">💥 Memory Under-Provisioning</div>
+      <div class="alert-route">spark-manager-specialist</div>
+      <div class="alert-apex planned">◎ Apex: spill metrics disponíveis</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">⏱ High Wasted Cores Rate</div>
+      <div class="alert-route">spark-manager-specialist</div>
+      <div class="alert-apex gap">✗ Apex: fora do escopo atual</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">📡 Large Data Broadcast</div>
+      <div class="alert-route">spark-shuffle-specialist</div>
+      <div class="alert-apex planned">◎ Apex: plano físico tem broadcast size</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">🔀 Broadcast Small Table in SMJ</div>
+      <div class="alert-route">spark-shuffle-specialist</div>
+      <div class="alert-apex planned">◎ Apex: AQE-aware detecta SMJ evitável</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">✖ Large Cross Join Scan</div>
+      <div class="alert-route">spark-shuffle-specialist</div>
+      <div class="alert-apex gap">✗ Apex: requer análise de plano físico</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">📦 Large Partition Size</div>
+      <div class="alert-route">spark-specialist</div>
+      <div class="alert-apex planned">◎ Apex: shuffle read bytes disponíveis</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">🔍 Long Filter Conditions</div>
+      <div class="alert-route">spark-specialist</div>
+      <div class="alert-apex gap">✗ Apex: physicalPlanDescription truncada</div>
+    </div>
+    <div class="alert-item">
+      <div class="alert-name">❌ Query Failures</div>
+      <div class="alert-route">spark-troubleshooter</div>
+      <div class="alert-apex planned">◎ Apex: SparkListenerTaskEnd com failure</div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span class="alert-apex has" style="display:inline-block">✓ Implementado</span> 2 de 14</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span class="alert-apex planned" style="display:inline-block">◎ Planejado/Detectável</span> 7 de 14</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span class="alert-apex gap" style="display:inline-block">✗ Gap ou Fora do Escopo</span> 5 de 14</div>
+  </div>
+
+  <div class="divider"></div>
+  <h3>Triage Discipline (obrigatória antes de qualquer fix)</h3>
+  <table>
+    <tr><th>Passo</th><th>Ação</th><th>Apex equivalente</th></tr>
+    <tr><td>1. Nome</td><td>DataFlint indica o padrão</td><td>Watcher emite Finding com severity</td></tr>
+    <tr><td>2. Localizar</td><td>Abrir métrica na Spark UI / event log</td><td>apexlib.skew_metrics() — já leu</td></tr>
+    <tr><td>3. Confirmar</td><td>Métrica suporta o alerta em produção?</td><td>oracle.py valida ratio vs real</td></tr>
+    <tr><td>4. Decidir</td><td>Real → roteamento; FP → ignorar</td><td>acceptance check automático</td></tr>
+    <tr><td>5. Nunca cargo-cult</td><td>Não aplicar config por causa do alerta</td><td>confidence score previne isso</td></tr>
+  </table>
+</div>
+
+<!-- ============================== COMPETITIVE ============================== -->
+<div id="competitive" class="content section">
+  <h2>Comparativo Competitivo</h2>
+
+  <table>
+    <tr>
+      <th>Dimensão</th>
+      <th style="color:var(--df-color)">DataFlint OSS</th>
+      <th style="color:var(--apex-color)">Apex v4</th>
+    </tr>
+    <tr>
+      <td><strong>Intrusividade</strong></td>
+      <td><span class="no">JAR obrigatório no classpath</span></td>
+      <td><span class="yes">Zero JAR · Zero listener</span></td>
+    </tr>
+    <tr>
+      <td><strong>Quando age</strong></td>
+      <td>Live (driver:4040) + History Server</td>
+      <td>Pós-execução (event log)</td>
+    </tr>
+    <tr>
+      <td><strong>Entrada</strong></td>
+      <td>Event/metric stream in-process</td>
+      <td>Event log JSON do MinIO via REST</td>
+    </tr>
+    <tr>
+      <td><strong>Anti-patterns</strong></td>
+      <td>14 fixos (pattern_lib)</td>
+      <td>scenario.yaml (extensível)</td>
+    </tr>
+    <tr>
+      <td><strong>Output</strong></td>
+      <td>Alertas na UI (nome + métrica)</td>
+      <td>Finding + root_cause + recomendações</td>
+    </tr>
+    <tr>
+      <td><strong>Quem age</strong></td>
+      <td><span class="no">Humano lê e decide</span></td>
+      <td><span class="yes">Apex raciocina e entrega</span></td>
+    </tr>
+    <tr>
+      <td><strong>LLM</strong></td>
+      <td>AI copilot (produto pago)</td>
+      <td>Tiers 2–4 (Sonnet/Opus)</td>
+    </tr>
+    <tr>
+      <td><strong>Código-fonte</strong></td>
+      <td><span class="no">Não acessa</span></td>
+      <td><span class="partial">callSite → Git (em desenvolvimento)</span></td>
+    </tr>
+    <tr>
+      <td><strong>Validação</strong></td>
+      <td><span class="no">Sem oráculo</span></td>
+      <td><span class="yes">oracle.py valida sintético vs real</span></td>
+    </tr>
+    <tr>
+      <td><strong>Real-time</strong></td>
+      <td><span class="yes">Sim (durante execução)</span></td>
+      <td><span class="no">Não (pós-execução)</span></td>
+    </tr>
+    <tr>
+      <td><strong>Plataformas</strong></td>
+      <td>Wix, SimilarWeb, EMR, Dataproc</td>
+      <td>plat-v0 (prototype)</td>
+    </tr>
+    <tr>
+      <td><strong>Maturidade</strong></td>
+      <td>466★, 654 commits, prod-proven</td>
+      <td>v4 prototype, 21 testes passando</td>
+    </tr>
+    <tr>
+      <td><strong>Modelo negócio</strong></td>
+      <td>OSS gratuito + SaaS pago</td>
+      <td>A definir</td>
+    </tr>
+  </table>
+
+  <div class="divider"></div>
+  <h2>Onde o Apex compete com o DataFlint <em>pago</em></h2>
+  <div class="note"><strong>Insight crítico:</strong> O DataFlint OSS é o detector gratuito. O produto pago deles (<code>dataflint.io</code>) é um "Production-Aware AI Agents for Spark" com MCP + 4 agentes. <strong>O Apex compete com o tier pago</strong>, não com o OSS. O OSS é o benchmark; o SaaS é o concorrente.</div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title" style="color:var(--df-color)">DataFlint SaaS (concorrente real)</div>
+      <h3>4 Agentes + MCP Server</h3>
+      <p style="font-size:12px">Agentic Spark Copilot (IDE) · Cluster Agent (right-sizing) · Review Agent (PR regressions) · Fleet Observability. SOC 2 Type II. Envia operational metadata externamente.</p>
+    </div>
+    <div class="card" style="border-color:var(--apex-color)">
+      <div class="card-title" style="color:var(--apex-color)">Apex — Diferenciação</div>
+      <h3>Loop Fechado + Validação</h3>
+      <p style="font-size:12px">Não-intrusivo (zero JAR) · Diagnóstico automático sem UI · Validação via oráculo · scenario.yaml extensível · Pipeline agentic 4-tier com confiança graduada.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== DECISION ============================== -->
+<div id="decision" class="content section">
+  <h2>Decisão Estratégica — Baseada no Sync (09 Jun 2026)</h2>
+
+  <div class="note">O OwsHQ colocou a pergunta no Discord: <strong>"Conseguimos ter acesso ao código sem ser intrusivo?"</strong> A análise do DataFlint como benchmark responde essa pergunta com evidência empírica.</div>
+
+  <h3 style="margin-bottom:16px">Árvore de decisão: biblioteca vs beacon</h3>
+  <div class="decision-tree">
+    <div class="decision-node q">
+      <div class="decision-icon">❓</div>
+      <div class="decision-text">
+        <h4>O objetivo do Apex é recomendar melhoria de código?</h4>
+        <p>O OwsHQ quer "Fix it / Optimize" como o Databricks faz. Isso requer o código-fonte.</p>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="decision-node a-df">
+        <div class="decision-icon">📚</div>
+        <div class="decision-text">
+          <h4>Sim → Biblioteca é necessária</h4>
+          <p>O DataFlint confirma: mesmo com JAR intrusivo, eles <em>não acessam código-fonte</em>. Para recomendação de código é preciso ou (a) biblioteca que captura no ponto de execução, ou (b) beacon + Git API. Pivot confirmado pelo benchmark.</p>
+        </div>
+      </div>
+      <div class="decision-node a-apex">
+        <div class="decision-icon">🎯</div>
+        <div class="decision-text">
+          <h4>Não → Beacon é suficiente para Tiers 1-2</h4>
+          <p>Se o objetivo é diagnóstico não-intrusivo de anti-patterns (skew, spill, broadcast), o Apex já faz mais que o DataFlint OSS com zero JAR. Beacon + callSite cobre 80% dos casos.</p>
+        </div>
+      </div>
+    </div>
+    <div class="decision-node a-both">
+      <div class="decision-icon">🏛</div>
+      <div class="decision-text">
+        <h4>Recomendação: ADR para definir o produto</h4>
+        <p>Essa é uma decisão de produto, não técnica. As duas opções são viáveis — mas levam a produtos diferentes. Deve virar ADR-005 com posicionamento claro: "Apex = diagnóstico não-intrusivo" OU "Apex = copilot com code access". Não os dois ao mesmo tempo no v0.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <h3>O que o DataFlint prova empiricamente sobre a pergunta do OwsHQ</h3>
+  <table>
+    <tr><th>Pergunta</th><th>Evidência do DataFlint</th><th>Implicação para Apex</th></tr>
+    <tr>
+      <td>Dá pra correlacionar sem JAR?</td>
+      <td>DataFlint COM JAR ainda não acessa código-fonte</td>
+      <td>Beacon ou biblioteca são ambos necessários para code_raw_event</td>
+    </tr>
+    <tr>
+      <td>Diagnóstico automático é possível?</td>
+      <td>DataFlint OSS não automatiza — humano decide</td>
+      <td>Apex Tier 1 já supera DataFlint OSS nesse ponto</td>
+    </tr>
+    <tr>
+      <td>LLM melhora o diagnóstico?</td>
+      <td>DataFlint SaaS aposta em LLM (produto pago)</td>
+      <td>Apex Tiers 2-4 estão no caminho certo</td>
+    </tr>
+    <tr>
+      <td>Validação é importante?</td>
+      <td>DataFlint não tem oráculo</td>
+      <td>oracle.py é diferencial real do Apex</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ============================== LEARNING PATH ============================== -->
+<div id="learning" class="content section">
+  <h2>Fluxo de Estudo Recomendado</h2>
+  <div class="note">Ordem de leitura baseada no index.md da KB do DataFlint + alinhamento com os conceitos do Apex. Cada nível tem os arquivos no <code>docs/competitive/dataflint/</code>.</div>
+
+  <div class="path">
+    <div class="path-level">
+      <div class="path-num l1">1</div>
+      <div class="path-content">
+        <h4>Fundação — O que é e como funciona</h4>
+        <p>Entender a premissa core: diagnose-only, plugin in-process, lê as mesmas métricas da Spark UI. Comparar com a premissa do Apex (zero injeção).</p>
+        <div class="path-files">
+          <span class="file-tag">what-is-dataflint.md</span>
+          <span class="file-tag">plugin-architecture.md</span>
+        </div>
+        <p style="margin-top:8px;font-size:11px;color:var(--green)">⚡ Pergunta-chave: O que é diferente entre "spark.plugins" e um JAR injetado?</p>
+      </div>
+    </div>
+
+    <div class="path-level">
+      <div class="path-num l2">2</div>
+      <div class="path-content">
+        <h4>Instalação — Como se torna intrusivo</h4>
+        <p>Mapear exatamente onde o DataFlint exige intervenção no job/cluster. Identificar o que o Apex evita e por quê.</p>
+        <div class="path-files">
+          <span class="file-tag">install-pyspark-session.md</span>
+          <span class="file-tag">install-history-server.md</span>
+          <span class="file-tag">install-on-kubernetes.md</span>
+          <span class="file-tag">package-version-matrix.md</span>
+        </div>
+        <p style="margin-top:8px;font-size:11px;color:var(--green)">⚡ Pergunta-chave: O modo History Server do DataFlint é intrusivo?</p>
+      </div>
+    </div>
+
+    <div class="path-level">
+      <div class="path-num l3">3</div>
+      <div class="path-content">
+        <h4>Alertas — O catálogo de 14 e o que o Apex cobre</h4>
+        <p>Para cada alerta: (1) o DataFlint detecta como? (2) o Apex consegue detectar? (3) o que falta? Mapear o gap de cobertura.</p>
+        <div class="path-files">
+          <span class="file-tag">alerts-catalog.md</span>
+          <span class="file-tag">alert-triage-routing.md</span>
+          <span class="file-tag">quick-reference.md</span>
+        </div>
+        <p style="margin-top:8px;font-size:11px;color:var(--green)">⚡ Pergunta-chave: Quais dos 14 alertas o Apex pode implementar só com event log?</p>
+      </div>
+    </div>
+
+    <div class="path-level">
+      <div class="path-num l4">4</div>
+      <div class="path-content">
+        <h4>Posicionamento — Onde o Apex vence e onde perde</h4>
+        <p>Com a KB completa lida, preencher o comparativo: para cada dimensão decidir se o Apex é melhor, pior, ou igual. Usar isso para definir o produto v0.</p>
+        <div class="path-files">
+          <span class="file-tag">dataflint-specialist.md</span>
+          <span class="file-tag">aba Comparativo ←</span>
+          <span class="file-tag">aba Decisão Estratégica ←</span>
+        </div>
+        <p style="margin-top:8px;font-size:11px;color:var(--green)">⚡ Pergunta-chave: O Apex é um "melhor DataFlint OSS" ou um produto diferente?</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <h3>Perguntas de estudo para o time</h3>
+  <div class="grid-2" style="margin-top:12px">
+    <div class="card">
+      <div class="card-title">Técnicas</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <div style="font-size:12px">1. Por que o DataFlint no History Server ainda requer JAR?</div>
+        <div style="font-size:12px">2. O que é o SparkPlugin API e como difere de SparkListener?</div>
+        <div style="font-size:12px">3. Como o DataFlint detecta "Partition Skew" vs como o Apex detecta?</div>
+        <div style="font-size:12px">4. Quais alertas DataFlint são detectáveis só com event log (sem listener ativo)?</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Estratégicas</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <div style="font-size:12px">1. O DataFlint SaaS (pago) é realmente nosso concorrente?</div>
+        <div style="font-size:12px">2. "Diagnose-only" é limitação ou posicionamento do DataFlint?</div>
+        <div style="font-size:12px">3. O Apex deveria ter uma UI (como DataFlint) ou só API/output?</div>
+        <div style="font-size:12px">4. Qual dos 14 alertas teria maior impacto para o cliente se o Apex implementasse primeiro?</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

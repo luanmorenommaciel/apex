@@ -1,0 +1,272 @@
+Esta reunião está sendo gravada.
+Boa noite, sim.
+Boa.
+E aí, como você tá?
+Tudo jóia, por aqui. Tudo bem. E aí, Jaime, beleza?
+E aí, boa noite, tudo bem?
+Boa noite, tudo.
+Tá no trampo hoje?
+Tô. Hoje é dia de presencial.
+Que cara de felicidade.
+A felicidade é porque o cliente ele tem uma IA específica que a gente só pode usar ela e como contrata com o Google é o Gemini.
+Melhor de todos, só que não. É bom né, o Gemini? Brincadeiras à parte. Triste. Bem,.
+Acho que nas últimas semanas, então, a gente teve essa interação com você,.
+Aguimar, e o Jaime Na verdade, o.
+Jaime aqui perguntando sobre os últimos updates, eu estava dando uma lidinha Você teve tempo de a gente validar o escopo.
+Do que a gente tinha sugerido do Apex?
+Você quer dar uma passada para mim, para o Jaime?
+Pode ser, posso sim. Boa noite novamente. O que dentro dessas duas semanas eu... Eu realizei, fui buscando. Iniciei primeiro tentando entender como a gente focou tendo o Dataflint como o benchmark. Então, meu objetivo foi aquilo que foi pautado justamente na reunião que a gente teve. Ler a documentação deles, verificar o GitHub deles, varrei o que tinha dentro da... Dentro da página deles. Então, eu desde o princípio da reunião, lá naquele dia mesmo, busquei, já varrei aquelas informações. Inicialmente, tinha criado tanto agente quanto base de conhecimento sem focar diretamente nessas três fontes de dados. Basicamente, coloquei o Contact Server apenas para ele ir no GitHub e consumir o que tinha lá.
+Então, quando eu uni tanto o Contact Serve, quanto o Firecrawl, quanto outros MCPs para poder capturar e apontei o direcionamento na documentação e também na parte da e também na parte do site, ele conseguiu abranger e criar essa base de conhecimento mais sólida, onde ele tinha alguns pontos na qual ele chegou a alucinar, criando no contexto que ele tinha de conhecimento. Então o meu ponto principal foi esse, foi focar em tentar destrinchar o máximo possível do que tinha dentro do dataflint, entender como que funciona a camada de observabilidade, como que ele diagnostica ou se ele não diagnostica.
+Como que ele faz esse diagnóstico, como que funciona o processo de instalação, os pacotes de versão, sessão, sessão live dele, como que funciona essa captura no Storieserver, na parte do event logs, entender como que é o processo de alertas, o processo de triagem que é feito dentro do DataFlint, Então, a partir disso, é entender esses alertas e o que a gente pode consumir deles e agregar nosso próprio watch.
+Então, a gente tem os watchers já como se fosse segmentos, então, muito desses processos de alertas que eles geram, a gente já consegue sincronizar e meio que consumir já esses 14 alertas, que são 14 alertas que o DataFrint já gera, mas como eu mesmo mencionei lá na mensagem, o DataFrint, ele apenas alerta isso daí, ele apenas mostra E a ação é toda do humano, o humano que vai estar interagindo para resolver esse problema que é, na minha visão, é o ponto forte da Apex. É vir apontar a problemática e logo em seguida também já atuar dentro da problemática entregando uma solução para que o... Para que o cliente em questão possa apenas fazer essa correção, fazer esse call de review já com uma solução já preposta.
+Então, com base nisso, varrei o que tinha dentro do dataflint, dessa parte de alerta dos triagens, as operações, como que ele fazia essas operações telemetria, de segurança, de antepadrão que eles capturavam. Então, eu tentei consumir essas informações, criar essa base de conhecimento, disponibilizei lá no grupo também essa base de conhecimento. E logo no final dessa apresentação, eu meio que tentei fazer depara, o que tem no DataFlint, o que o Apex com o Apex a gente pode estar atuando, que foi aquele comparativo de valor que você mesmo colocou. Coloca comparativo no final do que a gente pode fazer de melhor que a gente possa estar criando valor e mostrando que o Apex pode chegar a ser competitivo juntamente com o Dataflint.
+Então, logo em seguida, no final documento, eu coloco uma comparação é assimétrica do que o DataFlint é contra o que o Apex pode vir a entregar. Tem muitos pontos, como eu mencionei, que eles já estão na versão 0.99, toda essa parte, são consolidados no mercado, mas que a gente vem para entregar muito valor. Então, eu fiz breve comparativo lá, coloquei tanto o DataFlint OSS quanto o size que eles têm, quanto o Apex, do que eu tenho de conhecimento, do que pode ser gerado, construído, algo que possa ser melhorado também. E por isso que eu coloquei, é disposto a trocar ideias com os colegas para ter esse entendimento do...
+isso daí eu acho que esse ponto que você falou que o Apex pode não entregar, eu acho que a gente entrega sim, ou a gente pode melhorar nisso, pode se atentar nesse ponto. E a partir disso, desse fluxo, eu coloquei meio que os estágios do Apex, da minha visão, a parte de telemetria, a parte de normalização, a parte detecção, a parte do Coordinator, que a gente tem, no que foi enviado, no documento que você passou pra gente, e a parte principal, que no meu ver, é a parte da ação, que é algo de totalmente valor que não tem dentro do dataflint.
+Então, a gente ganha nesse shift left no pull request, a gente ganha nesse processo de autônomo, podendo ser open source ou não, a parte de handover determinístico que a gente pode inserir e também no MCP nativo que a gente pode construir. Então eu foquei bastante em me aprofundar, entender melhor o dataflint. Em paralelo a isso, nessa outra semana que a gente não teve esse contato, eu tentei reconstruir o dataflint com o formato do Apex, focando na parte de construção do consumo através do listening. Foi até ponto da qual eu apontei lá no chat também se é direcionamento correto de seguir. Uma vez que eu descartei, dataflint a gente não vai utilizar agora, a gente vai focar dentro do... Do Spark, então tem toda essa parte que me surgiu algumas dúvidas.
+Eu utilizo dentro do Listerning, como que vai ser esse processo? Eu vou fazer esse consumo de forma ao vivo no momento desse processo do job, que eu vou capturar essas informações, então me surgiu esses questionamentos de como capturar e de como sugerir a melhora. Se vai ser num processo lá, quando ele morrer, que eu vou sugerir, esse watch vai entrar pra fazer essa sugestão. Então, nesse contexto de me aprofundar, surgiu essas dúvidas. Aí eu fico à disposição aí pra elucidar se eu falei muito rápido, se você falou com esse sentido.
+Tá, só quero saber se tá todo mundo na mesma página, Jaime, Augusto, do.
+Que a gente conversou.
+Basicamente, inicialmente, só pra gente resumir aqui.
+Inicialmente, a ideia era a gente construir algo que não fosse ofensivo.
+E a gente começou a fazer uma pesquisa bem profunda em termos de conseguir.
+Entender o que tem hoje no espectro.
+A gente entendeu que pra que a.
+Gente pudesse fazer algo mais reativo e algo mais autônomo, inteligente, a gente precisaria.
+Ser pouco mais agressivo, né? E não somente isso, a gente deveria.
+Não focar em dataflint agora e focar somente no Spark, porque o dataflint já tem esse cluster, né, serverless, e dentro do serverless você já tem...
+Assim, o dataflint já envolve pra que você não aconteça.
+Por exemplo, eu tive caso essa semana que foi exatamente isso. O cliente... O cliente mandou uma mensagem pra mim falando, olha Luan, eu apliquei o Spark Manager num ambiente que era de Spark, funcionou muito bem, a gente tá olhando as métricas e fazendo TAN em cima disso, enfim, Mas agora a gente está.
+Com problema que, cara, 90% dos nossos jobs aqui desse outro setor são.
+Todos no dataflint Serverless E aí, o que a gente faz?
+E aí, dentro do dataflint serverless, tem alguns probleminhas. Por exemplo, você não consegue injetar já, você não consegue fazer tudo isso que.
+A gente viu, você não consegue fazer isso.
+Então, o que geralmente sobra para performance stunning?
+Você tem system tables lá que você... Basicamente é assim que você faz o troubleshooting em dataflint hoje. Que eu acho péssimo de fazer, mas.
+Não quero atacar esse problema agora. Você usa system tables, você faz.
+Umas queries, você ordena, Acha quais são os offenders, acha quais são as queries que estão realmente dando problema. E aí daí você tem que ir lá, ir lá no history e ir.
+Por entendendo aquela query lá.
+No gráfico UI e tentando fazer o debug. Então assim, beleza, péssimo.
+Nosso foco ficou da gente ser o quê?
+Reativo.
+Ficou da gente ser receber, coletar e fazer. Até aqui tudo bem?
+Sim, Lu.
+Quer falar alguma coisa, Augusto?
+Eu queria falar sobre o time, mas eu acho que pode ficar para o final.
+Tá, beleza. Então, vamos só revisar aqui o approach.
+E daí eu tô vendo que, na verdade, todos os times, esse é o time que menos tá colaborando, na verdade.
+Então eu vou ter que tomar.
+Diferente approach, porque eu acho que vocês.
+Estão em mudanças de... Tem gente que.
+Tá, por exemplo, o Philo tava em casamento, aí teve alguns problemas, eu também.
+Tive alguns problemas, mas acho que foi.
+Geral Então como que a gente volta a reacender esse processo? Eu vou entrar como parte do time para trabalhar com vocês nessas próximas semanas, porque eu acho que a grande ideia é que todo mundo entenda qual o objetivo aqui. O objetivo aqui é a gente trabalhar em grupo e ter todo mundo, então.
+Eu vou chamar uma reunião com todo mundo do time para a gente voltar exatamente nesse processo. Para voltar nesse processo, o que eu quero fazer para quem está aqui?
+Vamos tentar construir essa V1, deixar o repositório bonitinho com o básico, e daí a gente traz todo mundo embordado para poder fazer o processo, tá? Então, o que eu quero mostrar aqui.
+Rapidamente, para depois a gente falar sobre essas estratégias, o que a gente pode fazer.
+Vocês estão vendo aí? Tô vendo minha tela, né? Então, beleza. O que eu tô entendendo aqui?
+A gente vai ter job, tá?
+Então, pra ter esse job aqui, a gente vai criar .. Vamos botar aqui.
+Spark Envy, tá? Vamos chamar de Spark Envy. Que nem o Flo já tinha criado, Spark Envy, que é o cara.
+Que vai ficar gerando o nosso ambiente.
+Lá no Dockerfile, tá?
+Que vai ficar gerando ali, a gente.
+Vai ter ambiente de Spark, que.
+Vai ficar basicamente gerando. Esse cara vai gerar os History, né?
+Vai ficar gerando History 7. Beleza?
+Essa é a fase 1. Então a gente vai criar esse gerador aqui.
+Esse é o primeiro passo. O segundo passo é, depois que ele começa a gerar isso aqui, então a.
+Gente vai criar o ambiente. Então o primeiro passo aqui é Create Env. O Philo já tem algo já criado, então a gente pode inclusive usar o.
+Ambiente que ele tem, e trazer lá.
+Organizado para dentro do repositório o Create Environment.
+No segundo passo, a gente vai criar o SparkListener, que é basicamente o cara.
+Que a gente vai editar aqui no.
+Job, então a gente vai adicionar aqui no job esse SparkListener, e agora esse.
+SparkListener vai se comunicar com a nossa infraestrutura.
+Que infraestrutura é essa?
+Nossa infraestrutura vai ser baseada no quê?
+Vai ser baseado em telemetria. E aí essa telemetria vai gravar essas informações no ClickStack. E aí o ClickStack vai ser responsável por armazenar essas informações. Então esse é o passo 3. É o ClickStack. Essa é a infraestrutura. Vou botar aqui, ClickStack. E a gente tem o passo 4, né? E o passo 4, basicamente, é o quê? É... Ter... CREI,.
+Que vai fazer o diagnóstico.
+Então, imagina aqui na prática, né? Então, você tem ambiente que está.
+Gerando, ou seja, literalmente está acontecendo jobs.
+Durante o dia, a gente vai criar SparkListener que a gente injeta nesse cluster, injeta lá na definição do Spark, roda o job tem as.
+Comunicações internas dele, vai enviar essas informações.
+Para a nossa infraestrutura, a gente vai.
+Em tempo real lá receber essas informações,.
+Daí isso vai trigar crew.ai, o.
+Crew.ai vai olhar e vai falar, pô beleza, essas são as métricas e tal,.
+E daí a gente vai ver como.
+Isso vai acontecer, Aí daí ele vai literalmente fazer o que?
+Ele vai fazer uma recomendação daquele job, né? E ele vai entregar isso via o que? Provavelmente MCP. Então, como seria isso?
+Assim, isso é o que eu estou pensando, tá?
+Isso é o que eu estou pensando.
+Então, basicamente, o usuário viria aqui e.
+Faria assim, só pra vocês entenderem.
+Nossa primeira camada. Nossa primeira camada é... Cheguei aqui, esse cara tá usando, vamos supor que ele tá usando o Cloud Code, tá?
+Só pra ficar fácil aqui, esse cara.
+Tá usando o Cloud Code. E aí ele conectou o Cloud Code com o MCP nosso. Aí ele falou, oi Cloud Code, tudo bem?
+Bem, tô tendo problema de performance nesse job, né?
+O que tá acontecendo aqui?
+Então imagina que eu fiz a referência desse job, aí ele vai falar, pô,.
+Beleza, aí isso aqui tá acontecendo.
+O CREI já fez o diagnóstico, pensou,.
+Tal, tal, e aí beleza.
+Aí eu falo, olha, inicialmente seria assim.
+Cláudio, a análise que aconteceu aqui foi assim ó, eu tenho problemas de performance e gostaria de melhorar a performance desse job, o que você recomenda pra mim?
+E aí basicamente o Cláudio Codd ia injetar aqui essa informação, vamos supor que ele tivesse, aqui eu só estou sendo simples, tá?
+Só pra vocês entenderem, o job ID.
+X1, AX, tal, tal, tal, tal,.
+Tal, tal, tal, tal,.
+Tal, tal, tal, Olha só, pra esse job.
+Você gostaria tal, tal... O problema é esse, esse... Tá.
+Acontecendo isso, isso... E tal,.
+Tal, tal, tal... Você gostaria de tal, aplicar nossa sugestão?" Aí você fala, pô, beleza, aplica a sugestão.
+Ele ia lá e mudava o código.
+Do cliente baseado na sugestão, baseado nas informações que ele teve aqui.
+Esse é o primeiro estágio. Acho que era isso que a gente.
+Deveria conseguir fazer no primeiro estágio. Que ficaria bem legal, ficaria bem intuitivo. Porque esse MCP pode conectar em qualquer ferramenta, né?
+Ele pode conectar no Cursor, ele pode conectar no Codecode, ele pode conectar no Codex, enfim, e assim por diante.
+E aí ficaria disponível para esse cara poder fazer essa query e entender exatamente.
+O que ele precisa fazer. Faz sentido?
+Faz, e eu acho que até o passo 3 a gente está usando como teste, né? O Job, o Spark History. A gente pode até dizer o que ele pode gerar de Job. A gente pegou a estrutura do Gabriel. Eu até peguei e criei uma branch lá nosso Git, onde eu fiz fork do trabalho do Gabriel. Acho que até a parte 3 está funcionando. O time pode verificar, enterar, pra gente partir pra parte 4 e 5.
+Beleza, então isso aqui tá na main lá do repositório?
+Na main não, porque eu coloquei como algumas issues.
+Ótimo.
+O time vai lidar o que eu propus na Brent, só que aí depois aconteceu esses desencontros e aí o Aguimar assumiu pouco e pegou toda essa outra parte onde a gente parou agora no Flink então falta a gente emergir tudo isso e aí eu não sei como a gente vai usar de padrão a partir de atualização dentro do próprio Git, ou até pedir para se dar acesso para a gente no Project dentro do Git, para a gente conseguir ir vendo as atividades.
+Está aqui, vou dar uma olhada nela então.
+Aí o ponto que eu até falei na última reunião que eu estava presente, é que chegou ponto que a Gemma falou agora, ela começa a alucinar a AI, então a gente tem que ver onde a gente tem que parar, onde a gente está. Fugindo dos corpos. Até pedi para estudar pouco do próprio Agente Spec, para ver aquela parte de contratos, onde a gente tem que amarrar os pontos para a gente não se perder, e até as bases de conhecimento, os cabês. Senão ele fala que vai construir uma coisa surreal e a gente começa... E não para. O negócio fica meio que viciante para a gente, até o TikTok naquele negócio vertical de eu vou inteirando, vou inteirando e foi nesse ponto que eu tive pouco de dificuldade.
+Beleza.
+Jair, você queria falar alguma coisa?
+Não, eu ia comentar só sobre Será que daria, então, para a gente fazer uma divisão em pods, então, de acordo com esses steps?
+Dá, só que eu acho que o ponto que a gente está agora é.
+Que, como a gente ainda não conseguiu chegar a nenhum, eu diria, a nenhum.
+Artefato que a gente tem, enfim, a.
+Fim, eu acho que o que seria.
+Legal é a gente trabalhar em conjunto para a gente ter essa primeira versão 0.1. O que seria essa versão 0.1?
+É ter ambiente que gera, Spark Listener ok, básico, tudo básico e.
+Daí essas informações sendo enviadas para o Qlikstack e dessas informações do Qlikstack a gente começar a olhar o Crue AI.
+E começar a entender o que a gente pode buildar então o que eu.
+Quero fazer nessa semana que vem é eu vou construir plano, eu vou construir PDF com todo o plano,.
+Vou pegar o que o Ogmar fez Eu vou pegar o que o Augusto.
+Fez, eu vou compilar tudo isso dentro de documento, eu vou enviar esse.
+Documento pra vocês A gente vai lá.
+No canal do Discord e falar, pô,.
+Faz sentido isso, eu quero dividir isso em branches diferentes Então vai ser os nossos pods, como você falou, pod ambiente, pod Sparklist e pod infraestrutura E daí eu vou gerar esse spec dividido e a partir desse spec a gente começa a dividir os pods, beleza?
+Porque fica mais fácil, porque eu tô sentindo que a gente não tá conseguindo chegar a denominador comum. E não é nem questão, na verdade,.
+Somente do time tá separado e assim por diante. Mas é porque é tema complexo,.
+E acho que acredito que, por exemplo,.
+Quando a gente pega o Otero, quando a gente pega o Agents Pack, quando a gente pega o próprio Sentinel,.
+Tá muito claro o que tem que ser feito e não tem nada, teoricamente.
+Quando a gente pega o Spark, o Apex, já é mais complexo.
+Por quê?
+Porque já existe coisas, já é algo.
+Que é macetado demais, já é algo.
+Que já existe durante muito tempo, então eu acho que é mais difícil a.
+Gente chegar no agreement. No Otero, não. Pô, gera métrica, captura métrica. No Sentinel, pô, gera métrica das nuvens, captura métrica.
+No AgentSpec, a gente já tem o AgentSpec definido.
+Então, assim, Eu acredito que de complexidade.
+O Apex é o mais complexo, literalmente, porque ele fala de ambientes de Spark. Então a ideia é criar uma experiência completamente nova em relação a isso. Então vai levar tempo, mas a gente.
+Tá aqui pra isso, a gente tá aqui pra trabalhar.
+Só que eu acho que o que.
+Talvez está causando a galera meio que não seguir o processo é que a.
+Gente ainda tá na parte de pensamento.
+A gente ainda não conseguiu criar nada fixo, então eu quero vir criar algo.
+Fixo e daí eu vou instigar vocês.
+A trabalhar em cima desse processo fixo inicial. Então eu vou trazer esse primeiro escopo, vou falar, beleza galera, o que vocês acham?
+Tem isso, isso, agora a gente.
+Vai trabalhar, agora a gente vai separar.
+Os pods, agora a gente vai destrinchar cada processo baseado nisso, nisso.
+Então eu vou trabalhar esse final de semana, Eu tô sexta-feira eu tô.
+Off, então eu vou pegar sexta-feira literalmente, porque é projeto que eu assim...
+Eu sou completamente apaixonado por performance, é.
+Uma coisa que eu todo dia... Não todo dia, mentira, mas cara, toda semana eu tenho gente me perguntando de.
+Performance e tal, tal... Então seria muito legal a gente ter MCP.
+Que a gente conecta numa base de conhecimento, e esse cara traz pra gente, e aí só vai ser o início de toda complexidade.
+Porque, por exemplo, o que talvez vocês.
+Não estejam vendo, é que a grande parada agêntica, ela tá aqui, ó.
+Por quê? Porque na hora que a gente começar a armazenar informação, armazenar plano, armazenar toda coisa, aí é o que o Augusto.
+Falou, pô, a gente vai ter que.
+Amarrar contrato, a gente vai ter que.
+Criar base de reg, a gente vai ter que criar skill pra acessar essa informação, a gente vai ter que ter memória, então isso aqui é o trabalho agêntico que a gente vai fazer. Isso aqui é literalmente só a casca,.
+E aqui é só o resultado final.
+Mesmo, mas assim, Essa parte aqui vai.
+Ser a parte mais complexa e a parte que a gente vai passar muito tempo, que daqui vai destrinchar tudo que é agêntico, né?
+Vai destrinchar multi-agent, vai destrinchar memória, vai destrinchar harness, vai destrinchar contexto, vai destrinchar tudo que é.
+A gente vai aplicar toda a parte aqui. Então, eu quero construir esses dois pedaços.
+Aqui, pra que a gente consiga colocar.
+Alguma informação aqui, já integrada, para que.
+A gente comece a ter essa capa inicial do que o SparkListener vai capturar. E a partir desse SparkListener, daí a gente começa literalmente a trabalhar as diferentes pesquisas e processos. Beleza? Faz sentido?
+Então, durante essa semana, aí a gente poderia fazer assim, começar a aprofundar mais, assim, nessa arquitetura que você desenhou aí.
+O que eu gostaria que todo mundo fizesse, de verdade, olhar se o Datafint,.
+Como o Aguimar olhou, e compilar uns.
+Documentos PDF, cada de vocês, então assim, o Anthony compila documento, e.
+Assim, documento curto, do que vocês.
+Acharam, quais são os pontos, o que a gente pode usar, quais são os lados positivos, quais são os lados negativos,.
+E assim por diante. Então, eu acho que isso é uma das coisas que eu gostaria demais que vocês fizessem.
+Por quê? Porque na hora que eu trouxer esse.
+Escopo inicial, aí vai ser a ideia.
+Que a gente vai ter, literalmente, de entender como utilizar isso e melhorar isso.
+Em cima do processo do que eles.
+Já fazem, tá vendo ali? Então, tipo, eles já fazem essas paradas.
+De oferecer Code Completion e assim por diante, tá vendo? Então, a ideia é a gente construir.
+Algo desse tipo ao longo do tempo.
+Beleza?
+Beleza.
+Outro ponto em paralelo, Juan, que eu gostaria de perguntar, seria se, acho que fica à vontade também, se a gente poderia criar uma branch para a gente criar esqueleto do que foi desenhado aí e tentar montar e esse agregar valor também.
+Claro, claro. Acho legal, acho muito legal, inclusive. E a gente vai discutir esse processo durante.
+Porque assim, O problema é que às vezes a gente olha produto desse com escopo como todo, e.
+Aí é muita coisa realmente. Por exemplo, se você olhar aqui o vídeo, o que ele tem no vídeo? É exatamente o que eu quero.
+Inicialmente é isso que eu quero.
+Só que qual a grande diferença do.
+DataFrame para a gente? Exatamente o que a Aguimar falou.
+O DataFrame inicialmente ele foi criado não para ser agêntico, ele foi criado justamente para capturar as informações de performance metrics.
+E ajudá-lo, a usuário, a fazer isso.
+A gente quer inicialmente começar sistema agêntico já que entende toda a parada.
+Para depois começar a prover recomendações mais acuradas. Então inicialmente o que a gente vai fazer? Como eu imagino, o que eu acho que seria legal? O job rodou, eu tenho esse ID, eu falo, cara, quero debugar esse ID, esse dataflint que está com problema, debuga para mim.
+Aí ele vai lá dentro do cursor, por exemplo, e beleza, faz isso.
+Me mostra aí como que resolver e tal. Ele vai lá, resolve o código para.
+Você, isso aí ele está fazendo via MCP.
+E depois, eu quero visualizar como que vai ser.
+Aí está vendo essa parte de DAGs aqui, de visão?
+Eu quero oferecer também, só que de.
+Uma forma muito melhor.
+É tipo a gente literalmente criar uma.
+Interface bem legal para mostrar isso para galera que abre ali local host.
+Alguma coisa se o cara pode debugar.
+O ambiente dele vê ele pode dar replay ele pode dar tipo assim tipo, rode com novo código.
+E aí a gente tenta simular o.
+Que seria esse novo código rodando, pelas estatísticas que a gente captura, então assim,.
+Só que pensar nisso é muito vago, é muita coisa, então eu quero que.
+A gente tenha mínimo viável de cada desses componentes, porque são componentes,.
+E daí com esse mínimo viável a gente começa a expandir e quebrar esses componentes, aí vai virar exatamente o que.
+Você falou, vai virar os pods exatamente. Beleza? Então, eu diria, de novo, foca nisso aqui, foca, vou olhar exatamente isso aqui que você fez, Augusto, a Brent, o.
+Que você colocou aqui na Brent, vou.
+Te trazer alguns feedbacks também, em relação.
+Às evidências, enfim, até pra gente poder.
+Conversar sobre isso, e daí, na semana.
+Que vem, eu trago já algo completo pra gente poder trabalhar isso aqui.
+E aí, durante isso, eu vou mandar o documento para vocês quando estiver pronto inclusive eu vou usar esses 30 minutos.
+Para começar já a desenhar alguma coisa.
+Porque eu quero muito ver isso funcionando.
+Eu acho que na hora que a gente vê pelo menos o v1 tipo assim bem basicão vai dar visão para.
+Vocês, pô legal entendi tá então.
+Acho que eu quero chegar nesse.
+Modelo para vocês conseguirem ver fim a fim.
+E eu vejo muita aplicabilidade aqui no meu trabalho. É, imagino.
+Tem muita.
+Tem muita.
+E até ponto de partida, a gente pensar mais para frente, como executar de uma forma segura para uma empresa que tem muito problema em relação a deixar eu rodar agente aqui. Como a gente poderia rodar isso de forma offline, no próprio hardware? Que a gente possa impedir isso e rodar aqui.
+Você tem aí, Augusto, só dataflint ou você tem Spark normal também na sua base?
+Só dataflint.
+Só dataflint.
+E é só serverless ou não?
+Os dois. O serverless é o porpose normal, essas coisas. O serverless fica mais para o SQL Server. E o Cluster Cycle, o Serverless do Notebook, do Cluster por Pouso, a gente não usa porque a dataflint estava com o problema de a gente conseguir definir barreiras de uso. Então, quando foi liberado de forma automática, a gente teve custo altíssimo, porque o usuário usou o Notebook, viu o Cluster, aí é o Cluster aqui, aí clicava e brum. O custo foi lá em cima, então a gente tem ele desabilitado hoje Tá.
+Beleza Então deixa comigo aqui que eu vou fazer meu dever de caça Quando.
+Você fala ponto de mostrar para o usuário quando está rodando, eu penso muito no Power Center e agora o que até o próprio dataflint está fazendo, é você interagir com a execução olhando as variáveis. Então as variáveis em execução, então se você já viu que aquela variável está dando problema, se você conseguir dar stop no momento, recortar e dali você já alterar o script que faz, se você conseguir dar uma estaloura, explodir e você conseguir ver isso em tempo real, eu acho que é diferencial grande. Porque você amarra o usuário dentro da interação do próprio código dele. Tem uns que vão querer só o resultado final, tem outros que vão querer estar interando ao mesmo tempo. Os que mais entendem vão querer interar ao mesmo tempo.
+Os que não entendem vão querer me dar uma visão final aí e eu vejo o que eu vou fazer.
+Beleza?
+Deixa comigo. Vou dar uma trabalhadinha aqui.
+Então, dois próximos passos é a gente interagir, criar uma visão do dataflink, gerar documento para ver a percepção de cada. Enquanto isso, você vai ver as branches, dar feedback e trazer direcionamento para a gente criar V1. É o que eu entendi, é isso mesmo?
+Exatamente.
+Então é isso, pessoal.
+Então beleza, deixa comigo aqui que eu vou trabalhar pouquinho agora.
+Uma entranhação aqui. Fica com Deus, gente.

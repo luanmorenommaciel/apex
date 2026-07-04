@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/luanmorenommaciel/apex/contracts/apex-event.schema.json",
+  "title": "ApexEvent v1",
+  "description": "Um evento de telemetria normalizado. O Spark cospe eventos crus (verbosos e cheios de detalhe interno); o Apex os reduz a ESTE formato limpo, que é o que os Watchers leem. Exemplo real extraido de um job de skew abaixo.",
+  "type": "object",
+  "required": ["event_id", "timestamp", "kind", "resource", "execution"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Identificador unico do evento (uuid)."
+    },
+    "timestamp": {
+      "type": "string", "format": "date-time",
+      "description": "Quando o evento aconteceu, em UTC."
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["task_end", "stage_completed", "sql_execution_start", "sql_execution_end"],
+      "description": "Que tipo de evento e. Um Watcher de skew, por exemplo, olha 'task_end'."
+    },
+    "resource": {
+      "type": "object",
+      "description": "QUEM emitiu — a aplicacao Spark de origem.",
+      "required": ["service_name", "spark_app_id"],
+      "properties": {
+        "service_name": {"type": "string", "description": "Ex.: 'apex-listener'."},
+        "spark_app_id":  {"type": "string", "description": "Id da aplicacao Spark."},
+        "spark_app_name":{"type": "string", "description": "Nome do job."}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "description": "ONDE no Spark — a unidade de analise. Repare: a unidade e a QUERY (execution_id), nao a aplicacao inteira.",
+      "properties": {
+        "execution_id": {"type": "integer", "description": "Id da query/execucao SQL. Esta e a unidade de analise do Apex."},
+        "job_id":   {"type": "integer"},
+        "stage_id": {"type": "integer"},
+        "task_id":  {"type": "integer"}
+      }
+    },
+    "call_site": {
+      "type": "string",
+      "description": "A LINHA do codigo que originou esta operacao. E a chave que liga a telemetria ao codigo-fonte no GitHub. Ex.: 'job.py:58'."
+    },
+    "plan_fingerprint": {
+      "type": "string",
+      "description": "Hash do plano fisico normalizado. Serve de chave pra comparar a mesma query ao longo do tempo (baseline)."
+    },
+    "metrics": {
+      "type": "object",
+      "description": "OS NUMEROS. Sao estes campos, com estes nomes exatos, que todos concordam em usar.",
+      "properties": {
+        "run_time_ms":          {"type": "integer", "description": "Tempo de execucao da tarefa, em ms."},
+        "shuffle_read_records": {"type": "integer", "description": "Quantos registros a tarefa leu do shuffle. Sinal-chave de skew."},
+        "shuffle_read_bytes":   {"type": "integer"},
+        "spill_bytes":          {"type": "integer", "description": "Quanto vazou pra disco. Sinal de memoria insuficiente."},
+        "gc_time_ms":           {"type": "integer", "description": "Tempo gasto em garbage collection. Sinal de pressao de memoria."}
+      }
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Campos livres adicionais. SEMPRE ja com PII removido pelo Collector antes de chegar aqui."
+    }
+  },
+
+  "examples": [
+    {
+      "event_id": "a1b2-...-uuid",
+      "timestamp": "2026-06-04T00:41:58Z",
+      "kind": "task_end",
+      "resource": {
+        "service_name": "apex-listener",
+        "spark_app_id": "local-1780533718852",
+        "spark_app_name": "apex-skew_on_join_30x"
+      },
+      "execution": {"execution_id": 1, "job_id": 2, "stage_id": 4, "task_id": 17},
+      "call_site": "job.py:58",
+      "plan_fingerprint": "sha256:9f3c...",
+      "metrics": {
+        "run_time_ms": 1253,
+        "shuffle_read_records": 200100,
+        "shuffle_read_bytes": 12345678,
+        "spill_bytes": 0,
+        "gc_time_ms": 0
+      },
+      "attributes": {"join_operator": "SortMergeJoin"}
+    }
+  ]
+}

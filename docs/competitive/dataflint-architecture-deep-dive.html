@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataFlint — Arquitetura Completa × Apex Diferencial</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --surface3: #30363d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --teal: #39d353;
+    --yellow: #e3b341;
+    --df-blue: #1e6ef5;
+    --df-cyan: #06b6d4;
+    --apex-gold: #f59e0b;
+    --apex-green: #10b981;
+    --security-red: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 1.5; }
+
+  /* NAV */
+  .nav { position: sticky; top: 0; z-index: 100; background: #0d1117ee; backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); display: flex; gap: 2px; padding: 8px 16px; flex-wrap: wrap; }
+  .nav button { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all .2s; }
+  .nav button:hover, .nav button.active { background: var(--df-blue); color: white; border-color: var(--df-blue); }
+  .nav .badge { font-size: 10px; background: var(--red); color: white; border-radius: 10px; padding: 1px 6px; margin-left: 4px; }
+
+  /* SECTIONS */
+  .section { display: none; padding: 20px; max-width: 1400px; margin: 0 auto; }
+  .section.active { display: block; }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--accent); }
+  h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .subtitle { color: var(--text-muted); font-size: 12px; margin-bottom: 20px; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .card-grid { display: grid; gap: 12px; }
+  .card-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .card-grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .card-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+  /* ZONES (Architecture) */
+  .arch-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .arch-zone { padding: 16px; border-right: 1px solid var(--border); }
+  .arch-zone:last-child { border-right: none; }
+  .arch-zone-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+  .zone-a { background: rgba(30,110,245,.08); }
+  .zone-b { background: rgba(6,182,212,.08); }
+  .zone-c { background: rgba(16,185,129,.08); }
+  .zone-a .arch-zone-title { background: rgba(30,110,245,.2); color: #60a5fa; }
+  .zone-b .arch-zone-title { background: rgba(6,182,212,.2); color: #22d3ee; }
+  .zone-c .arch-zone-title { background: rgba(16,185,129,.2); color: #34d399; }
+
+  /* MODULE BOXES */
+  .module { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; position: relative; cursor: pointer; transition: all .2s; }
+  .module:hover { border-color: var(--accent); }
+  .module-title { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .module-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .module-badge { font-size: 9px; padding: 1px 6px; border-radius: 10px; font-weight: 700; }
+  .badge-oss { background: rgba(63,185,80,.2); color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
+  .badge-saas { background: rgba(188,140,255,.2); color: #bc8cff; border: 1px solid rgba(188,140,255,.3); }
+  .badge-auto { background: rgba(245,158,11,.2); color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+  .badge-agent { background: rgba(96,165,250,.2); color: #60a5fa; border: 1px solid rgba(96,165,250,.3); }
+  .badge-local { background: rgba(52,211,153,.2); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
+
+  /* SECURITY flags */
+  .sec-flag { font-size: 10px; display: inline-flex; align-items: center; gap: 3px; background: rgba(248,81,73,.15); border: 1px solid rgba(248,81,73,.3); color: #f85149; padding: 2px 6px; border-radius: 4px; margin-top: 5px; }
+  .apex-diff { font-size: 10px; display: inline-flex; align-items: center; gap: 3px; background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3); color: var(--apex-gold); padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
+
+  /* ARROWS */
+  .arrow-row { display: flex; align-items: center; justify-content: center; padding: 6px 0; color: var(--text-muted); font-size: 18px; }
+
+  /* FLOW (use case) */
+  .flow-container { display: flex; flex-direction: column; gap: 0; }
+  .flow-step { display: grid; grid-template-columns: 40px 1fr 240px; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--border); position: relative; }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .step-blue { background: rgba(30,110,245,.3); color: #60a5fa; border: 2px solid #1e6ef5; }
+  .step-cyan { background: rgba(6,182,212,.3); color: #22d3ee; border: 2px solid #06b6d4; }
+  .step-green { background: rgba(16,185,129,.3); color: #34d399; border: 2px solid #10b981; }
+  .step-red { background: rgba(248,81,73,.3); color: #f87171; border: 2px solid #f85149; }
+  .step-purple { background: rgba(188,140,255,.3); color: #c084fc; border: 2px solid #bc8cff; }
+  .step-orange { background: rgba(245,158,11,.3); color: #fbbf24; border: 2px solid #f59e0b; }
+  .flow-main { }
+  .flow-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .flow-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .flow-tech { font-size: 11px; color: var(--df-cyan); font-family: monospace; background: rgba(6,182,212,.08); padding: 4px 8px; border-radius: 4px; margin-bottom: 6px; display: inline-block; }
+  .flow-aside { display: flex; flex-direction: column; gap: 6px; }
+  .aside-sec { background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.25); border-radius: 6px; padding: 8px 10px; }
+  .aside-apex { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25); border-radius: 6px; padding: 8px 10px; }
+  .aside-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .aside-sec .aside-label { color: #f85149; }
+  .aside-apex .aside-label { color: var(--apex-gold); }
+  .aside-text { font-size: 11px; line-height: 1.4; }
+  .aside-sec .aside-text { color: #fca5a5; }
+  .aside-apex .aside-text { color: #fcd34d; }
+
+  /* SECURITY PAGE */
+  .sec-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .sec-card { background: var(--surface); border: 1px solid rgba(248,81,73,.3); border-radius: 8px; padding: 14px; }
+  .sec-card-title { font-size: 13px; font-weight: 600; color: #f87171; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .sec-severity { font-size: 9px; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+  .sev-critical { background: #7f1d1d; color: #fca5a5; }
+  .sev-high { background: #78350f; color: #fcd34d; }
+  .sev-medium { background: #1e3a5f; color: #93c5fd; }
+  .sec-source { font-size: 10px; color: var(--text-muted); margin-bottom: 6px; font-style: italic; }
+  .sec-detail { font-size: 12px; line-height: 1.5; color: var(--text-muted); }
+  .sec-apex-note { margin-top: 8px; padding: 6px 8px; background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2); border-radius: 4px; font-size: 11px; color: #6ee7b7; }
+
+  /* AGENTIC PAGE */
+  .agent-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .agent-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .agent-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .agent-icon { font-size: 22px; }
+  .agent-name { font-size: 14px; font-weight: 700; }
+  .agent-type { font-size: 11px; color: var(--text-muted); }
+  .agent-features { list-style: none; padding: 0; }
+  .agent-features li { font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); color: var(--text-muted); display: flex; gap: 6px; }
+  .agent-features li:last-child { border-bottom: none; }
+  .agent-features li span { color: var(--text); }
+  .autonomy-bar { margin-top: 10px; }
+  .autonomy-label { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .autonomy-track { height: 4px; background: var(--surface3); border-radius: 2px; }
+  .autonomy-fill { height: 4px; border-radius: 2px; }
+
+  /* APEX vs DF comparison table */
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .compare-table th { background: var(--surface2); padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); border-bottom: 2px solid var(--border); }
+  .compare-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .compare-table tr:hover td { background: var(--surface2); }
+  .td-mod { font-weight: 600; color: var(--text); }
+  .td-df { color: var(--text-muted); }
+  .td-gap { color: #f87171; }
+  .td-apex { color: #6ee7b7; }
+  .td-status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .status-exists { background: rgba(63,185,80,.15); color: #3fb950; }
+  .status-partial { background: rgba(210,153,34,.15); color: #d29922; }
+  .status-gap { background: rgba(248,81,73,.15); color: #f85149; }
+  .status-super { background: rgba(96,165,250,.15); color: #60a5fa; }
+
+  /* LEGEND */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 16px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* QUOTE */
+  .official-quote { background: rgba(30,110,245,.08); border-left: 3px solid var(--df-blue); padding: 10px 14px; margin: 12px 0; border-radius: 0 6px 6px 0; }
+  .official-quote em { font-size: 12px; color: var(--text-muted); font-style: italic; line-height: 1.5; }
+  .official-quote .source { font-size: 10px; color: var(--df-cyan); margin-top: 4px; }
+
+  /* CONNECTION LINE decorative */
+  .conn-line { display: flex; align-items: center; gap: 4px; padding: 6px 12px; color: var(--text-muted); font-size: 11px; }
+  .conn-arrow { flex: 1; height: 1px; background: linear-gradient(90deg, var(--df-blue), var(--df-cyan)); position: relative; }
+  .conn-arrow::after { content: '▶'; position: absolute; right: -8px; top: -7px; font-size: 10px; color: var(--df-cyan); }
+
+  /* incident banner */
+  .incident-banner { background: rgba(248,81,73,.1); border: 1px solid rgba(248,81,73,.3); border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; display: flex; gap: 10px; align-items: flex-start; }
+  .step-connector { display: flex; flex-direction: column; align-items: center; padding: 4px 0; }
+  .step-line { width: 2px; height: 16px; background: var(--border); }
+
+  .page-header { margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .tag-df { background: rgba(30,110,245,.2); color: #93c5fd; }
+  .tag-apex { background: rgba(245,158,11,.2); color: #fcd34d; }
+  .tag-sec { background: rgba(248,81,73,.2); color: #fca5a5; }
+  .tag-oss { background: rgba(63,185,80,.2); color: #86efac; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button class="active" onclick="show('arch')">🏗 Arquitetura</button>
+  <button onclick="show('agentic')">🤖 Agêntico & Autônomo</button>
+  <button onclick="show('usecase')">🎬 Caso de Uso (NI)</button>
+  <button onclick="show('security')">🔒 Segurança<span class="badge">10</span></button>
+  <button onclick="show('apex')">⚡ DataFlint × Apex</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ ARQUITETURA -->
+<div id="arch" class="section active">
+  <div class="page-header">
+    <h1>DataFlint — Arquitetura Completa de Módulos</h1>
+    <p class="subtitle">Baseado exclusivamente em fontes oficiais: dataflint.io/resources/how-it-works · dataflint.io/product · plugin-architecture.md (KB)</p>
+    <div class="tag-row">
+      <span class="tag tag-df">OSS v0.9.9</span>
+      <span class="tag tag-df">SaaS (pago)</span>
+      <span class="tag tag-oss">Apache-2.0</span>
+      <span class="tag tag-sec">JAR obrigatório</span>
+    </div>
+  </div>
+
+  <div class="official-quote">
+    <em>"DataFlint enriches your Spark logs and serves them to AI agents through a Spark MCP server, so they ship fixes that actually cut runtime and cost."</em>
+    <div class="source">— dataflint.io/resources/how-it-works (oficial)</div>
+  </div>
+
+  <!-- ARCH DIAGRAM -->
+  <div class="arch-container" style="margin-bottom:16px;">
+
+    <!-- ZONE A: CLUSTER -->
+    <div class="arch-zone zone-a">
+      <div class="arch-zone-title">🔵 ZONA A — Cluster de Produção</div>
+
+      <div class="module">
+        <div class="module-title">🚀 Spark Job
+          <span class="module-badge badge-oss">qualquer plataforma</span>
+        </div>
+        <div class="module-sub">PySpark / Scala · Databricks · EMR · Dataproc · Fabric · K8s · Standalone</div>
+      </div>
+
+      <div class="arrow-row">↓ ativa via spark.plugins=</div>
+
+      <div class="module" style="border-color:#1e6ef5;">
+        <div class="module-title">🔌 Open-Source JAR Plugin
+          <span class="module-badge badge-oss">OSS</span>
+        </div>
+        <div class="module-sub">Ativa via <code>spark.plugins=io.dataflint.spark.SparkDataflintPlugin</code></div>
+        <div class="module-sub" style="margin-top:4px;">• Corre <strong>in-process</strong> com driver/executors<br>• Polling ~1s no event stream existente<br>• Fail-safe: exception → logged, job continua<br>• Zero novas portas abertas</div>
+        <div class="sec-flag">🔴 JAR em produção = supply chain risk</div>
+        <div class="apex-diff">⚡ Apex: zero JAR, zero install</div>
+      </div>
+
+      <div class="arrow-row">↓ extrai métricas não-padrão</div>
+
+      <div class="module">
+        <div class="module-title">⚗️ Enrichment Engine</div>
+        <div class="module-sub">Extrai o que o Spark UI padrão não expõe:<br>• Memory patterns por executor<br>• CPU utilization (not just wall time)<br>• I/O bottlenecks por stage<br>• Shuffle performance detalhado<br>• Stage dependencies<br>• Physical plan execution trace</div>
+      </div>
+
+      <div class="arrow-row">↓ comprime 100×</div>
+
+      <div class="module">
+        <div class="module-title">📦 Enriched Log (formato proprietário)</div>
+        <div class="module-sub">Raw logs 10GB+ → compressed MB<br>Formato proprietário (não é NDJSON padrão)<br>Preserva todos os sinais de otimização</div>
+        <div class="module-sub" style="color:#f59e0b;margin-top:4px;">⚠ Só ~1% do raw log é relevante para otimização</div>
+        <div class="apex-diff">⚡ Apex usa event log padrão Spark — sem formato proprietário</div>
+      </div>
+
+      <div style="height:12px;"></div>
+      <div style="font-size:10px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">OSS ONLY (local, sem egress)</div>
+
+      <div class="module" style="border-color:#3fb950;">
+        <div class="module-title">🖥 Job Debugger UI (OSS)
+          <span class="module-badge badge-oss">open-source</span>
+          <span class="module-badge badge-local">local</span>
+        </div>
+        <div class="module-sub">Tab no Spark UI (:4040) ou Spark History Server (:18080)<br>• Performance heat map por query<br>• 14 alertas nomeados<br>• Application run summary<br>• Query failures com JVM stack trace<br>• SQL node duration (opt-in)</div>
+        <div class="apex-diff">⚡ Apex: sem UI própria (API/CLI first)</div>
+      </div>
+
+      <div class="module" style="border-color:#3fb950;">
+        <div class="module-title">📡 Telemetria MixPanel
+          <span class="module-badge badge-oss">opt-out</span>
+        </div>
+        <div class="module-sub">ON por default. Desativar: <code>spark.dataflint.telemetry.enabled=false</code></div>
+        <div class="sec-flag">🔴 ON por default em ambientes sensíveis</div>
+        <div class="apex-diff">⚡ Apex: zero telemetria externa</div>
+      </div>
+    </div>
+
+    <!-- ZONE B: ENGINE -->
+    <div class="arch-zone zone-b">
+      <div class="arch-zone-title">🔷 ZONA B — DataFlint Engine (SaaS)</div>
+
+      <div style="text-align:center;padding:8px 0;color:#22d3ee;font-size:11px;">
+        ↑ upload enriched logs (opt-in separado)
+      </div>
+
+      <div class="module" style="border-color:#0891b2;">
+        <div class="module-title">☁️ Enriched Spark Logs Store
+          <span class="module-badge badge-saas">SaaS</span>
+        </div>
+        <div class="module-sub">Armazena logs enriquecidos de todos os runs<br>• AWS North Virginia (US)<br>• Histórico + trend analysis<br>• Cross-job, cross-cluster, cross-platform</div>
+        <div class="sec-flag">🔴 Dados operacionais saem do seu ambiente</div>
+        <div class="sec-flag">🟠 Retenção: "until we delete records" (sem prazo)</div>
+        <div class="apex-diff">⚡ Apex: logs ficam no seu MinIO/S3 — zero egress</div>
+      </div>
+
+      <div class="arrow-row">↕ expõe via MCP protocol</div>
+
+      <div class="module" style="border-color:#0891b2;">
+        <div class="module-title">🔗 Spark MCP Server
+          <span class="module-badge badge-saas">SaaS</span>
+        </div>
+        <div class="module-sub">Protocolo MCP (Model Context Protocol)<br>• Exposição de logs enriquecidos para LLMs<br>• Compatível: OpenAI, Gemini, Claude<br>• Usado por: Copilot, Cluster, Review, Fleet<br>• Queries on-demand sobre production runs</div>
+        <div class="sec-flag">🟠 Novo protocolo (2024) — attack surface emergente</div>
+        <div class="sec-flag">🟠 Auth/credentials não documentados publicamente</div>
+        <div class="apex-diff">⚡ Apex: LLM lê logs localmente, sem MCP externo</div>
+      </div>
+
+      <div class="arrow-row">↕</div>
+
+      <div class="module">
+        <div class="module-title">📊 Fleet Dashboard
+          <span class="module-badge badge-saas">SaaS</span>
+        </div>
+        <div class="module-sub">• Todos os jobs em uma view<br>• Stage-level cost attribution<br>• Ranked optimization opportunities (por $ impact)<br>• Cross-run comparisons (Databricks vs EMR)<br>• Team-level accountability</div>
+        <div class="sec-flag">🟠 Google Analytics na UI (tracking de uso)</div>
+        <div class="apex-diff">⚡ Apex pode ter fleet analysis via iteração no MinIO (sem SaaS)</div>
+      </div>
+
+      <div style="height:12px;"></div>
+      <div style="font-size:10px;font-weight:700;color:#22d3ee;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">DADOS COMPARTILHADOS</div>
+
+      <div class="module" style="border-color:#f85149;">
+        <div class="module-title">👥 Terceiros (Privacy Policy)</div>
+        <div class="module-sub" style="color:#fca5a5;">• "shared with our partners and other third parties"<br>• Cloud hosting (AWS), CRM, analytics<br>• Sem lista de parceiros divulgada<br>• Em fusão/aquisição: dados transferidos ao comprador</div>
+        <div class="sec-flag">🔴 Dado compartilhado com terceiros não nomeados</div>
+        <div class="sec-flag">🔴 Risco de acquisition — dados vão ao novo dono</div>
+      </div>
+    </div>
+
+    <!-- ZONE C: AGENTS -->
+    <div class="arch-zone zone-c">
+      <div class="arch-zone-title">🟢 ZONA C — Agentes (via MCP)</div>
+
+      <div class="module" style="border-color:#8b5cf6;">
+        <div class="module-title">💬 Agentic Spark Copilot
+          <span class="module-badge badge-agent">agêntico</span>
+          <span class="module-badge badge-saas">SaaS</span>
+        </div>
+        <div class="module-sub">IDE: Cursor, VS Code, IntelliJ<br>• Consulta MCP server com contexto real de produção<br>• Root-cause via plano físico + code tracing<br>• Fix com impacto estimado: "-32% runtime, -$41/run"<br>• Rastreia até 5 arquivos de profundidade<br>• <strong>Human in the loop: engenheiro aprova e aplica</strong></div>
+        <div class="sec-flag">🟠 IDE extension tem acesso ao codebase inteiro</div>
+        <div class="apex-diff">⚡ Apex Tier 3 Coordinator (Sonnet) não requer IDE install</div>
+      </div>
+
+      <div class="arrow-row">↕</div>
+
+      <div class="module" style="border-color:#f59e0b;">
+        <div class="module-title">⚙️ Cluster Agent
+          <span class="module-badge badge-auto">autônomo</span>
+          <span class="module-badge badge-saas">SaaS</span>
+        </div>
+        <div class="module-sub">• Right-size clusters em <strong>real-time</strong><br>• Usa enriched logs via MCP para decisões<br>• Até 50% redução de custo de infra<br>• <strong>Age sem aprovação humana</strong><br>• Adapta à medida que o workload muda</div>
+        <div class="sec-flag">🔴 Age autonomamente no seu cluster — sem aprovação</div>
+        <div class="apex-diff">⚡ Apex não toca clusters. Diagnóstico only, decision ao humano</div>
+      </div>
+
+      <div class="arrow-row">↕</div>
+
+      <div class="module" style="border-color:#3b82f6;">
+        <div class="module-title">🔍 Review Agent
+          <span class="module-badge badge-agent">agêntico</span>
+          <span class="module-badge badge-saas">SaaS</span>
+        </div>
+        <div class="module-sub">• Revisa <strong>cada PR</strong> automaticamente<br>• Compara mudança vs. comportamento de produção<br>• Detecta regressões de runtime e cost spikes<br>• CI passa mas Review Agent pode reprovar<br>• <strong>Humano decide se faz merge</strong></div>
+        <div class="sec-flag">🟠 Acesso ao código + histórico de produção por PR</div>
+        <div class="apex-diff">⚡ Apex scenario-gate.yml faz gate similar em CI sem acesso externo</div>
+      </div>
+
+      <div class="arrow-row">↕</div>
+
+      <div class="module" style="border-color:#10b981;">
+        <div class="module-title">🌐 Fleet Observability
+          <span class="module-badge badge-saas">SaaS</span>
+        </div>
+        <div class="module-sub">• Dashboard empresa inteira<br>• Stage-level cost attribution<br>• Ranked por impacto em $<br>• Alimenta os outros 3 agentes<br>• Histórico + trend analysis</div>
+        <div class="apex-diff">⚡ Apex pode iterar sobre MinIO → fleet analysis sem SaaS</div>
+      </div>
+
+      <div style="height:12px;"></div>
+      <div class="module" style="border-color:#6366f1;background:rgba(99,102,241,.06);">
+        <div class="module-title">🤝 LLM Providers</div>
+        <div class="module-sub">OpenAI · Gemini · <strong>Claude (Anthropic)</strong><br>Usados como motor de raciocínio dos agentes via MCP</div>
+        <div class="apex-diff">⚡ Apex usa Claude Sonnet (Tier 3) + Opus (Tier 4) diretamente — sem intermediação do MCP DataFlint</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLUXO RESUMO -->
+  <h2>Fluxo de dados (3 etapas oficiais)</h2>
+  <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;">
+    <div style="text-align:center;">
+      <div style="font-size:24px;">⚗️</div>
+      <div style="font-size:12px;font-weight:700;margin-top:4px;">1. ENRICH</div>
+      <div style="font-size:11px;color:var(--text-muted);">JAR extrai métricas<br>proprietárias + comprime<br>100× em formato próprio</div>
+    </div>
+    <div style="font-size:24px;color:var(--df-blue);">→</div>
+    <div style="text-align:center;">
+      <div style="font-size:24px;">🔗</div>
+      <div style="font-size:12px;font-weight:700;margin-top:4px;">2. SERVE via MCP</div>
+      <div style="font-size:11px;color:var(--text-muted);">Spark MCP Server expõe<br>contexto enriquecido<br>para agentes e LLMs</div>
+    </div>
+    <div style="font-size:24px;color:var(--df-cyan);">→</div>
+    <div style="text-align:center;">
+      <div style="font-size:24px;">⚡</div>
+      <div style="font-size:12px;font-weight:700;margin-top:4px;">3. ACT</div>
+      <div style="font-size:11px;color:var(--text-muted);">Agentes corrigem código,<br>redimensionam clusters,<br>revisam PRs, rankeiam savings</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ AGÊNTICO -->
+<div id="agentic" class="section">
+  <div class="page-header">
+    <h1>O que é Agêntico e Autônomo no DataFlint</h1>
+    <p class="subtitle">Distinção oficial baseada em dataflint.io/product e comportamento descrito nos case studies</p>
+  </div>
+
+  <div class="official-quote">
+    <em>"Most AI tools are blind to production. DataFlint enriches your Spark logs and serves them to your agents through a Spark MCP server, so they ship fixes that actually cut runtime and cost."</em>
+    <div class="source">— dataflint.io/product (oficial)</div>
+  </div>
+
+  <h2 style="margin-bottom:16px;">Definição operacional</h2>
+  <div class="card-grid card-grid-2" style="margin-bottom:20px;">
+    <div class="card" style="border-color:#60a5fa;">
+      <h3 style="color:#60a5fa;">🤖 AGÊNTICO (Agentic)</h3>
+      <p style="font-size:12px;color:var(--text-muted);margin:8px 0;">Tem ferramentas, raciocina em múltiplos passos, tem acesso a contexto de produção. <strong>Mas o humano aprova e executa.</strong></p>
+      <div style="background:var(--surface2);border-radius:6px;padding:10px;margin-top:8px;">
+        <div style="font-size:11px;color:var(--text-muted);">Ciclo agêntico (DataFlint):</div>
+        <div style="font-size:12px;margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <span style="background:rgba(96,165,250,.2);color:#60a5fa;padding:3px 8px;border-radius:4px;">Observe</span>
+          <span style="color:var(--text-muted);">→</span>
+          <span style="background:rgba(96,165,250,.2);color:#60a5fa;padding:3px 8px;border-radius:4px;">Diagnose</span>
+          <span style="color:var(--text-muted);">→</span>
+          <span style="background:rgba(96,165,250,.2);color:#60a5fa;padding:3px 8px;border-radius:4px;">Suggest</span>
+          <span style="color:var(--text-muted);">→</span>
+          <span style="background:rgba(248,81,73,.2);color:#f87171;padding:3px 8px;border-radius:4px;">Human applies</span>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="border-color:#f59e0b;">
+      <h3 style="color:#f59e0b;">⚙️ AUTÔNOMO (Autonomous)</h3>
+      <p style="font-size:12px;color:var(--text-muted);margin:8px 0;">Age sem aprovação humana. Executa mudanças diretamente. <strong>Requer confiança total no agente.</strong></p>
+      <div style="background:var(--surface2);border-radius:6px;padding:10px;margin-top:8px;">
+        <div style="font-size:11px;color:var(--text-muted);">Ciclo autônomo (DataFlint Cluster Agent):</div>
+        <div style="font-size:12px;margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <span style="background:rgba(245,158,11,.2);color:#fbbf24;padding:3px 8px;border-radius:4px;">Monitor</span>
+          <span style="color:var(--text-muted);">→</span>
+          <span style="background:rgba(245,158,11,.2);color:#fbbf24;padding:3px 8px;border-radius:4px;">Calculate</span>
+          <span style="color:var(--text-muted);">→</span>
+          <span style="background:rgba(245,158,11,.2);color:#fbbf24;padding:3px 8px;border-radius:4px;">Apply</span>
+          <span style="color:var(--text-muted);">→</span>
+          <span style="background:rgba(16,185,129,.2);color:#34d399;padding:3px 8px;border-radius:4px;">✓ done</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 AGENTS -->
+  <h2>Os 4 Agentes: autonomia e como funcionam</h2>
+  <div class="agent-grid">
+
+    <div class="agent-card" style="border-color:#8b5cf6;">
+      <div class="agent-header">
+        <span class="agent-icon">💬</span>
+        <div>
+          <div class="agent-name">Agentic Spark Copilot</div>
+          <div class="agent-type">Agêntico · Human-in-the-loop · IDE extension</div>
+        </div>
+      </div>
+      <ul class="agent-features">
+        <li>🛠 <span>Conecta ao MCP Server para obter contexto real de produção</span></li>
+        <li>🔍 <span>Rastreia plano físico de execução, identifica bottleneck</span></li>
+        <li>📁 <span>Navega pelo codebase até 5 arquivos de profundidade</span></li>
+        <li>✍️ <span>Gera fix com impacto estimado (ex: "-32% runtime, -$41/run")</span></li>
+        <li>👤 <span><strong>Humano aprova e aplica o fix no IDE</strong></span></li>
+        <li>🔗 <span>Deep links para o run de produção que embasou o fix</span></li>
+      </ul>
+      <div class="autonomy-bar">
+        <div class="autonomy-label"><span>Autonomia</span><span style="color:#8b5cf6;">60% — sugere, não executa</span></div>
+        <div class="autonomy-track"><div class="autonomy-fill" style="width:60%;background:#8b5cf6;"></div></div>
+      </div>
+      <div class="apex-diff" style="margin-top:10px;display:block;">⚡ Apex equivalente: Tier 3 Coordinator (Sonnet) — raciocina sem IDE install, sem acesso ao codebase do usuário</div>
+    </div>
+
+    <div class="agent-card" style="border-color:#f59e0b;">
+      <div class="agent-header">
+        <span class="agent-icon">⚙️</span>
+        <div>
+          <div class="agent-name">Cluster Agent</div>
+          <div class="agent-type">Autônomo · Sem aprovação humana · Real-time</div>
+        </div>
+      </div>
+      <ul class="agent-features">
+        <li>📊 <span>Lê enriched logs via MCP em tempo real</span></li>
+        <li>📐 <span>Calcula tamanho ideal de cluster por workload</span></li>
+        <li>⚡ <span><strong>Aplica mudanças automaticamente — sem aprovação</strong></span></li>
+        <li>💰 <span>Até 50% redução de custo de infraestrutura</span></li>
+        <li>🔄 <span>Adapta continuamente à medida que o workload muda</span></li>
+        <li>🚫 <span>Sem necessidade de tuning manual</span></li>
+      </ul>
+      <div class="autonomy-bar">
+        <div class="autonomy-label"><span>Autonomia</span><span style="color:#f59e0b;">100% — age sozinho</span></div>
+        <div class="autonomy-track"><div class="autonomy-fill" style="width:100%;background:#f59e0b;"></div></div>
+      </div>
+      <div class="sec-flag" style="display:block;margin-top:10px;">🔴 Risco: agente autônomo com permissão de alterar cluster de produção</div>
+      <div class="apex-diff" style="margin-top:6px;display:block;">⚡ Apex não toca o cluster — diagnóstico only. Zero risco de ação autônoma indesejada</div>
+    </div>
+
+    <div class="agent-card" style="border-color:#3b82f6;">
+      <div class="agent-header">
+        <span class="agent-icon">🔍</span>
+        <div>
+          <div class="agent-name">Review Agent</div>
+          <div class="agent-type">Agêntico · Ativado por PR · CI integration</div>
+        </div>
+      </div>
+      <ul class="agent-features">
+        <li>📝 <span>Revisa cada PR automaticamente ao abrir</span></li>
+        <li>📊 <span>Compara mudança vs. comportamento de produção real (via MCP)</span></li>
+        <li>⚠️ <span>Detecta regressões de runtime e cost spikes</span></li>
+        <li>✅ <span>CI pode passar mas o Review Agent rejeita se detectar regressão</span></li>
+        <li>📋 <span>Sugere fixes com contexto de produção no PR</span></li>
+        <li>👤 <span><strong>Humano decide fazer merge ou não</strong></span></li>
+      </ul>
+      <div class="autonomy-bar">
+        <div class="autonomy-label"><span>Autonomia</span><span style="color:#3b82f6;">70% — revisa e bloqueia, não corrige</span></div>
+        <div class="autonomy-track"><div class="autonomy-fill" style="width:70%;background:#3b82f6;"></div></div>
+      </div>
+      <div class="apex-diff" style="margin-top:10px;display:block;">⚡ Apex scenario-gate.yml: gate de CI com synthetic log + oracle.py — sem acesso externo, sem SaaS</div>
+    </div>
+
+    <div class="agent-card" style="border-color:#10b981;">
+      <div class="agent-header">
+        <span class="agent-icon">🌐</span>
+        <div>
+          <div class="agent-name">Fleet Observability</div>
+          <div class="agent-type">Dashboard · Company-wide · Alimenta os outros 3</div>
+        </div>
+      </div>
+      <ul class="agent-features">
+        <li>🗺 <span>Todos os jobs, clusters e custos em uma view</span></li>
+        <li>💵 <span>Stage-level cost attribution com team accountability</span></li>
+        <li>📈 <span>Ranked optimization opportunities por $ impact</span></li>
+        <li>🔗 <span>Alimenta Copilot, Cluster Agent e Review Agent com contexto histórico</span></li>
+        <li>🔄 <span>Cross-run, cross-platform comparison (Databricks vs EMR, etc.)</span></li>
+        <li>📊 <span>Trend analysis e anomaly detection ao longo do tempo</span></li>
+      </ul>
+      <div class="autonomy-bar">
+        <div class="autonomy-label"><span>Autonomia</span><span style="color:#10b981;">20% — observa, não age</span></div>
+        <div class="autonomy-track"><div class="autonomy-fill" style="width:20%;background:#10b981;"></div></div>
+      </div>
+      <div class="apex-diff" style="margin-top:10px;display:block;">⚡ Apex pode ter fleet view iterando sobre MinIO — sem SaaS, sem egress, sem custo adicional</div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;" class="official-quote">
+    <em>"From Hours of Guesswork to Minutes of Precision. Most teams spend 4-8 hours to root cause issues manually. DataFlint: 2-5 minutes with AI-powered analysis."</em>
+    <div class="source">— dataflint.io/product (oficial)</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ CASO DE USO -->
+<div id="usecase" class="section">
+  <div class="page-header">
+    <h1>Caso de Uso: Natural Intelligence — 30x speedup, OOM às 3AM</h1>
+    <p class="subtitle">Fonte: dataflint.io/resources/blog/ni-spark-hidden-bug-30x-improvement (Abril 2026) — reproduzido com fidelidade</p>
+  </div>
+
+  <div class="incident-banner">
+    <span style="font-size:20px;">🚨</span>
+    <div>
+      <strong>Cenário:</strong> Pipeline hourly no AWS EMR processando ~400 GB/hora. SLA: 30 minutos. Runtime subindo para 44 minutos em pico → OOM crash às 3AM com <code>ExecutorLostFailure</code>. Adicionaram mais máquinas — não ajudou nada.
+    </div>
+  </div>
+
+  <div class="flow-container">
+
+    <!-- STEP 1 -->
+    <div class="flow-step">
+      <div><div class="flow-num step-blue">1</div></div>
+      <div class="flow-main">
+        <div class="flow-title">Spark Job submetido ao AWS EMR</div>
+        <div class="flow-desc">Pipeline "in sites" — processa dados incrementais com Apache Spark + Apache Iceberg. Input: ~400 GB/hora. SLA: 30 min. Cluster: 84 cores disponíveis.</div>
+        <div class="flow-tech">spark-submit --packages io.dataflint:spark_2.12:0.9.9 ...</div>
+      </div>
+      <div class="flow-aside">
+        <div class="aside-sec">
+          <div class="aside-label">⚠ Segurança</div>
+          <div class="aside-text">JAR DataFlint injetado como dependência no job de produção. Runs in-process com driver e executors do cluster.</div>
+        </div>
+        <div class="aside-apex">
+          <div class="aside-label">⚡ Apex</div>
+          <div class="aside-text">Zero JAR. Apex lê o event log depois que o job termina — sem dependência no classpath de produção.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="flow-step">
+      <div><div class="flow-num step-cyan">2</div></div>
+      <div class="flow-main">
+        <div class="flow-title">JAR enrichment roda in-process durante execução</div>
+        <div class="flow-desc">O plugin DataFlint coleta métricas não disponíveis no Spark UI padrão: CPU utilization por executor, memory patterns, shuffle performance, stage dependencies, physical plan trace. Polling ~1s. Comprime 100× em formato proprietário.</div>
+        <div class="flow-tech">spark.plugins = io.dataflint.spark.SparkDataflintPlugin</div>
+      </div>
+      <div class="flow-aside">
+        <div class="aside-sec">
+          <div class="aside-label">⚠ Segurança</div>
+          <div class="aside-text">Formato proprietário comprimido. Não é o event log padrão Spark — opacidade sobre exatamente o que é capturado.</div>
+        </div>
+        <div class="aside-apex">
+          <div class="aside-label">⚡ Apex</div>
+          <div class="aside-text">Apex usa o NDJSON padrão do event log Spark — auditável, open, sem formato proprietário. Cada campo é rastreável na spec do Spark.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="flow-step">
+      <div><div class="flow-num step-red">3</div></div>
+      <div class="flow-main">
+        <div class="flow-title">Enriched log enviado ao DataFlint SaaS (AWS North Virginia)</div>
+        <div class="flow-desc">Logs enriquecidos e comprimidos são enviados para a infraestrutura SaaS do DataFlint. Armazenados em AWS North Virginia para análise histórica, fleet view e servir ao MCP server.</div>
+        <div class="flow-tech">POST https://api.dataflint.io/ingest/enriched-log</div>
+      </div>
+      <div class="flow-aside">
+        <div class="aside-sec">
+          <div class="aside-label">🔴 Segurança CRÍTICA</div>
+          <div class="aside-text">Metadados operacionais saem do ambiente da NI → DataFlint cloud (US). Inclui planos físicos, file sizes, data distribution. Retenção sem prazo definido. Compartilhado com "parceiros" não nomeados.</div>
+        </div>
+        <div class="aside-apex">
+          <div class="aside-label">⚡ Apex</div>
+          <div class="aside-text">Zero egress. O event log fica no MinIO da sua infraestrutura. O Apex lê de lá — nenhum dado sai do seu ambiente.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="flow-step">
+      <div><div class="flow-num step-cyan">4</div></div>
+      <div class="flow-main">
+        <div class="flow-title">Fleet Dashboard mostra: SLA breach, 44min em pico</div>
+        <div class="flow-desc">O Dashboard DataFlint (SaaS) mostra a tendência de runtime — job subindo para 44 minutos durante pico de tráfego, consistentemente acima do SLA de 30min. Cross-run comparison histórico visível.</div>
+        <div class="flow-tech">Dashboard → Jobs view → "in sites" pipeline → Performance trend</div>
+      </div>
+      <div class="flow-aside">
+        <div class="aside-sec">
+          <div class="aside-label">⚠ Segurança</div>
+          <div class="aside-text">Dashboard rastreado via Google Analytics (privacy policy DataFlint). Padrões de uso dos engenheiros enviados ao Google.</div>
+        </div>
+        <div class="aside-apex">
+          <div class="aside-label">⚡ Apex</div>
+          <div class="aside-text">Apex não tem dashboard visual. Mas: oracle.py + watcher output podem alimentar um dashboard local sem enviar dados para fora.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="flow-step">
+      <div><div class="flow-num step-blue">5</div></div>
+      <div class="flow-main">
+        <div class="flow-title">Job Debugger OSS flagra: "Idle Cores 50.58%"</div>
+        <div class="flow-desc">O open-source Job Debugger (tab no Spark UI) detecta o primeiro alerta: cluster utilizando apenas 50.58% dos cores. Recomenda ajuste de executor cores. Mas isso é só o sintoma secundário — a causa real é upstream.</div>
+        <div class="flow-tech">Alert: "High Wasted Cores Rate" · Idle: 50.58% · Rec: reduce executor cores</div>
+      </div>
+      <div class="flow-aside">
+        <div class="aside-sec">
+          <div class="aside-label">⚠ Nota</div>
+          <div class="aside-text">O alerta certo (Idle Cores) — mas a recomendação aqui seria errada: reduzir executor cores salvaria custo mas não resolveria a lentidão. A causa está em outro lugar.</div>
+        </div>
+        <div class="aside-apex">
+          <div class="aside-label">⚡ Apex</div>
+          <div class="aside-text">Apex v5 scenario "parallelism_collapse" detectaria: task_count=2, available_cores=84, utilization=2.38%. Emite finding com root_cause structurado e confiança.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="flow-step">
+      <div><div class="flow-num step-purple">6</div></div>
+      <div class="flow-main">
+        <div class="flow-title">Engenheiro abre Cursor IDE → Copilot conecta ao MCP Server</div>
+        <div class="flow-desc">O Agentic Spark Copilot (IDE extension) conecta via MCP ao Spark MCP Server do DataFlint. O agente tem acesso simultaneamente ao: código-fonte no IDE + enriched logs de produção via MCP + histórico de runs.</div>
+        <div class="flow-tech">DataFlint MCP → Cursor IDE extension → contexto: código + runtime</div>
+      </div>
+      <div class="flow-aside">
+        <div class="aside-sec">
+          <div class="aside-label">⚠ Segurança</div>
+          <div class="aside-text">IDE extension tem acesso ao codebase completo da NI. MCP server é um novo protocolo com attack surface emergente. LLM vê tanto o código quanto os dados de produção simultaneamente.</div>
+        </div>
+        <div class="aside-apex">
+          <div class="aside-label">⚡ Apex</div>
+          <div class="aside-text">Apex Tier 3 Coordinator não acessa o IDE do engenheiro. Opera sobre o event log + scenario.yaml — sem acesso ao codebase. O engenheiro recebe um Finding estruturado.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="flow-step">
+      <div><div class="flow-num step-purple">7</div></div>
+      <div class="flow-main">
+        <div class="flow-title">Copilot investiga: Stage 365, 82/84 cores ociosos, 2 tasks</div>
+        <div class="flow-desc">O agente rastreia o Stage 365 (o mais lento): 82 dos 84 cores estão completamente ociosos. Apenas 2 tasks estão rodando, cada uma processando 6.93 GiB. Median task duration: 4.2 minutos. Spill: 11.2 GiB.</div>
+        <div class="flow-tech">Stage 365 · Tasks: 2/84 · Utilization: 2.38% · Median input: 6.93 GiB · Spill: 11.2 GiB</div>
+      </div>
+      <div class="flow-aside">
+        <div class="aside-sec">
+          <div class="aside-label">📊 Dado</div>
+          <div class="aside-text">Estes dados (task count, spill, idle cores) estão disponíveis no Spark event log padrão — sem precisar de JAR ou enriquecimento proprietário.</div>
+        </div>
+        <div class="aside-apex">
+          <div class="aside-label">⚡ Apex</div>
+          <div class="aside-text">Apex leria exatamente estes dados do SparkListenerStageCompleted. O scenario "parallelism_collapse" detectaria task_count=2 vs available_cores=84 e emitiria finding com ratio de subutilização.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="flow-step">
+      <div><div class="flow-num step-orange">8</div></div>
+      <div class="flow-main">
+        <div class="flow-title">Copilot rastreia causa: coalesce(2) em lib Iceberg — 5 arquivos de profundidade</div>
+        <div class="flow-desc">O agente segue o plano físico de execução e, navegando pelo codebase no IDE, encontra um <code>.coalesce(2)</code> enterrado 5 níveis de chamada de função em uma classe utilitária de terceiro do Apache Iceberg — não estava no código da NI. Este coalesce colapsou as partições para 2 antes do sort+write.</div>
+        <div class="flow-tech">NI main class → method1 → method2 → method3 → method4 → IcebergUtils.coalesce(2)</div>
+      </div>
+      <div class="flow-aside">
+        <div class="aside-sec">
+          <div class="aside-label">⚠ Segurança</div>
+          <div class="aside-text">O agente leu 5 arquivos de código — incluindo libs de terceiro no classpath do projeto. Acesso amplo ao codebase via IDE extension.</div>
+        </div>
+        <div class="aside-apex">
+          <div class="aside-label">⚡ Apex (gap real)</div>
+          <div class="aside-text">Apex callSite aponta para o código da NI, não para libs de terceiro. Apex detectaria o SINTOMA (2 tasks, spill) e diria: "Coalesce operator no plano físico — verifique libs de terceiro." Não rastrearia automaticamente 5 arquivos de profundidade.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 9 -->
+    <div class="flow-step">
+      <div><div class="flow-num step-green">9</div></div>
+      <div class="flow-main">
+        <div class="flow-title">Copilot sugere fix + engenheiro aplica no IDE</div>
+        <div class="flow-desc">O Agentic Copilot sugere: substituir <code>coalesce(2)</code> por <code>repartition(200)</code>, adicionar broadcast joins para tabelas pequenas, e salting para hot keys (skew de 37.12×). O engenheiro revisa a sugestão e aplica diretamente no editor.</div>
+        <div class="flow-tech">coalesce(2) → repartition(200) + broadcast joins + salting</div>
+      </div>
+      <div class="flow-aside">
+        <div class="aside-sec">
+          <div class="aside-label">⚠ Nota</div>
+          <div class="aside-text">O humano ainda aprova. O Copilot não alterou código automaticamente — sugeriu. Distingue do Cluster Agent que age sem aprovação.</div>
+        </div>
+        <div class="aside-apex">
+          <div class="aside-label">⚡ Apex</div>
+          <div class="aside-text">Apex Tier 3 Coordinator emitiria o mesmo finding estruturado: root_cause, recommendation, confidence score. Não requer IDE. O engenheiro recebe o Finding e decide o fix.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 10 -->
+    <div class="flow-step">
+      <div><div class="flow-num step-green">10</div></div>
+      <div class="flow-main">
+        <div class="flow-title">Resultado: stage 5min → 10 segundos (30×) · OOM eliminado</div>
+        <div class="flow-desc">O stage problemático caiu de 5 minutos para 10 segundos. Spill: 11.2 GiB → 0 B. Core utilization: 2.38% → 100%. O pipeline passou a rodar dentro do SLA mesmo durante o pico. O OOM às 3AM foi eliminado. A pipeline ficou resiliente o suficiente para absorver o bug do produtor upstream (string vazia em vez de null) sem brechar o SLA.</div>
+        <div class="flow-tech">Stage: 5min → 10s · Spill: 11.2 GiB → 0 B · Cores: 2.38% → 100% · SLA: ✅</div>
+      </div>
+      <div class="flow-aside">
+        <div class="aside-apex">
+          <div class="aside-label">⚡ Apex — o mesmo resultado?</div>
+          <div class="aside-text">Apex detectaria o sintoma (2 tasks, spill, wasted cores) com zero JAR. Não rastrearia o coalesce na lib de terceiro automaticamente — mas daria ao engenheiro tudo que precisa para encontrá-lo. O fix seria o mesmo.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SEGURANÇA -->
+<div id="security" class="section">
+  <div class="page-header">
+    <h1>Análise de Segurança — DataFlint</h1>
+    <p class="subtitle">Baseado exclusivamente em: Privacy Policy (dataflint.io/privacy) · plugin-architecture.md (KB) · what-is-dataflint.md (KB) · dataflint-specialist.md</p>
+  </div>
+
+  <div class="official-quote">
+    <em>"This is exactly where DataFlint fits in. [...] Treat as CRITICAL (0.98); ask first" [sobre habilitar egress SaaS em dados da plataforma]</em>
+    <div class="source">— dataflint-specialist.md (KB oficial, regra de segurança interna)</div>
+  </div>
+
+  <div class="sec-grid">
+
+    <div class="sec-card">
+      <div class="sec-card-title">🔴 JAR em Cluster de Produção <span class="sec-severity sev-critical">CRÍTICO</span></div>
+      <div class="sec-source">Fonte: plugin-architecture.md · "spark.plugins=io.dataflint.spark.SparkDataflintPlugin"</div>
+      <div class="sec-detail">O JAR roda in-process com o driver e executors Spark. Qualquer vulnerabilidade no JAR (ex: Log4Shell-style, dependency confusion, supply chain attack) compromete o cluster. A dependência é resolvida pelo Maven Central em runtime (<code>spark.jars.packages</code>) — em pods K8s com egress bloqueado o job falha. Não há mecanismo de verificação de integridade documentado.</div>
+      <div class="sec-apex-note">✅ Apex: zero JAR. O watcher roda no seu próprio ambiente, lendo o event log via MinIO REST. Nenhuma dependência no classpath do job de produção.</div>
+    </div>
+
+    <div class="sec-card">
+      <div class="sec-card-title">🔴 Egress de Metadados Operacionais <span class="sec-severity sev-critical">CRÍTICO</span></div>
+      <div class="sec-source">Fonte: what-is-dataflint.md · Privacy Policy (dataflint.io/privacy)</div>
+      <div class="sec-detail">O produto SaaS envia "operational metadata" (logs enriquecidos, planos físicos, data distribution, file sizes, task metrics) para os servidores DataFlint em AWS North Virginia (US). Para empresas com dados sensíveis ou restrições de soberania de dados (LGPD, GDPR, regulação financeira), isso é um bloqueador. O KB próprio da DataFlint adverte: "Enable SaaS/external egress on platform data unprompted → Treat as CRITICAL (0.98); ask first."</div>
+      <div class="sec-apex-note">✅ Apex: zero egress. Event log lido diretamente do MinIO da sua infraestrutura. O LLM (Anthropic API) só recebe o finding estruturado, não o log completo.</div>
+    </div>
+
+    <div class="sec-card">
+      <div class="sec-card-title">🟠 Telemetria MixPanel ON por Default <span class="sec-severity sev-high">ALTO</span></div>
+      <div class="sec-source">Fonte: dataflint-config-schema.yaml · Privacy Policy</div>
+      <div class="sec-detail">O plugin OSS habilita telemetria de uso via MixPanel por padrão. Para desativar: <code>spark.dataflint.telemetry.enabled=false</code>. A telemetria inclui email address e user activity (privacy policy). O KB DataFlint instrui explicitamente: "telemetry.enabled=false for sensitive data" — o que implica que em ambientes sensíveis o comportamento default está errado.</div>
+      <div class="sec-apex-note">✅ Apex: sem telemetria. OSS puro, zero tracking externo de uso.</div>
+    </div>
+
+    <div class="sec-card">
+      <div class="sec-card-title">🟠 Compartilhamento com Terceiros Não Nomeados <span class="sec-severity sev-high">ALTO</span></div>
+      <div class="sec-source">Fonte: Privacy Policy (dataflint.io/privacy) — citação direta</div>
+      <div class="sec-detail">"The information DataFlint gathers is shared with our partners and other third parties." Não há lista pública de parceiros. Inclui: cloud hosting (AWS), app content platforms, email/CRM providers, analytics companies. A política também permite transferência de todos os dados em caso de fusão, aquisição ou venda da empresa — "we reserve the right to transfer, disclose or assign your information."</div>
+      <div class="sec-apex-note">✅ Apex: código open-source, sem coleta de dados do usuário, sem terceiros.</div>
+    </div>
+
+    <div class="sec-card">
+      <div class="sec-card-title">🟠 Retenção de Dados Indefinida <span class="sec-severity sev-high">ALTO</span></div>
+      <div class="sec-source">Fonte: Privacy Policy — seção "How We Protect and Retain"</div>
+      <div class="sec-detail">"Your information will be stored until we delete our records, and we proactively delete it, or if you send a valid deletion request." Não há prazo definido para retenção de logs operacionais. Para compliance (LGPD Art. 16, GDPR Art. 5.1.e), períodos de retenção precisam ser especificados. O dado pode persistir indefinidamente nos servidores DataFlint.</div>
+      <div class="sec-apex-note">✅ Apex: você controla a retenção — o event log fica no seu MinIO com a política que você definir.</div>
+    </div>
+
+    <div class="sec-card">
+      <div class="sec-card-title">🟠 MCP Server — Attack Surface Emergente <span class="sec-severity sev-high">ALTO</span></div>
+      <div class="sec-source">Fonte: dataflint.io/resources/how-it-works · produto SaaS</div>
+      <div class="sec-detail">O Spark MCP Server expõe logs enriquecidos de produção via protocolo MCP para múltiplos LLMs (OpenAI, Gemini, Claude). MCP é um protocolo criado em 2024 com padronização de segurança ainda emergente. As credenciais/auth do MCP server não são documentadas publicamente. Expõe dados de execução de produção para qualquer agente MCP-compatível que tiver acesso.</div>
+      <div class="sec-apex-note">✅ Apex: sem MCP server. O LLM é chamado diretamente pela pipeline interna do Apex — sem exposição via protocolo de rede.</div>
+    </div>
+
+    <div class="sec-card">
+      <div class="sec-card-title">🔵 IDE Extension com Acesso ao Codebase <span class="sec-severity sev-medium">MÉDIO</span></div>
+      <div class="sec-source">Fonte: caso Natural Intelligence — "traced through 5 files deep"</div>
+      <div class="sec-detail">O Agentic Spark Copilot (IDE extension para Cursor/VS Code/IntelliJ) tem acesso ao codebase completo para rastrear causas 5 arquivos de profundidade. Isso é necessário para o caso NI, mas significa que o agente LLM lê código proprietário para enviar ao MCP server/LLM provider. Não há documentação sobre o que do código é enviado ao servidor DataFlint.</div>
+      <div class="sec-apex-note">✅ Apex: não acessa o codebase do usuário. Usa callSite do event log (file:line) como referência — sem ler o código fonte.</div>
+    </div>
+
+    <div class="sec-card">
+      <div class="sec-card-title">🔵 Google Analytics na Dashboard UI <span class="sec-severity sev-medium">MÉDIO</span></div>
+      <div class="sec-source">Fonte: Privacy Policy — seção "Analytic Tools/Cookies"</div>
+      <div class="sec-detail">"The Website uses a tool called Google Analytics to collect information about use of the Website." Rastreia: frequência de visitas, páginas visitadas, sites anteriores. Em empresas com políticas de privacidade rigorosas ou ambientes corporativos, Google Analytics pode ser bloqueado por firewall — inutilizando o dashboard. Dados de comportamento dos engenheiros vão ao Google.</div>
+      <div class="sec-apex-note">✅ Apex: sem UI web, sem tracking. Output é arquivo/CLI.</div>
+    </div>
+
+    <div class="sec-card">
+      <div class="sec-card-title">🔴 Cluster Agent Age Autonomamente <span class="sec-severity sev-critical">CRÍTICO (operacional)</span></div>
+      <div class="sec-source">Fonte: dataflint.io/product/cluster-agent — "Auto-scales your Spark clusters in real time"</div>
+      <div class="sec-detail">O Cluster Agent aplica mudanças de tamanho de cluster em real-time sem aprovação humana. Em um ambiente de produção com SLAs, um agente autônomo que redimensiona clusters errado pode: causar OOM por suballocação, aumentar custo por superallocação, ou interromper jobs em andamento. "No manual tuning" soa como benefício mas é também um risco para ambientes com controles de change management.</div>
+      <div class="sec-apex-note">✅ Apex: não toca o cluster. Diagnóstico only. A ação é sempre do engenheiro.</div>
+    </div>
+
+    <div class="sec-card">
+      <div class="sec-card-title">🔵 Sem Opção On-Premises para SaaS <span class="sec-severity sev-medium">MÉDIO</span></div>
+      <div class="sec-source">Fonte: ausência de menção em toda a documentação oficial DataFlint</div>
+      <div class="sec-detail">Não há menção de deployment on-premises ou private cloud para o SaaS DataFlint em nenhuma documentação pública. Ambientes air-gapped (financeiro, governo, defesa, saúde) não podem usar os agentes SaaS. O OSS (Job Debugger) funciona localmente, mas sem acesso ao MCP server, Copilot, Cluster Agent, Review Agent e Fleet Observability ficam indisponíveis.</div>
+      <div class="sec-apex-note">✅ Apex: 100% on-premises by design. Roda onde você roda o Spark — MinIO, HDFS, qualquer file system.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ APEX vs DF -->
+<div id="apex" class="section">
+  <div class="page-header">
+    <h1>DataFlint × Apex — Módulo a Módulo</h1>
+    <p class="subtitle">Onde o Apex já diferencia, onde pode superar e onde é o gap real</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#3fb950;"></div><span>Apex supera</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#d29922;"></div><span>Equivalente ou em desenvolvimento</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f85149;"></div><span>Gap real (decisão estratégica)</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#60a5fa;"></div><span>Diferente por design (não é gap)</span></div>
+  </div>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th style="width:18%;">Módulo DataFlint</th>
+        <th style="width:22%;">O que DataFlint faz</th>
+        <th style="width:20%;">Apex hoje (v4)</th>
+        <th style="width:20%;">Diferencial Apex</th>
+        <th style="width:10%;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="td-mod">🔌 OSS JAR Plugin</td>
+        <td class="td-df">Roda in-process. Enriquece métricas não-padrão. Comprime 100× em formato proprietário. Requer install no cluster.</td>
+        <td>Zero JAR. Apex lê o event log padrão Spark via MinIO REST. Sem install, sem dependência.</td>
+        <td class="td-apex">⭐ Maior diferencial do Apex. DataFlint precisa de JAR em produção — Apex não precisa de nada no cluster.</td>
+        <td><span class="td-status status-super">Apex supera</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">⚗️ Enrichment Engine (formato proprietário)</td>
+        <td class="td-df">Extrai métricas adicionais. Formato comprimido proprietário. 100× menor que raw logs.</td>
+        <td>Usa event log padrão NDJSON. Suporte a zstd nativo (P0-1 v4). iter_events() streaming para logs grandes.</td>
+        <td class="td-apex">⭐ Event log padrão = auditável, portável, sem lock-in. Formato proprietário do DataFlint é opaco.</td>
+        <td><span class="td-status status-super">Apex supera</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">📡 Telemetria MixPanel</td>
+        <td class="td-df">Rastreia uso via MixPanel. ON por default. Opt-out via config explícita.</td>
+        <td>Zero telemetria. Código open-source. Sem tracking de uso.</td>
+        <td class="td-apex">⭐ Apex não coleta nenhum dado de uso. Não existe MixPanel, Google Analytics, ou qualquer tracking.</td>
+        <td><span class="td-status status-super">Apex supera</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">🖥 Job Debugger OSS (UI + 14 alertas)</td>
+        <td class="td-df">Tab no Spark UI. Heat map visual. 14 alertas nomeados. Funciona live (:4040) e History Server.</td>
+        <td>1 watcher (SkewWatcher v4, AQE-aware). Sem UI visual. Output estruturado JSON/CLI.</td>
+        <td class="td-gap">⚠ Gap de cobertura: 13 dos 14 alertas são detectáveis do event log sem JAR. Faltam 12 scenarios novos. Gap de UI: sem heat map.</td>
+        <td><span class="td-status status-partial">Em desenvolvimento</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">🔗 Spark MCP Server</td>
+        <td class="td-df">Expõe enriched logs para LLMs via MCP. Qualquer agente MCP-compatível pode consultar. SaaS, dados saem do seu ambiente.</td>
+        <td>Apex não tem MCP server. LLMs chamados diretamente na pipeline interna (Tier 2/3/4).</td>
+        <td class="td-apex">⭐ Apex não expõe dados via MCP externo. Chama LLM diretamente com o finding compacto — sem egress dos dados brutos de produção.</td>
+        <td><span class="td-status status-super">Apex supera (segurança)</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">☁️ Enriched Logs Store (SaaS)</td>
+        <td class="td-df">Armazena logs enriquecidos. AWS North Virginia. Histórico multi-run. Compartilha com terceiros.</td>
+        <td>Event logs ficam no seu MinIO/S3. Apex lê de lá. Zero dados saem do seu ambiente.</td>
+        <td class="td-apex">⭐ Soberania total de dados. Retenção controlada pelo usuário. Compatível com air-gapped, LGPD, regulação financeira.</td>
+        <td><span class="td-status status-super">Apex supera</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">💬 Agentic Spark Copilot</td>
+        <td class="td-df">IDE extension (Cursor/VS Code/IntelliJ). Chat com contexto de produção. Rastreia 5 arquivos de profundidade. Human-in-the-loop.</td>
+        <td>Tier 3 Coordinator (Sonnet) emite finding estruturado com root_cause, hot_key, recommendation, confidence.</td>
+        <td class="td-apex">⭐ Apex não requer IDE install. Apex emite finding auditável com confidence score. Gap: Apex não rastreia código 5 arquivos de profundidade (callSite → git em desenvolvimento).</td>
+        <td><span class="td-status status-partial">Diferente por design</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">⚙️ Cluster Agent (autônomo)</td>
+        <td class="td-df">Right-size automático de clusters em real-time. Age sem aprovação humana. Até 50% redução de custo.</td>
+        <td>Apex não toca o cluster. Diagnóstico only.</td>
+        <td class="td-apex">⭐ Decisão de design consciente. Apex não age autonomamente em infra de produção — menor risco operacional. O engenheiro sempre decide.</td>
+        <td><span class="td-status status-super">Diferente (mais seguro)</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">🔍 Review Agent</td>
+        <td class="td-df">Revisa cada PR com contexto de produção via MCP. Detecta regressões antes de merge. SaaS.</td>
+        <td>scenario-gate.yml (CI): gera synthetic log + roda watcher. Oracle valida antes de merge. Sem SaaS.</td>
+        <td class="td-apex">⭐ Apex scenario-gate é mais rigoroso: valida com oracle.py que o synthetic log é fiel ao real. DataFlint Review Agent compara código vs. produção — sem oracle de validação.</td>
+        <td><span class="td-status status-super">Apex supera (oracle)</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">🌐 Fleet Observability</td>
+        <td class="td-df">Dashboard empresa inteira. Stage-level cost attribution. Ranked por $ impact. SaaS, dados no DataFlint cloud.</td>
+        <td>Apex roda por app-id. Sem fleet view hoje.</td>
+        <td class="td-gap">⚠ Gap real. Apex pode ter fleet analysis iterando no MinIO — 1 sprint de trabalho. Sem SaaS, sem egress. Cost attribution precisa de integração com billing do cloud.</td>
+        <td><span class="td-status status-gap">Gap (v5 roadmap)</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">🏆 Oracle Validation</td>
+        <td class="td-df">❌ DataFlint não tem nada equivalente. Sem validação se diagnóstico está calibrado contra dados reais.</td>
+        <td>oracle.py valida synthetic log ≈ real. Chain of custody: scenario_hash + ApexSyntheticProvenance. Rejeita log stale.</td>
+        <td class="td-apex">⭐⭐ Único no mercado. Diagnóstico com cadeia de custódia verificável. DataFlint pode ter falsos positivos sem auditoria. Apex tem rastreabilidade de cada finding.</td>
+        <td><span class="td-status status-super">Apex único no mercado</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">📝 Correlação Código ↔ Runtime</td>
+        <td class="td-df">DataFlint Copilot rastreia 5 arquivos de profundidade no codebase (incluindo libs terceiros) via IDE + MCP.</td>
+        <td>callSite no SparkListenerJobStart (file:line). Git sidecar em desenvolvimento (ADR-005). Não rastreia libs de terceiro.</td>
+        <td class="td-gap">⚠ Gap parcial. Apex detecta o SINTOMA (wasted cores, spill) sem JAR. Para causa em lib de terceiro: Apex diria "Coalesce no plano físico — investigue." DataFlint encontra o arquivo exato. Mas Apex não precisa de IDE install para isso.</td>
+        <td><span class="td-status status-partial">Em desenvolvimento (ADR-005)</span></td>
+      </tr>
+      <tr>
+        <td class="td-mod">💰 Confidence Scoring</td>
+        <td class="td-df">❌ DataFlint não tem confidence score. Alerta é binário: disparou ou não disparou.</td>
+        <td>Tier 1: determinístico. Tier 2: LLM classifica. Tier 3: Sonnet + confidence. Tier 4: Opus se confidence < 0.6.</td>
+        <td class="td-apex">⭐ Apex tem graduação de confiança. DataFlint alerta binário pode ser falso positivo sem aviso. Apex escalona para modelo mais capaz quando inseguro.</td>
+        <td><span class="td-status status-super">Apex supera</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+    <div class="card" style="border-color:#3fb950;">
+      <h3 style="color:#3fb950;margin-bottom:8px;">✅ Apex já supera (hoje)</h3>
+      <ul style="list-style:none;padding:0;font-size:12px;color:var(--text-muted);">
+        <li style="padding:3px 0;">• Zero JAR — sem supply chain risk</li>
+        <li style="padding:3px 0;">• Zero egress — dados ficam no seu ambiente</li>
+        <li style="padding:3px 0;">• Oracle validation — único no mercado</li>
+        <li style="padding:3px 0;">• Confidence scoring (4 tiers)</li>
+        <li style="padding:3px 0;">• Extensível via scenario.yaml</li>
+        <li style="padding:3px 0;">• scenario-gate.yml no CI com oracle</li>
+        <li style="padding:3px 0;">• Diagnóstico only — sem ação autônoma em produção</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:#d29922;">
+      <h3 style="color:#d29922;margin-bottom:8px;">🔶 Apex pode superar (v5)</h3>
+      <ul style="list-style:none;padding:0;font-size:12px;color:var(--text-muted);">
+        <li style="padding:3px 0;">• 13 scenarios novos (parallelism_collapse, spill, broadcast...)</li>
+        <li style="padding:3px 0;">• Fleet analysis via MinIO iteration</li>
+        <li style="padding:3px 0;">• callSite → git correlation (ADR-005)</li>
+        <li style="padding:3px 0;">• Cost attribution (task_metrics × billing API)</li>
+        <li style="padding:3px 0;">• Rolling log polling (real-time parcial)</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:#f85149;">
+      <h3 style="color:#f85149;margin-bottom:8px;">🔴 Gap real (decisão consciente)</h3>
+      <ul style="list-style:none;padding:0;font-size:12px;color:var(--text-muted);">
+        <li style="padding:3px 0;">• UI visual (heat map, dashboard) — gap intencional</li>
+        <li style="padding:3px 0;">• Rastrear libs de terceiro no codebase</li>
+        <li style="padding:3px 0;">• UDF duration (não está no event log)</li>
+        <li style="padding:3px 0;">• Real-time live monitoring (:4040)</li>
+        <li style="padding:3px 0;">• Delta Lake / Iceberg write metrics</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

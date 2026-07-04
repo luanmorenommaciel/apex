@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Apex · Fluxos</title><style>body{background:#060608;color:#E8E4D8;font-family:sans-serif;padding:40px}</style></head>
+<body>
+<h1>Fluxos do Apex</h1>
+<h2>1. Contrato scenario.yaml</h2>
+<p>Define o anti-pattern, dados e sinais esperados. É a única ligação entre os geradores.</p>
+<h2>2. Gerador de código</h2>
+<p><code>python3 code_generator.py scenario.yaml job.py</code> → produz job PySpark com bug na linha especificada.</p>
+<h2>3. Gerador de plano (sintético)</h2>
+<p><code>python3 plan_generator.py scenario.yaml synthetic.ndjson</code> → gera event log sem rodar Spark, em milissegundos.</p>
+<h2>4. Execução real</h2>
+<p><code>docker exec spark-master spark-submit job.py</code> → log real armazenado no MinIO.</p>
+<h2>5. Validação</h2>
+<p>Script Python compara os sinais esperados com o log sintético. Exemplo de saída: <code>join_operator: SortMergeJoin</code> e <code>recordsRead: 200100</code>.</p>
+<h2>6. Oráculo (planejado)</h2>
+<p>Workflow semanal que baixa logs reais do MinIO, compara com sintéticos e abre issue em caso de divergência.</p>
+<h2>7. CI gate (planejado)</h2>
+<p>Em cada PR, rodar plan_generator para todos os YAMLs e validar o acceptance; bloquear merge se falhar.</p>
+</body>
+</html>

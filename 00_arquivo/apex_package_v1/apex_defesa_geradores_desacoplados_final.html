@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Apex · Defesa final · Desacoplamento validado</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060608;color:#E8E4D8;font-family:system-ui,sans-serif;padding:40px}
+h1{font-size:2.2rem;margin-bottom:20px;color:#E8AE4A}
+h2{font-size:1.6rem;margin:30px 0 10px;color:#C8943A}
+p{line-height:1.5;margin-bottom:15px;color:#8A8C9E}
+code{background:#12141A;padding:2px 6px;border-radius:4px;color:#F5C668}
+pre{background:#12141A;padding:15px;border-radius:8px;overflow-x:auto;margin:15px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}
+.card{background:#12141A;border:1px solid #1F2335;border-radius:12px;padding:20px}
+.card h3{color:#E8AE4A;margin-bottom:10px}
+.flash{background:rgba(200,148,58,.1);border-left:4px solid #C8943A;padding:15px;margin:20px 0}
+.tag{font-family:monospace;color:#C8943A;margin-bottom:10px}
+</style>
+</head>
+<body>
+<h1>Desacoplamos o gerador de código<br>do gerador de plano</h1>
+<div class="tag">✅ Resposta ao Commander: SIM</div>
+<p>Utilizando um contrato <code>scenario.yaml</code>, os dois geradores são independentes. O gerador de plano produz um event log sintético <strong>sem rodar Spark</strong>, contendo os mesmos sinais esperados.</p>
+
+<div class="grid">
+  <div class="card">
+    <h3>Contrato YAML</h3>
+    <pre>scenario_id: skew_on_join_30x
+plan_generator:
+  expected_signals:
+    join_operator: SortMergeJoin
+    hot_partition:
+      single_task_shuffle_read_records: 200100</pre>
+  </div>
+  <div class="card">
+    <h3>Log sintético gerado</h3>
+    <pre>"physicalPlanDescription": "SortMergeJoin"
+"recordsRead": 200100</pre>
+  </div>
+</div>
+
+<div class="flash">
+  <strong>Evidência direta</strong><br>
+  <code>$ python3 -c "import json; ..."<br>
+  join_operator: SortMergeJoin<br>
+  recordsRead: 200100</code>
+</div>
+
+<h2>Próxima fase</h2>
+<ul style="color:#8A8C9E; margin-left:20px">
+  <li>Oráculo semanal (GitHub Action comparando logs reais vs sintéticos)</li>
+  <li>Expansão para 11 cenários (null_skew, broadcast_missed_smj, etc.)</li>
+  <li>CI gate com scenario.yaml nos PRs</li>
+  <li>CLI apex (generate-code, generate-plan, oracle)</li>
+</ul>
+<p style="margin-top:30px">Apresentação completa disponível nos demais slides. Validação realizada em 2026-06-05 no ambiente dataship-spark-plat-v0.</p>
+</body>
+</html>

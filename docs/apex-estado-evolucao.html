@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex — Estado, Evolução e Diagramas</title>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --surface3: #30363d;
+  --border: #30363d; --text: #e6edf3; --muted: #8b949e;
+  --blue: #58a6ff; --green: #3fb950; --orange: #d29922; --red: #f85149;
+  --purple: #bc8cff; --cyan: #39d353; --yellow: #e3b341;
+  --claude: #d4a017; --gemini: #4285f4; --luan: #10b981;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 1.5; }
+.nav { position: sticky; top: 0; z-index: 100; background: #0d1117ee; backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); display: flex; gap: 2px; padding: 8px 16px; flex-wrap: wrap; }
+.nav button { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all .2s; }
+.nav button:hover, .nav button.active { background: #1e6ef5; color: white; border-color: #1e6ef5; }
+.section { display: none; padding: 20px; max-width: 1300px; margin: 0 auto; }
+.section.active { display: block; }
+h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+h2 { font-size: 15px; font-weight: 600; color: var(--blue); margin: 20px 0 12px; }
+h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.subtitle { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+code { font-family: 'Cascadia Code', 'Fira Code', monospace; background: var(--surface2); padding: 2px 6px; border-radius: 3px; font-size: 11px; color: var(--cyan); }
+pre { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 11px; color: var(--text); overflow-x: auto; margin: 8px 0; line-height: 1.6; }
+.badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+.tag-claude { background: rgba(212,160,23,.2); color: var(--claude); border: 1px solid rgba(212,160,23,.3); }
+.tag-gemini { background: rgba(66,133,244,.2); color: var(--gemini); border: 1px solid rgba(66,133,244,.3); }
+.tag-luan { background: rgba(16,185,129,.2); color: var(--luan); border: 1px solid rgba(16,185,129,.3); }
+.tag-human { background: rgba(139,148,158,.2); color: var(--muted); border: 1px solid var(--border); }
+.tag-ok { background: rgba(63,185,80,.15); color: var(--green); }
+.tag-warn { background: rgba(210,153,34,.15); color: var(--orange); }
+.tag-gap { background: rgba(248,81,73,.15); color: var(--red); }
+.tag-pending { background: rgba(188,140,255,.15); color: var(--purple); }
+
+/* TIMELINE */
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+.tl-item { position: relative; padding: 0 0 20px 20px; }
+.tl-dot { position: absolute; left: -20px; top: 4px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; }
+.tl-v1 { border-color: var(--muted); background: var(--surface2); color: var(--muted); }
+.tl-v2 { border-color: var(--orange); background: rgba(210,153,34,.1); color: var(--orange); }
+.tl-v3 { border-color: var(--blue); background: rgba(88,166,255,.1); color: var(--blue); }
+.tl-v4 { border-color: var(--green); background: rgba(63,185,80,.1); color: var(--green); }
+.tl-v5 { border-color: var(--purple); background: rgba(188,140,255,.1); color: var(--purple); }
+.tl-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.tl-date { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.tl-body { font-size: 12px; color: var(--muted); }
+.tl-body li { padding: 2px 0; }
+.tl-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+/* INFRA TABLE */
+table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 12px 0; }
+th { background: var(--surface2); padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); border-bottom: 2px solid var(--border); }
+td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:hover td { background: var(--surface2); }
+
+/* SVG DIAGRAMS */
+.diagram-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 12px 0; overflow-x: auto; }
+svg { font-family: 'Segoe UI', sans-serif; }
+
+/* STATUS ROW */
+.status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.status-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+.status-num { font-size: 28px; font-weight: 700; }
+.status-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+.alert { border-radius: 6px; padding: 10px 14px; margin: 10px 0; font-size: 12px; }
+.alert-warn { background: rgba(210,153,34,.1); border: 1px solid rgba(210,153,34,.3); color: var(--orange); }
+.alert-info { background: rgba(88,166,255,.1); border: 1px solid rgba(88,166,255,.3); color: var(--blue); }
+.alert-ok { background: rgba(63,185,80,.1); border: 1px solid rgba(63,185,80,.3); color: var(--green); }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button class="active" onclick="show('estado')">📍 Estado Atual</button>
+  <button onclick="show('evolucao')">🕐 Evolução</button>
+  <button onclick="show('infra')">🏗 Infra & Contratos</button>
+  <button onclick="show('llm')">🤖 Autoria LLM</button>
+  <button onclick="show('flow')">🔄 Fluxo & Diagramas</button>
+  <button onclick="show('usecase')">🎬 Caso de Uso</button>
+</div>
+
+<!-- ═══════ ESTADO ATUAL ═══════ -->
+<div id="estado" class="section active">
+  <h1>Apex — Onde você está agora</h1>
+  <p class="subtitle">Nivelamento completo do estado atual · Julho 2026</p>
+
+  <div class="status-grid">
+    <div class="status-card">
+      <div class="status-num" style="color:var(--green);">40</div>
+      <div class="status-label">Testes passando (pytest)</div>
+    </div>
+    <div class="status-card">
+      <div class="status-num" style="color:var(--blue);">1</div>
+      <div class="status-label">Scenario validado (skew_on_join_30x)</div>
+    </div>
+    <div class="status-card">
+      <div class="status-num" style="color:var(--orange);">4</div>
+      <div class="status-label">Tiers planejados (1 implementado)</div>
+    </div>
+    <div class="status-card">
+      <div class="status-num" style="color:var(--purple);">1</div>
+      <div class="status-label">Anti-pattern detectável</div>
+    </div>
+  </div>
+
+  <div class="alert alert-ok">✅ O que FUNCIONA hoje: Tier 1 (zero-JAR, event log), scenario.yaml, code_generator, plan_generator, skew_watcher, oracle — 40 testes verdes, ratio 27.9x vs real 29.5x</div>
+  <div class="alert alert-warn">⚠ O que FALTA: Tier 2/3/4 (LLM pipeline), novos scenarios (parallelism_collapse, spill, broadcast_miss...), fleet view, callSite→git</div>
+  <div class="alert alert-info">🔷 Nova frente (reunião 30/jun): v1-skeleton com SparkListener→ClickHouse→LLM→MCP — abordagem DIFERENTE do zero-JAR atual. Decisão pendente (ADR-005)</div>
+
+  <h2>Mapa do que existe vs. o que falta</h2>
+  <table>
+    <thead><tr><th>Componente</th><th>Existe onde</th><th>Estado</th><th>Próximo passo</th></tr></thead>
+    <tbody>
+      <tr><td><code>apex/apexlib.py</code></td><td>plat-v0 main + Apex repo</td><td><span class="badge tag-ok">✅ Funciona</span></td><td>Migrar Watcher/Oracle p/ iter_events</td></tr>
+      <tr><td><code>generators/code_generator.py</code></td><td>branch desacoplamento-geradores</td><td><span class="badge tag-ok">✅ Funciona</span></td><td>Novos scenarios</td></tr>
+      <tr><td><code>generators/plan_generator.py</code></td><td>branch desacoplamento-geradores</td><td><span class="badge tag-ok">✅ Funciona</span></td><td>Calibrar para outros anti-patterns</td></tr>
+      <tr><td><code>watchers/skew_watcher.py</code></td><td>plat-v0 + Apex repo</td><td><span class="badge tag-ok">✅ Funciona</span></td><td>+12 scenarios novos</td></tr>
+      <tr><td><code>oracle/compare.py</code></td><td>plat-v0 + Apex repo</td><td><span class="badge tag-ok">✅ Funciona</span></td><td>Divergências viram warnings (feito)</td></tr>
+      <tr><td><code>scenarios/skew_on_join_30x.yaml</code></td><td>todos os repos</td><td><span class="badge tag-ok">✅ Validado</span></td><td>Template para novos scenarios</td></tr>
+      <tr><td>Tier 2 — Classifier LLM</td><td>❌ não existe</td><td><span class="badge tag-gap">❌ Gap</span></td><td>Issue #17</td></tr>
+      <tr><td>Tier 3 — Coordinator (Sonnet)</td><td>❌ não existe</td><td><span class="badge tag-gap">❌ Gap</span></td><td>Issue #17</td></tr>
+      <tr><td>Tier 4 — Judge (Opus)</td><td>❌ não existe</td><td><span class="badge tag-gap">❌ Gap</span></td><td>Issue #17</td></tr>
+      <tr><td>MCP Server</td><td>v1-skeleton (novo, não validado)</td><td><span class="badge tag-warn">⚠ Rascunho</span></td><td>Validar com plat-v0</td></tr>
+      <tr><td>SparkListener (v1-skeleton)</td><td>v1-skeleton (novo)</td><td><span class="badge tag-pending">🔷 Experimento</span></td><td>ADR-005 decide</td></tr>
+      <tr><td>ClickHouse telemetria real-time</td><td>v1-skeleton (novo)</td><td><span class="badge tag-pending">🔷 Experimento</span></td><td>Testar local com docker compose</td></tr>
+      <tr><td>Fleet observability</td><td>❌ não existe</td><td><span class="badge tag-gap">❌ Gap</span></td><td>v5 roadmap</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Dois mundos paralelos — precisam alinhar</h2>
+  <div class="grid2">
+    <div class="card" style="border-color:var(--green);">
+      <h3 style="color:var(--green);">🟢 Mundo A — Apex atual (zero-JAR)</h3>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:8px;">O que funciona e está validado</p>
+      <ul style="list-style:none;font-size:12px;color:var(--muted);">
+        <li style="padding:3px 0;">✅ scenario.yaml → generators → watcher → oracle</li>
+        <li style="padding:3px 0;">✅ Lê event log padrão Spark (sem JAR)</li>
+        <li style="padding:3px 0;">✅ 40 testes, oracle calibrado (27.9x vs 29.5x)</li>
+        <li style="padding:3px 0;">✅ CI via scenario-gate.yml</li>
+        <li style="padding:3px 0;">✅ plat-v0 como ambiente de execução real</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:var(--purple);">
+      <h3 style="color:var(--purple);">🔷 Mundo B — v1-skeleton (reunião 30/jun)</h3>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:8px;">O que o Luan pediu como experimento</p>
+      <ul style="list-style:none;font-size:12px;color:var(--muted);">
+        <li style="padding:3px 0;">🔷 SparkListener → ClickHouse (real-time)</li>
+        <li style="padding:3px 0;">🔷 LLM analisa métricas do ClickHouse</li>
+        <li style="padding:3px 0;">🔷 MCP entrega findings ao IDE</li>
+        <li style="padding:3px 0;">⚠ Usa JAR in-process (como DataFlint)</li>
+        <li style="padding:3px 0;">⚠ Docker próprio — NÃO usa plat-v0</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="alert alert-warn">⚠ <strong>Você NÃO precisa mudar o modelo atual.</strong> O Mundo A é válido e diferenciado. O Mundo B é uma exploração paralela. O ADR-005 decide se um substitui o outro, se convivem, ou se se complementam.</div>
+</div>
+
+<!-- ═══════ EVOLUÇÃO ═══════ -->
+<div id="evolucao" class="section">
+  <h1>Evolução Técnica do Apex</h1>
+  <p class="subtitle">Linha do tempo com as mudanças de arquitetura, premissas e decisões em cada versão</p>
+
+  <div class="timeline">
+
+    <div class="tl-item">
+      <div class="tl-dot tl-v1">v1</div>
+      <div class="tl-title" style="color:var(--muted);">v1 — Concepção inicial</div>
+      <div class="tl-date">Maio 2026 · Branch: plat-v0 Gabriel</div>
+      <div class="tl-body">
+        <p style="margin-bottom:6px;">Ideia inicial: criar algo que não fosse "ofensivo" para os ambientes de produção. DataFlint como benchmark. Primeiros experimentos com geração de event logs sintéticos.</p>
+        <ul>
+          <li>Premissa: leitura de event logs Spark sem modificar o cluster</li>
+          <li>Infra: plat-v0 com Spark + MinIO (criado por Gabriel/Philo)</li>
+          <li>Primeiro job demo gerando event log real</li>
+          <li>Watcher básico sem AQE-awareness</li>
+        </ul>
+        <div class="tl-tags">
+          <span class="badge tag-human">Manual</span>
+          <span class="badge tag-warn">⚠ Ratio absurdo: 15392x</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot tl-v2">v2</div>
+      <div class="tl-title" style="color:var(--orange);">v2 — Geradores desacoplados</div>
+      <div class="tl-date">Junho 2026 · Branch: feat/desacoplamento-geradores</div>
+      <div class="tl-body">
+        <p style="margin-bottom:6px;">Decisão arquitetural central (ADR-004): code_generator e plan_generator leem o mesmo scenario.yaml de forma independente. Nenhum chama o outro.</p>
+        <ul>
+          <li>✅ scenario.yaml como contrato declarativo único</li>
+          <li>✅ code_generator → job.py + manifesto com scenario_hash</li>
+          <li>✅ plan_generator → event log sintético sem executar Spark</li>
+          <li>✅ Oracle de validação: compara sintético vs log real</li>
+          <li>⚠ Stage escolhido por maior volume (não confiável)</li>
+          <li>⚠ Tasks com retries podiam duplicar métricas</li>
+        </ul>
+        <div class="tl-tags">
+          <span class="badge tag-claude">Claude</span>
+          <span class="badge tag-warn">⚠ Stage selection problemático</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot tl-v3">v3</div>
+      <div class="tl-title" style="color:var(--blue);">v3 — AQE-aware + auto-zstd</div>
+      <div class="tl-date">Junho 2026 · Commit baseline: 357efad</div>
+      <div class="tl-body">
+        <p style="margin-bottom:6px;">Watcher passa a ler o plano FINAL pós-AQE (SparkListenerSQLAdaptiveExecutionUpdate). Suporte automático a logs comprimidos com zstd.</p>
+        <ul>
+          <li>✅ AQE-aware: lê plano pós-adaptação (não o plano inicial)</li>
+          <li>✅ auto-zstd: detecta magic bytes <code>\x28\xb5\x2f\xfd</code></li>
+          <li>✅ Stage-aware skew: isola reduce stage (shuffle > 0)</li>
+          <li>✅ Sentinela de linha: guard de CI valida anti_pattern_line</li>
+          <li>✅ 25 testes (13 unitários + 12 plat-v0)</li>
+          <li>⚠ Correlação de acumuladores ainda não implementada</li>
+        </ul>
+        <div class="tl-tags">
+          <span class="badge tag-claude">Claude</span>
+          <span class="badge tag-ok">✅ 25 testes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot tl-v4">v4</div>
+      <div class="tl-title" style="color:var(--green);">v4 — Correlação por acumuladores + Oracle calibrado</div>
+      <div class="tl-date">Julho 2026 · Branch: desacoplamento-geradores (atual)</div>
+      <div class="tl-body">
+        <p style="margin-bottom:6px;">Maior melhoria de qualidade: ratio sintético agora é 27.9x (próximo do real 29.5x). Oracle reformulado para warnings em vez de erros em divergências estruturais.</p>
+        <ul>
+          <li>✅ Correlação por acumuladores: stage selecionado por score, não por volume</li>
+          <li>✅ Zeros preservados: mediana fria zero invalida evidência</li>
+          <li>✅ Uma tentativa efetiva por partição (sem duplicação por retries)</li>
+          <li>✅ iter_events: leitura em streaming (evita carregar arquivo inteiro)</li>
+          <li>✅ Diretório de rolling logs suportado</li>
+          <li>✅ Provenance completa: scenario_hash no manifesto + log sintético</li>
+          <li>✅ Oracle: fiel ou divergente com tolerância configurável</li>
+          <li>✅ 40 testes passando</li>
+          <li>⚠ Watcher e Oracle ainda não migraram para iter_events</li>
+          <li>⚠ Apenas 1 anti-pattern coberto (skew_on_join_30x)</li>
+        </ul>
+        <div class="tl-tags">
+          <span class="badge tag-claude">Claude</span>
+          <span class="badge tag-ok">✅ 40 testes</span>
+          <span class="badge tag-ok">✅ Ratio calibrado</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot tl-v5">V1sk</div>
+      <div class="tl-title" style="color:var(--purple);">v1-skeleton — SparkListener (experimento, reunião 30/jun)</div>
+      <div class="tl-date">Julho 2026 · Pasta: v1-skeleton/ (não merged)</div>
+      <div class="tl-body">
+        <p style="margin-bottom:6px;">Nova frente exploratória baseada na arquitetura desenhada pelo Luan. Abordagem diferente: captura em tempo real via SparkListener → ClickHouse → LLM → MCP.</p>
+        <ul>
+          <li>🔷 Docker Compose: Spark Envy + ClickHouse</li>
+          <li>🔷 SparkListener Python via py4j (in-process com driver)</li>
+          <li>🔷 ClickHouseWriter: stage_metrics + task_metrics + findings</li>
+          <li>🔷 diagnose.py: lê ClickHouse → chama Claude API → finding JSON</li>
+          <li>🔷 MCP Server: 4 tools para IDE (Cursor/Claude Code)</li>
+          <li>⚠ NÃO usa plat-v0 (infra separada)</li>
+          <li>⚠ NÃO usa scenario.yaml (sem contratos)</li>
+          <li>⚠ SparkListener é in-process (similar ao DataFlint)</li>
+          <li>⚠ ADR-005 pendente</li>
+        </ul>
+        <div class="tl-tags">
+          <span class="badge tag-claude">Claude (Cowork)</span>
+          <span class="badge tag-pending">🔷 Rascunho</span>
+          <span class="badge tag-warn">⚠ Sem testes</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════ INFRA & CONTRATOS ═══════ -->
+<div id="infra" class="section">
+  <h1>Infraestrutura & Contratos</h1>
+
+  <div class="alert alert-warn">⚠ <strong>Resposta direta:</strong> O v1-skeleton que criei NÃO usa o plat-v0 existente. Ele tem um docker-compose próprio com Spark + ClickHouse. O plat-v0 usa MinIO para event logs. São arquiteturas diferentes.</div>
+
+  <h2>Plat-v0 — A infraestrutura real que você tem</h2>
+  <table>
+    <thead><tr><th>Serviço</th><th>Porta</th><th>Papel</th><th>Repo</th></tr></thead>
+    <tbody>
+      <tr><td>Spark 4.1.2</td><td>4040 / 7077</td><td>Executa jobs reais, gera event logs</td><td>gustocezar/dataship-spark-plat-v0</td></tr>
+      <tr><td>MinIO</td><td>9000 / 9001</td><td>Armazena event logs em spark-logs/events/ (zstd)</td><td>gustocezar/dataship-spark-plat-v0</td></tr>
+      <tr><td>ClickHouse</td><td>8123</td><td>Métricas de observabilidade (OTel, issue #18)</td><td>gustocezar/dataship-spark-plat-v0</td></tr>
+      <tr><td>Spark History Server</td><td>18080</td><td>UI de execuções passadas</td><td>gustocezar/dataship-spark-plat-v0</td></tr>
+    </tbody>
+  </table>
+
+  <div class="alert alert-ok">✅ <strong>Boa notícia:</strong> O plat-v0 JÁ TEM ClickHouse. O v1-skeleton poderia reusar o ClickHouse do plat-v0 em vez de criar um novo container. Seria uma integração com 1 linha de mudança.</div>
+
+  <h2>scenario.yaml — O contrato que evita alucinação</h2>
+  <div class="card">
+    <h3 style="color:var(--blue);margin-bottom:8px;">O que Luan pediu: contratos para a LLM não alucinar</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">O scenario.yaml IS o contrato. Ele declara o que o problema é, como validar, e quais critérios de aceitação. A LLM lê esse contrato e não pode inventar fora dele.</p>
+    <pre>scenario_id: skew_on_join_30x
+version: 3
+status: prototype
+
+acceptance:               ← critérios que o Watcher DEVE satisfazer
+  min_ratio: 10.0         ← skew ratio mínimo detectável
+  hot_key_present: true   ← hot key deve estar no finding
+
+code_generator:           ← gera o job PySpark com o anti-pattern
+  anti_pattern: skew_join
+  hot_key_factor: 30
+
+plan_generator:           ← gera o event log sintético calibrado
+  target_ratio: 30.0
+  total_tasks: 8
+  hot_partition_tasks: 1
+
+oracle:                   ← valida sintético vs real
+  tolerance: 0.15         ← 15% de tolerância</pre>
+
+    <div class="alert alert-warn" style="margin-top:10px;">⚠ <strong>O v1-skeleton NÃO tem scenario.yaml.</strong> Isso significa que o SparkListener vai capturar dados reais, mas sem contrato declarativo — a LLM pode alucinar porque não há critério de aceitação definido. Para evitar isso, o v1-skeleton precisa de: (1) um schema de validação do finding, e (2) um contrato mínimo de o que esperar de cada anti-pattern.</div>
+  </div>
+
+  <h2>Dois fluxos de infra — como se relacionam</h2>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg" width="100%">
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#58a6ff"/>
+        </marker>
+        <marker id="arr2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#bc8cff"/>
+        </marker>
+      </defs>
+
+      <!-- WORLD A label -->
+      <rect x="10" y="10" width="400" height="270" rx="8" fill="rgba(63,185,80,.05)" stroke="#3fb950" stroke-width="1" stroke-dasharray="4"/>
+      <text x="20" y="30" fill="#3fb950" font-size="11" font-weight="700">MUNDO A — Zero-JAR (atual, funciona)</text>
+
+      <!-- WORLD B label -->
+      <rect x="430" y="10" width="460" height="270" rx="8" fill="rgba(188,140,255,.05)" stroke="#bc8cff" stroke-width="1" stroke-dasharray="4"/>
+      <text x="440" y="30" fill="#bc8cff" font-size="11" font-weight="700">MUNDO B — SparkListener (experimento)</text>
+
+      <!-- World A components -->
+      <rect x="30" y="45" width="130" height="36" rx="5" fill="#21262d" stroke="#3fb950" stroke-width="1"/>
+      <text x="95" y="59" fill="#e6edf3" font-size="10" text-anchor="middle">Spark Job</text>
+      <text x="95" y="72" fill="#8b949e" font-size="9" text-anchor="middle">plat-v0 (real)</text>
+
+      <rect x="30" y="110" width="130" height="36" rx="5" fill="#21262d" stroke="#3fb950" stroke-width="1"/>
+      <text x="95" y="124" fill="#e6edf3" font-size="10" text-anchor="middle">MinIO</text>
+      <text x="95" y="137" fill="#8b949e" font-size="9" text-anchor="middle">event logs zstd</text>
+
+      <rect x="200" y="110" width="130" height="36" rx="5" fill="#21262d" stroke="#58a6ff" stroke-width="1"/>
+      <text x="265" y="124" fill="#e6edf3" font-size="10" text-anchor="middle">apexlib.py</text>
+      <text x="265" y="137" fill="#8b949e" font-size="9" text-anchor="middle">iter_events / parser</text>
+
+      <rect x="200" y="175" width="130" height="36" rx="5" fill="#21262d" stroke="#58a6ff" stroke-width="1"/>
+      <text x="265" y="189" fill="#e6edf3" font-size="10" text-anchor="middle">skew_watcher.py</text>
+      <text x="265" y="202" fill="#8b949e" font-size="9" text-anchor="middle">finding estruturado</text>
+
+      <rect x="30" y="175" width="130" height="36" rx="5" fill="#21262d" stroke="#d29922" stroke-width="1"/>
+      <text x="95" y="189" fill="#e6edf3" font-size="10" text-anchor="middle">oracle/compare.py</text>
+      <text x="95" y="202" fill="#8b949e" font-size="9" text-anchor="middle">sintético vs real</text>
+
+      <!-- World A arrows -->
+      <line x1="95" y1="81" x2="95" y2="110" stroke="#3fb950" stroke-width="1" marker-end="url(#arr)"/>
+      <line x1="160" y1="128" x2="200" y2="128" stroke="#58a6ff" stroke-width="1" marker-end="url(#arr)"/>
+      <line x1="265" y1="146" x2="265" y2="175" stroke="#58a6ff" stroke-width="1" marker-end="url(#arr)"/>
+      <line x1="95" y1="146" x2="160" y2="193" stroke="#d29922" stroke-width="1" stroke-dasharray="4" marker-end="url(#arr)"/>
+
+      <!-- World B components -->
+      <rect x="450" y="45" width="130" height="36" rx="5" fill="#21262d" stroke="#bc8cff" stroke-width="1"/>
+      <text x="515" y="59" fill="#e6edf3" font-size="10" text-anchor="middle">Spark Job</text>
+      <text x="515" y="72" fill="#8b949e" font-size="9" text-anchor="middle">+ SparkListener (JAR)</text>
+
+      <rect x="450" y="110" width="130" height="36" rx="5" fill="#21262d" stroke="#bc8cff" stroke-width="1"/>
+      <text x="515" y="124" fill="#e6edf3" font-size="10" text-anchor="middle">ClickHouse</text>
+      <text x="515" y="137" fill="#8b949e" font-size="9" text-anchor="middle">stage/task metrics</text>
+
+      <rect x="620" y="110" width="130" height="36" rx="5" fill="#21262d" stroke="#bc8cff" stroke-width="1"/>
+      <text x="685" y="124" fill="#e6edf3" font-size="10" text-anchor="middle">diagnose.py</text>
+      <text x="685" y="137" fill="#8b949e" font-size="9" text-anchor="middle">Claude API</text>
+
+      <rect x="620" y="175" width="130" height="36" rx="5" fill="#21262d" stroke="#bc8cff" stroke-width="1"/>
+      <text x="685" y="189" fill="#e6edf3" font-size="10" text-anchor="middle">MCP Server</text>
+      <text x="685" y="202" fill="#8b949e" font-size="9" text-anchor="middle">Cursor / Claude Code</text>
+
+      <!-- World B arrows -->
+      <line x1="515" y1="81" x2="515" y2="110" stroke="#bc8cff" stroke-width="1" marker-end="url(#arr2)"/>
+      <line x1="580" y1="128" x2="620" y2="128" stroke="#bc8cff" stroke-width="1" marker-end="url(#arr2)"/>
+      <line x1="685" y1="146" x2="685" y2="175" stroke="#bc8cff" stroke-width="1" marker-end="url(#arr2)"/>
+
+      <!-- Connecting note -->
+      <text x="450" y="258" fill="#8b949e" font-size="10">⚠ ClickHouse do plat-v0 pode ser reutilizado aqui</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ═══════ LLM AUTORIA ═══════ -->
+<div id="llm" class="section">
+  <h1>Identificação de Autoria por LLM</h1>
+  <p class="subtitle">Como marcar o que foi feito por cada LLM para rastrear e auditar</p>
+
+  <h2>Sistema de tags proposto</h2>
+  <div class="grid3">
+    <div class="card" style="border-color:var(--claude);">
+      <h3 style="color:var(--claude);">🟡 Claude (Anthropic)</h3>
+      <p style="font-size:12px;color:var(--muted);margin:6px 0;">Claude Sonnet via Cowork — gerou a maioria dos documentos e código desta sessão</p>
+      <pre style="margin-top:8px;"># @llm: claude-sonnet-4-6
+# @session: cowork
+# @date: 2026-07-04</pre>
+    </div>
+    <div class="card" style="border-color:var(--gemini);">
+      <h3 style="color:var(--gemini);">🔵 Gemini / Outras LLMs</h3>
+      <p style="font-size:12px;color:var(--muted);margin:6px 0;">LLMs externas usadas pelo time (Aguimar mencionou Gemini por restrição do cliente)</p>
+      <pre style="margin-top:8px;"># @llm: gemini-pro
+# @session: external
+# @date: 2026-06-30</pre>
+    </div>
+    <div class="card" style="border-color:var(--luan);">
+      <h3 style="color:var(--luan);">🟢 Human / Luan</h3>
+      <p style="font-size:12px;color:var(--muted);margin:6px 0;">Decisões arquiteturais, ADRs, design da reunião 30/jun</p>
+      <pre style="margin-top:8px;"># @author: luan-commander
+# @type: architecture-decision
+# @date: 2026-06-30</pre>
+    </div>
+  </div>
+
+  <h2>Mapa atual — o que foi feito por quem</h2>
+  <table>
+    <thead><tr><th>Artefato</th><th>Autoria</th><th>Confiança</th><th>Nota</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>apex/apexlib.py</code></td>
+        <td><span class="badge tag-claude">Claude (Code)</span></td>
+        <td>Alta</td>
+        <td>Testado, 40 testes verdes, oracle calibrado</td>
+      </tr>
+      <tr>
+        <td><code>generators/</code></td>
+        <td><span class="badge tag-claude">Claude (Code)</span></td>
+        <td>Alta</td>
+        <td>Validado contra log real do Spark</td>
+      </tr>
+      <tr>
+        <td><code>watchers/skew_watcher.py</code></td>
+        <td><span class="badge tag-claude">Claude (Code)</span></td>
+        <td>Alta</td>
+        <td>AQE-aware, stage-aware, sentinela de CI</td>
+      </tr>
+      <tr>
+        <td><code>scenarios/skew_on_join_30x.yaml</code></td>
+        <td><span class="badge tag-claude">Claude + Human</span></td>
+        <td>Alta</td>
+        <td>Contrato co-criado, validado por oracle</td>
+      </tr>
+      <tr>
+        <td><code>oracle/compare.py</code></td>
+        <td><span class="badge tag-claude">Claude (Code)</span></td>
+        <td>Alta</td>
+        <td>Calibrado: ratio 27.9x vs real 29.5x</td>
+      </tr>
+      <tr>
+        <td><code>v1-skeleton/</code></td>
+        <td><span class="badge tag-claude">Claude (Cowork)</span></td>
+        <td>Baixa</td>
+        <td>Rascunho, sem testes, não validado contra plat-v0</td>
+      </tr>
+      <tr>
+        <td><code>docs/competitive/</code></td>
+        <td><span class="badge tag-claude">Claude (Cowork)</span></td>
+        <td>Média</td>
+        <td>Baseado em fontes oficiais DataFlint (auditável)</td>
+      </tr>
+      <tr>
+        <td>Arquitetura 4 tiers (CLAUDE.md)</td>
+        <td><span class="badge tag-luan">Luan (Commander)</span></td>
+        <td>Alta</td>
+        <td>Decisão humana, não gerada por LLM</td>
+      </tr>
+      <tr>
+        <td>ADR-004 (scenario.yaml)</td>
+        <td><span class="badge tag-luan">Luan + Augusto</span></td>
+        <td>Alta</td>
+        <td>Decisão arquitetural validada</td>
+      </tr>
+      <tr>
+        <td>Arquitetura V1 (SparkListener)</td>
+        <td><span class="badge tag-luan">Luan (reunião 30/jun)</span></td>
+        <td>Alta</td>
+        <td>Desenhado ao vivo, pendente ADR-005</td>
+      </tr>
+      <tr>
+        <td>Base de conhecimento DataFlint (KB/)</td>
+        <td><span class="badge tag-gemini">Aguimar + Gemini?</span></td>
+        <td>Média</td>
+        <td>11 arquivos, menção de alucinação na reunião</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Como implementar a tag no código</h2>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Opção 1 — Header em cada arquivo Python:</p>
+  <pre>"""
+@llm-author: claude-sonnet-4-6
+@llm-session: cowork-2026-07-04
+@llm-confidence: high  # high | medium | low | unvalidated
+@human-reviewed: false
+Descrição do módulo...
+"""</pre>
+  <p style="font-size:12px;color:var(--muted);margin:8px 0;">Opção 2 — Git commit convention:</p>
+  <pre>feat(watcher): add AQE-aware stage selection [llm:claude-sonnet] [confidence:high]
+docs(competitive): dataflint architecture diagram [llm:claude-cowork] [confidence:medium]
+arch(adr-005): sparklistener vs zero-jar decision [author:luan-commander]</pre>
+  <p style="font-size:12px;color:var(--muted);margin:8px 0;">Opção 3 — LLMAUTHORSHIP.md na raiz do repo:</p>
+  <pre>| Path                  | LLM                | Confidence | Date       |
+|-----------------------|--------------------|-----------|------------|
+| apex/apexlib.py       | claude-sonnet-4-6  | high      | 2026-06-07 |
+| v1-skeleton/          | claude-sonnet-4-6  | low       | 2026-07-04 |
+| docs/competitive/     | claude-sonnet-4-6  | medium    | 2026-07-04 |</pre>
+</div>
+
+<!-- ═══════ DIAGRAMAS ═══════ -->
+<div id="flow" class="section">
+  <h1>Fluxo, Diagramas & Infográficos</h1>
+
+  <!-- FLUXOGRAMA PRINCIPAL -->
+  <h2>Fluxograma — Apex Mundo A (zero-JAR, atual)</h2>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 860 420" xmlns="http://www.w3.org/2000/svg" width="100%">
+      <defs>
+        <marker id="a1" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
+        <marker id="a2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#3fb950"/></marker>
+        <marker id="a3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#d29922"/></marker>
+        <marker id="a4" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f85149"/></marker>
+      </defs>
+
+      <!-- Nodes -->
+      <!-- scenario.yaml -->
+      <rect x="340" y="10" width="170" height="40" rx="6" fill="#21262d" stroke="#e3b341" stroke-width="2"/>
+      <text x="425" y="26" fill="#e3b341" font-size="11" font-weight="700" text-anchor="middle">scenario.yaml</text>
+      <text x="425" y="41" fill="#8b949e" font-size="9" text-anchor="middle">contrato declarativo</text>
+
+      <!-- code_generator -->
+      <rect x="100" y="100" width="155" height="40" rx="6" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="177" y="116" fill="#58a6ff" font-size="11" font-weight="600" text-anchor="middle">code_generator.py</text>
+      <text x="177" y="131" fill="#8b949e" font-size="9" text-anchor="middle">scenario → job.py</text>
+
+      <!-- plan_generator -->
+      <rect x="595" y="100" width="155" height="40" rx="6" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="672" y="116" fill="#58a6ff" font-size="11" font-weight="600" text-anchor="middle">plan_generator.py</text>
+      <text x="672" y="131" fill="#8b949e" font-size="9" text-anchor="middle">scenario → event log</text>
+
+      <!-- Spark Job -->
+      <rect x="60" y="195" width="120" height="40" rx="6" fill="#21262d" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="120" y="211" fill="#3fb950" font-size="11" font-weight="600" text-anchor="middle">Spark Job</text>
+      <text x="120" y="226" fill="#8b949e" font-size="9" text-anchor="middle">job.py (plat-v0)</text>
+
+      <!-- Manifesto -->
+      <rect x="210" y="195" width="120" height="40" rx="6" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="270" y="211" fill="#58a6ff" font-size="11" font-weight="600" text-anchor="middle">manifesto</text>
+      <text x="270" y="226" fill="#8b949e" font-size="9" text-anchor="middle">scenario_hash</text>
+
+      <!-- Synthetic log -->
+      <rect x="595" y="195" width="155" height="40" rx="6" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="672" y="211" fill="#58a6ff" font-size="11" font-weight="600" text-anchor="middle">event log sintético</text>
+      <text x="672" y="226" fill="#8b949e" font-size="9" text-anchor="middle">NDJSON calibrado</text>
+
+      <!-- Real log -->
+      <rect x="440" y="195" width="130" height="40" rx="6" fill="#21262d" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="505" y="211" fill="#3fb950" font-size="11" font-weight="600" text-anchor="middle">real_log.ndjson</text>
+      <text x="505" y="226" fill="#8b949e" font-size="9" text-anchor="middle">execução Spark real</text>
+
+      <!-- Quality check -->
+      <rect x="540" y="290" width="155" height="40" rx="6" fill="#21262d" stroke="#d29922" stroke-width="1.5"/>
+      <text x="617" y="306" fill="#d29922" font-size="11" font-weight="600" text-anchor="middle">quality check</text>
+      <text x="617" y="321" fill="#8b949e" font-size="9" text-anchor="middle">attempts, zeros, correlação</text>
+
+      <!-- Watcher -->
+      <rect x="340" y="290" width="155" height="40" rx="6" fill="#21262d" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="417" y="306" fill="#3fb950" font-size="11" font-weight="600" text-anchor="middle">skew_watcher.py</text>
+      <text x="417" y="321" fill="#8b949e" font-size="9" text-anchor="middle">detecta anti-pattern</text>
+
+      <!-- Oracle -->
+      <rect x="440" y="370" width="155" height="40" rx="6" fill="#21262d" stroke="#d29922" stroke-width="1.5"/>
+      <text x="517" y="386" fill="#d29922" font-size="11" font-weight="600" text-anchor="middle">oracle/compare.py</text>
+      <text x="517" y="401" fill="#8b949e" font-size="9" text-anchor="middle">fiel ou divergente</text>
+
+      <!-- Finding -->
+      <rect x="130" y="370" width="155" height="40" rx="6" fill="#21262d" stroke="#bc8cff" stroke-width="2"/>
+      <text x="207" y="386" fill="#bc8cff" font-size="11" font-weight="700" text-anchor="middle">Finding</text>
+      <text x="207" y="401" fill="#8b949e" font-size="9" text-anchor="middle">root_cause + recommendation</text>
+
+      <!-- Arrows -->
+      <line x1="350" y1="50" x2="240" y2="100" stroke="#e3b341" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="500" y1="50" x2="630" y2="100" stroke="#e3b341" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="155" y1="140" x2="100" y2="195" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="200" y1="140" x2="270" y2="195" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="672" y1="140" x2="672" y2="195" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="672" y1="235" x2="672" y2="290" stroke="#d29922" stroke-width="1.5" marker-end="url(#a3)"/>
+      <line x1="617" y1="330" x2="500" y2="370" stroke="#d29922" stroke-width="1.5" marker-end="url(#a3)"/>
+      <line x1="617" y1="330" x2="417" y2="330" stroke="#d29922" stroke-width="1" marker-end="url(#a3)"/>
+
+      <!-- Spark job → MinIO → real log -->
+      <line x1="120" y1="235" x2="120" y2="355" stroke="#3fb950" stroke-width="1" stroke-dasharray="4"/>
+      <text x="125" y="300" fill="#8b949e" font-size="9">MinIO</text>
+      <line x1="120" y1="355" x2="440" y2="210" stroke="#3fb950" stroke-width="1" stroke-dasharray="4" marker-end="url(#a2)"/>
+
+      <!-- Watcher → Finding -->
+      <line x1="340" y1="310" x2="285" y2="370" stroke="#bc8cff" stroke-width="1.5" marker-end="url(#a1)"/>
+
+      <!-- oracle to watcher -->
+      <line x1="505" y1="235" x2="417" y2="290" stroke="#d29922" stroke-width="1" stroke-dasharray="4"/>
+    </svg>
+  </div>
+
+  <!-- DIAGRAMA DE ESTADO -->
+  <h2>Diagrama de Estado — Ciclo de vida de um Scenario</h2>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 780 200" xmlns="http://www.w3.org/2000/svg" width="100%">
+      <defs>
+        <marker id="as" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
+      </defs>
+
+      <!-- States -->
+      <rect x="20" y="75" width="100" height="50" rx="20" fill="#21262d" stroke="#8b949e" stroke-width="1.5"/>
+      <text x="70" y="97" fill="#8b949e" font-size="10" text-anchor="middle">draft</text>
+      <text x="70" y="112" fill="#8b949e" font-size="9" text-anchor="middle">scenario.yaml criado</text>
+
+      <rect x="160" y="75" width="100" height="50" rx="8" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="210" y="97" fill="#58a6ff" font-size="10" text-anchor="middle">generated</text>
+      <text x="210" y="112" fill="#8b949e" font-size="9" text-anchor="middle">job + log sintético</text>
+
+      <rect x="300" y="75" width="100" height="50" rx="8" fill="#21262d" stroke="#d29922" stroke-width="1.5"/>
+      <text x="350" y="97" fill="#d29922" font-size="10" text-anchor="middle">detected</text>
+      <text x="350" y="112" fill="#8b949e" font-size="9" text-anchor="middle">watcher gate verde</text>
+
+      <rect x="440" y="75" width="100" height="50" rx="8" fill="#21262d" stroke="#d29922" stroke-width="1.5"/>
+      <text x="490" y="97" fill="#d29922" font-size="10" text-anchor="middle">validated</text>
+      <text x="490" y="112" fill="#8b949e" font-size="9" text-anchor="middle">oracle calibrado</text>
+
+      <rect x="580" y="75" width="100" height="50" rx="8" fill="#21262d" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="630" y="97" fill="#3fb950" font-size="10" text-anchor="middle">prototype</text>
+      <text x="630" y="112" fill="#8b949e" font-size="9" text-anchor="middle">em produção</text>
+
+      <!-- Error state -->
+      <rect x="300" y="155" width="100" height="30" rx="8" fill="#21262d" stroke="#f85149" stroke-width="1.5"/>
+      <text x="350" y="175" fill="#f85149" font-size="10" text-anchor="middle">divergent</text>
+
+      <!-- Arrows -->
+      <line x1="120" y1="100" x2="160" y2="100" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#as)"/>
+      <line x1="260" y1="100" x2="300" y2="100" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#as)"/>
+      <line x1="400" y1="100" x2="440" y2="100" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#as)"/>
+      <line x1="540" y1="100" x2="580" y2="100" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#as)"/>
+      <line x1="490" y1="125" x2="350" y2="155" stroke="#f85149" stroke-width="1" stroke-dasharray="4" marker-end="url(#as)"/>
+      <line x1="350" y1="155" x2="350" y2="125" stroke="#f85149" stroke-width="1" stroke-dasharray="4" marker-end="url(#as)"/>
+
+      <!-- Labels on arrows -->
+      <text x="140" y="92" fill="#8b949e" font-size="8">generators</text>
+      <text x="265" y="92" fill="#8b949e" font-size="8">watcher</text>
+      <text x="405" y="92" fill="#8b949e" font-size="8">oracle</text>
+      <text x="545" y="92" fill="#8b949e" font-size="8">status:prototype</text>
+      <text x="355" y="148" fill="#f85149" font-size="8">oracle falha</text>
+      <text x="355" y="143" fill="#f85149" font-size="8">→ revisão</text>
+
+      <!-- Current state indicator -->
+      <text x="630" y="65" fill="#3fb950" font-size="10" text-anchor="middle">← você está aqui</text>
+      <line x1="630" y1="68" x2="630" y2="75" stroke="#3fb950" stroke-width="1.5" marker-end="url(#as)"/>
+    </svg>
+  </div>
+
+  <!-- SEQUENCE DIAGRAM -->
+  <h2>Diagrama de Sequência — Finding gerado do zero</h2>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 800 360" xmlns="http://www.w3.org/2000/svg" width="100%">
+      <defs>
+        <marker id="aseq" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
+        <marker id="aseqr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#8b949e"/></marker>
+      </defs>
+
+      <!-- Participants -->
+      <rect x="30" y="10" width="90" height="28" rx="4" fill="#21262d" stroke="#e3b341" stroke-width="1.5"/>
+      <text x="75" y="29" fill="#e3b341" font-size="10" font-weight="700" text-anchor="middle">Engineer</text>
+
+      <rect x="175" y="10" width="90" height="28" rx="4" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="220" y="29" fill="#58a6ff" font-size="10" font-weight="700" text-anchor="middle">scenario.yaml</text>
+
+      <rect x="320" y="10" width="90" height="28" rx="4" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="365" y="29" fill="#58a6ff" font-size="10" font-weight="700" text-anchor="middle">generators</text>
+
+      <rect x="465" y="10" width="90" height="28" rx="4" fill="#21262d" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="510" y="29" fill="#3fb950" font-size="10" font-weight="700" text-anchor="middle">watcher</text>
+
+      <rect x="610" y="10" width="90" height="28" rx="4" fill="#21262d" stroke="#d29922" stroke-width="1.5"/>
+      <text x="655" y="29" fill="#d29922" font-size="10" font-weight="700" text-anchor="middle">oracle</text>
+
+      <!-- Lifelines -->
+      <line x1="75" y1="38" x2="75" y2="350" stroke="#8b949e" stroke-width="1" stroke-dasharray="4"/>
+      <line x1="220" y1="38" x2="220" y2="350" stroke="#8b949e" stroke-width="1" stroke-dasharray="4"/>
+      <line x1="365" y1="38" x2="365" y2="350" stroke="#8b949e" stroke-width="1" stroke-dasharray="4"/>
+      <line x1="510" y1="38" x2="510" y2="350" stroke="#8b949e" stroke-width="1" stroke-dasharray="4"/>
+      <line x1="655" y1="38" x2="655" y2="350" stroke="#8b949e" stroke-width="1" stroke-dasharray="4"/>
+
+      <!-- Messages -->
+      <line x1="75" y1="65" x2="215" y2="65" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#aseq)"/>
+      <text x="145" y="60" fill="#e6edf3" font-size="9" text-anchor="middle">define skew_on_join_30x</text>
+
+      <line x1="220" y1="90" x2="360" y2="90" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#aseq)"/>
+      <text x="290" y="85" fill="#e6edf3" font-size="9" text-anchor="middle">code_generator(scenario)</text>
+
+      <line x1="365" y1="110" x2="215" y2="110" stroke="#8b949e" stroke-width="1" stroke-dasharray="3" marker-end="url(#aseqr)"/>
+      <text x="290" y="105" fill="#8b949e" font-size="9" text-anchor="middle">job.py + manifesto (scenario_hash)</text>
+
+      <line x1="220" y1="135" x2="360" y2="135" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#aseq)"/>
+      <text x="290" y="130" fill="#e6edf3" font-size="9" text-anchor="middle">plan_generator(scenario)</text>
+
+      <line x1="365" y1="155" x2="215" y2="155" stroke="#8b949e" stroke-width="1" stroke-dasharray="3" marker-end="url(#aseqr)"/>
+      <text x="290" y="150" fill="#8b949e" font-size="9" text-anchor="middle">event_log.ndjson (ratio~30x)</text>
+
+      <!-- Spark runs -->
+      <rect x="50" y="170" width="50" height="20" rx="3" fill="rgba(63,185,80,.2)" stroke="none"/>
+      <text x="75" y="184" fill="#3fb950" font-size="9" text-anchor="middle">spark-submit</text>
+      <line x1="75" y1="190" x2="75" y2="210" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="130" y="205" fill="#8b949e" font-size="9">→ plat-v0 → real_log</text>
+
+      <line x1="220" y1="235" x2="505" y2="235" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#aseq)"/>
+      <text x="362" y="230" fill="#e6edf3" font-size="9" text-anchor="middle">watcher(scenario, event_log)</text>
+
+      <line x1="510" y1="255" x2="215" y2="255" stroke="#8b949e" stroke-width="1" stroke-dasharray="3" marker-end="url(#aseqr)"/>
+      <text x="362" y="250" fill="#8b949e" font-size="9" text-anchor="middle">Finding {pattern, ratio, hot_key, recommendation}</text>
+
+      <line x1="220" y1="280" x2="650" y2="280" stroke="#d29922" stroke-width="1.5" marker-end="url(#aseq)"/>
+      <text x="430" y="275" fill="#e6edf3" font-size="9" text-anchor="middle">oracle(scenario, synthetic, real)</text>
+
+      <line x1="655" y1="300" x2="215" y2="300" stroke="#8b949e" stroke-width="1" stroke-dasharray="3" marker-end="url(#aseqr)"/>
+      <text x="430" y="295" fill="#8b949e" font-size="9" text-anchor="middle">fiel (27.9x vs 29.5x, Δ5.4%)</text>
+
+      <line x1="220" y1="325" x2="70" y2="325" stroke="#bc8cff" stroke-width="2" marker-end="url(#aseq)"/>
+      <text x="145" y="320" fill="#bc8cff" font-size="9" text-anchor="middle">GATE VERDE ✅</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ═══════ CASO DE USO ═══════ -->
+<div id="usecase" class="section">
+  <h1>Caso de Uso — skew_on_join_30x (fim a fim)</h1>
+  <p class="subtitle">O único anti-pattern validado hoje. Use como template para os próximos 12.</p>
+
+  <div class="grid2">
+    <div class="card" style="border-color:var(--red);">
+      <h3 style="color:var(--red);">🚨 O Problema</h3>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;">Um job PySpark faz JOIN entre uma tabela grande e uma tabela de lookup. A chave de join tem uma hot key — um valor que aparece muito mais que os outros (30x). O Spark distribui igualmente os dados por partição, mas a hot key acaba em uma única task que processa 30x mais dados que as outras. O job leva horas. Adicionar mais recursos não resolve.</p>
+    </div>
+    <div class="card" style="border-color:var(--green);">
+      <h3 style="color:var(--green);">✅ O que o Apex detecta</h3>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;">Sem instalar JAR, sem modificar o cluster: o Apex lê o event log padrão Spark no MinIO, calcula o ratio máx_task/mediana, identifica a hot key responsável, e emite um finding estruturado com root_cause, hot_key, ratio, e recomendação concreta.</p>
+    </div>
+  </div>
+
+  <h2>Passo a passo completo</h2>
+  <table>
+    <thead><tr><th>#</th><th>Ação</th><th>Quem</th><th>Resultado</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>scenarios/skew_on_join_30x.yaml</code> define o contrato: ratio mínimo 10x, hot_key_present: true, 8 tasks</td><td>Engineer</td><td>Contrato declarativo com acceptance criteria</td></tr>
+      <tr><td>2</td><td><code>python generators/code_generator.py scenario.yaml job.py</code></td><td>Claude</td><td>job.py com hot key 30x e sentinela de linha</td></tr>
+      <tr><td>3</td><td><code>python generators/plan_generator.py scenario.yaml log.ndjson</code></td><td>Claude</td><td>Event log sintético com ratio 27.9x</td></tr>
+      <tr><td>4</td><td><code>python watchers/skew_watcher.py scenario.yaml log.ndjson</code></td><td>Apex</td><td>Finding: skew detectado, ratio=27.9x, hot_key=val_0</td></tr>
+      <tr><td>5</td><td><code>spark-submit job.py</code> no plat-v0</td><td>Engineer</td><td>real_log.ndjson gerado no MinIO</td></tr>
+      <tr><td>6</td><td><code>python oracle/compare.py scenario.yaml log.ndjson real_log.ndjson</code></td><td>Apex</td><td>Fiel: Δratio = 5.4% (dentro da tolerância 15%)</td></tr>
+      <tr><td>7</td><td>Finding entregue: "Aplique salting na coluna join_key + repartition(50)"</td><td>Apex</td><td>Root cause + fix concreto para o engineer</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Output real do Finding (estruturado)</h2>
+  <pre>{
+  "pattern":        "skew_on_join",
+  "severity":       "high",
+  "confidence":     0.94,
+  "hot_key":        "val_0",
+  "ratio":          27.9,
+  "expected_ratio": 1.0,
+  "stage_id":       2,
+  "anti_pattern_line": 42,   ← linha no job.py que tem o anti-pattern
+  "root_cause":     "Chave de join 'join_key' tem hot key 'val_0' concentrando 30x mais dados",
+  "recommendation": "Adicione salting: df.withColumn('join_key_salt', concat(col('join_key'), lit('_'), (rand()*10).cast('int')))"
+}</pre>
+
+  <h2>O que o v1-skeleton adiciona (quando validado)</h2>
+  <div class="card" style="border-color:var(--purple);">
+    <p style="font-size:12px;color:var(--muted);line-height:1.7;">
+      No v1-skeleton, o mesmo finding seria entregue via MCP ao Claude Code / Cursor enquanto o job ainda está rodando (ou logo após terminar). O engineer pergunta: <em>"O que está errado com job ID X?"</em> e o MCP consulta o ClickHouse, obtém as métricas, chama a Claude API, e retorna: <em>"Stage 2 tem skew 27.9x na chave join_key. Hot key: val_0. Recomendação: salting + repartition(50)."</em>
+    </p>
+    <div class="alert alert-warn" style="margin-top:10px;">⚠ Esse fluxo ainda não está testado — é o objetivo do v1-skeleton. O Mundo A (atual) já entrega o mesmo finding, só que via CLI em vez de MCP.</div>
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

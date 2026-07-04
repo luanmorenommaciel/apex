@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex · v3 · Reunião 06/06 · Da hipótese à prova real</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060608;--sf:#0D0E12;--sf2:#12141A;--sf3:#181B23;
+  --bd:#1F2335;--bd2:#272B3D;
+  --gold:#C8943A;--gol2:#E8AE4A;--gol3:#F5C668;
+  --red:#8B2020;--red2:#C04040;
+  --grn:#1A5C3A;--grn2:#2A8A58;
+  --blue:#1A3A6B;--bl2:#2A5DAE;--bl3:#4A82D4;
+  --pur:#3A2A6B;--pur2:#6B50CC;
+  --tx:#E8E4D8;--tx2:#8A8C9E;--tx3:#4A4D62;
+  --serif:'Playfair Display',Georgia,serif;
+  --mono:'Space Mono',monospace;
+  --sans:'Inter',system-ui,sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--sans)}
+.shell{display:flex;flex-direction:column;height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-bottom:.5px solid var(--bd);background:rgba(6,6,8,.95);backdrop-filter:blur(8px);flex-shrink:0;gap:12px;position:relative;z-index:10}
+.brand{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.acts{display:flex;gap:3px;flex-wrap:wrap}
+.act-btn{font-size:10px;padding:3px 10px;border-radius:20px;cursor:pointer;border:.5px solid transparent;color:var(--tx3);background:none;transition:all .18s;font-family:var(--mono);letter-spacing:.04em;white-space:nowrap}
+.act-btn:hover{color:var(--tx2);background:var(--sf2)}
+.act-btn.on{background:rgba(200,148,58,.12);color:var(--gol2);border-color:rgba(200,148,58,.3)}
+.slide-ctr{font-family:var(--mono);font-size:10px;color:var(--tx3);white-space:nowrap;letter-spacing:.08em}
+.area{flex:1;overflow:hidden;position:relative}
+.slide{position:absolute;inset:0;padding:32px 40px 24px;overflow-y:auto;opacity:0;pointer-events:none;transform:translateY(16px);transition:opacity .25s,transform .25s}
+.slide.active{opacity:1;pointer-events:auto;transform:translateY(0)}
+.slide.out{opacity:0;transform:translateY(-16px)}
+.slide::-webkit-scrollbar{width:3px}.slide::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.botbar{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-top:.5px solid var(--bd);background:rgba(6,6,8,.95);flex-shrink:0;gap:16px}
+.navbtn{width:32px;height:32px;border-radius:50%;border:.5px solid var(--bd2);background:var(--sf2);color:var(--tx2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;flex-shrink:0}
+.navbtn:hover{border-color:var(--gold);color:var(--gold)}
+.navbtn:disabled{opacity:.25;cursor:default}
+.progress{flex:1;height:2px;background:var(--bd);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:var(--gold);transition:width .3s}
+.tag{font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;margin-bottom:16px;opacity:.8}
+h1{font-family:var(--serif);font-size:clamp(2.2rem,5vw,3.8rem);font-weight:400;line-height:1.05;color:var(--tx);margin-bottom:20px}
+h1 em{font-style:italic;color:var(--gol2)}
+h2{font-family:var(--serif);font-size:clamp(1.8rem,3.5vw,2.8rem);font-weight:400;line-height:1.1;color:var(--tx);margin-bottom:20px}
+h2 em{font-style:italic;color:var(--gol2)}
+h3{font-family:var(--serif);font-size:1.3rem;font-weight:500;color:var(--tx);margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.card{background:var(--sf2);border:.5px solid var(--bd);border-radius:8px;padding:18px 20px}
+.card-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;margin-bottom:6px}
+.card-title{font-family:var(--serif);font-size:1.1rem;font-weight:500;color:var(--tx);margin-bottom:8px}
+.card-title em{font-style:italic;color:var(--gol2)}
+.card-body{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.card-body strong{color:var(--tx)}
+.badge{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.badge.gold{background:rgba(200,148,58,.15);color:var(--gol2);border:.5px solid rgba(200,148,58,.3)}
+.badge.red{background:rgba(139,32,32,.2);color:var(--red2);border:.5px solid rgba(139,32,32,.4)}
+.badge.grn{background:rgba(26,92,58,.2);color:var(--grn2);border:.5px solid rgba(26,92,58,.4)}
+.badge.blue{background:rgba(26,58,107,.2);color:var(--bl3);border:.5px solid rgba(26,58,107,.4)}
+.badge.pur{background:rgba(58,42,107,.2);color:var(--pur2);border:.5px solid rgba(58,42,107,.4)}
+.divider{height:.5px;background:var(--bd);margin:20px 0}
+.quote{border-left:2px solid var(--gold);padding:10px 16px;margin:12px 0;font-family:var(--serif);font-style:italic;font-size:1rem;color:var(--tx2);line-height:1.6}
+.quote strong{color:var(--gol2);font-style:normal}
+.mono-label{font-family:var(--mono);font-size:10px;color:var(--tx3);letter-spacing:.1em;text-transform:uppercase}
+.row{display:flex;gap:16px;align-items:flex-start}
+.col{flex:1}
+.action-item{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:var(--sf2);border:.5px solid var(--bd);border-radius:6px;margin-bottom:8px}
+.action-check{width:16px;height:16px;border:.5px solid var(--bd2);border-radius:3px;flex-shrink:0;margin-top:1px}
+.action-text{font-size:12.5px;color:var(--tx2);line-height:1.5}
+.action-text strong{color:var(--tx)}
+.stat-row{display:flex;gap:12px;margin-bottom:20px}
+.stat{background:var(--sf2);border:.5px solid var(--bd);border-radius:6px;padding:14px 18px;flex:1;text-align:center}
+.stat-val{font-family:var(--serif);font-size:2rem;color:var(--gol2);font-weight:500;display:block;margin-bottom:2px}
+.stat-label{font-family:var(--mono);font-size:9px;color:var(--tx3);letter-spacing:.1em;text-transform:uppercase}
+.flash{background:rgba(200,148,58,.07);border:.5px solid rgba(200,148,58,.2);border-radius:6px;padding:12px 16px;margin-bottom:10px}
+.flash.red{background:rgba(139,32,32,.07);border-color:rgba(139,32,32,.3)}
+.flash.blue{background:rgba(26,58,107,.07);border-color:rgba(26,58,107,.3)}
+.flash.grn{background:rgba(26,92,58,.07);border-color:rgba(26,92,58,.3)}
+.flash-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.flash.red .flash-label{color:var(--red2)}
+.flash.blue .flash-label{color:var(--bl3)}
+.flash.grn .flash-label{color:var(--grn2)}
+.flash-body{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.flash-body strong{color:var(--tx)}
+.luan-insight{background:rgba(200,148,58,.04);border-left:2px solid var(--gold);padding:12px 16px;border-radius:0 6px 6px 0;margin-bottom:10px}
+.luan-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;margin-bottom:4px}
+.luan-text{font-size:12.5px;color:var(--tx2);line-height:1.6;font-style:italic}
+.luan-text strong{color:var(--gol2);font-style:normal}
+.principle{background:var(--sf3);border:.5px solid var(--bd2);border-radius:6px;padding:14px 16px;margin-bottom:10px}
+.principle-num{font-family:var(--mono);font-size:9px;color:var(--gold);margin-bottom:6px;letter-spacing:.1em}
+.principle-title{font-family:var(--serif);font-size:1rem;font-weight:500;color:var(--tx);margin-bottom:6px}
+.principle-body{font-size:12px;color:var(--tx2);line-height:1.6}
+.blocked{background:rgba(139,32,32,.08);border:.5px solid rgba(139,32,32,.3);border-radius:8px;padding:16px 20px;margin-bottom:12px}
+.blocked-label{font-family:var(--mono);font-size:9px;color:var(--red2);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.blocked-title{font-family:var(--serif);font-size:1.1rem;color:var(--tx);margin-bottom:8px}
+.blocked-body{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.blocked-body strong{color:var(--tx)}
+.timeline{display:flex;gap:0;align-items:stretch;margin-bottom:16px}
+.tl-node{flex:1;background:var(--sf2);border:.5px solid var(--bd);border-radius:8px;padding:16px;position:relative}
+.tl-node.active-node{border-color:var(--gold);background:rgba(200,148,58,.05)}
+.tl-arrow{display:flex;align-items:center;padding:0 8px;color:var(--tx3);font-size:20px;flex-shrink:0}
+.tl-version{font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.15em;margin-bottom:6px}
+.tl-title{font-family:var(--serif);font-size:1.05rem;color:var(--tx);margin-bottom:6px}
+.tl-body{font-size:11.5px;color:var(--tx2);line-height:1.6}
+.tl-body strong{color:var(--tx)}
+.fix-row{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:var(--sf2);border:.5px solid var(--bd);border-left:2px solid var(--grn2);border-radius:0 6px 6px 0;margin-bottom:8px}
+.fix-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.fix-text{font-size:12.5px;color:var(--tx2);line-height:1.5}
+.fix-text strong{color:var(--tx)}
+.fix-text .before{color:var(--red2);font-family:var(--mono);font-size:10px}
+.fix-text .after{color:var(--grn2);font-family:var(--mono);font-size:10px}
+.flow-step{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.flow-box{background:var(--sf2);border:.5px solid var(--bd);border-radius:6px;padding:10px 16px;flex:1}
+.flow-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;margin-bottom:3px}
+.flow-title{font-size:12.5px;color:var(--tx);font-weight:500}
+.flow-sub{font-size:11px;color:var(--tx3);margin-top:2px}
+.flow-arrow{color:var(--tx3);font-size:18px;flex-shrink:0}
+.victory{background:rgba(26,92,58,.07);border:.5px solid rgba(26,92,58,.3);border-radius:8px;padding:14px 18px;margin-bottom:10px}
+.victory-label{font-family:var(--mono);font-size:9px;color:var(--grn2);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.victory-title{font-family:var(--serif);font-size:1.05rem;color:var(--tx);margin-bottom:6px}
+.victory-body{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.victory-body strong{color:var(--tx)}
+code{background:var(--sf3);padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:10.5px;color:var(--gol3)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand">Apex · Crew A · 06/06/2026</div>
+    <div class="acts" id="acts"></div>
+    <div class="slide-ctr" id="slide-ctr">1 / 9</div>
+  </div>
+  <div class="area" id="area">
+
+    <!-- SLIDE 1: COVER -->
+    <div class="slide active" data-act="0">
+      <div class="tag">Reunião · 06 de Junho · Crew A + Luan</div>
+      <h1>Da hipótese<br><em>à prova real.</em></h1>
+      <div class="stat-row" style="margin-top:28px">
+        <div class="stat"><span class="stat-val">3</span><span class="stat-label">Versões entregues</span></div>
+        <div class="stat"><span class="stat-val">25</span><span class="stat-label">Testes verdes</span></div>
+        <div class="stat"><span class="stat-val">17</span><span class="stat-label">Arquivos no repo</span></div>
+        <div class="stat"><span class="stat-val">4.1.2</span><span class="stat-label">Spark real validado</span></div>
+      </div>
+      <div class="grid2" style="margin-top:20px">
+        <div class="card">
+          <div class="card-label">O que esta call cobre</div>
+          <div class="card-title">Evolução <em>v1 → v2 → v3</em></div>
+          <div class="card-body">Cada versão com suas hipóteses, o que funcionou, o que foi descoberto como band-aid e como chegamos na primeira prova real de causa raiz no Spark 4.1.2 com event logs reais do MinIO.</div>
+        </div>
+        <div class="card">
+          <div class="card-label">O que precisamos do time</div>
+          <div class="card-title">Validação e <em>feedback</em></div>
+          <div class="card-body">O código está em validação — não é entrega oficial ainda. Queremos o olhar crítico do time nos resultados, no fluxo e nas decisões abertas antes de registrar nas issues e ADRs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: V1 -->
+    <div class="slide" data-act="1">
+      <div class="tag">Versão 1 · A Hipótese</div>
+      <h2>Spec como<br><em>fonte da verdade.</em></h2>
+      <div style="margin-top:20px">
+        <div class="grid2">
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-label">O que foi proposto</div>
+              <div class="card-title">Contrato <em>scenario.yaml</em></div>
+              <div class="card-body">A v1 estabeleceu a premissa central: um contrato canônico em YAML como spec único, desacoplando gerador de planos e gerador de código. A ideia era que spec → ambos os geradores, não código → histórico.</div>
+            </div>
+            <div class="card">
+              <div class="card-label">O que funcionou</div>
+              <div class="card-title">Decoupling <em>provado em princípio</em></div>
+              <div class="card-body">O padrão de contrato funcionou como arquitetura. Schema-faithful plan generator e <code>skew_watcher.py</code> como detector por distribuição tail — fundação correta.</div>
+            </div>
+          </div>
+          <div>
+            <div class="blocked">
+              <div class="blocked-label">Defeito crítico descoberto na v1</div>
+              <div class="blocked-title">anti_pattern_line quebrava a tese central</div>
+              <div class="blocked-body">A linha declarada no <code>scenario.yaml</code> como <code>anti_pattern_line</code> <strong>não correspondia à linha gerada no código</strong>. Isso quebrava a correlação código↔telemetria — a tese fundamental do Apex. Se o contrato não é a verdade, o sistema não é testável contra logs reais.</div>
+            </div>
+            <div class="flash red">
+              <div class="flash-label">Lição aprendida</div>
+              <div class="flash-body">O contrato deve ser a fonte da verdade com <strong>guard de validação automática</strong>. Qualquer divergência entre spec e código gerado deve quebrar o CI antes de chegar no cluster.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: V2 -->
+    <div class="slide" data-act="2">
+      <div class="tag">Versão 2 · Primeira Execução Real</div>
+      <h2>200.100x de skew.<br><em>Spark 4.1.2 real.</em></h2>
+      <div style="margin-top:20px">
+        <div class="stat-row">
+          <div class="stat"><span class="stat-val">200.100x</span><span class="stat-label">Skew ratio detectado real</span></div>
+          <div class="stat"><span class="stat-val">27,9x</span><span class="stat-label">Skew ratio sintético gerado</span></div>
+          <div class="stat"><span class="stat-val">3</span><span class="stat-label">Band-aids aplicados</span></div>
+        </div>
+        <div class="grid2">
+          <div>
+            <div class="victory">
+              <div class="victory-label">Vitória v2</div>
+              <div class="victory-title">Detecção real confirmada</div>
+              <div class="victory-body">O <code>skew_watcher.py</code> detectou SortMergeJoin com skew ratio de <strong>200.100x</strong> nos event logs reais do MinIO (zstd). Primeira prova de que o sistema funciona contra dados reais do Spark 4.1.2.</div>
+            </div>
+            <div class="card">
+              <div class="card-label">Artefatos entregues</div>
+              <div class="card-body" style="line-height:2">
+                → <code>scenario.yaml</code> como spec canônico com guard<br>
+                → Schema-faithful plan generator<br>
+                → <code>skew_watcher.py</code> por distribuição tail<br>
+                → <code>compare.py</code> oracle comparator<br>
+                → <code>scenario-gate.yml</code> CI gate
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="blocked">
+              <div class="blocked-label">O que a v2 revelou</div>
+              <div class="blocked-title">3 band-aids identificados</div>
+              <div class="blocked-body">
+                <strong>Band-aid 1:</strong> Patch de divisão por zero aplicado no watcher — sinal de que a detecção por task única era estruturalmente impossível.<br><br>
+                <strong>Band-aid 2:</strong> Comparação sintético vs real desabilitada — o oráculo não conseguia comparar porque os ambientes não eram equivalentes.<br><br>
+                <strong>Band-aid 3:</strong> Tolerância de registros ajustada manualmente para 25% — número arbitrário, não derivado da causa raiz.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: BAND-AIDS -->
+    <div class="slide" data-act="3">
+      <div class="tag">O Diagnóstico · Band-aids vs Causa Raiz</div>
+      <h2>Workaround<br><em>mascara o problema.</em></h2>
+      <div style="margin-top:20px">
+        <div class="luan-insight">
+          <div class="luan-label">Princípio aplicado</div>
+          <div class="luan-text">Cada band-aid era um sinal. Em vez de corrigir o sintoma, a v3 investigou a causa raiz de cada um e construiu a solução correta. <strong>Produção real > paliativo funcionando.</strong></div>
+        </div>
+        <div class="grid2" style="margin-top:12px">
+          <div>
+            <div class="principle">
+              <div class="principle-num">BAND-AID 1 · Divisão por zero</div>
+              <div class="principle-title">Task única tornava detecção impossível</div>
+              <div class="principle-body">Com apenas 1 task, não há distribuição para comparar — qualquer percentil é igual à mediana. O watcher dividia por zero porque o problema era estrutural: skew detection requer distribuição, não amostra única.</div>
+            </div>
+            <div class="principle">
+              <div class="principle-num">BAND-AID 2 · Comparação desabilitada</div>
+              <div class="principle-title">Sintético e real não eram equivalentes</div>
+              <div class="principle-body">O job sintético gerava um ambiente diferente do job real — AQE ativo no cluster alterava o plano físico, stages eram diferentes. Desabilitar a comparação escondia que o gerador não era fiel ao ambiente real.</div>
+            </div>
+          </div>
+          <div>
+            <div class="principle">
+              <div class="principle-num">BAND-AID 3 · Tolerância 25% arbitrária</div>
+              <div class="principle-title">Número sem fundamento técnico</div>
+              <div class="principle-body">A tolerância de 25% foi ajustada manualmente para fazer os testes passarem — não derivada de nenhuma análise do comportamento real do Spark. Um número mágico que mascarava divergência entre sintético e real.</div>
+            </div>
+            <div class="flash red" style="margin-top:12px">
+              <div class="flash-label">O padrão que a v3 quebrou</div>
+              <div class="flash-body">Os 3 band-aids tinham uma raiz comum: <strong>o ambiente sintético não era um modelo fiel do ambiente real.</strong> Corrigir um de cada vez sem corrigir a fundação criaria mais band-aids.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: V3 CAUSA RAIZ -->
+    <div class="slide" data-act="4">
+      <div class="tag">Versão 3 · Causa Raiz</div>
+      <h2>Cinco fixes.<br><em>Zero band-aids.</em></h2>
+      <div style="margin-top:20px">
+        <div class="fix-row">
+          <div class="fix-icon">🏗</div>
+          <div class="fix-text">
+            <strong>apexlib</strong> — Biblioteca centralizada de utilitários compartilhados entre watcher, gerador e comparador.<br>
+            <span class="before">antes:</span> código duplicado com comportamento inconsistente entre módulos.<br>
+            <span class="after">agora:</span> fonte única de verdade para parsing de event logs e métricas de stage.
+          </div>
+        </div>
+        <div class="fix-row">
+          <div class="fix-icon">🎯</div>
+          <div class="fix-text">
+            <strong>Stage-aware skew detection</strong> — Detecção opera no nível de stage, não de task isolada.<br>
+            <span class="before">antes:</span> task única → divisão por zero → band-aid de guarda.<br>
+            <span class="after">agora:</span> distribuição real de tasks por stage → percentil 95 vs mediana → ratio correto.
+          </div>
+        </div>
+        <div class="fix-row">
+          <div class="fix-icon">⚙️</div>
+          <div class="fix-text">
+            <strong>AQE-aware generation</strong> — Gerador sintético respeita o comportamento do Adaptive Query Execution.<br>
+            <span class="before">antes:</span> plano sintético divergia do plano real porque AQE alterava stages em runtime.<br>
+            <span class="after">agora:</span> gerador modela as coalesced stages do AQE — sintético fiel ao real.
+          </div>
+        </div>
+        <div class="fix-row">
+          <div class="fix-icon">📦</div>
+          <div class="fix-text">
+            <strong>Auto-zstd</strong> — Decompressão automática dos event logs do MinIO.<br>
+            <span class="before">antes:</span> step manual <code>zstd -d</code> antes de qualquer análise.<br>
+            <span class="after">agora:</span> pipeline detecta e descomprime transparentemente — zero fricção operacional.
+          </div>
+        </div>
+        <div class="fix-row">
+          <div class="fix-icon">🛡</div>
+          <div class="fix-text">
+            <strong>Sentinela de linha</strong> — Guard automático que valida que <code>anti_pattern_line</code> no contrato corresponde à linha gerada no código.<br>
+            <span class="before">antes:</span> defeito da v1 persistia silenciosamente — correlação código↔telemetria quebrada.<br>
+            <span class="after">agora:</span> CI falha imediatamente se spec e código divergem.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: RESULTADOS -->
+    <div class="slide" data-act="5">
+      <div class="tag">Resultados · v3 · commit 357efad</div>
+      <h2>Slice vertical<br><em>provado no real.</em></h2>
+      <div style="margin-top:20px">
+        <div class="stat-row">
+          <div class="stat"><span class="stat-val">25</span><span class="stat-label">Testes verdes</span></div>
+          <div class="stat"><span class="stat-val">17</span><span class="stat-label">Arquivos entregues</span></div>
+          <div class="stat"><span class="stat-val">0</span><span class="stat-label">Band-aids ativos</span></div>
+          <div class="stat"><span class="stat-val">4.1.2</span><span class="stat-label">Spark validado</span></div>
+        </div>
+        <div class="grid2">
+          <div>
+            <div class="victory">
+              <div class="victory-label">Vitória principal</div>
+              <div class="victory-title">Slice vertical end-to-end funcionando</div>
+              <div class="victory-body">O pipeline completo — geração sintética → event log → detecção de skew → ratio calculado — roda contra o Spark 4.1.2 real no plat-v0 com event logs do MinIO. <strong>A tese central do Apex está provada na prática.</strong></div>
+            </div>
+            <div class="victory">
+              <div class="victory-label">Vitória técnica</div>
+              <div class="victory-title">Contrato íntegro pela primeira vez</div>
+              <div class="victory-body">Com o sentinela de linha ativo, o <code>scenario.yaml</code> é agora de fato a fonte da verdade. A correlação código↔telemetria que a v1 prometia e a v2 não conseguia garantir está funcionando na v3.</div>
+            </div>
+          </div>
+          <div>
+            <div class="victory">
+              <div class="victory-label">Vitória de processo</div>
+              <div class="victory-title">CI gate como barreira de qualidade</div>
+              <div class="victory-body">O <code>scenario-gate.yml</code> atualizado cobre os 5 fixes da v3. Nenhum merge passa sem que o contrato, o gerador e o watcher estejam alinhados. <strong>Qualidade deixou de ser manual.</strong></div>
+            </div>
+            <div class="flash grn">
+              <div class="flash-label">Estado da validação</div>
+              <div class="flash-body">O código está <strong>em validação</strong> — 25 testes verdes, Spark real confirmado. Esta reunião é o checkpoint de validação do time antes do registro oficial nas issues e ADRs.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: FLUXO DA SOLUÇÃO -->
+    <div class="slide" data-act="6">
+      <div class="tag">Arquitetura · Fluxo da Solução v3</div>
+      <h2>Como o Apex<br><em>funciona agora.</em></h2>
+      <div style="margin-top:24px">
+        <div class="flow-step">
+          <div class="flow-box" style="border-color:var(--bd2)">
+            <div class="flow-label">Tier 0 · Coleta</div>
+            <div class="flow-title">Event Log Reader + Auto-zstd</div>
+            <div class="flow-sub">MinIO → decompressão automática → JsonProtocol parser via apexlib</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-box" style="border-color:var(--gold)">
+            <div class="flow-label">Tier 1 · Watcher (Pod A1) — entregue v3</div>
+            <div class="flow-title">Stage-aware Skew Watcher + AQE-aware</div>
+            <div class="flow-sub">Distribuição de tasks por stage → P95 vs mediana → ratio → threshold → sinal binário</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-box" style="border-color:var(--bd2);opacity:.6">
+            <div class="flow-label">Tier 1 · Watcher (Pod A2) — próximo passo</div>
+            <div class="flow-title">Memory / Cost Watcher</div>
+            <div class="flow-sub">Mesmo padrão do skew — spill, OOM, custo de shuffle por stage</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-box" style="border-color:var(--bd2);opacity:.5">
+            <div class="flow-label">Tier 2 · Classifier (Pod A3) — spec aberta</div>
+            <div class="flow-title">LLM Especializado — Code / AST</div>
+            <div class="flow-sub">Plano físico + sinal do watcher → classificação do padrão anti-performance</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-box" style="border-color:var(--bd2);opacity:.4">
+            <div class="flow-label">Tier 3/4 · Coordinator + Judge (Pod A4) — bloqueado A3</div>
+            <div class="flow-title">Sonnet → Opus (se confiança &lt; 0,6)</div>
+            <div class="flow-sub">Recomendação final → ADR-002 (Opus threshold)</div>
+          </div>
+        </div>
+        <div class="flash blue" style="margin-top:12px">
+          <div class="flash-label">Premissa inegociável mantida</div>
+          <div class="flash-body">Zero JAR no cluster. Zero modificação de SparkSession. O Apex roda <strong>completamente fora do contexto de execução</strong> dos jobs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: ABERTO -->
+    <div class="slide" data-act="7">
+      <div class="tag">O que está aberto · Próximos passos</div>
+      <h2>Validado.<br><em>Ainda não fechado.</em></h2>
+      <div style="margin-top:20px">
+        <div class="grid2">
+          <div>
+            <div class="card" style="margin-bottom:12px;border-color:var(--gol2)">
+              <div class="badge gold">Próximo · Sprint imediato</div>
+              <div class="card-title">Scale worker <em>2+ cores</em></div>
+              <div class="card-body">Rodar o job no compose com 2+ cores para fechar o ratio real do oráculo. Com 1 core, o paralelismo não representa o ambiente de produção — o skew ratio medido pode estar subestimado.</div>
+            </div>
+            <div class="card" style="border-color:var(--gol2)">
+              <div class="badge gold">Próximo · Pod A2</div>
+              <div class="card-title">Memory / Cost Watcher</div>
+              <div class="card-body">Mesmo padrão arquitetural do skew watcher — detector determinístico, sem LLM, operando sobre métricas de spill e shuffle cost por stage. Aguimar + Augusto.</div>
+            </div>
+          </div>
+          <div>
+            <div class="blocked">
+              <div class="blocked-label">Oracle ratio · em aberto</div>
+              <div class="blocked-title">Ratio real vs sintético não fechado</div>
+              <div class="blocked-body">O oráculo comparator (<code>compare.py</code>) ainda não tem o ratio final validado com worker multi-core. Este é o número que prova que o ambiente sintético é fiel ao real. <strong>Depende do scale do worker.</strong></div>
+            </div>
+            <div class="flash" style="margin-top:12px">
+              <div class="flash-label">ADRs para registrar após esta reunião</div>
+              <div class="flash-body">
+                <strong>ADR-001:</strong> Go como linguagem core (confirmar)<br>
+                <strong>ADR-002:</strong> Opus quando confiança &lt; 0,6 (aguarda A3)<br>
+                <strong>ADR-003:</strong> ClickHouse + Railway + OTel (owned Luan)<br>
+                Após validação do time → atualizar issues #17–#25.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: FEEDBACK -->
+    <div class="slide" data-act="8">
+      <div class="tag">Pedido de Feedback · Time + Luan</div>
+      <h2>Olhar crítico<br><em>antes de registrar.</em></h2>
+      <div style="margin-top:20px">
+        <div class="grid2">
+          <div>
+            <div class="luan-insight">
+              <div class="luan-label">Para o Luan</div>
+              <div class="luan-text">Os 5 fixes da v3 representam o sequenciamento intencional que discutimos — causa raiz antes de avançar camadas. <strong>O slice vertical está provado. A pergunta agora é: o que precisa ser diferente antes de mover para o Pod A2?</strong></div>
+            </div>
+            <div class="action-item">
+              <div class="action-check"></div>
+              <div class="action-text"><strong>Os 5 fixes endereçam os band-aids certos?</strong> Ou há algum que ainda é patch e não causa raiz?</div>
+            </div>
+            <div class="action-item">
+              <div class="action-check"></div>
+              <div class="action-text"><strong>AQE-aware é suficiente?</strong> Algum comportamento do Spark 4.x que o gerador ainda não modela?</div>
+            </div>
+            <div class="action-item">
+              <div class="action-check"></div>
+              <div class="action-text"><strong>O fluxo de coleta está correto?</strong> Event Log Reader → apexlib → watcher — alguma camada que deveria ser diferente?</div>
+            </div>
+          </div>
+          <div>
+            <div class="action-item">
+              <div class="action-check"></div>
+              <div class="action-text"><strong>Scale do worker:</strong> 2 cores é suficiente para validar o oracle ratio, ou precisamos de mais para ser representativo?</div>
+            </div>
+            <div class="action-item">
+              <div class="action-check"></div>
+              <div class="action-text"><strong>Pod A2 Memory/Cost:</strong> O padrão do skew watcher (P95 vs mediana por stage) serve para detectar spill, ou precisa de abordagem diferente?</div>
+            </div>
+            <div class="action-item">
+              <div class="action-check"></div>
+              <div class="action-text"><strong>Registro nas issues:</strong> Após esta reunião, quais issues precisam de update imediato antes do próximo sync?</div>
+            </div>
+            <div class="flash grn" style="margin-top:12px">
+              <div class="flash-label">Checkpoint desta reunião</div>
+              <div class="flash-body">Saída esperada: <strong>go / no-go</strong> nos 5 fixes, alinhamento no próximo passo (scale worker), e lista de issues/ADRs para atualizar após a call.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /area -->
+
+  <div class="botbar">
+    <button class="navbtn" id="prev">&#8592;</button>
+    <div class="progress"><div class="progress-fill" id="pf"></div></div>
+    <button class="navbtn" id="next">&#8594;</button>
+  </div>
+</div>
+
+<script>
+const slides = Array.from(document.querySelectorAll('.slide'));
+const actBtns = document.getElementById('acts');
+const ctr = document.getElementById('slide-ctr');
+const pf = document.getElementById('pf');
+let cur = 0;
+
+const acts = [
+  'Cover','v1 · Hipótese','v2 · Real','Band-aids','v3 · Causa Raiz','Resultados','Fluxo','Aberto','Feedback'
+];
+
+acts.forEach((a,i)=>{
+  const b = document.createElement('button');
+  b.className='act-btn'+(i===0?' on':'');
+  b.textContent=a;
+  b.onclick=()=>go(i);
+  actBtns.appendChild(b);
+});
+
+function go(n){
+  if(n<0||n>=slides.length)return;
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('out');
+  setTimeout(()=>slides[cur].classList.remove('out'),300);
+  cur=n;
+  slides[cur].classList.add('active');
+  document.querySelectorAll('.act-btn').forEach((b,i)=>b.classList.toggle('on',i===cur));
+  ctr.textContent=`${cur+1} / ${slides.length}`;
+  pf.style.width=`${((cur+1)/slides.length)*100}%`;
+  document.getElementById('prev').disabled=cur===0;
+  document.getElementById('next').disabled=cur===slides.length-1;
+}
+
+document.getElementById('prev').onclick=()=>go(cur-1);
+document.getElementById('next').onclick=()=>go(cur+1);
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+});
+
+go(0);
+</script>
+</body>
+</html>

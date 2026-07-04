@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Apex · Landscape Competitivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060608;--sf2:#12141A;--sf3:#181B23;--bd:#1F2335;--bd2:#272B3D;
+  --gold:#C8943A;--gol2:#E8AE4A;--gol3:#F5C668;
+  --red2:#C04040;--grn2:#2A8A58;--bl3:#4A82D4;--pur2:#6B50CC;--or2:#D4724A;
+  --tx:#E8E4D8;--tx2:#8A8C9E;--tx3:#4A4D62;
+  --serif:'Playfair Display',Georgia,serif;--mono:'Space Mono',monospace;--sans:'Inter',system-ui,sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--sans)}
+.shell{display:flex;flex-direction:column;height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-bottom:.5px solid var(--bd);background:rgba(6,6,8,.95);flex-shrink:0;gap:12px}
+.brand{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase}
+.acts{display:flex;gap:3px;flex-wrap:wrap}
+.act-btn{font-size:10px;padding:3px 10px;border-radius:20px;cursor:pointer;border:.5px solid transparent;color:var(--tx3);background:none;transition:all .18s;font-family:var(--mono);letter-spacing:.04em}
+.act-btn:hover{color:var(--tx2);background:var(--sf2)}
+.act-btn.on{background:rgba(200,148,58,.12);color:var(--gol2);border-color:rgba(200,148,58,.3)}
+.sc{font-family:var(--mono);font-size:10px;color:var(--tx3)}
+.area{flex:1;overflow:hidden;position:relative}
+.slide{position:absolute;inset:0;padding:30px 44px 22px;overflow-y:auto;opacity:0;pointer-events:none;transform:translateY(14px);transition:opacity .25s,transform .25s}
+.slide.active{opacity:1;pointer-events:auto;transform:translateY(0)}
+.slide::-webkit-scrollbar{width:3px}.slide::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.botbar{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-top:.5px solid var(--bd);background:rgba(6,6,8,.95);flex-shrink:0;gap:16px}
+.navbtn{width:32px;height:32px;border-radius:50%;border:.5px solid var(--bd2);background:var(--sf2);color:var(--tx2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+.navbtn:hover{border-color:var(--gold);color:var(--gold)}.navbtn:disabled{opacity:.25;cursor:default}
+.progress{flex:1;height:2px;background:var(--bd);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:var(--gold);transition:width .3s}
+.tag{font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;margin-bottom:14px}
+h1{font-family:var(--serif);font-size:clamp(2rem,4.6vw,3.2rem);font-weight:400;line-height:1.06;margin-bottom:14px}
+h1 em{font-style:italic;color:var(--gol2)}
+h2{font-family:var(--serif);font-size:clamp(1.5rem,3vw,2.2rem);font-weight:400;line-height:1.12;margin-bottom:12px}
+h2 em{font-style:italic;color:var(--gol2)}
+p.lead{font-size:13.5px;color:var(--tx2);line-height:1.65;max-width:700px;margin-bottom:10px}
+p.lead strong{color:var(--tx)}
+p.lead code{font-family:var(--mono);font-size:11px;color:var(--gol3);background:rgba(200,148,58,.08);padding:1px 5px;border-radius:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.card{background:var(--sf2);border:.5px solid var(--bd);border-radius:8px;padding:14px 16px}
+.card.gold{border-color:rgba(200,148,58,.35);background:rgba(200,148,58,.05)}
+.card.red{border-color:rgba(192,64,64,.3)}
+.card-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.13em;text-transform:uppercase;margin-bottom:6px}
+.card.red .card-label{color:var(--red2)}
+.card-title{font-family:var(--serif);font-size:1rem;font-weight:500;margin-bottom:6px}
+.card-title em{font-style:italic;color:var(--gol2)}
+.card-body{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.card-body strong{color:var(--tx)}
+.card-body code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+.flash{background:rgba(200,148,58,.07);border:.5px solid rgba(200,148,58,.2);border-radius:6px;padding:12px 16px;margin:10px 0}
+.flash.grn{background:rgba(42,138,88,.07);border-color:rgba(42,138,88,.3)}
+.flash-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.flash.grn .flash-label{color:var(--grn2)}
+.flash-body{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.flash-body strong{color:var(--tx)}
+.matrix{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+.matrix th{font-family:var(--mono);font-size:8.5px;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;padding:7px 10px;border-bottom:.5px solid var(--bd2);text-align:left;white-space:nowrap}
+.matrix td{padding:8px 10px;border-bottom:.5px solid var(--bd);vertical-align:middle;color:var(--tx2);line-height:1.4}
+.matrix td.tool{font-weight:500;color:var(--tx);white-space:nowrap}
+.matrix tr.apex-row td{background:rgba(200,148,58,.06);color:var(--tx)}
+.matrix tr.apex-row td.tool{color:var(--gol2);font-family:var(--mono)}
+.ok{color:var(--grn2);font-weight:600}
+.no{color:var(--red2)}
+.maybe{color:var(--or2)}
+.dead{font-family:var(--mono);font-size:10px;color:var(--red2);letter-spacing:.05em}
+.alive{font-family:var(--mono);font-size:10px;color:var(--grn2)}
+.footer{font-family:var(--mono);font-size:10px;color:var(--tx3);letter-spacing:.08em;text-align:center;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand">Apex · Landscape Competitivo</div>
+    <div class="acts" id="acts"></div>
+    <div class="sc" id="sc">1 / 6</div>
+  </div>
+  <div class="area" id="area">
+
+    <!-- 1 COVER -->
+    <div class="slide active" data-act="0">
+      <div class="tag">Por que a abordagem que escolhemos · não é preguiça</div>
+      <h1>O campo que<br>o Apex <em>enfrenta.</em></h1>
+      <p class="lead">O Commander disse: <strong>"o DataFlint, o Sparklens, o Unravel — todos param no mesmo ponto. Ninguém faz a ponte do monitoramento até o código."</strong> Ele estava certo, mas o campo mudou: a Unravel lançou um agente autônomo na semana passada. Esta apresentação mapeia quem está onde, por que a abordagem do Gabriel é a escolha certa dado o landscape, e qual o posicionamento único do Apex.</p>
+      <div class="grid2" style="margin-top:16px">
+        <div class="card"><div class="card-label">5 alternativas estudadas</div><div class="card-body">Sparklens · Dr. Elephant<br>sparkMeasure<br>DataFlint (OSS + SaaS)<br>Unravel Arvix AI<br>Databricks Overwatch</div></div>
+        <div class="card gold"><div class="card-label">O espaço que o Apex ocupa</div><div class="card-body"><strong>Única combinação</strong> no mercado de: baixa intrusividade <strong>+</strong> recomendação agêntica <strong>+</strong> OSS <strong>+</strong> agnóstico de fornecedor <strong>+</strong> acesso ao código.</div></div>
+      </div>
+    </div>
+
+    <!-- 2 PRIOR ART -->
+    <div class="slide" data-act="1">
+      <div class="tag">Prior art · o que validou a tese e o que deixou a lacuna</div>
+      <h2>Eles <em>provaram</em> que funciona<br>— e pararam no meio.</h2>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-label">Sparklens (Qubole) · Dr. Elephant (LinkedIn)</div>
+          <div class="card-title">Profilers post-mortem<br><em>clássicos</em></div>
+          <div class="card-body">Leem o event log, calculam eficiência de executor, detectam skew, sugerem configs. <strong>Provam que análise de event log funciona</strong> — o mesmo caminho que escolhemos. Limitação: heurística fixa, sem motor extensível, sem agente. Confirmado sem manutenção desde jul/2021.</div>
+        </div>
+        <div class="card">
+          <div class="card-label">sparkMeasure (Luca Canali · CERN)</div>
+          <div class="card-title">Biblioteca de métricas<br><em>via Listener</em></div>
+          <div class="card-body">Coleta TaskMetrics e StageMetrics em tempo real via SparkListener. OSS, mantido, zero recomendação — só coleta. É a <strong>referência de implementação de listener não-intrusivo</strong> que usamos como base. Validou a abordagem de coleta; não é um produto de recomendação.</div>
+        </div>
+      </div>
+      <div class="flash" style="margin-top:12px">
+        <div class="flash-label">O que eles deixaram aberto</div>
+        <div class="flash-body">Os dois <strong>param na observabilidade</strong>. Nenhum conecta o sinal do log com o repositório de código, com um agente com KB especializado, ou com um ciclo de feedback sobre o PR. Essa lacuna é exatamente o que o Luan quer fechar.</div>
+      </div>
+    </div>
+
+    <!-- 3 DATAFLINT -->
+    <div class="slide" data-act="2">
+      <div class="tag">O competidor mais próximo · tese idêntica, caminho diferente</div>
+      <h2>DataFlint: mesma tese,<br><em>escolhas distintas.</em></h2>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-label">DataFlint OSS · Apache-2.0</div>
+          <div class="card-title"><em>Plugin</em> no driver + History Server</div>
+          <div class="card-body">Roda como <code>spark.plugins</code> dentro do cluster. UI enriquecida, bottleneck detection, planos visuais. <strong>Mais intrusivo que o nosso event-log tail</strong> — requer deploy no cluster, viola a premissa de adoção voluntária de clientes grandes.</div>
+        </div>
+        <div class="card">
+          <div class="card-label">DataFlint SaaS · IA via MCP</div>
+          <div class="card-title"><em>Copiloto</em> proprietário com LLM</div>
+          <div class="card-body">Comprime logs 100×, envia via MCP pra OpenAI/Gemini/Claude. IDE copilot, fleet observability, cost. <strong>Chasing the same agentic world</strong> — validam a tese. Limitação: IA é SaaS proprietário, não auto-hospedável, e não é agnóstico de fornecedor. Sem cross-job memory ou feedback loops.</div>
+        </div>
+      </div>
+      <div class="flash grn" style="margin-top:12px">
+        <div class="flash-label">A diferenciação do Apex</div>
+        <div class="flash-body">DataFlint chega perto mas <strong>divide em dois produtos</strong>: o OSS (coleta) e o SaaS (inteligência). O Apex é um único sistema OSS onde coleta <em>e</em> inteligência <em>e</em> acesso ao código convivem. E a coleta é mais não-intrusiva (event-log tail, nenhum JAR no cluster).</div>
+      </div>
+    </div>
+
+    <!-- 4 MATRIX -->
+    <div class="slide" data-act="3">
+      <div class="tag">Matriz de comparação · todas as alternativas</div>
+      <h2>O mapa completo.</h2>
+      <table class="matrix">
+        <tr>
+          <th>Ferramenta</th><th>Intrusividade</th><th>OSS livre</th><th>Agnóstico</th>
+          <th>Recomendação</th><th>Agêntico</th><th>Acesso ao código</th><th>Estado</th>
+        </tr>
+        <tr>
+          <td class="tool">Sparklens / Dr. Elephant</td>
+          <td class="ok">Baixa</td><td class="ok">✓</td><td class="ok">✓</td>
+          <td class="maybe">~ heurística</td><td class="no">✗</td><td class="no">✗</td>
+          <td class="dead">sem manutenção</td>
+        </tr>
+        <tr>
+          <td class="tool">sparkMeasure</td>
+          <td class="maybe">Média (listener)</td><td class="ok">✓</td><td class="ok">✓</td>
+          <td class="no">✗ só métricas</td><td class="no">✗</td><td class="no">✗</td>
+          <td class="alive">ativo</td>
+        </tr>
+        <tr>
+          <td class="tool">DataFlint OSS</td>
+          <td class="maybe">Média (plugin)</td><td class="ok">✓</td><td class="ok">✓</td>
+          <td class="ok">✓</td><td class="no">✗ (UI)</td><td class="no">✗</td>
+          <td class="alive">ativo</td>
+        </tr>
+        <tr>
+          <td class="tool">DataFlint SaaS AI</td>
+          <td class="maybe">Média (plugin)</td><td class="no">✗ proprietário</td><td class="maybe">~</td>
+          <td class="ok">✓</td><td class="ok">✓ MCP+LLM</td><td class="maybe">~ plano</td>
+          <td class="alive">ativo</td>
+        </tr>
+        <tr>
+          <td class="tool">Unravel Arvix AI</td>
+          <td class="no">Alta (agente)</td><td class="no">✗</td><td class="no">✗ (DBR+)</td>
+          <td class="ok">✓</td><td class="ok">✓ autônomo</td><td class="ok">✓ reescreve</td>
+          <td class="dead">jun/2026</td>
+        </tr>
+        <tr>
+          <td class="tool">Databricks Overwatch</td>
+          <td class="ok">Baixa</td><td class="ok">✓</td><td class="no">✗ só DBR</td>
+          <td class="maybe">~ cost/perf</td><td class="no">✗</td><td class="no">✗</td>
+          <td class="alive">DBR Labs</td>
+        </tr>
+        <tr class="apex-row">
+          <td class="tool">★ Apex</td>
+          <td class="ok">Baixa (tail)</td><td class="ok">✓</td><td class="ok">✓</td>
+          <td class="ok">✓</td><td class="ok">✓ KB+Judge</td><td class="ok">✓ Lane 2</td>
+          <td class="alive">em construção</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- 5 POSITIONING -->
+    <div class="slide" data-act="4">
+      <div class="tag">Posicionamento · o quadrante que ninguém ocupa</div>
+      <h2>O <em>sweet spot</em><br>que está vazio.</h2>
+      <div style="background:var(--sf2);border:.5px solid var(--bd);border-radius:10px;padding:16px">
+        <svg width="100%" viewBox="0 0 680 340" role="img">
+          <defs><marker id="ax" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#4A4D62" stroke-width="1.5" stroke-linecap="round"/></marker></defs>
+          <!-- axes -->
+          <line x1="60" y1="280" x2="640" y2="280" stroke="#4A4D62" stroke-width="1" marker-end="url(#ax)"/>
+          <line x1="60" y1="280" x2="60" y2="30" stroke="#4A4D62" stroke-width="1" marker-end="url(#ax)"/>
+          <!-- axis labels -->
+          <text x="350" y="310" text-anchor="middle" fill="#4A4D62" font-size="11" font-family="'Space Mono',monospace">Intrusividade →</text>
+          <text x="28" y="155" text-anchor="middle" fill="#4A4D62" font-size="11" font-family="'Space Mono',monospace" transform="rotate(-90,28,155)">Capacidade agêntica →</text>
+          <!-- dashed dividers -->
+          <line x1="340" y1="35" x2="340" y2="278" stroke="#272B3D" stroke-width=".5" stroke-dasharray="4 4"/>
+          <line x1="62" y1="155" x2="636" y2="155" stroke="#272B3D" stroke-width=".5" stroke-dasharray="4 4"/>
+          <!-- quadrant labels -->
+          <text x="175" y="55" text-anchor="middle" fill="rgba(200,148,58,.25)" font-size="12" font-family="'Playfair Display',serif" font-style="italic">Sweet Spot</text>
+          <text x="510" y="55" text-anchor="middle" fill="rgba(192,64,64,.2)" font-size="12" font-family="'Playfair Display',serif" font-style="italic">APM Comercial</text>
+          <text x="175" y="268" text-anchor="middle" fill="rgba(74,77,98,.6)" font-size="11" font-family="'Playfair Display',serif" font-style="italic">Observ. básica</text>
+          <!-- tools -->
+          <!-- Sparklens/Dr.Elephant: low intrusion, very low agentic -->
+          <circle cx="120" cy="255" r="7" fill="#12141A" stroke="#4A4D62" stroke-width="1"/>
+          <text x="120" y="240" text-anchor="middle" fill="#4A4D62" font-size="10" font-family="'Space Mono',monospace">Sparklens</text>
+          <text x="120" y="229" text-anchor="middle" fill="#4A4D62" font-size="10" font-family="'Space Mono',monospace">Dr.Elephant</text>
+          <!-- sparkMeasure: slightly more intrusive, no agentic -->
+          <circle cx="195" cy="262" r="7" fill="#12141A" stroke="#4A4D62" stroke-width="1"/>
+          <text x="195" y="248" text-anchor="middle" fill="#4A4D62" font-size="10" font-family="'Space Mono',monospace">sparkMeasure</text>
+          <!-- Overwatch: low intrusion, low agentic -->
+          <circle cx="145" cy="215" r="7" fill="#12141A" stroke="#4A4D62" stroke-width="1"/>
+          <text x="145" y="200" text-anchor="middle" fill="#4A4D62" font-size="10" font-family="'Space Mono',monospace">Overwatch</text>
+          <!-- DataFlint OSS: medium, medium -->
+          <circle cx="295" cy="168" r="7" fill="#12141A" stroke="#4A82D4" stroke-width="1"/>
+          <text x="295" y="153" text-anchor="middle" fill="#4A82D4" font-size="10" font-family="'Space Mono',monospace">DataFlint OSS</text>
+          <!-- DataFlint SaaS: medium intrusion, high agentic -->
+          <circle cx="340" cy="105" r="7" fill="#12141A" stroke="#4A82D4" stroke-width="1"/>
+          <text x="340" y="90" text-anchor="middle" fill="#4A82D4" font-size="10" font-family="'Space Mono',monospace">DataFlint SaaS</text>
+          <!-- Unravel Arvix: high intrusion, very high agentic -->
+          <circle cx="545" cy="72" r="7" fill="#12141A" stroke="#C04040" stroke-width="1"/>
+          <text x="545" y="57" text-anchor="middle" fill="#C04040" font-size="10" font-family="'Space Mono',monospace">Unravel Arvix AI</text>
+          <!-- Apex: low intrusion, high agentic — THE STAR -->
+          <circle cx="130" cy="82" r="12" fill="rgba(200,148,58,.15)" stroke="#C8943A" stroke-width="2"/>
+          <text x="130" y="87" text-anchor="middle" fill="#C8943A" font-size="13" font-family="'Space Mono',monospace">★</text>
+          <text x="130" y="68" text-anchor="middle" fill="#E8AE4A" font-size="11" font-family="'Space Mono',monospace" font-weight="700">Apex</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 6 JUSTIFICATION -->
+    <div class="slide" data-act="5">
+      <div class="tag">A justificativa · por que a abordagem do Gabriel é a escolha certa</div>
+      <h2>Não é preguiça.<br><em>É posicionamento.</em></h2>
+      <p class="lead" style="margin-bottom:12px">Augusto sentiu que adotar o trabalho do Gabriel como proposta principal "parecia preguiça". O mapa diz o contrário: <strong>a abordagem event-log-first do Gabriel posiciona o Apex exatamente no quadrante que está vazio</strong> — e que todos os outros tentaram mas não conseguiram ocupar.</p>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-label">O que a abordagem do Gabriel entrega</div>
+          <div class="card-body">Event-log-first (sem JAR no cluster) + Listener async Day 1 + tail out-of-process Sprint 2 (serverless) + ClickHouse como store. É o substrato de coleta que honra a <strong>premissa não-intrusiva</strong> que nenhum dos comerciais honra.</div>
+        </div>
+        <div class="card gold">
+          <div class="card-label">Por que os outros não estão nesse quadrante</div>
+          <div class="card-body">Sparklens/Dr.Elephant: chegaram lá mas morreram.<br>DataFlint OSS: plugin (intrusivo) + IA é SaaS proprietário.<br>Unravel: chega na capacidade mas com agente pesado.<br>Overwatch: só Databricks.</div>
+        </div>
+      </div>
+      <div class="flash grn" style="margin-top:12px">
+        <div class="flash-label">A diferenciação que ninguém tem ainda</div>
+        <div class="flash-body">Cross-job memory e feedback loops — <strong>Apex aprende entre jobs</strong>. A Unravel diz que tem isso num knowledge graph proprietário de décadas. O Apex faz open, com KB auditável, e com o Judge adversarial pra evitar alucinação. Isso não tem preço de mercado ainda. É o que o time está construindo.</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="botbar">
+    <button class="navbtn" id="prev">‹</button>
+    <div class="progress"><div class="progress-fill" id="pf"></div></div>
+    <button class="navbtn" id="next">›</button>
+  </div>
+</div>
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+const acts=['Capa','Prior Art','DataFlint','Matriz','Posição','Justificativa'];
+let cur=0;
+const ae=document.getElementById('acts');
+acts.forEach((n,i)=>{const b=document.createElement('button');b.className='act-btn'+(i===0?' on':'');b.textContent=n;b.onclick=()=>go(i);ae.appendChild(b);});
+const ab=[...ae.children];
+function go(i){if(i<0||i>=slides.length)return;slides[cur].classList.remove('active');ab[cur].classList.remove('on');cur=i;slides[cur].classList.add('active');ab[cur].classList.add('on');document.getElementById('sc').textContent=(cur+1)+' / '+slides.length;document.getElementById('pf').style.width=((cur+1)/slides.length*100)+'%';document.getElementById('prev').disabled=cur===0;document.getElementById('next').disabled=cur===slides.length-1;}
+document.getElementById('prev').onclick=()=>go(cur-1);
+document.getElementById('next').onclick=()=>go(cur+1);
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')go(cur+1);if(e.key==='ArrowLeft')go(cur-1);});
+document.getElementById('pf').style.width=(1/slides.length*100)+'%';
+document.getElementById('prev').disabled=true;
+</script>
+</body>
+</html>

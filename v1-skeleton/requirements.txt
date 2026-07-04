@@ -1,0 +1,4 @@
+clickhouse-connect>=0.6.0
+anthropic>=0.25.0
+mcp>=0.9.0
+pyspark>=3.5.0

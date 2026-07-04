@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Apex · Especificação Técnica v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060608;--sf2:#12141A;--sf3:#181B23;--bd:#1F2335;--bd2:#272B3D;
+  --gold:#C8943A;--gol2:#E8AE4A;--gol3:#F5C668;
+  --red2:#C04040;--grn2:#2A8A58;--bl3:#4A82D4;--or2:#D4724A;
+  --tx:#E8E4D8;--tx2:#8A8C9E;--tx3:#4A4D62;
+  --serif:'Playfair Display',Georgia,serif;--mono:'Space Mono',monospace;--sans:'Inter',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);line-height:1.6}
+.page{max-width:900px;margin:0 auto;padding:40px 40px 80px}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;margin-bottom:36px;border-bottom:.5px solid var(--bd)}
+.brand{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase}
+.meta-row{display:flex;gap:20px;flex-wrap:wrap}
+.meta-item{font-family:var(--mono);font-size:10px;color:var(--tx3);letter-spacing:.06em}
+.meta-item span{color:var(--tx2)}
+h1{font-family:var(--serif);font-size:2.6rem;font-weight:400;line-height:1.05;margin-bottom:8px}
+h1 em{font-style:italic;color:var(--gol2)}
+.subtitle{font-size:14px;color:var(--tx2);max-width:720px;margin-bottom:32px}
+h2{font-family:var(--serif);font-size:1.6rem;font-weight:400;margin:40px 0 12px;padding-top:36px;border-top:.5px solid var(--bd)}
+h2 em{font-style:italic;color:var(--gol2)}
+h3{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin:20px 0 8px}
+p{font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:8px}
+p strong{color:var(--tx)}
+p code,td code,li code{font-family:var(--mono);font-size:11px;color:var(--gol3);background:rgba(200,148,58,.08);padding:1px 5px;border-radius:3px}
+pre{background:var(--sf2);border:.5px solid var(--bd2);border-radius:6px;padding:14px 16px;font-family:var(--mono);font-size:11px;color:var(--tx2);line-height:1.55;overflow-x:auto;margin:10px 0}
+pre .ok{color:var(--grn2)}pre .bad{color:var(--red2)}pre .dim{color:var(--tx3)}pre .hl{color:var(--gol3)}
+.toc{background:var(--sf2);border:.5px solid var(--bd);border-radius:8px;padding:16px 20px;margin-bottom:32px}
+.toc-title{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
+.toc a{font-size:12px;color:var(--tx2);text-decoration:none;display:block;padding:2px 0;transition:color .15s}
+.toc a:hover{color:var(--gol2)}
+.toc-num{color:var(--tx3);font-family:var(--mono);font-size:10px;margin-right:6px}
+.info-box{background:var(--sf2);border:.5px solid var(--bd);border-left:2px solid var(--gold);border-radius:6px;padding:12px 16px;margin:10px 0}
+.info-box.grn{border-left-color:var(--grn2)}
+.info-box.red{border-left-color:var(--red2)}
+.info-box.blu{border-left-color:var(--bl3)}
+.ib-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.info-box.grn .ib-label{color:var(--grn2)}.info-box.red .ib-label{color:var(--red2)}.info-box.blu .ib-label{color:var(--bl3)}
+.ib-body{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.ib-body strong{color:var(--tx)}.ib-body code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}
+th{font-family:var(--mono);font-size:9px;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;padding:6px 10px;border-bottom:.5px solid var(--bd2);text-align:left}
+td{padding:8px 10px;border-bottom:.5px solid var(--bd);color:var(--tx2);vertical-align:top;line-height:1.5}
+td strong{color:var(--tx)}
+tr.hl-row td{background:rgba(200,148,58,.04)}
+.status-ok{color:var(--grn2);font-family:var(--mono);font-size:10px}
+.status-warn{color:var(--or2);font-family:var(--mono);font-size:10px}
+.status-open{color:var(--tx3);font-family:var(--mono);font-size:10px}
+.fig{background:var(--sf2);border:.5px solid var(--bd);border-radius:10px;padding:20px;margin:14px 0;text-align:center}
+.fig-cap{font-family:var(--mono);font-size:10px;color:var(--tx3);letter-spacing:.07em;text-transform:uppercase;margin-top:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}
+.card{background:var(--sf2);border:.5px solid var(--bd);border-radius:8px;padding:13px 15px}
+.cl{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.cb{font-size:12px;color:var(--tx2);line-height:1.6}.cb strong{color:var(--tx)}.cb code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+footer{margin-top:48px;padding-top:16px;border-top:.5px solid var(--bd);font-family:var(--mono);font-size:10px;color:var(--tx3);text-align:center}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="topbar">
+  <div class="brand">Apex · Especificação Técnica</div>
+  <div class="meta-row">
+    <div class="meta-item">versão <span>2.0</span></div>
+    <div class="meta-item">data <span>05 jun 2026</span></div>
+    <div class="meta-item">status <span>prototype · validado no plat-v0</span></div>
+    <div class="meta-item">autor <span>Augusto (Captain, Crew A)</span></div>
+  </div>
+</div>
+
+<h1>Apex<br><em>Especificação Técnica</em></h1>
+<p class="subtitle">Diagnóstico e validação de anti-patterns de performance Spark via geradores desacoplados, Watcher agêntico e Oráculo de fidelidade. Estado do sistema <strong>antes</strong> das melhorias da v3 — documenta o que foi provado, os band-aids honestos e o fluxo de criação de ponta a ponta.</p>
+
+<div class="toc">
+  <div class="toc-title">Índice</div>
+  <a href="#s1"><span class="toc-num">1</span>Visão geral e premissa inegociável</a>
+  <a href="#s2"><span class="toc-num">2</span>Ambiente e stack</a>
+  <a href="#s3"><span class="toc-num">3</span>Arquitetura do sistema</a>
+  <a href="#s4"><span class="toc-num">4</span>Fluxo de criação (diagrama principal)</a>
+  <a href="#s5"><span class="toc-num">5</span>O contrato — scenario.yaml</a>
+  <a href="#s6"><span class="toc-num">6</span>Gerador de código</a>
+  <a href="#s7"><span class="toc-num">7</span>Gerador de plano (sintético)</a>
+  <a href="#s8"><span class="toc-num">8</span>O Watcher de Skew</a>
+  <a href="#s9"><span class="toc-num">9</span>O Oráculo de fidelidade</a>
+  <a href="#s10"><span class="toc-num">10</span>Gate de CI</a>
+  <a href="#s11"><span class="toc-num">11</span>Run real no plat-v0 e achados do AQE</a>
+  <a href="#s12"><span class="toc-num">12</span>Estado atual honesto — o que está provado e os band-aids</a>
+  <a href="#s13"><span class="toc-num">13</span>Próximos passos antes da v3</a>
+</div>
+
+<!-- 1 -->
+<h2 id="s1">1 · <em>Visão geral</em> e premissa inegociável</h2>
+<p>O Apex é um sistema de diagnóstico e recomendação agêntica de performance para workloads Spark. A meta é detectar anti-patterns (data skew, memory spill, broadcast mal dimensionado, etc.) e prescrever correções <strong>antes de falhas</strong>, em vez de reagir depois.</p>
+<p>A tese de mercado: todos os concorrentes (Sparklens, DataFlint, Unravel) param na observabilidade do cluster. Nenhum faz a ponte entre o sinal do log e o código no repositório. E os que chegam perto (Unravel Arvix AI, lançado jun/2026) são comerciais, intrusivos e proprietários.</p>
+<div class="info-box">
+  <div class="ib-label">Premissa inegociável — não-intrusivo</div>
+  <div class="ib-body">Zero JAR injetado no cluster. Zero modificação da SparkSession. Zero listener de terceiros. Compatível com serverless (onde listeners extras são proibidos). A coleta usa apenas o event log nativo do Spark, lido fora do processo a partir do object storage.</div>
+</div>
+
+<!-- 2 -->
+<h2 id="s2">2 · <em>Ambiente</em> e stack</h2>
+<table>
+  <tr><th>Componente</th><th>Versão</th><th>Papel</th></tr>
+  <tr><td><strong>WSL2 (Ubuntu)</strong></td><td>Ubuntu 26.04</td><td>Terminal de desenvolvimento no Windows 11</td></tr>
+  <tr><td><strong>Docker Desktop</strong></td><td>29.5.2</td><td>Runtime dos containers plat-v0 (integrado ao WSL)</td></tr>
+  <tr><td><strong>plat-v0</strong></td><td>—</td><td>Plataforma de base criada por Gabriel Philot: Spark + MinIO + ClickHouse + History Server</td></tr>
+  <tr><td><strong>Spark</strong></td><td>4.1.2 (Scala 2.13, Java 17)</td><td>Motor sendo monitorado; executa os jobs de teste</td></tr>
+  <tr><td><strong>MinIO</strong></td><td>2025-09-07</td><td>Object storage S3-compatible; guarda os event logs em <code>spark-logs/events/</code></td></tr>
+  <tr><td><strong>ClickHouse</strong></td><td>26.5.1</td><td>Store analítico para métricas; tabelas <code>spark_raw_events</code>, <code>spark_tasks</code>, etc.</td></tr>
+  <tr><td><strong>Python</strong></td><td>3.12</td><td>Runtime dos geradores, Watcher e Oráculo</td></tr>
+  <tr><td><strong>PyYAML</strong></td><td>6.0.3</td><td>Parse do contrato YAML</td></tr>
+  <tr><td><strong>zstd</strong></td><td>CLI 1.5.7</td><td>Descompressão do event log (MinIO entrega comprimido por padrão)</td></tr>
+</table>
+<h3>Comandos do plat-v0</h3>
+<pre><span class="dim"># subir o cluster</span>
+make compose
+
+<span class="dim"># verificar serviços (URLs, portas, credenciais)</span>
+make services
+
+<span class="dim"># carregar logs do MinIO para o ClickHouse</span>
+make spark-logs
+
+<span class="dim"># MinIO web console</span>
+http://127.0.0.1:29001  <span class="dim">(spv0minio / spv0minio123)</span>
+
+<span class="dim"># submeter job ao cluster real</span>
+docker cp job.py spv0-spark-master:/opt/spark/
+docker exec spv0-spark-master /opt/spark/bin/spark-submit \
+  --master spark://spv0-spark-master:7077 job.py</pre>
+
+<!-- 3 -->
+<h2 id="s3">3 · <em>Arquitetura</em> do sistema</h2>
+<p>O Apex tem quatro tiers de agentes e dois lanes de coleta:</p>
+<div class="grid2">
+  <div class="card"><div class="cl">Tier 1 — Watchers (deterministicos)</div><div class="cb">Pod A1: Shuffle/Skew (Guilherme, Antony)<br>Pod A2: Memory/Cost (Aguimar, Augusto)</div></div>
+  <div class="card"><div class="cl">Tier 2 — Classifier (LLM especializado)</div><div class="cb">Pod A3: Code/AST — lê o repositório, não a telemetria. Depende de acesso ao GitHub.</div></div>
+  <div class="card"><div class="cl">Tier 3 — Coordinator (Sonnet)</div><div class="cb">Pod A4: orquestra os Watchers, consolida Findings, emite recomendação com root cause.</div></div>
+  <div class="card"><div class="cl">Tier 4 — Judge (Opus, confiança &lt; 0.6)</div><div class="cb">Pod A4: adversarial, escalado pelo Coordinator quando confiança é baixa.</div></div>
+</div>
+<p style="margin-top:12px"><strong>Lane 1 (Dia 1):</strong> SparkListener in-process (mais intrusivo; ADR-001). <strong>Lane 2 (Sprint 2):</strong> event-log tail / SHS REST — leitura out-of-process do storage. O que está implementado e provado aqui é a <strong>Lane 2</strong> — a mais não-intrusiva.</p>
+
+<!-- 4 -->
+<h2 id="s4">4 · <em>Fluxo de criação</em> (diagrama principal)</h2>
+<p>Este é o fluxo que o spec documenta e que foi provado de ponta a ponta no plat-v0 (Spark 4.1.2, 05 jun 2026):</p>
+<div class="fig">
+<svg width="100%" viewBox="0 0 820 520" role="img" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#4A4D62" stroke-width="1.5" stroke-linecap="round"/>
+    </marker>
+    <marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#2A8A58" stroke-width="1.5" stroke-linecap="round"/>
+    </marker>
+    <marker id="aro" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#C8943A" stroke-width="1.5" stroke-linecap="round"/>
+    </marker>
+  </defs>
+
+  <!-- scenario.yaml — topo, centro -->
+  <rect x="295" y="10" width="230" height="52" rx="6" fill="rgba(200,148,58,.12)" stroke="#C8943A" stroke-width="1.5"/>
+  <text x="410" y="31" text-anchor="middle" fill="#E8AE4A" font-size="11" font-family="'Space Mono',monospace" font-weight="700">scenario.yaml</text>
+  <text x="410" y="47" text-anchor="middle" fill="#8A8C9E" font-size="10" font-family="'Inter',sans-serif">contrato — fonte única da verdade</text>
+
+  <!-- seta esquerda (para code_generator) -->
+  <line x1="340" y1="62" x2="200" y2="130" stroke="#C8943A" stroke-width="1" marker-end="url(#aro)"/>
+  <!-- seta direita (para plan_generator) -->
+  <line x1="480" y1="62" x2="620" y2="130" stroke="#C8943A" stroke-width="1" marker-end="url(#aro)"/>
+
+  <!-- code_generator -->
+  <rect x="80" y="130" width="230" height="48" rx="6" fill="#12141A" stroke="#272B3D" stroke-width=".5"/>
+  <text x="195" y="150" text-anchor="middle" fill="#8A8C9E" font-size="10" font-family="'Space Mono',monospace">generators/</text>
+  <text x="195" y="165" text-anchor="middle" fill="#E8E4D8" font-size="11" font-family="'Space Mono',monospace">code_generator.py</text>
+
+  <!-- plan_generator -->
+  <rect x="510" y="130" width="230" height="48" rx="6" fill="#12141A" stroke="#272B3D" stroke-width=".5"/>
+  <text x="625" y="150" text-anchor="middle" fill="#8A8C9E" font-size="10" font-family="'Space Mono',monospace">generators/</text>
+  <text x="625" y="165" text-anchor="middle" fill="#E8E4D8" font-size="11" font-family="'Space Mono',monospace">plan_generator.py</text>
+
+  <!-- seta code_gen → job.py -->
+  <line x1="195" y1="178" x2="195" y2="230" stroke="#4A4D62" stroke-width="1" marker-end="url(#ar)"/>
+  <!-- seta plan_gen → synthetic_log -->
+  <line x1="625" y1="178" x2="625" y2="230" stroke="#4A4D62" stroke-width="1" marker-end="url(#ar)"/>
+
+  <!-- job_demo.py -->
+  <rect x="100" y="230" width="190" height="44" rx="5" fill="#12141A" stroke="#1F2335"/>
+  <text x="195" y="249" text-anchor="middle" fill="#8A8C9E" font-size="10" font-family="'Inter',sans-serif">job_demo.py</text>
+  <text x="195" y="264" text-anchor="middle" fill="#E8E4D8" font-size="10.5" font-family="'Space Mono',monospace">código com anti-pattern</text>
+
+  <!-- synthetic_log.ndjson -->
+  <rect x="525" y="230" width="200" height="44" rx="5" fill="#12141A" stroke="#1F2335"/>
+  <text x="625" y="249" text-anchor="middle" fill="#8A8C9E" font-size="10" font-family="'Inter',sans-serif">synthetic_log.ndjson</text>
+  <text x="625" y="264" text-anchor="middle" fill="#E8E4D8" font-size="10.5" font-family="'Space Mono',monospace">log sintético fiel</text>
+
+  <!-- seta job → spark-submit -->
+  <line x1="195" y1="274" x2="195" y2="330" stroke="#4A4D62" stroke-width="1" marker-end="url(#ar)"/>
+
+  <!-- spark-submit / plat-v0 -->
+  <rect x="60" y="330" width="270" height="52" rx="6" fill="#12141A" stroke="#4A82D4" stroke-width=".8"/>
+  <text x="195" y="352" text-anchor="middle" fill="#4A82D4" font-size="10" font-family="'Space Mono',monospace">spark-submit (plat-v0)</text>
+  <text x="195" y="367" text-anchor="middle" fill="#8A8C9E" font-size="10" font-family="'Inter',sans-serif">Spark 4.1.2 · spark://spv0-spark-master:7077</text>
+
+  <!-- seta spark → MinIO -->
+  <line x1="195" y1="382" x2="195" y2="426" stroke="#4A4D62" stroke-width="1" marker-end="url(#ar)"/>
+
+  <!-- MinIO (event log real) -->
+  <rect x="60" y="426" width="270" height="48" rx="6" fill="#12141A" stroke="#1F2335"/>
+  <text x="195" y="447" text-anchor="middle" fill="#8A8C9E" font-size="10" font-family="'Space Mono',monospace">MinIO — spark-logs/events/</text>
+  <text x="195" y="462" text-anchor="middle" fill="#E8E4D8" font-size="10.5" font-family="'Space Mono',monospace">real_log.ndjson (zstd)</text>
+
+  <!-- linha convergindo os dois logs para o watcher -->
+  <!-- real_log → watcher (horizontal + down) -->
+  <line x1="330" y1="450" x2="390" y2="450" stroke="#4A4D62" stroke-width="1"/>
+  <line x1="390" y1="450" x2="390" y2="490" stroke="#4A4D62" stroke-width="1" marker-end="url(#ar)"/>
+  <!-- synthetic → watcher (right + down) -->
+  <line x1="625" y1="274" x2="720" y2="274" stroke="#4A4D62" stroke-width="1"/>
+  <line x1="720" y1="274" x2="720" y2="490" stroke="#4A4D62" stroke-width="1"/>
+  <line x1="720" y1="490" x2="500" y2="490" stroke="#4A4D62" stroke-width="1" marker-end="url(#ar)"/>
+
+  <!-- skew_watcher -->
+  <rect x="290" y="478" width="220" height="44" rx="6" fill="rgba(42,138,88,.1)" stroke="#2A8A58" stroke-width="1"/>
+  <text x="400" y="497" text-anchor="middle" fill="#2A8A58" font-size="10" font-family="'Space Mono',monospace">watchers/skew_watcher.py</text>
+  <text x="400" y="512" text-anchor="middle" fill="#8A8C9E" font-size="10" font-family="'Inter',sans-serif">Finding JSON · acceptance gate</text>
+
+  <!-- label: oracle (semanal) entre synthetic e real -->
+  <rect x="355" y="345" width="200" height="38" rx="5" fill="#181B23" stroke="#272B3D" stroke-width=".5"/>
+  <text x="455" y="362" text-anchor="middle" fill="#8A8C9E" font-size="9.5" font-family="'Space Mono',monospace">oracle/compare.py</text>
+  <text x="455" y="376" text-anchor="middle" fill="#4A4D62" font-size="9" font-family="'Inter',sans-serif">sintético vs real · semanal</text>
+  <!-- oracle ↔ arrows -->
+  <line x1="525" y1="252" x2="455" y2="345" stroke="#272B3D" stroke-width=".8" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+  <line x1="330" y1="450" x2="390" y2="383" stroke="#272B3D" stroke-width=".8" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+</svg>
+<div class="fig-cap">fluxo de criação completo — provado no plat-v0 em 05 jun 2026</div>
+</div>
+
+<!-- 5 -->
+<h2 id="s5">5 · <em>O Contrato</em> — scenario.yaml</h2>
+<p>O <code>scenarios/skew_on_join_30x.yaml</code> é a fonte única da verdade. Ambos os geradores leem o mesmo arquivo independentemente — nenhum chama o outro. É esse desacoplamento que responde à lição de casa do Commander.</p>
+<pre><span class="hl">scenario_id:</span> skew_on_join_30x
+<span class="hl">version:</span> 2
+
+<span class="hl">anti_pattern:</span>
+  class: data_skew_on_join_key   <span class="dim"># que bug estamos simulando</span>
+  severity: high
+
+<span class="hl">code_generator:</span>                   <span class="dim"># instrucoes para o job.py</span>
+  anti_pattern_line: 21           <span class="dim"># linha declarada (v2: fragil — vira output na v3)</span>
+  data:
+    orders:    { rows: 200000, hot_key: 7, hot_share: 0.80 }
+    customers: { rows: 100, distinct_keys: 100 }
+  spark_config:
+    spark.sql.adaptive.enabled: "false"        <span class="dim"># desabilita AQE para fixture deterministico</span>
+    spark.sql.shuffle.partitions: "8"
+
+<span class="hl">plan_generator:</span>                   <span class="dim"># instrucoes para o log sintetico</span>
+  expected_signals:
+    join_operator: SortMergeJoin
+    hot_stage: 4
+    skew_ratio_min: 10
+    hot_partition: { single_task_shuffle_read_records: 200100 }
+
+<span class="hl">oracle:</span>
+  tolerance: { skew_ratio: 0.30, records: 0.25 }  <span class="dim"># tolerancia ajustada no run real</span>
+
+<span class="hl">acceptance:</span>                        <span class="dim"># o que o Watcher DEVE detectar (gate de CI)</span>
+  root_cause_includes: ["data skew", "customer_id", "SortMergeJoin"]
+  min_recommendations: 1</pre>
+
+<!-- 6 -->
+<h2 id="s6">6 · <em>Gerador de código</em></h2>
+<p>O <code>generators/code_generator.py</code> lê o contrato e produz um job PySpark com o anti-pattern na linha declarada. Na v2, inclui um <strong>guard de linha</strong>: o gerador calcula a linha real do join e falha se divergir do contrato — contrato e código não divergem em silêncio.</p>
+<div class="info-box red">
+  <div class="ib-label">Fragilidade v2 (será corrigida na v3)</div>
+  <div class="ib-body">A linha é um <strong>input</strong> no scenario — qualquer mudança de config desloca o join e exige <code>sed</code> manual para corrigir. Na v3, a linha vira <strong>output derivado</strong> via sentinela <code># APEX::ANTIPATTERN</code> gravado num manifesto.</div>
+</div>
+<p>Saída além do <code>job.py</code>: o job usa <code>hint("shuffle_merge")</code> para garantir que o SortMergeJoin ocorra mesmo quando o AQE tentaria broadcast do lado pequeno.</p>
+
+<!-- 7 -->
+<h2 id="s7">7 · <em>Gerador de plano</em> (sintético)</h2>
+<p>O <code>generators/plan_generator.py</code> produz um event log em <strong>milissegundos, sem executar Spark</strong>. O schema usa os nomes de campo reais do Spark JsonProtocol — <code>Task Metrics → Shuffle Read Metrics → Total Records Read</code> — então um Watcher escrito contra o sintético também lê log de produção.</p>
+<p>A distribuição de tasks é derivada dos dados do scenario: uma task quente com o volume declarado em <code>single_task_shuffle_read_records</code>; as demais dividem o restante uniformemente. Isso é o que torna o "30x" do nome do cenário um sinal medível, não um número inventado.</p>
+<pre><span class="dim"># evento real gerado (Spark JsonProtocol):</span>
+{"Event": "SparkListenerTaskEnd", "Stage ID": 4,
+ "Task Info": {"Task ID": 0, ...},
+ "Task Metrics": {"Shuffle Read Metrics": {"Total Records Read": <span class="ok">200100</span>}, ...}}
+{"Event": "SparkListenerTaskEnd", "Stage ID": 4,
+ "Task Info": {"Task ID": 1, ...},
+ "Task Metrics": {"Shuffle Read Metrics": {"Total Records Read": <span class="dim">5729</span>}, ...}}
+<span class="dim">... 6 tasks frias adicionais ...</span></pre>
+
+<!-- 8 -->
+<h2 id="s8">8 · <em>O Watcher</em> de Skew</h2>
+<p>O <code>watchers/skew_watcher.py</code> lê um event log (real ou sintético), detecta o anti-pattern e emite um Finding no formato do <code>watcher.contract</code>. O Finding é validado contra o bloco <code>acceptance</code> do scenario — isso é o gate que o CI checa.</p>
+<h3>Lógica de detecção</h3>
+<p>Toma <strong>todos</strong> os TaskEnd do log, computa <code>max(records) / median(cold_records)</code>. Detecção = SortMergeJoin no plano <strong>E</strong> ratio ≥ <code>skew_ratio_min</code> do contrato.</p>
+<div class="info-box red">
+  <div class="ib-label">Band-aid v2 (corrigido na v3)</div>
+  <div class="ib-body">O Watcher v2 mistura tasks de scan (lêem 0 shuffle) com as de reduce, causando divisão por zero quando as tasks frias mostram 0 records. Solução: <code>cold = [...] or [1]</code>. CAUSA RAIZ: precisa isolar o stage de reduce do join. Correto na v3 via <code>hottest_reduce_stage()</code>.</div>
+</div>
+<h3>Formato do Finding (saída)</h3>
+<pre>{
+  "watcher": "shuffle_skew",
+  "severity": <span class="ok">"high"</span>,
+  "confidence": 0.99,
+  "evidence": [
+    "join operator: SortMergeJoin",
+    "task mais pesada (id 4) leu 200100 registros",
+    "mediana das demais: 1 -> skew ratio 200100.0x"
+  ],
+  "root_cause": "data skew na chave de join customer_id (SortMergeJoin): ...",
+  "recommendations": [
+    "habilitar spark.sql.adaptive.skewJoin.enabled",
+    "broadcast o lado customers (dimensao pequena)",
+    "salgar a chave customer_id"
+  ]
+}</pre>
+
+<!-- 9 -->
+<h2 id="s9">9 · <em>O Oráculo</em> de fidelidade</h2>
+<p>O <code>oracle/compare.py</code> compara o log sintético com o log real, verificando se os sinais detectáveis são fiéis dentro da tolerância do scenario. Garante que o fixture não se descole da realidade do Spark ao longo do tempo.</p>
+<table>
+  <tr><th>Sinal comparado</th><th>Tolerância</th><th>Racional</th></tr>
+  <tr><td><strong>join_operator</strong></td><td>exato</td><td>Hard — se o plano mudou (ex: AQE fez broadcast), o fixture está errado</td></tr>
+  <tr><td><strong>hot_records</strong></td><td>25%</td><td>Volume da task quente; tolerância ajustada pelo run real (sintético: 160k, real: 200k)</td></tr>
+  <tr><td><strong>skew_ratio</strong></td><td>desabilitado</td><td>Band-aid v2: o real colapsou em 1 task (200100x) vs. sintético spread (27.9x); incomparáveis neste ambiente 1-core</td></tr>
+</table>
+<div class="info-box red">
+  <div class="ib-label">Band-aid v2</div>
+  <div class="ib-body">A comparação de ratio foi desabilitada com <code>if False:</code> porque o real (colapso 1-core) e o sintético (spread 8 tasks) medem distribuições diferentes. Na v3: o oráculo detecta o colapso e emite um <strong>aviso honesto</strong> em vez de desabilitar a checagem.</div>
+</div>
+
+<!-- 10 -->
+<h2 id="s10">10 · <em>Gate</em> de CI</h2>
+<p>O <code>.github/workflows/scenario-gate.yml</code> roda a cada Pull Request: gera o fixture de cada scenario, roda o Watcher contra o log sintético, e exige gate verde antes do merge.</p>
+<pre><span class="dim">on: pull_request</span>
+jobs:
+  gate:
+    steps:
+      - run: pip install pyyaml
+      - <span class="ok">python generators/code_generator.py "$s" job.py</span>   <span class="dim"># guard de linha</span>
+      - <span class="ok">python generators/plan_generator.py "$s" log.ndjson</span> <span class="dim"># log fiel</span>
+      - <span class="ok">python watchers/skew_watcher.py "$s" log.ndjson</span>    <span class="dim"># detecta + acceptance</span></pre>
+
+<!-- 11 -->
+<h2 id="s11">11 · <em>Run real</em> no plat-v0 e achados do AQE</h2>
+<p>Em 05 jun 2026, o job foi submetido ao cluster real via <code>spark-submit --master spark://spv0-spark-master:7077</code>. App ID: <code>app-20260606030054-0000</code>. O Watcher rodou contra o log real baixado do MinIO e emitiu <strong>GATE VERDE</strong> — a primeira prova com Spark de produção.</p>
+<h3>3 achados do AQE (mudaram o design)</h3>
+<table>
+  <tr><th>#</th><th>Achado</th><th>Implicação para o Watcher</th></tr>
+  <tr class="hl-row"><td>1</td><td><strong>AQE faz coalesce e apaga o skew</strong> — juntou as 8 partições em 1 no ambiente 1-core</td><td>Config <code>coalescePartitions=false</code> adicionada ao fixture. Watcher precisa tratar 1 task explicitamente.</td></tr>
+  <tr><td>2</td><td><strong>AQE faz broadcast em tempo de execução</strong> — converteu SMJ para BroadcastHashJoin apesar do threshold -1 estático</td><td>Config <code>adaptive.autoBroadcastJoinThreshold=-1</code> + <code>hint("shuffle_merge")</code> adicionados.</td></tr>
+  <tr class="hl-row"><td>3</td><td><strong>Plano inicial ≠ plano executado</strong> — o <code>physicalPlanDescription</code> no início trazia SMJ, mas o <code>AdaptiveExecutionUpdate</code> mudou</td><td>O Watcher <strong>deve</strong> ler o plano final do último <code>SparkListenerSQLAdaptiveExecutionUpdate</code>, não o inicial. Corrigido na v3.</td></tr>
+</table>
+
+<!-- 12 -->
+<h2 id="s12">12 · <em>Estado atual honesto</em> — o que está provado e os band-aids</h2>
+<table>
+  <tr><th>Item</th><th>Status</th><th>Nota</th></tr>
+  <tr><td>Desacoplamento (lição de casa do Luan)</td><td class="status-ok">✓ PROVADO</td><td>Ambos os geradores leem scenario; nenhum chama o outro</td></tr>
+  <tr><td>Schema fiel ao Spark JsonProtocol</td><td class="status-ok">✓ PROVADO</td><td>Mesmo Watcher lê sintético e real</td></tr>
+  <tr><td>Spark real rodou no plat-v0</td><td class="status-ok">✓ PROVADO</td><td>App 20260606030054, GATE VERDE no log real</td></tr>
+  <tr><td>Guard de linha (contrato ≠ código → falha)</td><td class="status-ok">✓ FUNCIONA</td><td>Conceito correto; a linha como input é a fragilidade</td></tr>
+  <tr><td>Gate de CI por PR</td><td class="status-ok">✓ EXISTE</td><td>Roda generate + watch + acceptance</td></tr>
+  <tr><td>Coleta não-intrusiva</td><td class="status-ok">✓ CONFIRMADO</td><td>Lane 2 (event-log tail), zero JAR, zero listener injetado</td></tr>
+  <tr class="hl-row"><td><code>cold = [...] or [1]</code> no Watcher</td><td class="status-warn">⚠ BAND-AID</td><td>Dodge de divisão por zero; causa raiz: não isola o stage de reduce</td></tr>
+  <tr class="hl-row"><td><code>if False:</code> desabilitando ratio no Oráculo</td><td class="status-warn">⚠ BAND-AID</td><td>Esconde que sintético (spread) e real (colapso 1-core) medem distribuições diferentes</td></tr>
+  <tr class="hl-row"><td>Tolerância records 0→25% sem explicação</td><td class="status-warn">⚠ BAND-AID</td><td>Mascara gap estrutural (160k previsto vs 200k real)</td></tr>
+  <tr class="hl-row"><td>Linha do anti-pattern como input no scenario</td><td class="status-warn">⚠ FRÁGIL</td><td>Todo <code>--conf</code> novo exige sed manual</td></tr>
+  <tr><td>Suite de testes</td><td class="status-open">— AUSENTE na v2</td><td>Corrigido na v3: 13 testes (pytest)</td></tr>
+  <tr><td>Auto-descompressão zstd</td><td class="status-open">— AUSENTE na v2</td><td>O script crashava no UnicodeDecodeError; corrigido na v3</td></tr>
+  <tr><td>Correlação código↔log (GitHub hook)</td><td class="status-open">— Lane 2 futura</td><td>CodeGrounder / Classifier — depende de acesso ao repo e Spark Connect</td></tr>
+</table>
+
+<!-- 13 -->
+<h2 id="s13">13 · <em>Próximos passos</em> antes da v3</h2>
+<p>Os passos abaixo transformam os band-aids em causa raiz, sem mudar o contrato externo nem o formato do Finding:</p>
+<div class="info-box blu">
+  <div class="ib-label">1 — apexlib (lib compartilhada)</div>
+  <div class="ib-body">Concentrar a lógica de leitura (auto-zstd), isolamento de stage, leitura do plano final e cálculo de skew num módulo compartilhado. Watcher e Oráculo consomem a lib, não duplicam lógica.</div>
+</div>
+<div class="info-box blu">
+  <div class="ib-label">2 — sentinela + manifesto (mata o sed)</div>
+  <div class="ib-body"><code># APEX::ANTIPATTERN</code> no template substitui a linha hardcoded. O gerador calcula a linha real e a grava em <code>job.meta.json</code>. Se o scenario declara uma linha, o gerador avisa na divergência (não falha).</div>
+</div>
+<div class="info-box blu">
+  <div class="ib-label">3 — Oráculo honesto (sem if False)</div>
+  <div class="ib-body">Detectar o colapso (n==1) explicitamente e emitir um aviso: "lado real colapsou em 1 task — rode multi-core para validar o ratio". Green com aviso em vez de green forjado.</div>
+</div>
+<div class="info-box blu">
+  <div class="ib-label">4 — 13 testes (pytest)</div>
+  <div class="ib-body">Cobrir: spread, colapso, zstd, plano-AQE, falso-positivo, oracle pass, oracle catches join mismatch. Rodam no CI sem Spark (fixtures deterministicas).</div>
+</div>
+<div class="info-box">
+  <div class="ib-label">5 — run multi-core (valida ratio)</div>
+  <div class="ib-body">Escalar <code>spv0-spark-worker</code> para ≥2 CPUs no compose para ter 8 reduce tasks com spread real, fechar a comparação de ratio no Oráculo sem band-aid de tolerância.</div>
+</div>
+
+<footer>Apex · Especificação Técnica v2 · Crew A · DataShip 2026 · Augusto (Captain) · 05 jun 2026</footer>
+</div>
+</body>
+</html>

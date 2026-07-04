@@ -1,0 +1,5 @@
+{"event": "SparkListenerApplicationStart", "appName": "skew_on_join_30x", "timestamp": "2026-06-05T01:18:55.905880"}
+{"event": "SparkListenerSQLExecutionStart", "sqlExecutionId": 1, "description": "join", "physicalPlanDescription": "SortMergeJoin"}
+{"event": "SparkListenerStageSubmitted", "stageId": 4, "numTasks": 100}
+{"event": "SparkListenerTaskEnd", "stageId": 4, "taskInfo": {"taskId": 42}, "taskMetrics": {"shuffleReadMetrics": {"recordsRead": 200100}}}
+{"event": "SparkListenerApplicationEnd", "timestamp": "2026-06-05T01:18:55.905917"}

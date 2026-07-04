@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex · Captain's Brief · Sync 06</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060608;--sf2:#12141A;--sf3:#181B23;--bd:#1F2335;--bd2:#272B3D;
+  --gold:#C8943A;--gol2:#E8AE4A;--gol3:#F5C668;
+  --red2:#C04040;--grn2:#2A8A58;--bl3:#4A82D4;--pur2:#6B50CC;
+  --tx:#E8E4D8;--tx2:#8A8C9E;--tx3:#4A4D62;
+  --serif:'Playfair Display',Georgia,serif;--mono:'Space Mono',monospace;--sans:'Inter',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);padding:0;min-height:100vh}
+.page{max-width:860px;margin:0 auto;padding:40px 44px 60px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:36px;padding-bottom:16px;border-bottom:.5px solid var(--bd)}
+.brand{font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.15em;text-transform:uppercase}
+.meta{font-family:var(--mono);font-size:10px;color:var(--tx3);letter-spacing:.08em}
+h1{font-family:var(--serif);font-size:clamp(1.9rem,4vw,2.8rem);font-weight:400;line-height:1.06;margin-bottom:10px}
+h1 em{font-style:italic;color:var(--gol2)}
+.subtitle{font-size:13px;color:var(--tx2);line-height:1.6;max-width:680px;margin-bottom:32px}
+.subtitle strong{color:var(--tx)}
+.section{margin-bottom:30px}
+.sec-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.18em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:.5px;background:var(--bd)}
+.sec-title{font-family:var(--serif);font-size:1.25rem;font-weight:400;margin-bottom:10px}
+.sec-title em{font-style:italic;color:var(--gol2)}
+p.body{font-size:13px;color:var(--tx2);line-height:1.68;margin-bottom:8px}
+p.body strong{color:var(--tx)}
+p.body code{font-family:var(--mono);font-size:11px;color:var(--gol3);background:rgba(200,148,58,.08);padding:1px 5px;border-radius:3px}
+.insight-box{background:rgba(200,148,58,.07);border:.5px solid rgba(200,148,58,.25);border-radius:8px;padding:15px 18px;margin:12px 0}
+.insight-label{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
+.insight-body{font-size:13px;color:var(--tx);line-height:1.65}
+.insight-body em{font-style:italic;color:var(--gol2)}
+.insight-body code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+.map{width:100%;border-collapse:collapse;margin-top:4px}
+.map th{font-family:var(--mono);font-size:9px;color:var(--tx3);letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;text-align:left;border-bottom:.5px solid var(--bd2);white-space:nowrap}
+.map td{font-size:12px;padding:9px 12px;border-bottom:.5px solid var(--bd);vertical-align:top;line-height:1.5;color:var(--tx2)}
+.map td strong{color:var(--tx)}
+.map td code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+.map td.status{white-space:nowrap;font-family:var(--mono);font-size:10px}
+.s-ok{color:var(--grn2)}.s-wip{color:var(--gol2)}.s-open{color:var(--tx3)}
+.row-ask td{background:var(--sf2)}
+.caveat{background:var(--sf2);border:.5px solid var(--bd);border-left:2px solid var(--gold);border-radius:6px;padding:12px 16px;margin-bottom:8px}
+.caveat.red{border-left-color:var(--red2)}
+.caveat.blue{border-left-color:var(--bl3)}
+.caveat-num{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.caveat.red .caveat-num{color:var(--red2)}
+.caveat.blue .caveat-num{color:var(--bl3)}
+.caveat-body{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.caveat-body strong{color:var(--tx)}
+.caveat-body code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+.open-item{display:flex;gap:12px;padding:10px 0;border-bottom:.5px solid var(--bd)}
+.open-item:last-child{border-bottom:none}
+.open-dot{width:6px;height:6px;border-radius:50%;background:var(--bl3);flex-shrink:0;margin-top:6px}
+.open-text{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.open-text strong{color:var(--tx)}
+.next-box{background:var(--sf2);border:.5px solid rgba(200,148,58,.3);border-radius:8px;padding:16px 20px;margin-top:6px}
+.next-row{display:flex;align-items:baseline;gap:10px;padding:5px 0}
+.next-n{font-family:var(--mono);font-size:10px;color:var(--gold);width:18px;flex-shrink:0}
+.next-text{font-size:13px;color:var(--tx2);line-height:1.55}
+.next-text strong{color:var(--tx)}
+.next-text code{font-family:var(--mono);font-size:11px;color:var(--gol3)}
+.footer{font-family:var(--mono);font-size:10px;color:var(--tx3);letter-spacing:.08em;text-align:center;padding-top:24px;border-top:.5px solid var(--bd);margin-top:16px}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <div class="brand">Apex · Captain's Brief · Sync 06</div>
+    <div class="meta">Preparado por Augusto · 05 jun 2026</div>
+  </div>
+
+  <h1>O dever de casa<br><em>está entregue.</em></h1>
+  <p class="subtitle">A pergunta que o Luan mandou no grupo no fim da reunião do dia 2 de junho — <strong>"como desacoplar o gerador de código do gerador de plano?"</strong> — tem resposta, tem defesa preparada, e tem o contrato concreto pronto para debate. Esta página consolida o alinhamento com tudo que ele espera e o que ainda é trabalho real.</p>
+
+  <!-- SECTION 1 — A RESPOSTA CENTRAL -->
+  <div class="section">
+    <div class="sec-label">01 · a resposta para a lição de casa</div>
+    <div class="sec-title">O <em>scenario.yaml</em> é o contrato que desacopla.</div>
+    <p class="body">O Luan encerrou a reunião com a intuição de que os dois geradores <strong>tinham que ser acoplados</strong> ("não tem como existir Spark History sem job"). A resposta é: sim, você tem razão que um não pode derivar do outro — e é exatamente isso que os desacopla. Em vez de o gerador de plano tentar inferir o Spark History a partir do código (o que exigiria reimplementar o planner e o AQE), <strong>os dois leem a mesma especificação declarativa</strong> — o <code>scenario.yaml</code> — e geram cada um o seu artefato de forma independente.</p>
+    <div class="insight-box">
+      <div class="insight-label">A inversão que resolve o problema</div>
+      <div class="insight-body">Não é <em>"gero código → derivo o history"</em>. É <em>"declaro o cenário → os dois geradores derivam do contrato"</em>. O código com o bug e o event log com o sinal de skew <strong>correspondem por construção</strong> porque partem do mesmo <code>scenario_id</code> — sem que nenhum dos dois execute ou dependa do outro. O oráculo semanal roda o job de verdade e valida que o sintético continua fiel ao que o Spark real produziria.</div>
+    </div>
+    <p class="body" style="margin-top:10px">O Luan também pediu "sem executar, só olhando e criando". A Estratégia A (sintetizar do scenario) entrega exatamente isso — geração em milissegundos, sem subir Spark. A Estratégia B (rodar de verdade, periodicamente) é o oráculo que garante a fidelidade. Há uma apresentação de defesa pronta com os diagramas do fluxo para debate com o time.</p>
+  </div>
+
+  <!-- SECTION 2 — MAPA DE ALINHAMENTO -->
+  <div class="section">
+    <div class="sec-label">02 · alinhamento com o que o luan pediu</div>
+    <table class="map">
+      <tr>
+        <th>O que o Luan pediu na reunião</th>
+        <th>O que já existe</th>
+        <th>Status</th>
+      </tr>
+      <tr class="row-ask">
+        <td><strong>Desacoplar os dois geradores</strong></td>
+        <td><code>scenario.yaml</code> como contrato; apresentação de defesa com diagramas de fluxo</td>
+        <td class="status s-ok">✓ Pronto</td>
+      </tr>
+      <tr>
+        <td><strong>Gerador que não depende de dados reais</strong> ("pra gente não ficar dependente de gente mandando coisa")</td>
+        <td>Design dos dois geradores lendo o scenario; evento real do caso de skew já gerado no Spark 4.1.2</td>
+        <td class="status s-ok">✓ Pronto</td>
+      </tr>
+      <tr class="row-ask">
+        <td><strong>Gerar sem executar</strong> ("sem executar, só olhando e criando")</td>
+        <td>Estratégia A — sintetiza o event log do scenario em milissegundos, sem subir Spark</td>
+        <td class="status s-ok">✓ Pronto</td>
+      </tr>
+      <tr>
+        <td><strong>Sem engine/LLM fazendo a geração</strong></td>
+        <td>Geradores determinísticos que leem o contrato — nenhum LLM no loop de geração</td>
+        <td class="status s-ok">✓ Alinhado</td>
+      </tr>
+      <tr class="row-ask">
+        <td><strong>Contratos e CLIs entre as peças</strong></td>
+        <td>Pasta <code>contracts/</code> com ApexEventSource, event schema, schema ClickHouse, watcher contract</td>
+        <td class="status s-ok">✓ Pronto</td>
+      </tr>
+      <tr>
+        <td><strong>Premissa não-intrusiva</strong> (serverless proíbe extra listeners)</td>
+        <td>ApexEventSource — Listener in-process Dia 1 + tail out-of-process Sprint 2 (serverless-ready)</td>
+        <td class="status s-ok">✓ Alinhado</td>
+      </tr>
+      <tr class="row-ask">
+        <td><strong>Hash do plano</strong> ("sha256 determinístico pra comparar se é plano novo")</td>
+        <td>Campo <code>plan_fingerprint: sha256:…</code> no event schema</td>
+        <td class="status s-ok">✓ Já existe</td>
+      </tr>
+      <tr>
+        <td><strong>Ler History → ClickStack</strong></td>
+        <td>eventlog-loader do plat-v0 — 119/119 linhas provado; tabelas reais no ClickHouse</td>
+        <td class="status s-ok">✓ Existe</td>
+      </tr>
+      <tr class="row-ask">
+        <td><strong>Primeiro teste: recuperar nome do job → correlacionar com CI</strong> (Antony)</td>
+        <td>Entendido; é o experimento validação de tese do Pod 1 — ainda não executado</td>
+        <td class="status s-wip">⏳ Próximo</td>
+      </tr>
+      <tr>
+        <td><strong>Conectar repositório</strong> (GitHub hook / GitHub App)</td>
+        <td>Arquitetura mapeada (CodeGrounder / Classifier lê repo); o hook em si é Lane 2</td>
+        <td class="status s-open">— Lane 2</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- SECTION 3 — ONDE AFINAR -->
+  <div class="section">
+    <div class="sec-label">03 · o que afinar na defesa</div>
+    <div class="sec-title"><em>Três pontos</em> pra não ser pego de surpresa.</div>
+
+    <div class="caveat">
+      <div class="caveat-num">A · A inversão que você tem que defender</div>
+      <div class="caveat-body">O Luan pode perguntar "mas você não está gerando o history a partir do código?". A resposta certa: <strong>não — e é exatamente isso que torna o desacoplamento possível.</strong> Gerar history a partir do código sem executar exigiria simular o Spark (reimplementar planner + AQE). Em vez disso, os dois geradores derivam de uma <strong>especificação compartilhada</strong>. Essa inversão é o coração da defesa — tenha ela na ponta da língua.</div>
+    </div>
+
+    <div class="caveat blue">
+      <div class="caveat-num">B · Spark Connect — defer para Lane 2</div>
+      <div class="caveat-body">O primeiro entregável do Luan (gerador + History → ClickStack + demo de Watcher) <strong>não precisa de Spark Connect</strong>. O Connect entra na fase de reconstrução código↔execução — a Lane 2, onde o Luan ficou empolgado com "reconstruir a query do plano físico e lógico". Posição limpa: <strong>Connect é peça da correlação código↔execução, Sprint 2+, não do primeiro pedido.</strong></div>
+    </div>
+
+    <div class="caveat red">
+      <div class="caveat-num">C · Atualização competitiva que o Luan ainda não tem</div>
+      <div class="caveat-body">O Luan disse "o Unravel para no cluster level". <strong>Há uma semana a Unravel lançou o Arvix AI</strong> — sistema agêntico que reescreve código e valida antes do deploy. A lacuna que ele descreve é real mas está estreitando. A diferenciação do Apex precisa ser afiada para: <strong>OSS + não-intrusivo + agnóstico de fornecedor</strong>, em vez de "somos os únicos que chegam no código". Levar isso pra sync é honesto e mostra que você acompanha o campo.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 4 — O QUE É DE FATO ABERTO -->
+  <div class="section">
+    <div class="sec-label">04 · genuinamente aberto</div>
+    <div class="sec-title">O que ainda é <em>trabalho real.</em></div>
+    <div style="padding:4px 0">
+      <div class="open-item">
+        <div class="open-dot"></div>
+        <div class="open-text"><strong>Correlação nome-do-job → pipeline de CI</strong> — o primeiro teste que o Antony cravou: validar a tese de recuperar, no nível mais granular, o nome do job para correlacionar com o CI. É o experimento concreto do Pod 1; ainda não foi executado.</div>
+      </div>
+      <div class="open-item">
+        <div class="open-dot"></div>
+        <div class="open-text"><strong>GitHub hook / GitHub App</strong> — a dependência da Lane 2. O Luan decidiu que será webhook ou, melhor, um GitHub App. É o que destrava a correlação código↔execução e as sugestões inline em PR. Ainda não existe — e o Luan colocou como fase seguinte, não como primeira entrega.</div>
+      </div>
+      <div class="open-item">
+        <div class="open-dot"></div>
+        <div class="open-text"><strong>Reconstrução da query a partir do plano</strong> — o Luan ficou entusiasmado ("ele consegue reconstruir do plano físico e lógico"). Isso se conecta com Connect e com a capacidade de engenharia reversa do Classifier. É pesquisa/experimento — não está bloqueando o primeiro entregável, mas precisa de prova de conceito.</div>
+      </div>
+      <div class="open-item">
+        <div class="open-dot"></div>
+        <div class="open-text"><strong>Acesso ao repositório desbloqueado</strong> — o bloqueio de acesso que impede PRs ainda não foi resolvido. Nada flui sem isso. É pré-requisito de tudo que o time constrói em paralelo.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5 — PRÓXIMOS PASSOS -->
+  <div class="section">
+    <div class="sec-label">05 · próximos passos do captain</div>
+    <div class="next-box">
+      <div class="next-row"><div class="next-n">01</div><div class="next-text"><strong>Abrir a sync com o dever de casa entregue.</strong> Apresentar a resposta de desacoplamento (<code>scenario.yaml</code> como contrato + os dois geradores), mostrar o diagrama de fluxo e o contrato concreto. Postura: proposta pra debate, não imposição.</div></div>
+      <div class="next-row"><div class="next-n">02</div><div class="next-text"><strong>Apresentar o mapa de alinhamento</strong> acima — mostrar que o que o Luan pediu na última reunião já tem resposta, e separar o que é Lane 1 (entregar agora) do que é Lane 2 (deferred).</div></div>
+      <div class="next-row"><div class="next-n">03</div><div class="next-text"><strong>Trazer a atualização do campo</strong> — corrigir o "Unravel para no cluster level" com o lançamento do Arvix AI, e afiar a diferenciação do Apex. Mostra que você acompanha o mercado.</div></div>
+      <div class="next-row"><div class="next-n">04</div><div class="next-text"><strong>Fechar com a decisão do Connect</strong> — propor explicitamente: Connect entra no Sprint 2, não no primeiro pedido. Pede validação do Luan pra travar.</div></div>
+      <div class="next-row"><div class="next-n">05</div><div class="next-text"><strong>Escalar o desbloqueio de acesso</strong> como primeiro movimento operacional — sem acesso aos repos, nenhum pod consegue abrir PR. Precisa de ação do Commander.</div></div>
+    </div>
+  </div>
+
+  <div class="footer">Apex · Captain's Brief · Sync 06 · Augusto Cezar · 05 jun 2026</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+name: Apex Oracle - Weekly Validation
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # toda segunda-feira às 6h UTC
+  workflow_dispatch:
+
+jobs:
+  oracle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pyyaml
+      - name: Generate jobs and synthetic logs
+        run: |
+          for scenario in scenarios/*.yaml; do
+            python generators/code_generator.py "$scenario" "job_$(basename $scenario .yaml).py"
+            python generators/plan_generator.py "$scenario" "synthetic_$(basename $scenario .yaml).ndjson"
+          done
+      - name: Start Spark cluster
+        run: docker-compose -f build/docker-compose.yml up -d
+      - name: Submit jobs (real execution)
+        run: |
+          for job in job_*.py; do
+            docker cp "$job" spv0-spark-master:/opt/spark/
+            docker exec spv0-spark-master /opt/spark/bin/spark-submit --master spark://spv0-spark-master:7077 /opt/spark/"$job"
+          done
+      - name: Compare synthetic vs real (placeholder)
+        run: echo "Implementar comparação com logs reais do MinIO"
+      - name: Create issue on divergence
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Oracle: divergência entre logs',
+              body: 'A validação semanal identificou diferenças.',
+              labels: ['oracle']
+            })

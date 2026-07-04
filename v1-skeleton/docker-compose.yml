@@ -1,0 +1,88 @@
+version: "3.9"
+
+# Apex V1 Skeleton — Spark Envy + ClickHouse
+# Uso: docker compose up -d
+# Spark UI:      http://localhost:4040  (durante job)
+# History:       http://localhost:18080
+# ClickHouse UI: http://localhost:8123/play
+
+services:
+
+  spark-master:
+    image: bitnami/spark:3.5
+    environment:
+      - SPARK_MODE=master
+      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=/spark-logs
+      - SPARK_EVENTLOG_ENABLED=true
+      - SPARK_EVENTLOG_DIR=/spark-logs
+    ports:
+      - "4040:4040"   # Spark UI
+      - "7077:7077"   # Spark master
+      - "8080:8080"   # Master web UI
+    volumes:
+      - spark-logs:/spark-logs
+      - ./jobs:/opt/jobs
+      - ./listener:/opt/listener
+    networks:
+      - apex-net
+
+  spark-worker:
+    image: bitnami/spark:3.5
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=4
+      - SPARK_WORKER_MEMORY=4g
+      - SPARK_EVENTLOG_ENABLED=true
+      - SPARK_EVENTLOG_DIR=/spark-logs
+    volumes:
+      - spark-logs:/spark-logs
+      - ./jobs:/opt/jobs
+      - ./listener:/opt/listener
+    depends_on:
+      - spark-master
+    networks:
+      - apex-net
+
+  spark-history:
+    image: bitnami/spark:3.5
+    environment:
+      - SPARK_MODE=history-server
+      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=/spark-logs
+    ports:
+      - "18080:18080"
+    volumes:
+      - spark-logs:/spark-logs
+    depends_on:
+      - spark-master
+    networks:
+      - apex-net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    environment:
+      - CLICKHOUSE_DB=apex
+      - CLICKHOUSE_USER=apex
+      - CLICKHOUSE_PASSWORD=apex123
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    ports:
+      - "8123:8123"   # HTTP interface (UI: /play)
+      - "9000:9000"   # Native protocol
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./schema/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - apex-net
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  spark-logs:
+  clickhouse-data:
+
+networks:
+  apex-net:
+    driver: bridge
