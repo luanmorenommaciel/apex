@@ -1,7 +1,7 @@
 """
-Apex V1 — Diagnóstico Crew.ai (substitui diagnose.py)
+Apex V1 — Diagnóstico Crew.ai (crewai >= 1.0)
 
-Pipeline multi-agent:
+Pipeline multi-agent sequencial:
   MetricsAnalyzer  → lê ClickHouse, identifica padrão e bottleneck
   RecommendationWriter → recebe análise, escreve fix concreto
 
@@ -9,19 +9,25 @@ Uso:
     python analysis/crew_diagnose.py --app-id <app_id>
     python analysis/crew_diagnose.py --app-id <app_id> --model claude-sonnet-4-6
 
-Em MCP: import crew_diagnose; crew_diagnose.diagnose(app_id)
+Import em outros módulos:
+    from analysis.crew_diagnose import diagnose, persist_finding
 """
 import argparse
 import json
 import os
+import re
 import sys
 import logging
-from typing import Any
+from typing import Optional
+
+# Desabilita telemetria do crewai 1.x (evita conexão de rede na importação)
+os.environ.setdefault("CREWAI_DISABLE_TELEMETRY", "true")
+os.environ.setdefault("OTEL_SDK_DISABLED", "true")
 
 import clickhouse_connect
-from crewai import Agent, Task, Crew, Process
+from pydantic import BaseModel, Field
+from crewai import Agent, Task, Crew, Process, LLM
 from crewai.tools import tool
-from langchain_anthropic import ChatAnthropic
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("apex.crew")
@@ -33,61 +39,39 @@ CH_PORT     = int(os.getenv("APEX_CH_PORT", "8123"))
 CH_USER     = os.getenv("APEX_CH_USER", "apex")
 CH_PASSWORD = os.getenv("APEX_CH_PASSWORD", "apex123")
 
-ANTHROPIC_KEY  = os.getenv("ANTHROPIC_API_KEY")
-DEFAULT_MODEL  = os.getenv("APEX_LLM_MODEL", "claude-sonnet-4-6")
+ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
+DEFAULT_MODEL = os.getenv("APEX_LLM_MODEL", "claude-sonnet-4-6")
 
-# ── Padrões detectáveis (contrato anti-alucinação) ───────────────────────────
+# ── Schema de saída (Pydantic — anti-alucinação) ─────────────────────────────
 
-KNOWN_PATTERNS = {
-    "skew": {
-        "description": "Uma task processa significativamente mais dados que as demais",
-        "key_signals": ["max_task_ms / avg_task_ms > 3", "shuffle_read desigual entre tasks"],
-        "threshold": {"max_avg_ratio": 3.0},
-    },
-    "parallelism_collapse": {
-        "description": "Stage com número de tasks muito baixo para o volume de dados",
-        "key_signals": ["num_tasks < 8 com input_bytes > 1GB", "executor idle time alto"],
-        "threshold": {"tasks_per_gb": 8},
-    },
-    "spill": {
-        "description": "Tasks derramando dados para disco por falta de memória",
-        "key_signals": ["disk_spill > 0", "memory_spill > 0"],
-        "threshold": {"spill_bytes": 1},
-    },
-    "broadcast_miss": {
-        "description": "Join sem broadcast em tabela pequena, causando shuffle desnecessário",
-        "key_signals": ["shuffle_read alto em stage com input pequeno"],
-        "threshold": {},
-    },
-    "small_files": {
-        "description": "Muitos arquivos pequenos causando overhead de task scheduling",
-        "key_signals": ["num_tasks muito alto com duration_ms muito baixo"],
-        "threshold": {},
-    },
-    "other": {
-        "description": "Anti-pattern identificado mas não classificado nos padrões conhecidos",
-        "key_signals": [],
-        "threshold": {},
-    },
-}
+class Evidence(BaseModel):
+    key_metric:     str = Field(description="Nome da métrica principal que evidencia o problema")
+    key_value:      str = Field(description="Valor observado")
+    expected_value: str = Field(description="Valor esperado em condições normais")
 
+class ApexFinding(BaseModel):
+    pattern:             str            = Field(description="skew|parallelism_collapse|spill|broadcast_miss|small_files|other")
+    severity:            str            = Field(description="critical|high|medium|low")
+    confidence:          float          = Field(ge=0.0, le=1.0, description="Confiança 0.0–1.0")
+    bottleneck_stage_id: Optional[int]  = Field(default=None, description="Stage ID do bottleneck ou null")
+    root_cause:          str            = Field(max_length=300, description="Causa raiz em até 300 chars")
+    recommendation:      str            = Field(max_length=500, description="Fix concreto e aplicável em até 500 chars")
+    evidence:            Evidence       = Field(description="Evidência quantitativa")
+
+# ── Padrões válidos e contratos ───────────────────────────────────────────────
+
+KNOWN_PATTERNS = ["skew", "parallelism_collapse", "spill", "broadcast_miss", "small_files", "other"]
 SEVERITY_LEVELS = ["critical", "high", "medium", "low"]
 
-FINDING_SCHEMA = {
-    "pattern": list(KNOWN_PATTERNS.keys()),
-    "severity": SEVERITY_LEVELS,
-    "confidence": "float 0.0–1.0",
-    "bottleneck_stage_id": "int or null",
-    "root_cause": "string descritiva (max 300 chars)",
-    "recommendation": "string com o fix concreto e aplicável (max 500 chars)",
-    "evidence": {
-        "key_metric": "nome da métrica principal",
-        "key_value": "valor observado",
-        "expected_value": "valor esperado em condição normal",
-    },
+PATTERN_KEYWORDS = {
+    "skew":                 ["salting", "repartition", "skewhint", "adaptive"],
+    "spill":                ["spark.executor.memory", "spark.memory.fraction", "repartition", "persist"],
+    "parallelism_collapse": ["repartition", "spark.default.parallelism", "spark.sql.shuffle.partitions"],
+    "broadcast_miss":       ["broadcast", "hint", "autobroadcastjointhreshold"],
+    "small_files":          ["coalesce", "repartition", "compact"],
 }
 
-# ── ClickHouse tools (disponíveis para MetricsAnalyzer) ──────────────────────
+# ── ClickHouse tools ──────────────────────────────────────────────────────────
 
 def _get_ch():
     return clickhouse_connect.get_client(
@@ -101,7 +85,7 @@ def fetch_stage_metrics(app_id: str) -> str:
     """
     Busca métricas de stage do ClickHouse para o app_id informado.
     Retorna os top 20 stages por duração em formato JSON.
-    Use sempre como primeiro passo da análise.
+    Use como primeiro passo da análise de performance.
     """
     try:
         ch = _get_ch()
@@ -117,7 +101,7 @@ def fetch_stage_metrics(app_id: str) -> str:
         """, parameters={"app_id": app_id}).named_results()
         result = list(rows)
         if not result:
-            return f"ERRO: Nenhuma métrica encontrada para app_id={app_id}"
+            return f"NENHUMA MÉTRICA encontrada para app_id={app_id}"
         return json.dumps(result, default=str)
     except Exception as e:
         return f"ERRO ao buscar stage metrics: {e}"
@@ -126,7 +110,7 @@ def fetch_stage_metrics(app_id: str) -> str:
 @tool("fetch_task_distribution")
 def fetch_task_distribution(app_id: str, stage_id: int) -> str:
     """
-    Busca distribuição de tasks de um stage específico para detectar skew.
+    Busca distribuição de tasks de um stage para detectar skew.
     Retorna min/max/avg de duration_ms e total de disk_spill.
     Use após identificar o stage mais lento com fetch_stage_metrics.
     """
@@ -134,11 +118,11 @@ def fetch_task_distribution(app_id: str, stage_id: int) -> str:
         ch = _get_ch()
         rows = ch.query("""
             SELECT
-                count()          AS total_tasks,
-                max(duration_ms) AS max_task_ms,
-                min(duration_ms) AS min_task_ms,
-                avg(duration_ms) AS avg_task_ms,
-                sum(disk_spill)  AS total_spill_bytes,
+                count()           AS total_tasks,
+                max(duration_ms)  AS max_task_ms,
+                min(duration_ms)  AS min_task_ms,
+                avg(duration_ms)  AS avg_task_ms,
+                sum(disk_spill)   AS total_spill_bytes,
                 sum(memory_spill) AS total_memory_spill
             FROM apex.task_metrics
             WHERE app_id = {app_id:String}
@@ -152,37 +136,33 @@ def fetch_task_distribution(app_id: str, stage_id: int) -> str:
 
 # ── LLM ──────────────────────────────────────────────────────────────────────
 
-def _get_llm(model: str):
+def _get_llm(model: str) -> LLM:
     if not ANTHROPIC_KEY:
         raise EnvironmentError("ANTHROPIC_API_KEY não configurada")
-    return ChatAnthropic(
-        model=model,
-        anthropic_api_key=ANTHROPIC_KEY,
+    # crewai 1.x usa litellm internamente — prefixo "anthropic/" para o provider
+    return LLM(
+        model=f"anthropic/{model}",
+        api_key=ANTHROPIC_KEY,
         max_tokens=1024,
     )
 
 
 # ── Agents ───────────────────────────────────────────────────────────────────
 
-def build_metrics_analyzer(llm) -> Agent:
-    """
-    MetricsAnalyzer: lê ClickHouse, identifica padrão e bottleneck.
-    Tem acesso às tools de ClickHouse. Produz análise intermediária estruturada.
-    """
+def build_metrics_analyzer(llm: LLM) -> Agent:
     return Agent(
         role="Spark Performance Analyst",
         goal=(
             "Identificar o principal anti-pattern de performance em um job Spark "
             "analisando métricas de stage e task do ClickHouse. "
-            "Produzir uma análise estruturada com: padrão identificado, stage bottleneck, "
-            "evidências quantitativas e nível de confiança."
+            "Produzir análise estruturada com: padrão, bottleneck, evidências quantitativas e confiança."
         ),
         backstory=(
-            "Especialista em internals do Spark com 8 anos de experiência. "
-            "Conhece profundamente skew, spill, parallelism collapse, broadcast miss e small files. "
-            "Sempre baseia conclusões em dados — nunca alucina. "
-            f"Padrões válidos: {list(KNOWN_PATTERNS.keys())}. "
-            "Se os dados não evidenciam claramente um padrão, reporta 'other' com confidence < 0.5."
+            "Especialista em Spark internals com 8 anos de experiência. "
+            "Conhece skew, spill, parallelism collapse, broadcast miss e small files. "
+            "Baseia conclusões SEMPRE em dados observados — nunca assume sem evidência. "
+            f"Padrões válidos: {KNOWN_PATTERNS}. "
+            "Se dados insuficientes, reporta 'other' com confidence < 0.5."
         ),
         tools=[fetch_stage_metrics, fetch_task_distribution],
         llm=llm,
@@ -192,24 +172,21 @@ def build_metrics_analyzer(llm) -> Agent:
     )
 
 
-def build_recommendation_writer(llm) -> Agent:
-    """
-    RecommendationWriter: recebe a análise do MetricsAnalyzer e escreve o fix.
-    Sem acesso a tools — trabalha apenas com o output do agente anterior.
-    """
+def build_recommendation_writer(llm: LLM) -> Agent:
     return Agent(
         role="Spark Fix Engineer",
         goal=(
-            "Converter a análise de performance em uma recomendação concreta e aplicável. "
-            "O fix deve ser específico, com código de exemplo quando possível, "
-            "e entregue no schema JSON exato definido pelo contrato Apex."
+            "Converter análise de performance em recomendação concreta e aplicável. "
+            "Fix específico com código de exemplo quando possível. "
+            "Saída no formato JSON exato do schema ApexFinding."
         ),
         backstory=(
             "Senior Spark engineer que escreve código, não apenas conselhos. "
-            "Quando detecta skew, sugere salting + repartition com parâmetros concretos. "
-            "Quando detecta spill, sugere configurações de memória específicas. "
-            "NUNCA inventa dados ou métricas que não estavam na análise recebida. "
-            f"Schema de saída obrigatório: {json.dumps(FINDING_SCHEMA, indent=2)}"
+            "Skew → sugere salting com exemplo concreto de salt + repartition. "
+            "Spill → sugere configuração de memória com valores específicos. "
+            "NUNCA inventa dados que não estavam na análise. "
+            "Sempre respeita o schema: pattern, severity, confidence, "
+            "bottleneck_stage_id, root_cause, recommendation, evidence."
         ),
         tools=[],
         llm=llm,
@@ -224,49 +201,49 @@ def build_recommendation_writer(llm) -> Agent:
 def build_analyze_task(agent: Agent, app_id: str) -> Task:
     return Task(
         description=(
-            f"Analise as métricas de performance do job Spark com app_id='{app_id}'.\n\n"
+            f"Analise o job Spark app_id='{app_id}'.\n\n"
             "Passos obrigatórios:\n"
-            "1. Use fetch_stage_metrics para obter os stages do job\n"
+            "1. Chame fetch_stage_metrics para obter os stages\n"
             "2. Identifique o stage mais lento (maior duration_ms)\n"
-            "3. Use fetch_task_distribution no stage mais lento para verificar skew\n"
-            "4. Classifique o anti-pattern principal usando APENAS estes padrões: "
-            f"{list(KNOWN_PATTERNS.keys())}\n"
-            "5. Calcule a confiança baseada nas evidências quantitativas\n\n"
-            "Sinais por padrão:\n"
-            + "\n".join(
-                f"  - {k}: {v['description']} | Signals: {v['key_signals']}"
-                for k, v in KNOWN_PATTERNS.items()
-            )
+            "3. Chame fetch_task_distribution no stage mais lento\n"
+            f"4. Classifique usando APENAS: {KNOWN_PATTERNS}\n"
+            "5. Sinais por padrão:\n"
+            "   skew: max_task_ms/avg_task_ms > 3\n"
+            "   spill: disk_spill > 0\n"
+            "   parallelism_collapse: num_tasks < 8 com input_bytes > 1GB\n"
         ),
         expected_output=(
-            "JSON com: pattern, confidence (0-1), bottleneck_stage_id, "
-            "evidências quantitativas (métricas observadas vs esperadas), "
-            "e resumo em 2-3 frases do que está acontecendo."
+            "JSON com: pattern, confidence (0.0-1.0), bottleneck_stage_id, "
+            "evidências numéricas do que foi observado vs esperado, "
+            "e resumo em 2-3 frases."
         ),
         agent=agent,
     )
 
 
-def build_recommendation_task(agent: Agent, app_id: str) -> Task:
+def build_recommendation_task(agent: Agent, app_id: str, analyze_task: Task) -> Task:
     return Task(
         description=(
-            f"Com base na análise do job '{app_id}' fornecida pelo MetricsAnalyzer, "
-            "produza o finding final no schema JSON exato do Apex.\n\n"
+            f"Com base na análise do job '{app_id}', produza o finding final.\n\n"
             "Regras:\n"
-            "1. Não invente dados — use APENAS as evidências da análise\n"
-            "2. recommendation deve ser um fix concreto e aplicável (max 500 chars)\n"
-            "3. Se padrão for skew: inclua exemplo de salting ou repartition\n"
-            "4. Se padrão for spill: inclua configuração de memória específica\n"
-            "5. severity: critical se job falhar ou demorar 10x+, high 3-10x, medium 1.5-3x, low < 1.5x\n\n"
-            f"Schema obrigatório:\n{json.dumps(FINDING_SCHEMA, indent=2)}\n\n"
-            "Retorne APENAS o JSON válido, sem texto adicional."
+            "1. Use APENAS dados da análise — não invente métricas\n"
+            "2. recommendation: fix concreto, max 500 chars\n"
+            "3. skew → inclua exemplo de salting\n"
+            "4. spill → inclua configuração de memória\n"
+            "5. severity: critical=job falha ou 10x+ lento, high=3-10x, medium=1.5-3x, low<1.5x\n"
+            "6. Retorne SOMENTE JSON válido, sem texto adicional\n\n"
+            "Schema obrigatório:\n"
+            '{"pattern": "skew|spill|...", "severity": "high|...", "confidence": 0.0-1.0, '
+            '"bottleneck_stage_id": 2, "root_cause": "...", "recommendation": "...", '
+            '"evidence": {"key_metric": "...", "key_value": "...", "expected_value": "..."}}'
         ),
         expected_output=(
-            "JSON válido com todos os campos do schema: pattern, severity, confidence, "
+            "JSON válido com todos os campos: pattern, severity, confidence, "
             "bottleneck_stage_id, root_cause, recommendation, evidence."
         ),
         agent=agent,
-        output_json=True,
+        context=[analyze_task],
+        output_json=ApexFinding,
     )
 
 
@@ -274,18 +251,12 @@ def build_recommendation_task(agent: Agent, app_id: str) -> Task:
 
 def _validate_against_contract(finding: dict) -> dict:
     """
-    Valida o finding do Crew.ai contra o contrato do cenário.
-    Implementa o 'contract_enforcement' definido nos listener_*.yaml.
-
-    Regras:
-    - Padrão não reconhecido → override para 'other'
-    - Severity inválida → override para 'medium'
-    - Confidence < 0.6 → sinaliza para escalação ao Judge (Tier 4)
-    - Evidence ausente → adiciona warning no finding
+    Valida o finding contra contratos dos listener_*.yaml.
+    Aplica: override de padrão inválido, escalação para Judge, e check de keywords.
     """
     # 1. Padrão reconhecido
     if finding.get("pattern") not in KNOWN_PATTERNS:
-        logger.warning(f"[CONTRATO] Padrão '{finding.get('pattern')}' não reconhecido → 'other'")
+        logger.warning(f"[CONTRATO] Padrão '{finding.get('pattern')}' inválido → 'other'")
         finding["pattern"] = "other"
 
     # 2. Severity válida
@@ -293,38 +264,31 @@ def _validate_against_contract(finding: dict) -> dict:
         logger.warning(f"[CONTRATO] Severity '{finding.get('severity')}' inválida → 'medium'")
         finding["severity"] = "medium"
 
-    # 3. Confidence abaixo do mínimo → sinaliza Judge
+    # 3. Confidence < 0.6 → Judge
     confidence = float(finding.get("confidence", 0.0))
     if confidence < 0.6:
-        logger.warning(f"[CONTRATO] Confidence {confidence:.2f} < 0.6 → marcado para Tier 4 (Judge)")
+        logger.warning(f"[CONTRATO] Confidence {confidence:.2f} < 0.6 → escala para Tier 4 (Judge)")
         finding["needs_judge"] = True
-        finding["judge_reason"] = f"confidence={confidence:.2f} abaixo do threshold 0.6"
+        finding["judge_reason"] = f"confidence={confidence:.2f} < 0.6"
     else:
         finding["needs_judge"] = False
 
     # 4. Evidence presente
     evidence = finding.get("evidence")
     if not evidence or not isinstance(evidence, dict):
-        logger.warning("[CONTRATO] Evidence ausente → finding pode estar alucinando")
+        logger.warning("[CONTRATO] Evidence ausente → possível alucinação")
         finding["contract_warning"] = "evidence_missing"
         finding["needs_judge"] = True
 
-    # 5. Validação de recomendação mínima por padrão
+    # 5. Keywords obrigatórias na recommendation
     pattern = finding.get("pattern", "other")
     recommendation = finding.get("recommendation", "").lower()
-    pattern_keywords = {
-        "skew":                  ["salting", "repartition", "skewhint", "adaptive"],
-        "spill":                 ["spark.executor.memory", "spark.memory.fraction", "repartition", "persist"],
-        "parallelism_collapse":  ["repartition", "spark.default.parallelism", "spark.sql.shuffle.partitions"],
-        "broadcast_miss":        ["broadcast", "hint", "autoBroadcastJoinThreshold"],
-        "small_files":           ["coalesce", "repartition", "compact"],
-    }
-    required_keywords = pattern_keywords.get(pattern, [])
-    if required_keywords and not any(kw.lower() in recommendation for kw in required_keywords):
-        logger.warning(f"[CONTRATO] Recommendation para '{pattern}' não menciona nenhum de {required_keywords}")
-        finding["contract_warning"] = finding.get("contract_warning", "") + " recommendation_keywords_missing"
+    required_kws = PATTERN_KEYWORDS.get(pattern, [])
+    if required_kws and not any(kw.lower() in recommendation for kw in required_kws):
+        warn = finding.get("contract_warning", "")
+        finding["contract_warning"] = (warn + " recommendation_keywords_missing").strip()
+        logger.warning(f"[CONTRATO] Recommendation para '{pattern}' não menciona {required_kws}")
 
-    logger.info(f"[CONTRATO] Validação concluída: pattern={pattern}, confidence={confidence:.2f}, needs_judge={finding.get('needs_judge')}")
     return finding
 
 
@@ -332,43 +296,34 @@ def _validate_against_contract(finding: dict) -> dict:
 
 def diagnose(app_id: str, model: str = DEFAULT_MODEL) -> dict:
     """
-    Pipeline Crew.ai: ClickHouse → MetricsAnalyzer → RecommendationWriter → finding JSON.
-
-    Args:
-        app_id: Spark application ID (ex: app-20240630-123456)
-        model:  Modelo Anthropic (default: claude-sonnet-4-6)
-
-    Returns:
-        dict com o finding estruturado
+    Pipeline Crew.ai: ClickHouse → MetricsAnalyzer → RecommendationWriter → finding validado.
     """
-    logger.info(f"Iniciando diagnóstico Crew.ai para app_id={app_id}, model={model}")
+    logger.info(f"Iniciando diagnóstico Crew.ai | app_id={app_id} | model={model}")
 
     llm = _get_llm(model)
 
-    metrics_analyzer    = build_metrics_analyzer(llm)
-    recommendation_writer = build_recommendation_writer(llm)
+    analyzer  = build_metrics_analyzer(llm)
+    writer    = build_recommendation_writer(llm)
 
-    analyze_task        = build_analyze_task(metrics_analyzer, app_id)
-    recommendation_task = build_recommendation_task(recommendation_writer, app_id)
-
-    # RecommendationWriter depende do output do MetricsAnalyzer
-    recommendation_task.context = [analyze_task]
+    analyze_task = build_analyze_task(analyzer, app_id)
+    rec_task     = build_recommendation_task(writer, app_id, analyze_task)
 
     crew = Crew(
-        agents=[metrics_analyzer, recommendation_writer],
-        tasks=[analyze_task, recommendation_task],
+        agents=[analyzer, writer],
+        tasks=[analyze_task, rec_task],
         process=Process.sequential,
         verbose=True,
     )
 
-    result = crew.kickoff(inputs={"app_id": app_id})
+    result = crew.kickoff()
 
-    # Parse do output final
+    # Extrair JSON do output
     raw = result.raw if hasattr(result, "raw") else str(result)
+    raw = raw.strip()
 
-    # Remove markdown fences se presentes
-    if raw.strip().startswith("```"):
-        raw = raw.strip().split("```")[1]
+    # Remove markdown fences
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
         raw = raw.strip()
@@ -376,29 +331,26 @@ def diagnose(app_id: str, model: str = DEFAULT_MODEL) -> dict:
     try:
         finding = json.loads(raw)
     except json.JSONDecodeError:
-        # Fallback: tenta extrair JSON do texto
-        import re
         match = re.search(r'\{.*\}', raw, re.DOTALL)
         if match:
             finding = json.loads(match.group())
         else:
-            logger.error(f"Output inválido do Crew.ai: {raw[:200]}")
+            logger.error(f"Output inválido do Crew.ai: {raw[:300]}")
             raise ValueError(f"Crew.ai não retornou JSON válido: {raw[:200]}")
 
-    # ── Validação de contrato (anti-alucinação) ──────────────────────────────
+    # Validação de contrato
     finding = _validate_against_contract(finding)
-    # ─────────────────────────────────────────────────────────────────────────
 
     finding["app_id"]   = app_id
     finding["llm_model"] = model
-    finding["pipeline"] = "crewai"
+    finding["pipeline"] = "crewai-1x"
 
-    logger.info(f"Diagnóstico concluído: pattern={finding.get('pattern')}, severity={finding.get('severity')}, confidence={finding.get('confidence')}")
+    logger.info(f"Diagnóstico concluído: {finding.get('pattern')} | {finding.get('severity')} | confidence={finding.get('confidence')}")
     return finding
 
 
 def persist_finding(finding: dict) -> None:
-    """Salva o finding no ClickHouse (apex.findings)."""
+    """Persiste o finding no ClickHouse (apex.findings)."""
     try:
         ch = _get_ch()
         ch.insert(
@@ -427,25 +379,17 @@ def persist_finding(finding: dict) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Apex V1 — Diagnóstico Crew.ai")
-    parser.add_argument("--app-id", required=True, help="Spark application ID")
-    parser.add_argument("--model", default=DEFAULT_MODEL, help="Modelo Anthropic")
-    parser.add_argument("--no-persist", action="store_true", help="Não salva no ClickHouse")
+    parser.add_argument("--app-id",    required=True,        help="Spark application ID")
+    parser.add_argument("--model",     default=DEFAULT_MODEL, help="Modelo Anthropic")
+    parser.add_argument("--no-persist",action="store_true",  help="Não salva no ClickHouse")
     args = parser.parse_args()
 
     finding = diagnose(args.app_id, args.model)
-
     if not args.no_persist:
         persist_finding(finding)
 
     print("\n" + "=" * 60)
-    print("APEX FINDING (Crew.ai)")
+    print("APEX FINDING (Crew.ai 1.x)")
     print("=" * 60)
     print(json.dumps(finding, indent=2, ensure_ascii=False))
-    print("=" * 60)
-
-    exit_codes = {"critical": 2, "high": 1, "medium": 0, "low": 0}
-    sys.exit(exit_codes.get(finding.get("severity", "low"), 0))
-
-
-if __name__ == "__main__":
-    main()
+   
