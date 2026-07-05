@@ -205,14 +205,22 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
 
     elif name == "trigger_diagnosis":
         app_id = arguments["app_id"]
-        # Chama o módulo de análise
-        import subprocess, sys
-        result = subprocess.run(
-            [sys.executable, "analysis/diagnose.py", "--app-id", app_id],
-            capture_output=True, text=True,
-        )
-        output = result.stdout + result.stderr
-        return [TextContent(type="text", text=output)]
+        # Usa Crew.ai multi-agent pipeline (crew_diagnose.py)
+        # Fallback automático para single-LLM (diagnose.py) se crewai não instalado
+        try:
+            import sys as _sys, os as _os
+            _sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
+            from analysis.crew_diagnose import diagnose as crew_diagnose, persist_finding
+            finding = crew_diagnose(app_id)
+            persist_finding(finding)
+            return [TextContent(type="text", text=json.dumps(finding, indent=2))]
+        except ImportError:
+            import subprocess
+            result = subprocess.run(
+                [sys.executable, "analysis/diagnose.py", "--app-id", app_id],
+                capture_output=True, text=True,
+            )
+            return [TextContent(type="text", text=result.stdout + result.stderr)]
 
     return [TextContent(type="text", text=f"Tool desconhecida: {name}")]
 

@@ -1,0 +1,88 @@
+# Contrato de Cenário — SparkListener / Skew Detection
+# Schema v1 — Mundo B (SparkListener in-process)
+#
+# Propósito: definir os critérios de aceitação que o Crew.ai DEVE satisfazer
+# ao detectar skew via dados do SparkListener. Impede alucinação do LLM.
+#
+# Equivalente ao scenario.yaml do Mundo A, mas para dados capturados in-process.
+
+scenario_id: listener_skew_on_join
+version: 1
+status: prototype          # prototype | validated
+world: B                   # A = zero-JAR, B = SparkListener
+
+# ── Gerador de job ──────────────────────────────────────────────────────────
+# O job demo_skew_job.py já existe em v1-skeleton/jobs/
+# Ele gera skew proposital com HOT_KEY (40.000 linhas vs 10.000 normais)
+job:
+  file: v1-skeleton/jobs/demo_skew_job.py
+  hot_key: "HOT_KEY"
+  hot_key_count: 40000
+  normal_key_count: 10000
+  skew_ratio_expected: 4.0     # hot_key tem ~4x mais dados que media
+  partitions: 10
+
+# ── Dados capturados pelo SparkListener ─────────────────────────────────────
+# Quais métricas o listener DEVE capturar e persistir no ClickHouse
+listener_capture:
+  stage_metrics:
+    - stage_id
+    - stage_name
+    - num_tasks
+    - duration_ms
+    - input_bytes
+    - shuffle_read
+    - shuffle_write
+    - memory_spill
+    - disk_spill
+    - gc_time_ms
+  task_metrics:
+    - task_id
+    - stage_id
+    - duration_ms
+    - disk_spill
+    - memory_spill
+    - executor_id
+
+# ── Critérios de aceitação (o que o Crew.ai DEVE detectar) ──────────────────
+acceptance:
+  pattern: skew
+
+  # O LLM deve classificar com pelo menos esta confiança
+  min_confidence: 0.70
+
+  # O stage identificado como bottleneck deve ter shuffle (é o reduce stage)
+  bottleneck_must_have_shuffle: true
+
+  # Evidência quantitativa mínima
+  evidence:
+    # Razão max_task_ms / avg_task_ms no stage bottleneck
+    max_avg_ratio_min: 2.5       # ratio abaixo disso → não é skew real
+
+    # A task mais lenta deve ter pelo menos X% do tempo total do stage
+    max_task_pct_min: 40.0
+
+  # Severidade mínima esperada para este cenário
+  min_severity: high             # skew 4x sempre deve ser high ou critical
+
+  # A recomendação deve mencionar ao menos um destes termos
+  recommendation_must_contain:
+    - salting
+    - repartition
+    - skewHint
+    - adaptive
+
+# ── Tolerâncias para o oráculo ───────────────────────────────────────────────
+# Quando comparar runs diferentes, aceita variação dentro destes limites
+oracle:
+  duration_ms_tolerance_pct: 20.0
+  max_avg_ratio_tolerance_pct: 15.0
+  confidence_tolerance: 0.15
+
+# ── Validação do contrato pelo Crew.ai ───────────────────────────────────────
+# O crew_diagnose.py deve validar o finding contra estes critérios antes
+# de retornar. Se não passar, deve rebaixar a confidence ou escalar para Judge.
+contract_enforcement:
+  on_pattern_mismatch: "override_to_other"       # se padrão não reconhecido
+  on_confidence_below_min: "escalate_to_judge"   # Tier 4 quando < 0.6
+  on_evidence_missing: "reject_with_warning"     # finding sem evidência = inválido

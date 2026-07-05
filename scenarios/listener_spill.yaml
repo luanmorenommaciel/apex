@@ -1,0 +1,54 @@
+# Contrato de Cenário — SparkListener / Spill Detection
+# Schema v1 — Mundo B (SparkListener in-process)
+
+scenario_id: listener_memory_spill
+version: 1
+status: prototype
+world: B
+
+job:
+  description: "Job com partições grandes e memória de executor insuficiente"
+  trigger: "spark.executor.memory pequeno + dataset grande sem repartition"
+  spill_threshold_bytes: 104857600   # 100MB de spill para ser cenário válido
+
+listener_capture:
+  stage_metrics:
+    - disk_spill
+    - memory_spill
+    - duration_ms
+    - num_tasks
+    - input_bytes
+  task_metrics:
+    - disk_spill
+    - memory_spill
+    - duration_ms
+
+acceptance:
+  pattern: spill
+
+  min_confidence: 0.75
+
+  evidence:
+    # Pelo menos um stage deve ter disk_spill > 0
+    disk_spill_min_bytes: 1
+
+    # Total de spill deve ser relevante (não é falso positivo)
+    total_spill_min_bytes: 1048576   # 1MB mínimo para considerar
+
+  min_severity: medium
+
+  recommendation_must_contain:
+    - spark.executor.memory
+    - spark.memory.fraction
+    - repartition
+    - persist
+
+oracle:
+  duration_ms_tolerance_pct: 25.0
+  spill_bytes_tolerance_pct: 30.0
+  confidence_tolerance: 0.15
+
+contract_enforcement:
+  on_pattern_mismatch: "override_to_other"
+  on_confidence_below_min: "escalate_to_judge"
+  on_evidence_missing: "reject_with_warning"

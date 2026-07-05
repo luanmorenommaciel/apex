@@ -7,12 +7,27 @@
 
 ## O que é o Apex?
 
-Sistema de diagnóstico em 4 tiers que analisa event logs do Spark de forma **não-intrusiva**:
+Sistema de diagnóstico agêntico de performance Spark — detecta anti-patterns, gera root cause e recomendações entregues via MCP ao IDE do engenheiro.
+
+**Duas arquiteturas em paralelo:**
+
+### Mundo A — Zero-JAR (v3, estável)
 - Zero JAR injetado no cluster
 - Zero modificação de SparkSession
-- Leitura de event logs via MinIO REST
+- Leitura de event logs via MinIO REST (pós-job)
+- Tiers: Watcher → Classifier → Coordinator → Judge
 
-**Tiers:**
+### Mundo B — V1 SparkListener (em construção, ADR-005)
+- SparkListener in-process via `spark.extraListeners`
+- Captura métricas em tempo real → ClickHouse
+- Diagnóstico via Crew.ai → entregue via MCP
+- Fluxo: `Spark Envy → SparkListener → ClickHouse → Crew.ai → MCP`
+
+> **Decisão arquitetural (ADR-005):** V1 segue Mundo B (SparkListener).  
+> Mundo A permanece válido para ambientes sem acesso ao Spark config.  
+> Ver `docs/adr/ADR-005-sparklistener-vs-zero-jar.md`.
+
+**Tiers originais (Mundo A):**
 ```
 Tier 1 · Watchers      → determinístico, sem LLM — detecta anti-patterns
 Tier 2 · Classifier    → LLM classifica o Finding emitido pelo Watcher
@@ -20,15 +35,16 @@ Tier 3 · Coordinator   → Sonnet orquestra o diagnóstico completo
 Tier 4 · Judge         → Opus quando confiança < 0.6
 ```
 
-Tier 1 está implementado (v3). Tiers 2–4 são próxima fase.
+Tier 1 implementado (v3). V1 (Mundo B) em construção.
 
 ---
 
 ## Estado atual
 
-**Versão:** v3 · **Commit baseline:** `357efad` (em plat-v0)  
-**Status:** prototype — slice vertical verde no plat-v0 (Spark 4.1.2 real, MinIO)  
-**Testes:** 25 passando (13 unitários + 12 do plat-v0)
+**Versão:** v3 (Mundo A) + v1-skeleton (Mundo B em construção)  
+**Commit baseline:** `bc747c1` (apex-workspace, branch cowork)  
+**Status:** prototype — Mundo A verde (40 testes). Mundo B: SparkListener + ClickHouse + MCP skeleton prontos, Crew.ai pendente.  
+**Testes:** 40 passando (plat-v0)
 
 ### O que funciona
 - `apexlib.py` — parse centralizado de event logs
@@ -171,7 +187,7 @@ Testes comparativos de LLMs para o pipeline de diagnóstico:
 
 ## Versão
 
-- **Versão:** 0.3.0 (v3)
+- **Versão:** 0.3.0 (v3 Mundo A) / 0.1.0-skeleton (V1 Mundo B)
 - **Status:** prototype
-- **Última atualização:** 07 jun 2026
+- **Última atualização:** 04 jul 2026
 - **Crew:** A · Captain: Augusto · Commander: Luan

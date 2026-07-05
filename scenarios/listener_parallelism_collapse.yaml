@@ -1,0 +1,51 @@
+# Contrato de Cenário — SparkListener / Parallelism Collapse
+# Schema v1 — Mundo B (SparkListener in-process)
+
+scenario_id: listener_parallelism_collapse
+version: 1
+status: prototype
+world: B
+
+job:
+  description: "Job com número de partições muito baixo para o volume de dados"
+  trigger: "coalesce() excessivo ou default.parallelism muito baixo"
+  tasks_per_gb_expected: 2.0    # menos de 8 tasks/GB = collapse
+
+listener_capture:
+  stage_metrics:
+    - num_tasks
+    - duration_ms
+    - input_bytes
+    - shuffle_read
+  task_metrics:
+    - duration_ms
+    - executor_id
+
+acceptance:
+  pattern: parallelism_collapse
+
+  min_confidence: 0.65
+
+  evidence:
+    # Stage com poucos tasks para o volume
+    max_tasks_per_gb: 8.0     # se tasks/GB < 8 → parallelism collapse
+
+    # Tasks devem durar muito (executores subutilizados)
+    min_task_duration_ms: 30000   # tasks longas = poucos tasks fazendo muito trabalho
+
+  min_severity: medium
+
+  recommendation_must_contain:
+    - repartition
+    - spark.default.parallelism
+    - spark.sql.shuffle.partitions
+    - coalesce
+
+oracle:
+  duration_ms_tolerance_pct: 20.0
+  confidence_tolerance: 0.15
+
+contract_enforcement:
+  on_pattern_mismatch: "override_to_other"
+  on_confidence_below_min: "escalate_to_judge"
+  on_evidence_missing: "reject_with_warning"
