@@ -1,43 +1,67 @@
 """
-Apex V1 — SparkListener
-Captura métricas durante a execução do job e envia ao ClickHouse.
+Apex V1 — SparkListener (py4j callback)
 
-Uso no job:
-    from listener.spark_listener import ApexListener
-    apex = ApexListener(app_id=sc.applicationId, ch_host="clickhouse")
-    sc._jvm.org.apache.spark.SparkContext.getOrCreate().addSparkListener(apex._java_listener)
+Captura métricas em tempo real durante a execução do job e envia ao ClickHouse.
 
-Nota arquitetural:
-    Esta abordagem usa py4j para registrar um listener Java no SparkContext.
-    É in-process com o driver — diferente da abordagem zero-JAR que lê event logs.
-    Ver ADR-005 (pendente) para a decisão final de arquitetura.
+Uso:
+    spark = SparkSession.builder.getOrCreate()
+    from spark_listener import attach_to_spark
+    attach_to_spark(spark, ch_host="clickhouse")
+
+Arquitetura (ADR-005 — Mundo B):
+    SparkListener in-process via py4j callback.
+    Implementa SparkListenerInterface completo (todos os métodos como no-op)
+    para evitar AttributeError quando Spark chama eventos não tratados.
 """
 import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from listener.clickhouse_writer import ClickHouseWriter
+from clickhouse_writer import ClickHouseWriter
 
 logger = logging.getLogger("apex.listener")
 
 
-def _ms_to_dt(ms: Optional[int]) -> datetime:
+def _ms_to_dt(ms) -> datetime:
     """Converte epoch milliseconds para datetime UTC."""
-    if ms is None or ms <= 0:
-        return datetime.utcnow()
-    return datetime.fromtimestamp(ms / 1000.0, tz=timezone.utc).replace(tzinfo=None)
+    try:
+        v = int(ms)
+        if v > 0:
+            return datetime.fromtimestamp(v / 1000.0, tz=timezone.utc).replace(tzinfo=None)
+    except (TypeError, ValueError, OSError):
+        pass
+    return datetime.utcnow()
+
+
+def _scala_option(opt) -> Optional[int]:
+    """
+    Extrai valor de um Scala Option via py4j.
+    Usa isDefined()/get() — getOrElse(None) não funciona com tipos primitivos.
+    """
+    try:
+        if opt.isDefined():
+            return int(opt.get())
+    except Exception:
+        pass
+    return None
 
 
 class ApexSparkListener:
     """
-    Listener Spark que coleta métricas via py4j e envia ao ClickHouse.
-    Registrado via sc.addSparkListener() após criar a SparkSession.
+    Listener Spark que coleta métricas via py4j e escreve no ClickHouse.
+
+    Implementa TODOS os métodos de SparkListenerInterface como no-op
+    para evitar AttributeError quando Spark dispara eventos não monitorados.
+    Apenas onJobStart, onStageCompleted e onTaskEnd têm lógica real.
     """
+
+    class Java:
+        implements = ["org.apache.spark.scheduler.SparkListenerInterface"]
 
     def __init__(
         self,
         app_id: str,
-        ch_host: str = "localhost",
+        ch_host: str = "clickhouse",
         ch_port: int = 8123,
         ch_user: str = "apex",
         ch_password: str = "apex123",
@@ -46,92 +70,100 @@ class ApexSparkListener:
         self._writer = ClickHouseWriter(
             host=ch_host, port=ch_port, user=ch_user, password=ch_password
         )
-        self._job_stage_map: dict[int, int] = {}  # stage_id → job_id
-        logger.info(f"ApexSparkListener iniciado para app_id={app_id}")
+        self._job_stage_map: dict = {}  # stage_id -> job_id
+        logger.info(f"ApexSparkListener iniciado | app_id={app_id} | ch={ch_host}:{ch_port}")
 
-    # ── Job ────────────────────────────────────────────────────────────────
+    # ── Eventos com lógica real ───────────────────────────────────────────────
 
-    def onJobStart(self, job_start) -> None:
+    def onJobStart(self, jobStart) -> None:
         """Mapeia stage_ids → job_id para enriquecer métricas de stage."""
         try:
-            job_id = job_start.jobId()
-            for stage_id in job_start.stageIds():
-                self._job_stage_map[stage_id] = job_id
+            job_id = int(jobStart.jobId())
+            stage_ids = jobStart.stageIds()
+            for sid in stage_ids:
+                self._job_stage_map[int(sid)] = job_id
+            logger.debug(f"Job {job_id} iniciado com {stage_ids.size()} stages")
         except Exception as e:
             logger.warning(f"onJobStart error: {e}")
 
-    # ── Stage ──────────────────────────────────────────────────────────────
-
-    def onStageCompleted(self, stage_completed) -> None:
+    def onStageCompleted(self, stageCompleted) -> None:
         """Captura métricas completas do stage e persiste no ClickHouse."""
         try:
-            info = stage_completed.stageInfo()
-            tm = info.taskMetrics()
+            info = stageCompleted.stageInfo()
+            tm   = info.taskMetrics()
 
-            stage_id = info.stageId()
-            job_id = self._job_stage_map.get(stage_id, 0)
+            stage_id = int(info.stageId())
+            job_id   = self._job_stage_map.get(stage_id, 0)
+
+            sub_ms  = _scala_option(info.submissionTime()) or 0
+            comp_ms = _scala_option(info.completionTime()) or 0
+            duration = (comp_ms - sub_ms) if (sub_ms and comp_ms) else 0
 
             metrics = {
                 "app_id":          self.app_id,
                 "job_id":          job_id,
                 "stage_id":        stage_id,
-                "attempt_id":      info.attemptNumber(),
-                "stage_name":      info.name(),
-                "submission_time": _ms_to_dt(info.submissionTime().getOrElse(None)),
-                "completion_time": _ms_to_dt(info.completionTime().getOrElse(None)),
-                "duration_ms":     self._calc_duration(info),
-                "num_tasks":       info.numTasks(),
-                "failed_tasks":    0,  # calculado via task events se necessário
-                "input_bytes":     tm.inputMetrics().bytesRead(),
-                "output_bytes":    tm.outputMetrics().bytesWritten(),
-                "shuffle_read":    tm.shuffleReadMetrics().totalBytesRead(),
-                "shuffle_write":   tm.shuffleWriteMetrics().bytesWritten(),
-                "memory_spill":    tm.memoryBytesSpilled(),
-                "disk_spill":      tm.diskBytesSpilled(),
-                "gc_time_ms":      tm.jvmGCTime(),
-                "executor_cpu_ms": tm.executorCpuTime() // 1_000_000,  # ns → ms
+                "attempt_id":      int(info.attemptNumber()),
+                "stage_name":      str(info.name()),
+                "submission_time": _ms_to_dt(sub_ms),
+                "completion_time": _ms_to_dt(comp_ms),
+                "duration_ms":     duration,
+                "num_tasks":       int(info.numTasks()),
+                "failed_tasks":    0,
+                "input_bytes":     int(tm.inputMetrics().bytesRead()),
+                "output_bytes":    int(tm.outputMetrics().bytesWritten()),
+                "shuffle_read":    int(tm.shuffleReadMetrics().totalBytesRead()),
+                "shuffle_write":   int(tm.shuffleWriteMetrics().bytesWritten()),
+                "memory_spill":    int(tm.memoryBytesSpilled()),
+                "disk_spill":      int(tm.diskBytesSpilled()),
+                "gc_time_ms":      int(tm.jvmGCTime()),
+                "executor_cpu_ms": int(tm.executorCpuTime()) // 1_000_000,  # ns → ms
             }
 
             self._writer.write_stage_metrics(metrics)
-            logger.debug(
-                f"Stage {stage_id} | tasks={metrics['num_tasks']} "
-                f"| spill={metrics['disk_spill']//1024//1024}MB "
-                f"| duration={metrics['duration_ms']}ms"
+            logger.info(
+                f"Stage {stage_id} gravado | tasks={metrics['num_tasks']} "
+                f"| duration={duration}ms "
+                f"| shuffle_read={metrics['shuffle_read']//1024//1024}MB "
+                f"| disk_spill={metrics['disk_spill']//1024//1024}MB"
             )
 
         except Exception as e:
             logger.error(f"onStageCompleted error: {e}", exc_info=True)
 
-    # ── Task ───────────────────────────────────────────────────────────────
-
-    def onTaskEnd(self, task_end) -> None:
-        """Captura métricas por task — necessário para detectar skew."""
+    def onTaskEnd(self, taskEnd) -> None:
+        """Captura métricas por task — detecta skew via distribuição de duration."""
         try:
-            info = task_end.taskInfo()
-            tm = task_end.taskMetrics()
+            info = taskEnd.taskInfo()
+            tm   = taskEnd.taskMetrics()
 
             if tm is None:
-                return  # task failed before producing metrics
+                return
 
-            stage_id = task_end.stageId()
-            duration_ms = info.finishTime() - info.launchTime()
+            launch_ms  = int(info.launchTime())
+            finish_ms  = int(info.finishTime())
+            duration   = finish_ms - launch_ms if finish_ms > launch_ms else 0
+
+            # reason().toString() retorna "Success" ou a exceção como string
+            reason_str = str(taskEnd.reason().toString()) if taskEnd.reason() else "UNKNOWN"
+            status = "SUCCESS" if reason_str == "Success" else "FAILED"
 
             metrics = {
                 "app_id":         self.app_id,
-                "stage_id":       stage_id,
-                "task_id":        info.taskId(),
-                "attempt_number": info.attemptNumber(),
-                "executor_id":    info.executorId(),
-                "launch_time":    _ms_to_dt(info.launchTime()),
-                "finish_time":    _ms_to_dt(info.finishTime()),
-                "duration_ms":    duration_ms,
-                "input_bytes":    tm.inputMetrics().bytesRead(),
-                "output_bytes":   tm.outputMetrics().bytesWritten(),
-                "shuffle_read":   tm.shuffleReadMetrics().totalBytesRead(),
-                "shuffle_write":  tm.shuffleWriteMetrics().bytesWritten(),
-                "memory_spill":   tm.memoryBytesSpilled(),
-                "disk_spill":     tm.diskBytesSpilled(),
-                "status":         "SUCCESS" if task_end.reason().toString() == "Success" else "FAILED",
+                "stage_id":       int(taskEnd.stageId()),
+                "task_id":        int(info.taskId()),
+                "attempt_number": int(info.attemptNumber()),
+                "executor_id":    str(info.executorId()),
+                "launch_time":    _ms_to_dt(launch_ms),
+                "finish_time":    _ms_to_dt(finish_ms),
+                "duration_ms":    duration,
+                "input_bytes":    int(tm.inputMetrics().bytesRead()),
+                "output_bytes":   int(tm.outputMetrics().bytesWritten()),
+                "shuffle_read":   int(tm.shuffleReadMetrics().totalBytesRead()),
+                "shuffle_write":  int(tm.shuffleWriteMetrics().bytesWritten()),
+                "memory_spill":   int(tm.memoryBytesSpilled()),
+                "disk_spill":     int(tm.diskBytesSpilled()),
+                "status":         status,
             }
 
             self._writer.write_task_metrics(metrics)
@@ -139,37 +171,57 @@ class ApexSparkListener:
         except Exception as e:
             logger.error(f"onTaskEnd error: {e}", exc_info=True)
 
-    # ── Helpers ────────────────────────────────────────────────────────────
+    # ── No-ops obrigatórios (SparkListenerInterface) ──────────────────────────
+    # Sem estes, py4j lança AttributeError quando Spark dispara o evento,
+    # o que pode derrubar o job ou logar erros incessantes.
 
-    def _calc_duration(self, stage_info) -> int:
-        try:
-            sub = stage_info.submissionTime().getOrElse(0)
-            comp = stage_info.completionTime().getOrElse(0)
-            if sub and comp:
-                return int(comp) - int(sub)
-        except Exception:
-            pass
-        return 0
+    def onJobEnd(self, jobEnd) -> None: pass
+    def onStageSubmitted(self, stageSubmitted) -> None: pass
+    def onTaskStart(self, taskStart) -> None: pass
+    def onTaskGettingResult(self, taskGettingResult) -> None: pass
+    def onEnvironmentUpdate(self, environmentUpdate) -> None: pass
+    def onBlockManagerAdded(self, blockManagerAdded) -> None: pass
+    def onBlockManagerRemoved(self, blockManagerRemoved) -> None: pass
+    def onUnpersistRDD(self, unpersistRDD) -> None: pass
+    def onApplicationStart(self, applicationStart) -> None: pass
+    def onApplicationEnd(self, applicationEnd) -> None: pass
+    def onExecutorMetricsUpdate(self, executorMetricsUpdate) -> None: pass
+    def onStageExecutorMetrics(self, executorMetrics) -> None: pass
+    def onExecutorAdded(self, executorAdded) -> None: pass
+    def onExecutorRemoved(self, executorRemoved) -> None: pass
+    def onExecutorExcluded(self, executorExcluded) -> None: pass
+    def onExecutorExcludedForStage(self, executorExcludedForStage) -> None: pass
+    def onTaskExcluded(self, taskExcluded) -> None: pass
+    def onNodeExcluded(self, nodeExcluded) -> None: pass
+    def onNodeExcludedForStage(self, nodeExcludedForStage) -> None: pass
+    def onExecutorUnexcluded(self, executorUnexcluded) -> None: pass
+    def onNodeUnexcluded(self, nodeUnexcluded) -> None: pass
+    def onBlockUpdated(self, blockUpdated) -> None: pass
+    def onSpeculativeTaskSubmitted(self, speculativeTask) -> None: pass
+    def onOtherEvent(self, event) -> None: pass
+    def onResourceProfileAdded(self, event) -> None: pass
 
-    # ── Java interface ─────────────────────────────────────────────────────
 
-    class Java:
-        implements = ["org.apache.spark.scheduler.SparkListenerInterface"]
-
-
-def attach_to_spark(spark, app_id: str = None, ch_host: str = "clickhouse"):
+def attach_to_spark(spark, app_id: str = None, ch_host: str = "clickhouse") -> ApexSparkListener:
     """
-    Helper para registrar o listener em uma SparkSession existente.
+    Registra o ApexSparkListener no SparkContext.
 
-    Uso:
-        spark = SparkSession.builder.getOrCreate()
-        from listener.spark_listener import attach_to_spark
-        attach_to_spark(spark, ch_host="clickhouse")
+    Deve ser chamado ANTES de qualquer ação Spark para capturar todos os eventos.
+
+    Args:
+        spark:   SparkSession ativa
+        app_id:  ID da aplicação (default: spark.sparkContext.applicationId)
+        ch_host: Host do ClickHouse (default: "clickhouse" para docker-compose)
+
+    Returns:
+        listener: instância do ApexSparkListener registrada
     """
     sc = spark.sparkContext
     _app_id = app_id or sc.applicationId
 
     listener = ApexSparkListener(app_id=_app_id, ch_host=ch_host)
+
+    # Registra via py4j no Scala SparkContext
     sc._jvm.org.apache.spark.SparkContext.getOrCreate().addSparkListener(listener)
 
     logger.info(f"ApexSparkListener registrado | app_id={_app_id} | ch_host={ch_host}")

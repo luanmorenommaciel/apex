@@ -1,51 +1,81 @@
 version: "3.9"
 
-# Apex V1 Skeleton — Spark Envy + ClickHouse
-# Uso: docker compose up -d
-# Spark UI:      http://localhost:4040  (durante job)
-# History:       http://localhost:18080
-# ClickHouse UI: http://localhost:8123/play
+# Apex V1 Skeleton — Spark + ClickHouse
+#
+# Subir:   docker compose up -d --build
+# Parar:   docker compose down
+# Logs:    docker compose logs -f spark-master
+#
+# URLs:
+#   Spark Master UI:  http://localhost:8080
+#   Spark History:    http://localhost:18080
+#   ClickHouse UI:    http://localhost:8123/play
+#
+# Submeter job (após `docker compose up -d --build`):
+#   docker exec spark-master spark-submit \
+#     --master spark://spark-master:7077 \
+#     --py-files /opt/listener/spark_listener.py,/opt/listener/clickhouse_writer.py \
+#     /opt/jobs/demo_skew_job.py
+
+x-spark-common: &spark-common
+  build:
+    context: .
+    dockerfile: Dockerfile.spark
+  environment:
+    - APEX_CH_HOST=clickhouse
+    - APEX_CH_PORT=8123
+    - APEX_CH_USER=apex
+    - APEX_CH_PASSWORD=apex123
+    - SPARK_EVENTLOG_ENABLED=true
+    - SPARK_EVENTLOG_DIR=/spark-logs
+  volumes:
+    - spark-logs:/spark-logs
+    - ./jobs:/opt/jobs
+    - ./listener:/opt/listener
+  networks:
+    - apex-net
+  depends_on:
+    clickhouse:
+      condition: service_healthy
 
 services:
 
   spark-master:
-    image: bitnami/spark:3.5
+    <<: *spark-common
     environment:
       - SPARK_MODE=master
-      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=/spark-logs
+      - APEX_CH_HOST=clickhouse
+      - APEX_CH_PORT=8123
+      - APEX_CH_USER=apex
+      - APEX_CH_PASSWORD=apex123
       - SPARK_EVENTLOG_ENABLED=true
       - SPARK_EVENTLOG_DIR=/spark-logs
     ports:
-      - "4040:4040"   # Spark UI
-      - "7077:7077"   # Spark master
+      - "4040:4040"   # Spark UI (durante job)
+      - "7077:7077"   # Spark master (submit)
       - "8080:8080"   # Master web UI
-    volumes:
-      - spark-logs:/spark-logs
-      - ./jobs:/opt/jobs
-      - ./listener:/opt/listener
-    networks:
-      - apex-net
 
   spark-worker:
-    image: bitnami/spark:3.5
+    <<: *spark-common
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_CORES=4
       - SPARK_WORKER_MEMORY=4g
+      - APEX_CH_HOST=clickhouse
+      - APEX_CH_PORT=8123
+      - APEX_CH_USER=apex
+      - APEX_CH_PASSWORD=apex123
       - SPARK_EVENTLOG_ENABLED=true
       - SPARK_EVENTLOG_DIR=/spark-logs
-    volumes:
-      - spark-logs:/spark-logs
-      - ./jobs:/opt/jobs
-      - ./listener:/opt/listener
     depends_on:
       - spark-master
-    networks:
-      - apex-net
+      - clickhouse
 
   spark-history:
-    image: bitnami/spark:3.5
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
     environment:
       - SPARK_MODE=history-server
       - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=/spark-logs
@@ -66,7 +96,7 @@ services:
       - CLICKHOUSE_PASSWORD=apex123
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
     ports:
-      - "8123:8123"   # HTTP interface (UI: /play)
+      - "8123:8123"   # HTTP interface + UI (/play)
       - "9000:9000"   # Native protocol
     volumes:
       - clickhouse-data:/var/lib/clickhouse

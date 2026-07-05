@@ -1,0 +1,16 @@
+# Apex V1 — Spark com clickhouse-connect pré-instalado
+# Estende bitnami/spark:3.5 adicionando as dependências Python do listener.
+#
+# Build: chamado automaticamente pelo docker-compose.yml (build: context: .)
+# Não precisa fazer build manual.
+
+FROM bitnami/spark:3.5
+
+USER root
+
+# Instala clickhouse-connect e dependências do listener
+RUN pip install --no-cache-dir \
+    clickhouse-connect>=0.6.0 \
+    python-dateutil>=2.8.0
+
+USER 1001
