@@ -392,3 +392,7 @@ def main():
     print("APEX FINDING (Crew.ai 1.x)")
     print("=" * 60)
     print(json.dumps(finding, indent=2, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
