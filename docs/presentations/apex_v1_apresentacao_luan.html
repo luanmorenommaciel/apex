@@ -686,7 +686,7 @@
   ────────────────────────────────────────────────────── -->
   <section class="slide active" id="slide-cover">
     <div class="cover-glow"></div>
-    <div class="slide-badge">01 / 07</div>
+    <div class="slide-badge">01 / 08</div>
 
     <div class="kicker">Apex · Diagnóstico Agêntico Spark</div>
     <h1>V1 Pipeline<br><span style="color:var(--accent)">Rodando.</span></h1>
@@ -736,7 +736,7 @@
        SLIDE 2 · O QUE FOI PEDIDO VS O QUE FOI ENTREGUE
   ────────────────────────────────────────────────────── -->
   <section class="slide" id="slide-pedido">
-    <div class="slide-badge">02 / 07</div>
+    <div class="slide-badge">02 / 08</div>
     <div class="kicker">30 Jun → 06 Jul 2026</div>
     <h2>O que foi pedido vs o que foi entregue</h2>
 
@@ -843,7 +843,7 @@
        SLIDE 3 · PIPELINE EM PRODUÇÃO
   ────────────────────────────────────────────────────── -->
   <section class="slide" id="slide-pipeline">
-    <div class="slide-badge">03 / 07</div>
+    <div class="slide-badge">03 / 08</div>
     <div class="kicker">Evidência de hoje · 06 Jul 2026</div>
     <h2>Pipeline em produção</h2>
 
@@ -988,7 +988,7 @@
        SLIDE 4 · APEX VS DATAFLINT
   ────────────────────────────────────────────────────── -->
   <section class="slide" id="slide-compare">
-    <div class="slide-badge">04 / 07</div>
+    <div class="slide-badge">04 / 08</div>
     <div class="kicker">Posicionamento competitivo</div>
     <h2>Apex vs DataFlint</h2>
 
@@ -1085,7 +1085,7 @@
        SLIDE 5 · ONDE GANHAMOS
   ────────────────────────────────────────────────────── -->
   <section class="slide" id="slide-wins">
-    <div class="slide-badge">05 / 07</div>
+    <div class="slide-badge">05 / 08</div>
     <div class="kicker">Vantagens competitivas confirmadas</div>
     <h2>Onde ganhamos — 3 vitórias claras</h2>
 
@@ -1163,7 +1163,7 @@
        SLIDE 6 · ONDE NÃO ESTAMOS AINDA
   ────────────────────────────────────────────────────── -->
   <section class="slide" id="slide-gaps">
-    <div class="slide-badge">06 / 07</div>
+    <div class="slide-badge">06 / 08</div>
     <div class="kicker">Honestidade técnica</div>
     <h2>Onde não estamos ainda</h2>
 
@@ -1220,184 +1220,88 @@
   </section>
 
   <!-- ─────────────────────────────────────────────────────
-       SLIDE 7 · PRÓXIMOS PASSOS
+       SLIDE 7 · STATUS DOS PONTOS DO LUAN
   ────────────────────────────────────────────────────── -->
-  <section class="slide" id="slide-next">
-    <div class="slide-badge">07 / 07</div>
-    <div class="kicker">Roadmap priorizado</div>
-    <h2>Próximos passos</h2>
+  <section class="slide" id="slide-status">
+    <div class="slide-badge">07 / 08</div>
+    <div class="kicker">Reunião 30/jun — checklist</div>
+    <h2>Status dos pontos do Luan</h2>
 
-    <div class="card scroll-content" style="flex:1; padding:0; overflow:hidden; overflow-y:auto;">
-      <div class="sprint-row">
-        <div class="sprint-tag s1">Sprint 1</div>
-        <div class="sprint-content">
-          <div class="sprint-title">Ligar MCP no Claude Code do Luan</div>
-          <div class="sprint-desc">Conectar mcp/server.py ao IDE → demo ao vivo do fluxo completo. Engenheiro pergunta, Apex responde com root cause.</div>
-        </div>
-        <div class="sprint-time">~30 min</div>
-      </div>
-      <div class="sprint-row">
-        <div class="sprint-tag s1">Sprint 1</div>
-        <div class="sprint-content">
-          <div class="sprint-title">Demo log_poller.py com job real no plat-v0</div>
-          <div class="sprint-desc">Rodar job → poller detecta em ≤15s → diagnóstico automático → Finding no ClickHouse. Demonstração do "real-time" ao Luan.</div>
-        </div>
-        <div class="sprint-time">~2h</div>
-      </div>
-      <div class="sprint-row">
-        <div class="sprint-tag s2">Sprint 2</div>
-        <div class="sprint-content">
-          <div class="sprint-title">Adicionar 3–5 cenários novos</div>
-          <div class="sprint-desc">
-            <code style="font-size:11px">spill_on_join</code> ·
-            <code style="font-size:11px">broadcast_miss</code> ·
-            <code style="font-size:11px">parallelism_collapse</code> ·
-            <code style="font-size:11px">small_files_storm</code>
-            <br>Cada scenario.yaml = Watcher + Classifier + teste oracle.
-          </div>
-        </div>
-        <div class="sprint-time">~1-2 dias cada</div>
-      </div>
-      <div class="sprint-row">
-        <div class="sprint-tag s3">Sprint 3</div>
-        <div class="sprint-content">
-          <div class="sprint-title">Scala JAR listener — real-time verdadeiro</div>
-          <div class="sprint-desc">SparkListener in-process via spark.extraListeners → streaming para ClickHouse durante execução → remove dependência do event log pós-job. Fecha gap com DataFlint :4040.</div>
-        </div>
-        <div class="sprint-time">~1 sprint</div>
-      </div>
-      <div class="sprint-row">
-        <div class="sprint-tag s4">Sprint 4</div>
-        <div class="sprint-content">
-          <div class="sprint-title">Code correlation — callSite → git blame → fix</div>
-          <div class="sprint-desc">
-            Anti-pattern detectado → callSite no event log → git blame → "este anti-pattern foi introduzido no commit X por autor Y" → sugestão de fix inline no IDE.
-            <br><span style="color:var(--purple)">⭐ único no mercado</span>
-          </div>
-        </div>
-        <div class="sprint-time">~2 sprints</div>
-      </div>
+    <div class="scroll-content" style="flex:1;overflow-y:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:8px 12px;color:var(--accent);font-weight:600;">Ponto da reunião</th>
+            <th style="text-align:center;padding:8px 12px;color:var(--accent);font-weight:600;white-space:nowrap;">Status</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--accent);font-weight:600;">Observação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px;">SparkListener injeta no cluster</td>
+            <td style="text-align:center;padding:9px 12px;"><span style="background:#f59e0b22;color:#f59e0b;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">⚠️ BRIDGE</span></td>
+            <td style="padding:9px 12px;color:var(--muted);font-size:12px;">Python/py4j quebrado em spark-submit. Bridge via event log funciona. Issue <strong style="color:var(--fg)">#17</strong></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px;">ClickHouse recebe as métricas</td>
+            <td style="text-align:center;padding:9px 12px;"><span style="background:#10b98122;color:#10b981;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">✅ FEITO</span></td>
+            <td style="padding:9px 12px;color:var(--muted);font-size:12px;">5 stages, 7 tasks ingeridos hoje. <code style="font-size:11px;">apex.stage_metrics</code> + <code style="font-size:11px;">apex.task_metrics</code></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px;">Crew.ai faz o diagnóstico</td>
+            <td style="text-align:center;padding:9px 12px;"><span style="background:#10b98122;color:#10b981;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">✅ FEITO</span></td>
+            <td style="padding:9px 12px;color:var(--muted);font-size:12px;">2 agents rodaram hoje. ApexFinding com root_cause + recommendation gerado e persistido. Issue <strong style="color:var(--fg)">#19</strong></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px;">Entrega via MCP</td>
+            <td style="text-align:center;padding:9px 12px;"><span style="background:#10b98122;color:#10b981;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">✅ FEITO</span></td>
+            <td style="padding:9px 12px;color:var(--muted);font-size:12px;"><code style="font-size:11px;">server.py</code> com 4 tools pronto. Falta registrar no Claude Code. Issue <strong style="color:var(--fg)">#21</strong></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px;">Engenheiro pergunta ao Claude Code sobre o job</td>
+            <td style="text-align:center;padding:9px 12px;"><span style="background:#10b98122;color:#10b981;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">✅ FEITO</span></td>
+            <td style="padding:9px 12px;color:var(--muted);font-size:12px;">Funciona via MCP após registro. Compatível com Cursor, Codex, Claude Code</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px;">"Aplica nossa sugestão" — muda o código</td>
+            <td style="text-align:center;padding:9px 12px;"><span style="background:#ef444422;color:#ef4444;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">❌ PENDENTE</span></td>
+            <td style="padding:9px 12px;color:var(--muted);font-size:12px;">Recommendation está no finding. Aplicação automática no código = Sprint 2. Issue <strong style="color:var(--fg)">#20</strong></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px;">Real-time durante execução</td>
+            <td style="text-align:center;padding:9px 12px;"><span style="background:#f59e0b22;color:#f59e0b;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">⚠️ 15s</span></td>
+            <td style="padding:9px 12px;color:var(--muted);font-size:12px;">log_poller.py detecta ~15s após o job. Real-time verdadeiro = Scala JAR (Sprint 3). Issue <strong style="color:var(--fg)">#17</strong></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px;">Variáveis em execução + stop + editar ao vivo</td>
+            <td style="text-align:center;padding:9px 12px;"><span style="background:#ef444422;color:#ef4444;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">❌ FUTURO</span></td>
+            <td style="padding:9px 12px;color:var(--muted);font-size:12px;">Visão Sprint 4+. Requer streaming do executor + instrumentação profunda</td>
+          </tr>
+          <tr>
+            <td style="padding:9px 12px;">On-premise / LLM local (Jaime)</td>
+            <td style="text-align:center;padding:9px 12px;"><span style="background:#ef444422;color:#ef4444;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">❌ FUTURO</span></td>
+            <td style="padding:9px 12px;color:var(--muted);font-size:12px;">Não priorizado para V1. Decisão estratégica pendente com Luan</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
-    <div class="hr" style="margin:16px 0 12px"></div>
-
-    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
-      <div class="card" style="padding:12px 18px; flex:1; min-width:200px; display:flex; align-items:center; gap:12px;">
-        <span style="font-size:24px">🎯</span>
-        <div>
-          <div style="font-size:13px; font-weight:700; color:var(--text);">Próxima ação imediata</div>
-          <div style="font-size:12px; color:var(--text2);">Conectar MCP ao Claude Code do Luan · 30 minutos · hoje</div>
-        </div>
+    <div class="hr"></div>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 18px;font-size:12px;">
+        <span style="color:#10b981;font-weight:700;">5 / 9</span> <span style="color:var(--muted)">pontos entregues</span>
       </div>
-      <div class="card" style="padding:12px 18px; flex:1; min-width:200px; display:flex; align-items:center; gap:12px;">
-        <span style="font-size:24px">📋</span>
-        <div>
-          <div style="font-size:13px; font-weight:700; color:var(--text);">Issues ativas</div>
-          <div style="font-size:12px; color:var(--text2);">#17 Pipeline · #18 OTel · #19 plat-v0 · #20 Rec Engine · #21 CI</div>
-        </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 18px;font-size:12px;">
+        <span style="color:#f59e0b;font-weight:700;">2 / 9</span> <span style="color:var(--muted)">bridge (funciona, não ideal)</span>
       </div>
-      <div class="card" style="padding:12px 18px; flex:1; min-width:200px; display:flex; align-items:center; gap:12px;">
-        <div class="status-dot"></div>
-        <div>
-          <div style="font-size:13px; font-weight:700; color:var(--text);">Status do pipeline</div>
-          <div style="font-size:12px; color:var(--green);">LIVE · 06 Jul 2026 · 40 testes passando</div>
-        </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 18px;font-size:12px;">
+        <span style="color:#ef4444;font-weight:700;">2 / 9</span> <span style="color:var(--muted)">sprint 3–4 (visão futura)</span>
       </div>
     </div>
   </section>
 
-</div><!-- /#deck -->
-
-<!-- Navigation -->
-<div id="nav">
-  <button id="btn-prev" onclick="go(-1)" disabled>←</button>
-  <div id="dots"></div>
-  <span id="counter">1 / 7</span>
-  <button id="btn-next" onclick="go(1)">→</button>
-</div>
-
-<div id="hint">← → arrow keys to navigate</div>
-
-<script>
-(function () {
-  const slides = Array.from(document.querySelectorAll('.slide'));
-  const dotsContainer = document.getElementById('dots');
-  const counter = document.getElementById('counter');
-  const btnPrev = document.getElementById('btn-prev');
-  const btnNext = document.getElementById('btn-next');
-  const progress = document.getElementById('progress');
-  const total = slides.length;
-  let current = 0;
-  let animating = false;
-
-  // Build dots
-  slides.forEach((_, i) => {
-    const d = document.createElement('div');
-    d.className = 'dot' + (i === 0 ? ' active' : '');
-    d.onclick = () => goTo(i);
-    dotsContainer.appendChild(d);
-  });
-
-  function updateUI() {
-    const dots = dotsContainer.querySelectorAll('.dot');
-    dots.forEach((d, i) => d.classList.toggle('active', i === current));
-    counter.textContent = (current + 1) + ' / ' + total;
-    btnPrev.disabled = current === 0;
-    btnNext.disabled = current === total - 1;
-    progress.style.width = ((current + 1) / total * 100) + '%';
-  }
-
-  function goTo(idx) {
-    if (animating || idx === current || idx < 0 || idx >= total) return;
-    animating = true;
-
-    const prev = slides[current];
-    const next = slides[idx];
-
-    prev.classList.add('exit');
-    next.style.transform = 'translateX(60px)';
-    next.style.opacity = '0';
-    next.classList.add('active');
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        next.style.transform = '';
-        next.style.opacity = '';
-        setTimeout(() => {
-          prev.classList.remove('active', 'exit');
-          next.style.transform = null;
-          next.style.opacity = null;
-          animating = false;
-        }, 360);
-      });
-    });
-
-    current = idx;
-    updateUI();
-  }
-
-  window.go = function (delta) { goTo(current + delta); };
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
-      e.preventDefault(); go(1);
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault(); go(-1);
-    }
-  });
-
-  // Touch swipe
-  let touchX = null;
-  document.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
-  document.addEventListener('touchend', (e) => {
-    if (touchX === null) return;
-    const dx = e.changedTouches[0].clientX - touchX;
-    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
-    touchX = null;
-  }, { passive: true });
-
-  updateUI();
-})();
-</script>
-</body>
-</html>
+  <!-- ─────────────────────────────────────────────────────
+       SLIDE 8 · PRÓXIMOS PASSOS
+  ────────────────────────────────────────────────────── -->
+  <section class="slide" id="slide-next">
+    <div clas
