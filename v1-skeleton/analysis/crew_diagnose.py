@@ -54,7 +54,7 @@ class ApexFinding(BaseModel):
     severity:            str            = Field(description="critical|high|medium|low")
     confidence:          float          = Field(ge=0.0, le=1.0, description="Confiança 0.0–1.0")
     bottleneck_stage_id: Optional[int]  = Field(default=None, description="Stage ID do bottleneck ou null")
-    root_cause:          str            = Field(max_length=300, description="Causa raiz em até 300 chars")
+    root_cause:          str            = Field(max_length=500, description="Causa raiz em até 500 chars")
     recommendation:      str            = Field(max_length=500, description="Fix concreto e aplicável em até 500 chars")
     evidence:            Evidence       = Field(description="Evidência quantitativa")
 
@@ -392,4 +392,3 @@ def main():
     print("APEX FINDING (Crew.ai 1.x)")
     print("=" * 60)
     print(json.dumps(finding, indent=2, ensure_ascii=False))
-   
