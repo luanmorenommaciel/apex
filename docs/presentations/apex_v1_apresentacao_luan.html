@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex V1 — Pipeline Rodando | 06 Jul 2026</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #79c0ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --orange: #e3b341;
+    --purple: #bc8cff;
+    --teal: #39d353;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    overflow: hidden;
+  }
+
+  /* ── Deck container ── */
+  #deck {
+    width: 100%; height: 100%;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 52px 72px 44px;
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+  }
+  .slide.exit {
+    opacity: 0;
+    transform: translateX(-60px);
+    transition: opacity .28s ease, transform .28s ease;
+  }
+
+  /* ── Navigation ── */
+  #nav {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(22,27,34,.85);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 8px 20px;
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  #nav button {
+    background: none;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color .2s, background .2s;
+  }
+  #nav button:hover { color: var(--accent); background: rgba(88,166,255,.1); }
+  #nav button:disabled { opacity: .3; cursor: default; }
+  #counter {
+    color: var(--text2);
+    font-size: 13px;
+    min-width: 52px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  #dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    transition: background .2s, transform .2s;
+  }
+  .dot.active { background: var(--accent); transform: scale(1.3); }
+
+  /* ── Keyboard hint ── */
+  #hint {
+    position: fixed;
+    bottom: 28px;
+    right: 32px;
+    color: var(--text2);
+    font-size: 11px;
+    opacity: .5;
+  }
+
+  /* ── Slide number badge ── */
+  .slide-badge {
+    position: absolute;
+    top: 20px;
+    right: 28px;
+    font-size: 11px;
+    color: var(--text2);
+    font-family: var(--font-mono);
+    opacity: .5;
+  }
+
+  /* ── Typography ── */
+  .kicker {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -.02em;
+    color: var(--text);
+  }
+  h2 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -.015em;
+    color: var(--text);
+    margin-bottom: 32px;
+  }
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .subtitle {
+    font-size: 20px;
+    color: var(--text2);
+    margin-top: 16px;
+    line-height: 1.5;
+  }
+  .label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+  p { line-height: 1.65; color: var(--text2); }
+  strong { color: var(--text); font-weight: 600; }
+
+  /* ── Divider ── */
+  .hr {
+    height: 1px;
+    background: var(--border);
+    margin: 24px 0;
+  }
+
+  /* ── Pill / Badge ── */
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+  }
+  .pill-green { background: rgba(63,185,80,.15); color: var(--green); border: 1px solid rgba(63,185,80,.3); }
+  .pill-yellow { background: rgba(210,153,34,.15); color: var(--orange); border: 1px solid rgba(210,153,34,.3); }
+  .pill-red { background: rgba(248,81,73,.15); color: var(--red); border: 1px solid rgba(248,81,73,.3); }
+  .pill-blue { background: rgba(88,166,255,.12); color: var(--accent); border: 1px solid rgba(88,166,255,.25); }
+  .pill-purple { background: rgba(188,140,255,.12); color: var(--purple); border: 1px solid rgba(188,140,255,.25); }
+
+  /* ── Card ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+  }
+
+  /* ── Terminal / Code block ── */
+  .terminal {
+    background: #010409;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+  }
+  .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .td-red { background: #ff5f57; }
+  .td-yellow { background: #febc2e; }
+  .td-green { background: #28c840; }
+  .terminal-title {
+    flex: 1;
+    text-align: center;
+    color: var(--text2);
+    font-size: 12px;
+  }
+  .terminal-body {
+    padding: 16px 20px;
+    overflow: auto;
+    max-height: 340px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .terminal-body::-webkit-scrollbar { width: 6px; }
+  .terminal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .t-dim { color: #484f58; }
+  .t-gray { color: var(--text2); }
+  .t-white { color: var(--text); }
+  .t-green { color: var(--green); }
+  .t-blue { color: var(--accent2); }
+  .t-yellow { color: var(--orange); }
+  .t-red { color: var(--red); }
+  .t-purple { color: var(--purple); }
+  .t-teal { color: #56d364; }
+  .t-string { color: #a5d6ff; }
+  .t-num { color: #79c0ff; }
+  .t-key { color: var(--purple); }
+
+  /* ── Grid ── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+  /* ── Pipeline flow diagram ── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px 0;
+  }
+  .pipe-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 96px;
+    flex-shrink: 0;
+  }
+  .pipe-icon {
+    width: 52px; height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    border: 2px solid;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .pipe-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .pipe-sub {
+    font-size: 10px;
+    color: var(--text2);
+    margin-top: 2px;
+    font-family: var(--font-mono);
+  }
+  .pipe-arrow {
+    font-size: 20px;
+    color: var(--border);
+    padding: 0 6px;
+    flex-shrink: 0;
+    margin-bottom: 28px;
+  }
+
+  .pn-spark { border-color: #f0883e; background: rgba(240,136,62,.1); }
+  .pn-minio { border-color: #c84b31; background: rgba(200,75,49,.1); }
+  .pn-ingest { border-color: var(--accent); background: rgba(88,166,255,.1); }
+  .pn-ch { border-color: #f7c94b; background: rgba(247,201,75,.1); }
+  .pn-crew { border-color: var(--purple); background: rgba(188,140,255,.1); }
+  .pn-finding { border-color: var(--green); background: rgba(63,185,80,.1); }
+  .pn-mcp { border-color: var(--teal); background: rgba(57,211,83,.1); }
+  .pn-ide { border-color: #58a6ff; background: rgba(88,166,255,.1); }
+
+  /* ── Comparison table ── */
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .comp-table th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+  .comp-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(48,54,61,.5);
+    color: var(--text);
+    vertical-align: middle;
+  }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .comp-table tr:hover td { background: rgba(88,166,255,.04); }
+  .comp-table .dim-col { color: var(--text2); }
+  .comp-table .apex-col { color: var(--accent); font-weight: 600; }
+  .comp-table .win-cell { color: var(--green); }
+  .comp-table .gap-cell { color: var(--text2); }
+  .comp-table .row-dim { color: var(--text2); font-size: 12px; }
+
+  th.col-apex { color: var(--accent) !important; }
+  th.col-potential { color: var(--purple) !important; }
+
+  /* ── Win cards ── */
+  .win-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .win-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+  }
+  .win-card.w1::before { background: var(--green); }
+  .win-card.w2::before { background: var(--accent); }
+  .win-card.w3::before { background: var(--purple); }
+  .win-number {
+    font-size: 40px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 8px;
+    opacity: .15;
+    position: absolute;
+    top: 12px; right: 20px;
+    font-family: var(--font-mono);
+  }
+  .win-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .win-sub {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.55;
+  }
+  .win-evidence {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: var(--bg3);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text2);
+    border-left: 3px solid var(--green);
+  }
+  .win-card.w2 .win-evidence { border-left-color: var(--accent); }
+  .win-card.w3 .win-evidence { border-left-color: var(--purple); }
+
+  /* ── Gap cards ── */
+  .gap-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .gap-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+  }
+  .gap-card.g1::before { background: var(--orange); }
+  .gap-card.g2::before { background: var(--yellow); }
+  .gap-card.g3::before { background: var(--red); }
+
+  .gap-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .gap-body { font-size: 13px; color: var(--text2); line-height: 1.55; margin-bottom: 8px; }
+  .gap-fix {
+    font-size: 12px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    padding: 6px 10px;
+    background: rgba(88,166,255,.07);
+    border-radius: 6px;
+    border-left: 2px solid var(--accent);
+  }
+
+  /* ── Sprint table ── */
+  .sprint-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(48,54,61,.5);
+    transition: background .15s;
+  }
+  .sprint-row:last-child { border-bottom: none; }
+  .sprint-row:hover { background: rgba(88,166,255,.04); }
+  .sprint-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .s1 { background: rgba(63,185,80,.15); color: var(--green); }
+  .s2 { background: rgba(88,166,255,.15); color: var(--accent); }
+  .s3 { background: rgba(188,140,255,.15); color: var(--purple); }
+  .s4 { background: rgba(227,179,65,.15); color: var(--orange); }
+  .sprint-content { flex: 1; }
+  .sprint-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .sprint-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .sprint-time {
+    font-size: 11px;
+    color: var(--text2);
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+
+  /* ── Cover specific ── */
+  #slide-cover {
+    justify-content: center;
+  }
+  .cover-meta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-top: 36px;
+  }
+  .cover-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .cover-badge span { color: var(--text); font-weight: 600; }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .4; }
+  }
+  .cover-glow {
+    position: absolute;
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse at center, rgba(88,166,255,.08) 0%, transparent 70%);
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  /* ── Quote block ── */
+  .quote-block {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--text);
+    font-style: italic;
+    line-height: 1.6;
+    position: relative;
+  }
+  .quote-block::before {
+    content: '"';
+    font-size: 52px;
+    position: absolute;
+    top: -8px; left: 14px;
+    color: var(--accent);
+    opacity: .2;
+    font-family: Georgia, serif;
+    line-height: 1;
+  }
+  .quote-attr {
+    margin-top: 8px;
+    font-size: 12px;
+    font-style: normal;
+    color: var(--text2);
+  }
+
+  /* ── Metric chips ── */
+  .metric-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 14px 0;
+  }
+  .metric-chip {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    text-align: center;
+  }
+  .metric-val {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+  }
+  .metric-lbl {
+    font-size: 11px;
+    color: var(--text2);
+    display: block;
+    margin-top: 2px;
+  }
+  .metric-chip.bad .metric-val { color: var(--red); }
+  .metric-chip.warn .metric-val { color: var(--orange); }
+  .metric-chip.ok .metric-val { color: var(--green); }
+
+  /* ── Tier diagram ── */
+  .tier-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 16px;
+    border-radius: 8px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .tier-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    width: 52px;
+    flex-shrink: 0;
+    color: var(--text2);
+  }
+  .tier-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 120px;
+    flex-shrink: 0;
+  }
+  .tier-desc {
+    font-size: 12px;
+    color: var(--text2);
+    flex: 1;
+    line-height: 1.4;
+  }
+
+  /* ── Scrollable content ── */
+  .scroll-content {
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    padding-right: 6px;
+  }
+  .scroll-content::-webkit-scrollbar { width: 5px; }
+  .scroll-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Progress bar ── */
+  #progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--purple));
+    transition: width .35s ease;
+    z-index: 200;
+  }
+
+  /* ── Slide: delivered vs asked ── */
+  .compare-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    flex: 1;
+  }
+  .compare-col h3 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-col.asked h3 { color: var(--text2); }
+  .compare-col.built h3 { color: var(--green); }
+  .check-list { list-style: none; }
+  .check-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 13px;
+    font-size: 13.5px;
+    color: var(--text);
+    line-height: 1.45;
+  }
+  .check-list li .ico { flex-shrink: 0; font-size: 15px; margin-top: 1px; }
+  .check-list li .desc { color: var(--text2); font-size: 11.5px; margin-top: 2px; display: block; }
+
+  /* Responsive shrink for smaller screens */
+  @media (max-width: 960px) {
+    .slide { padding: 36px 36px 56px; }
+    h1 { font-size: 40px; }
+    h2 { font-size: 28px; }
+    .grid2, .grid3, .compare-cols { grid-template-columns: 1fr; }
+    .pipeline { flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .pipe-arrow { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div id="deck">
+
+  <!-- ─────────────────────────────────────────────────────
+       SLIDE 1 · COVER
+  ────────────────────────────────────────────────────── -->
+  <section class="slide active" id="slide-cover">
+    <div class="cover-glow"></div>
+    <div class="slide-badge">01 / 07</div>
+
+    <div class="kicker">Apex · Diagnóstico Agêntico Spark</div>
+    <h1>V1 Pipeline<br><span style="color:var(--accent)">Rodando.</span></h1>
+    <p class="subtitle">
+      O que foi pedido em 30 jun. — construído e evidenciado em 06 jul. 2026.
+    </p>
+
+    <div class="cover-meta">
+      <div class="cover-badge">
+        <div class="status-dot"></div>
+        <span>Pipeline LIVE</span>
+      </div>
+      <div class="cover-badge">
+        📅 <span>06 Jul 2026</span>
+      </div>
+      <div class="cover-badge">
+        🧑‍✈️ Capitão: <span>Augusto</span>
+      </div>
+      <div class="cover-badge">
+        📋 Para: <span>Luan Moreno</span>
+      </div>
+    </div>
+
+    <div class="hr" style="margin-top:40px"></div>
+
+    <div style="display:flex; gap:32px; flex-wrap:wrap;">
+      <div>
+        <div class="label">App ID evidenciado</div>
+        <code style="font-family:var(--font-mono);font-size:13px;color:var(--accent)">app-20260706010516-0004</code>
+      </div>
+      <div>
+        <div class="label">Stages capturados</div>
+        <code style="font-family:var(--font-mono);font-size:13px;color:var(--green)">5 stages · 7 tasks</code>
+      </div>
+      <div>
+        <div class="label">Finding gerado</div>
+        <code style="font-family:var(--font-mono);font-size:13px;color:var(--purple)">severity: high · confidence: 0.42</code>
+      </div>
+      <div>
+        <div class="label">Tier 4 ativado</div>
+        <code style="font-family:var(--font-mono);font-size:13px;color:var(--orange)">needs_judge: true ✅</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────
+       SLIDE 2 · O QUE FOI PEDIDO VS O QUE FOI ENTREGUE
+  ────────────────────────────────────────────────────── -->
+  <section class="slide" id="slide-pedido">
+    <div class="slide-badge">02 / 07</div>
+    <div class="kicker">30 Jun → 06 Jul 2026</div>
+    <h2>O que foi pedido vs o que foi entregue</h2>
+
+    <div class="compare-cols scroll-content">
+      <div class="compare-col asked">
+        <h3>🎙 Visão do Luan (30 jun.)</h3>
+        <ul class="check-list">
+          <li>
+            <span class="ico">💬</span>
+            <div>
+              <strong>Ingestão em tempo real</strong>
+              <span class="desc">"Em tempo real lá receber essas informações..."</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico">💬</span>
+            <div>
+              <strong>Crew.ai diagnóstica</strong>
+              <span class="desc">"...isso vai trigar Crew.ai..."</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico">💬</span>
+            <div>
+              <strong>Entrega via MCP</strong>
+              <span class="desc">"...ele vai entregar isso via MCP"</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico">💬</span>
+            <div>
+              <strong>Claude Code como interface</strong>
+              <span class="desc">"oi Claude Code, estou tendo problema de performance nesse job, o que tá acontecendo aqui?"</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico">💬</span>
+            <div>
+              <strong>Multi-IDE</strong>
+              <span class="desc">"esse MCP pode conectar em qualquer ferramenta, Cursor, Claude Code, Codex"</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico">💬</span>
+            <div>
+              <strong>Futuro: corrigir código in-situ</strong>
+              <span class="desc">"se você conseguir dar stop no momento, recortar e dali já alterar o script"</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="compare-col built">
+        <h3>✅ O que foi construído (06 jul.)</h3>
+        <ul class="check-list">
+          <li>
+            <span class="ico">✅</span>
+            <div>
+              <strong>log_poller.py</strong>
+              <span class="desc">Rolling poller · MinIO · polling 15s · auto-diagnose novos jobs</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico">✅</span>
+            <div>
+              <strong>crew_diagnose.py</strong>
+              <span class="desc">MetricsAnalyzer + RecommendationWriter · evidência real de hoje</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico">✅</span>
+            <div>
+              <strong>mcp/server.py</strong>
+              <span class="desc">4 tools: get_findings · get_stage_metrics · list_slow_apps · trigger_diagnosis</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico">✅</span>
+            <div>
+              <strong>ApexFinding persistido no ClickHouse</strong>
+              <span class="desc">apex.findings · JSON completo com root_cause + recommendation</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico">✅</span>
+            <div>
+              <strong>Protocolo MCP padrão</strong>
+              <span class="desc">Conectável a Claude Code, Cursor, Codex, qualquer IDE com MCP</span>
+            </div>
+          </li>
+          <li>
+            <span class="ico">🔶</span>
+            <div>
+              <strong>Edição in-situ</strong>
+              <span class="desc">Backlog Sprint 4 · callSite → git blame → fix sugerido</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────
+       SLIDE 3 · PIPELINE EM PRODUÇÃO
+  ────────────────────────────────────────────────────── -->
+  <section class="slide" id="slide-pipeline">
+    <div class="slide-badge">03 / 07</div>
+    <div class="kicker">Evidência de hoje · 06 Jul 2026</div>
+    <h2>Pipeline em produção</h2>
+
+    <!-- Flow diagram -->
+    <div class="card" style="margin-bottom:20px; padding:20px 24px;">
+      <div class="label" style="margin-bottom:14px">Fluxo de dados — app-20260706010516-0004</div>
+      <div class="pipeline">
+        <div class="pipe-node">
+          <div class="pipe-icon pn-spark">⚡</div>
+          <div class="pipe-label">Spark Job</div>
+          <div class="pipe-sub">plat-v0</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-icon pn-minio">🗄</div>
+          <div class="pipe-label">Event Log</div>
+          <div class="pipe-sub">MinIO · zstd</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-icon pn-ingest">📥</div>
+          <div class="pipe-label">event_log_<br>ingest.py</div>
+          <div class="pipe-sub">parse + load</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-icon pn-ch">🗃</div>
+          <div class="pipe-label">ClickHouse</div>
+          <div class="pipe-sub">5 stages · 7 tasks</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-icon pn-crew">🤖</div>
+          <div class="pipe-label">Crew.ai</div>
+          <div class="pipe-sub">2 agents</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-icon pn-finding">📋</div>
+          <div class="pipe-label">ApexFinding</div>
+          <div class="pipe-sub">JSON · persisted</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-icon pn-mcp">🔌</div>
+          <div class="pipe-label">MCP Server</div>
+          <div class="pipe-sub">4 tools</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-icon pn-ide">💻</div>
+          <div class="pipe-label">Claude Code<br>/ Cursor</div>
+          <div class="pipe-sub">IDE do eng.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2" style="flex:1; gap:16px;">
+      <!-- Metrics -->
+      <div>
+        <div class="label" style="margin-bottom:10px">Evidência — Stage 5 (bottleneck)</div>
+        <div class="metric-row">
+          <div class="metric-chip bad">
+            <span class="metric-val">180,493</span>
+            <span class="metric-lbl">ms · Stage 5</span>
+          </div>
+          <div class="metric-chip">
+            <span class="metric-val">1</span>
+            <span class="metric-lbl">task ativa</span>
+          </div>
+          <div class="metric-chip">
+            <span class="metric-val">8.8 KB</span>
+            <span class="metric-lbl">shuffle_read</span>
+          </div>
+          <div class="metric-chip warn">
+            <span class="metric-val">0.42</span>
+            <span class="metric-lbl">confidence</span>
+          </div>
+        </div>
+
+        <div class="label" style="margin-top:14px;margin-bottom:8px">Tier 4 escalation</div>
+        <div class="card" style="padding:12px 16px;">
+          <div style="font-size:12px;color:var(--text2);font-family:var(--font-mono);">
+            <span class="t-key">needs_judge</span><span class="t-gray"> = </span><span class="t-yellow">true</span>
+            <br>
+            <span class="t-key">judge_reason</span><span class="t-gray"> = </span><span class="t-string">"confidence=0.42 &lt; 0.6"</span>
+            <br><br>
+            <span class="t-green">✓ Contract validation passed</span>
+            <br>
+            <span class="t-green">✓ Opus escalation triggered</span>
+            <br>
+            <span class="t-green">✓ apex.findings persisted</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal output -->
+      <div class="terminal" style="font-size:12px;">
+        <div class="terminal-bar">
+          <div class="terminal-dot td-red"></div>
+          <div class="terminal-dot td-yellow"></div>
+          <div class="terminal-dot td-green"></div>
+          <div class="terminal-title">ApexFinding — app-20260706010516-0004</div>
+        </div>
+        <div class="terminal-body">
+<pre><span class="t-gray">{</span>
+  <span class="t-key">"pattern"</span><span class="t-gray">:</span> <span class="t-string">"other"</span><span class="t-gray">,</span>
+  <span class="t-key">"severity"</span><span class="t-gray">:</span> <span class="t-red">"high"</span><span class="t-gray">,</span>
+  <span class="t-key">"confidence"</span><span class="t-gray">:</span> <span class="t-num">0.42</span><span class="t-gray">,</span>
+  <span class="t-key">"bottleneck_stage_id"</span><span class="t-gray">:</span> <span class="t-num">5</span><span class="t-gray">,</span>
+  <span class="t-key">"root_cause"</span><span class="t-gray">:</span> <span class="t-string">"Stage 5 executa com apenas
+    1 task processando ~8.8 KB de shuffle_read
+    (0 bytes input, 0 spill, sem skew),
+    mas levou 180 segundos. Possível contenção
+    de recursos, bloqueio externo ou problema
+    no driver."</span><span class="t-gray">,</span>
+  <span class="t-key">"recommendation"</span><span class="t-gray">:</span> <span class="t-string">"Investigar contenção
+    externa no Stage 5: (1) verificar GC logs
+    e thread dumps; (2) checar lock em
+    datasource externo; (3) aumentar
+    spark.executor.memoryOverhead se
+    houver pressão de memória nativa;
+    (4) habilitar AQE."</span><span class="t-gray">,</span>
+  <span class="t-key">"evidence"</span><span class="t-gray">: {</span>
+    <span class="t-key">"key_metric"</span><span class="t-gray">:</span> <span class="t-string">"stage_5_duration_ms
+      vs shuffle_read_bytes"</span><span class="t-gray">,</span>
+    <span class="t-key">"key_value"</span><span class="t-gray">:</span> <span class="t-string">"180493 ms para 8818
+      bytes (1 task, 0 spill)"</span><span class="t-gray">,</span>
+    <span class="t-key">"expected_value"</span><span class="t-gray">:</span> <span class="t-string">"&lt; 5000 ms para
+      volume de 8.8 KB com 1 task"</span>
+  <span class="t-gray">},</span>
+  <span class="t-key">"needs_judge"</span><span class="t-gray">:</span> <span class="t-yellow">true</span><span class="t-gray">,</span>
+  <span class="t-key">"judge_reason"</span><span class="t-gray">:</span> <span class="t-string">"confidence=0.42 &lt; 0.6"</span>
+<span class="t-gray">}</span>
+<span class="t-green">✓ Finding persisted → apex.findings</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────
+       SLIDE 4 · APEX VS DATAFLINT
+  ────────────────────────────────────────────────────── -->
+  <section class="slide" id="slide-compare">
+    <div class="slide-badge">04 / 07</div>
+    <div class="kicker">Posicionamento competitivo</div>
+    <h2>Apex vs DataFlint</h2>
+
+    <div class="scroll-content">
+      <div class="card" style="padding:0; overflow:hidden;">
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th style="width:200px">Dimensão</th>
+              <th>DataFlint OSS</th>
+              <th>DataFlint SaaS</th>
+              <th class="col-apex">Apex V1 hoje</th>
+              <th class="col-potential">Apex potencial</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="row-dim">Intrusividade</td>
+              <td class="dim-col">JAR obrigatório</td>
+              <td class="dim-col">JAR obrigatório</td>
+              <td class="apex-col win-cell">Zero JAR ✅</td>
+              <td class="win-cell">Zero JAR ✅</td>
+            </tr>
+            <tr>
+              <td class="row-dim">Alertas cobertos</td>
+              <td class="dim-col">14 fixos</td>
+              <td class="dim-col">14 fixos</td>
+              <td class="apex-col">1 (skew) + pipeline</td>
+              <td>14+ extensíveis</td>
+            </tr>
+            <tr>
+              <td class="row-dim">Raciocínio sobre causa</td>
+              <td class="dim-col">❌ alerta binário</td>
+              <td>✅ chat LLM</td>
+              <td class="apex-col win-cell">⭐ 4 tiers + confiança</td>
+              <td class="win-cell">⭐ 4 tiers</td>
+            </tr>
+            <tr>
+              <td class="row-dim">Correlação com código</td>
+              <td class="dim-col">❌</td>
+              <td class="dim-col">❌</td>
+              <td class="apex-col" style="color:var(--orange)">🔶 callSite→git (dev)</td>
+              <td class="win-cell">⭐ único no mercado</td>
+            </tr>
+            <tr>
+              <td class="row-dim">Validação oracle</td>
+              <td class="dim-col">❌</td>
+              <td class="dim-col">❌</td>
+              <td class="apex-col win-cell">⭐ oracle.py</td>
+              <td class="win-cell">⭐ chain of custody</td>
+            </tr>
+            <tr>
+              <td class="row-dim">Extensibilidade</td>
+              <td class="dim-col">❌ fixo</td>
+              <td class="dim-col">❌ fixo</td>
+              <td class="apex-col win-cell">⭐ scenario.yaml</td>
+              <td class="win-cell">⭐ N cenários</td>
+            </tr>
+            <tr>
+              <td class="row-dim">Real-time</td>
+              <td class="dim-col">✅ :4040 live</td>
+              <td>✅ :4040 live</td>
+              <td class="apex-col" style="color:var(--orange)">🔶 polling 15s</td>
+              <td style="color:var(--orange)">🔶 rolling log</td>
+            </tr>
+            <tr>
+              <td class="row-dim">MCP nativo</td>
+              <td class="dim-col">❌</td>
+              <td class="dim-col">❌</td>
+              <td class="apex-col win-cell">✅ server.py</td>
+              <td class="win-cell">✅</td>
+            </tr>
+            <tr>
+              <td class="row-dim">UI visual</td>
+              <td class="dim-col">✅ heat map</td>
+              <td>✅ dashboard</td>
+              <td class="apex-col" style="color:var(--text2)">❌ CLI/API</td>
+              <td style="color:var(--text2)">🚫 decisão</td>
+            </tr>
+            <tr>
+              <td class="row-dim">Custo operacional</td>
+              <td class="dim-col">Free (JAR)</td>
+              <td style="color:var(--red)">Pago (SaaS)</td>
+              <td class="apex-col win-cell">Free ✅</td>
+              <td class="win-cell">Free ✅</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────
+       SLIDE 5 · ONDE GANHAMOS
+  ────────────────────────────────────────────────────── -->
+  <section class="slide" id="slide-wins">
+    <div class="slide-badge">05 / 07</div>
+    <div class="kicker">Vantagens competitivas confirmadas</div>
+    <h2>Onde ganhamos — 3 vitórias claras</h2>
+
+    <div class="grid3 scroll-content" style="flex:1; align-content:start;">
+      <div class="win-card w1">
+        <div class="win-number">01</div>
+        <div class="win-title">Raciocínio profundo</div>
+        <div class="win-sub">
+          Root cause com nome do stage, ratio, recomendação específica com config. DataFlint para em <em>"Partition Skew detected."</em>
+        </div>
+        <div class="win-evidence">
+          <strong>Apex:</strong> "Stage 5 · 180s · 8.8KB shuffle · 1 task → investigar GC + AQE"<br>
+          <strong>DataFlint:</strong> "⚠ Partition Skew detected."
+        </div>
+      </div>
+
+      <div class="win-card w2">
+        <div class="win-number">02</div>
+        <div class="win-title">Zero JAR</div>
+        <div class="win-sub">
+          Funciona em qualquer Spark sem modificar o cluster, classpath ou SparkSession. DataFlint exige JAR no classpath de cada job.
+        </div>
+        <div class="win-evidence">
+          <strong>Apex:</strong> lê event log após o job → zero intrusão<br>
+          <strong>DataFlint:</strong> --jars dataflint-sdk.jar → bloqueado em clusters gerenciados
+        </div>
+      </div>
+
+      <div class="win-card w3">
+        <div class="win-number">03</div>
+        <div class="win-title">MCP nativo</div>
+        <div class="win-sub">
+          Engenheiro pergunta ao Claude Code ou Cursor sobre o job e recebe diagnóstico + fix. DataFlint não tem interface de agente.
+        </div>
+        <div class="win-evidence">
+          <strong>Eng:</strong> "oi Claude Code, o que tá lento no job?"<br>
+          <strong>MCP:</strong> get_findings → root_cause + recomendação → resposta in-IDE
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <!-- Architecture tiers -->
+    <div class="label" style="margin-bottom:10px">4 Tiers — por que 0.42 de confiança é uma feature, não bug</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="tier-row" style="flex:1; min-width:200px;">
+        <div class="tier-num">Tier 1</div>
+        <div class="tier-name">Watcher</div>
+        <div class="tier-desc">Determinístico · sem LLM · detecta anti-patterns</div>
+        <div class="pill pill-green">estável</div>
+      </div>
+      <div class="tier-row" style="flex:1; min-width:200px;">
+        <div class="tier-num">Tier 2</div>
+        <div class="tier-name">Classifier</div>
+        <div class="tier-desc">LLM classifica o Finding emitido pelo Watcher</div>
+        <div class="pill pill-blue">pipeline</div>
+      </div>
+      <div class="tier-row" style="flex:1; min-width:200px;">
+        <div class="tier-num">Tier 3</div>
+        <div class="tier-name">Coordinator</div>
+        <div class="tier-desc">Sonnet orquestra diagnóstico completo</div>
+        <div class="pill pill-blue">pipeline</div>
+      </div>
+      <div class="tier-row" style="flex:1; min-width:200px;">
+        <div class="tier-num">Tier 4</div>
+        <div class="tier-name">Judge ⭐</div>
+        <div class="tier-desc">Opus quando confiança &lt; 0.6 — <strong>ativado hoje</strong></div>
+        <div class="pill pill-purple">ativado</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────
+       SLIDE 6 · ONDE NÃO ESTAMOS AINDA
+  ────────────────────────────────────────────────────── -->
+  <section class="slide" id="slide-gaps">
+    <div class="slide-badge">06 / 07</div>
+    <div class="kicker">Honestidade técnica</div>
+    <h2>Onde não estamos ainda</h2>
+
+    <div class="grid3 scroll-content" style="flex:1; align-content:start;">
+      <div class="gap-card g1">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-size:22px">🎯</span>
+          <div class="gap-title">Cobertura de cenários</div>
+        </div>
+        <div class="gap-body">
+          <strong>Hoje:</strong> 1 cenário ativo (skew). DataFlint tem 14 alertas prontos.<br><br>
+          Cada <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:3px;">scenario.yaml</code> novo = 1–2 dias de trabalho.
+        </div>
+        <div class="gap-fix">
+          Sprint 2 → +3-5 cenários: spill · broadcast_miss · parallelism_collapse
+        </div>
+      </div>
+
+      <div class="gap-card g2">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-size:22px">⏱</span>
+          <div class="gap-title">Real-time verdadeiro</div>
+        </div>
+        <div class="gap-body">
+          <strong>Hoje:</strong> polling de 15s via <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:3px;">log_poller.py</code>. Não é ao vivo durante execução como DataFlint :4040.<br><br>
+          O poller detecta após o evento, não durante.
+        </div>
+        <div class="gap-fix" style="border-left-color:var(--yellow)">
+          Sprint 3 → Scala JAR listener (1 sprint) = real-time verdadeiro
+        </div>
+      </div>
+
+      <div class="gap-card g3">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-size:22px">🖥</span>
+          <div class="gap-title">UI visual</div>
+        </div>
+        <div class="gap-body">
+          <strong>Hoje:</strong> sem heat map, sem dashboard de stages. DataFlint tem UI visual rica com sparklines e flame graphs.<br><br>
+          <strong>Decisão consciente:</strong> foco em API/MCP como diferencial.
+        </div>
+        <div class="gap-fix" style="border-left-color:var(--red)">
+          Decisão pendente — UI é backlog não priorizado (foco: agente)
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="quote-block">
+      "se você conseguir dar stop no momento, recortar e dali já alterar o script que faz"
+      <div class="quote-attr">— Luan, 30 jun. · Este é o Sprint 4. Chegamos até o Sprint 1 em 6 dias.</div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────
+       SLIDE 7 · PRÓXIMOS PASSOS
+  ────────────────────────────────────────────────────── -->
+  <section class="slide" id="slide-next">
+    <div class="slide-badge">07 / 07</div>
+    <div class="kicker">Roadmap priorizado</div>
+    <h2>Próximos passos</h2>
+
+    <div class="card scroll-content" style="flex:1; padding:0; overflow:hidden; overflow-y:auto;">
+      <div class="sprint-row">
+        <div class="sprint-tag s1">Sprint 1</div>
+        <div class="sprint-content">
+          <div class="sprint-title">Ligar MCP no Claude Code do Luan</div>
+          <div class="sprint-desc">Conectar mcp/server.py ao IDE → demo ao vivo do fluxo completo. Engenheiro pergunta, Apex responde com root cause.</div>
+        </div>
+        <div class="sprint-time">~30 min</div>
+      </div>
+      <div class="sprint-row">
+        <div class="sprint-tag s1">Sprint 1</div>
+        <div class="sprint-content">
+          <div class="sprint-title">Demo log_poller.py com job real no plat-v0</div>
+          <div class="sprint-desc">Rodar job → poller detecta em ≤15s → diagnóstico automático → Finding no ClickHouse. Demonstração do "real-time" ao Luan.</div>
+        </div>
+        <div class="sprint-time">~2h</div>
+      </div>
+      <div class="sprint-row">
+        <div class="sprint-tag s2">Sprint 2</div>
+        <div class="sprint-content">
+          <div class="sprint-title">Adicionar 3–5 cenários novos</div>
+          <div class="sprint-desc">
+            <code style="font-size:11px">spill_on_join</code> ·
+            <code style="font-size:11px">broadcast_miss</code> ·
+            <code style="font-size:11px">parallelism_collapse</code> ·
+            <code style="font-size:11px">small_files_storm</code>
+            <br>Cada scenario.yaml = Watcher + Classifier + teste oracle.
+          </div>
+        </div>
+        <div class="sprint-time">~1-2 dias cada</div>
+      </div>
+      <div class="sprint-row">
+        <div class="sprint-tag s3">Sprint 3</div>
+        <div class="sprint-content">
+          <div class="sprint-title">Scala JAR listener — real-time verdadeiro</div>
+          <div class="sprint-desc">SparkListener in-process via spark.extraListeners → streaming para ClickHouse durante execução → remove dependência do event log pós-job. Fecha gap com DataFlint :4040.</div>
+        </div>
+        <div class="sprint-time">~1 sprint</div>
+      </div>
+      <div class="sprint-row">
+        <div class="sprint-tag s4">Sprint 4</div>
+        <div class="sprint-content">
+          <div class="sprint-title">Code correlation — callSite → git blame → fix</div>
+          <div class="sprint-desc">
+            Anti-pattern detectado → callSite no event log → git blame → "este anti-pattern foi introduzido no commit X por autor Y" → sugestão de fix inline no IDE.
+            <br><span style="color:var(--purple)">⭐ único no mercado</span>
+          </div>
+        </div>
+        <div class="sprint-time">~2 sprints</div>
+      </div>
+    </div>
+
+    <div class="hr" style="margin:16px 0 12px"></div>
+
+    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+      <div class="card" style="padding:12px 18px; flex:1; min-width:200px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:24px">🎯</span>
+        <div>
+          <div style="font-size:13px; font-weight:700; color:var(--text);">Próxima ação imediata</div>
+          <div style="font-size:12px; color:var(--text2);">Conectar MCP ao Claude Code do Luan · 30 minutos · hoje</div>
+        </div>
+      </div>
+      <div class="card" style="padding:12px 18px; flex:1; min-width:200px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:24px">📋</span>
+        <div>
+          <div style="font-size:13px; font-weight:700; color:var(--text);">Issues ativas</div>
+          <div style="font-size:12px; color:var(--text2);">#17 Pipeline · #18 OTel · #19 plat-v0 · #20 Rec Engine · #21 CI</div>
+        </div>
+      </div>
+      <div class="card" style="padding:12px 18px; flex:1; min-width:200px; display:flex; align-items:center; gap:12px;">
+        <div class="status-dot"></div>
+        <div>
+          <div style="font-size:13px; font-weight:700; color:var(--text);">Status do pipeline</div>
+          <div style="font-size:12px; color:var(--green);">LIVE · 06 Jul 2026 · 40 testes passando</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /#deck -->
+
+<!-- Navigation -->
+<div id="nav">
+  <button id="btn-prev" onclick="go(-1)" disabled>←</button>
+  <div id="dots"></div>
+  <span id="counter">1 / 7</span>
+  <button id="btn-next" onclick="go(1)">→</button>
+</div>
+
+<div id="hint">← → arrow keys to navigate</div>
+
+<script>
+(function () {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsContainer = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const progress = document.getElementById('progress');
+  const total = slides.length;
+  let current = 0;
+  let animating = false;
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotsContainer.appendChild(d);
+  });
+
+  function updateUI() {
+    const dots = dotsContainer.querySelectorAll('.dot');
+    dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    counter.textContent = (current + 1) + ' / ' + total;
+    btnPrev.disabled = current === 0;
+    btnNext.disabled = current === total - 1;
+    progress.style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  function goTo(idx) {
+    if (animating || idx === current || idx < 0 || idx >= total) return;
+    animating = true;
+
+    const prev = slides[current];
+    const next = slides[idx];
+
+    prev.classList.add('exit');
+    next.style.transform = 'translateX(60px)';
+    next.style.opacity = '0';
+    next.classList.add('active');
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        next.style.transform = '';
+        next.style.opacity = '';
+        setTimeout(() => {
+          prev.classList.remove('active', 'exit');
+          next.style.transform = null;
+          next.style.opacity = null;
+          animating = false;
+        }, 360);
+      });
+    });
+
+    current = idx;
+    updateUI();
+  }
+
+  window.go = function (delta) { goTo(current + delta); };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault(); go(1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault(); go(-1);
+    }
+  });
+
+  // Touch swipe
+  let touchX = null;
+  document.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    touchX = null;
+  }, { passive: true });
+
+  updateUI();
+})();
+</script>
+</body>
+</html>
