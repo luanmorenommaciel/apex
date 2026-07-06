@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "apex": {
+      "command": "python",
+      "args": ["C:/Users/Guest/Claude/Projects/Data Ship/v1-skeleton/mcp/server.py"],
+      "env": {
+        "APEX_CH_HOST": "localhost",
+        "APEX_CH_PORT": "28123",
+        "APEX_CH_USER": "spv0",
+        "APEX_CH_PASSWORD": "spv0clickhouse123",
+        "ANTHROPIC_API_KEY": ""
+      }
+    }
+  }
+}
