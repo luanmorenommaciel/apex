@@ -202,24 +202,36 @@ class ApexSparkListener:
     def onResourceProfileAdded(self, event) -> None: pass
 
 
-def attach_to_spark(spark, app_id: str = None, ch_host: str = "clickhouse") -> ApexSparkListener:
+def attach_to_spark(spark, app_id: str = None, ch_host: str = None) -> ApexSparkListener:
     """
     Registra o ApexSparkListener no SparkContext.
 
     Deve ser chamado ANTES de qualquer ação Spark para capturar todos os eventos.
+    Credenciais lidas de env vars: APEX_CH_HOST, APEX_CH_PORT, APEX_CH_USER, APEX_CH_PASSWORD.
 
     Args:
         spark:   SparkSession ativa
         app_id:  ID da aplicação (default: spark.sparkContext.applicationId)
-        ch_host: Host do ClickHouse (default: "clickhouse" para docker-compose)
+        ch_host: Host do ClickHouse (default: env APEX_CH_HOST ou "clickhouse")
 
     Returns:
         listener: instância do ApexSparkListener registrada
     """
+    import os
     sc = spark.sparkContext
     _app_id = app_id or sc.applicationId
+    _ch_host     = ch_host or os.getenv("APEX_CH_HOST", "clickhouse")
+    _ch_port     = int(os.getenv("APEX_CH_PORT", "8123"))
+    _ch_user     = os.getenv("APEX_CH_USER", "apex")
+    _ch_password = os.getenv("APEX_CH_PASSWORD", "apex123")
 
-    listener = ApexSparkListener(app_id=_app_id, ch_host=ch_host)
+    listener = ApexSparkListener(
+        app_id=_app_id,
+        ch_host=_ch_host,
+        ch_port=_ch_port,
+        ch_user=_ch_user,
+        ch_password=_ch_password,
+    )
 
     # Registra via py4j no Scala SparkContext
     sc._jvm.org.apache.spark.SparkContext.getOrCreate().addSparkListener(listener)
