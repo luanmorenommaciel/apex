@@ -14,6 +14,9 @@
       --apex-gray: #f5f5f5;
       --apex-text: #212121;
       --apex-text-light: #757575;
+      --tier-green: #69f0ae;
+      --tier-yellow: #ffd54f;
+      --tier-red: #ff5252;
     }
 
     * {
@@ -64,7 +67,6 @@
       transform: translateX(-60px);
     }
 
-    /* ===== SLIDE 1: TITLE ===== */
     .slide-title {
       text-align: center;
     }
@@ -106,7 +108,6 @@
       color: rgba(255,255,255,0.5);
     }
 
-    /* ===== HEADERS ===== */
     .slide-header {
       text-align: center;
       margin-bottom: 4vh;
@@ -132,7 +133,6 @@
       margin-top: 1.5vh;
     }
 
-    /* ===== CONTENT CARDS ===== */
     .content-card {
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.15);
@@ -170,7 +170,6 @@
       font-weight: bold;
     }
 
-    /* ===== TWO COLUMN ===== */
     .two-col {
       display: flex;
       gap: 3vw;
@@ -219,7 +218,6 @@
       color: #ff8a65;
     }
 
-    /* ===== TABLE ===== */
     .comparison-table {
       width: 100%;
       max-width: 85vw;
@@ -247,20 +245,10 @@
       border-bottom: none;
     }
 
-    .check {
-      color: #69f0ae;
-      font-weight: bold;
-    }
+    .check { color: #69f0ae; font-weight: bold; }
+    .partial { color: #ffd54f; }
+    .missing { color: #ff5252; }
 
-    .partial {
-      color: #ffd54f;
-    }
-
-    .missing {
-      color: #ff5252;
-    }
-
-    /* ===== GAP CARDS ===== */
     .gap-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -288,7 +276,6 @@
       color: rgba(255,255,255,0.75);
     }
 
-    /* ===== ARCHITECTURE ===== */
     .arch-diagram {
       display: flex;
       align-items: center;
@@ -311,22 +298,10 @@
       border-color: var(--apex-orange);
     }
 
-    .arch-box h4 {
-      font-size: 1vw;
-      margin-bottom: 0.5vh;
-    }
+    .arch-box h4 { font-size: 1vw; margin-bottom: 0.5vh; }
+    .arch-box span { font-size: 0.85vw; color: rgba(255,255,255,0.6); }
+    .arch-arrow { font-size: 2vw; color: var(--apex-orange); }
 
-    .arch-box span {
-      font-size: 0.85vw;
-      color: rgba(255,255,255,0.6);
-    }
-
-    .arch-arrow {
-      font-size: 2vw;
-      color: var(--apex-orange);
-    }
-
-    /* ===== ROADMAP ===== */
     .roadmap {
       display: flex;
       align-items: flex-start;
@@ -356,9 +331,7 @@
       color: var(--apex-orange);
     }
 
-    .roadmap-step:last-child::after {
-      display: none;
-    }
+    .roadmap-step:last-child::after { display: none; }
 
     .roadmap-step .version {
       font-size: 1.4vw;
@@ -387,7 +360,6 @@
       margin-right: 0.5vw;
     }
 
-    /* ===== DECISIONS ===== */
     .decision-list {
       width: 100%;
       max-width: 70vw;
@@ -424,7 +396,6 @@
       padding-top: 0.3vh;
     }
 
-    /* ===== NEXT STEPS ===== */
     .steps-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -442,21 +413,324 @@
       gap: 1vw;
     }
 
-    .step-card .icon {
-      font-size: 2vw;
+    .step-card .icon { font-size: 2vw; }
+    .step-card h4 { font-size: 1.1vw; margin-bottom: 0.3vh; }
+    .step-card p { font-size: 0.95vw; color: rgba(255,255,255,0.7); }
+
+    /* ===== NEW SLIDE STYLES ===== */
+    .flow-pipeline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1vw;
+      flex-wrap: wrap;
+      max-width: 90vw;
+      margin-top: 2vh;
     }
 
-    .step-card h4 {
-      font-size: 1.1vw;
-      margin-bottom: 0.3vh;
+    .flow-box {
+      border-radius: 10px;
+      padding: 1.5vh 1.2vw;
+      text-align: center;
+      min-width: 9vw;
+      font-size: 0.9vw;
+      font-weight: 600;
+      border: 2px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      position: relative;
     }
 
-    .step-card p {
-      font-size: 0.95vw;
+    .flow-box .flow-label {
+      font-size: 0.8vw;
+      font-weight: 400;
+      color: rgba(255,255,255,0.6);
+      margin-top: 0.3vh;
+    }
+
+    .flow-box.tier-0 { border-color: #4fc3f7; background: rgba(79,195,247,0.1); }
+    .flow-box.tier-1 { border-color: #69f0ae; background: rgba(105,240,174,0.1); }
+    .flow-box.tier-2 { border-color: #ffd54f; background: rgba(255,213,79,0.1); }
+    .flow-box.tier-3 { border-color: #ff8a65; background: rgba(255,138,101,0.1); }
+    .flow-box.tier-4 { border-color: #b39ddb; background: rgba(179,157,219,0.1); }
+    .flow-box.tier-5 { border-color: #f06292; background: rgba(240,98,146,0.1); }
+    .flow-box.tier-6 { border-color: var(--apex-orange); background: rgba(255,111,0,0.15); }
+    .flow-box.tier-7 { border-color: #81c784; background: rgba(129,199,132,0.1); }
+    .flow-box.tier-8 { border-color: #fff176; background: rgba(255,241,118,0.1); }
+
+    .flow-arrow { font-size: 1.8vw; color: var(--apex-orange); }
+
+    .sequence-diagram {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 92vw;
+      margin-top: 2vh;
+      position: relative;
+      padding: 0 1vw;
+    }
+
+    .seq-actor {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 7vw;
+      flex: 1;
+      position: relative;
+    }
+
+    .seq-actor-name {
+      font-size: 0.85vw;
+      font-weight: 700;
+      text-align: center;
+      padding: 0.8vh 0.5vw;
+      background: rgba(255,255,255,0.12);
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      width: 100%;
+      margin-bottom: 1vh;
+    }
+
+    .seq-lifeline {
+      width: 2px;
+      height: 38vh;
+      background: rgba(255,255,255,0.15);
+      position: relative;
+    }
+
+    .seq-msg {
+      position: absolute;
+      font-size: 0.75vw;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      padding: 0.6vh 0.8vw;
+      white-space: nowrap;
+      color: rgba(255,255,255,0.95);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 0.4vw;
+    }
+
+    .seq-msg-num {
+      background: var(--apex-orange);
+      color: var(--apex-white);
+      border-radius: 50%;
+      width: 1.4vw;
+      height: 1.4vw;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7vw;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .json-card {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 2vh 2vw;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 0.85vw;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.9);
+      max-width: 40vw;
+      overflow-x: auto;
+    }
+
+    .json-key { color: #9cdcfe; }
+    .json-str { color: #ce9178; }
+    .json-num { color: #b5cea8; }
+    .json-bool { color: #569cd6; }
+
+    .storytelling-wrap {
+      display: flex;
+      gap: 3vw;
+      align-items: flex-start;
+      max-width: 90vw;
+      width: 100%;
+    }
+
+    .story-narrative {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 3vh 2.5vw;
+      border-left: 4px solid var(--apex-orange);
+      font-size: 1.05vw;
+      line-height: 1.8;
+      color: rgba(255,255,255,0.85);
+    }
+
+    .story-narrative blockquote {
+      border-left: 3px solid var(--apex-orange);
+      padding-left: 1.2vw;
+      margin: 2vh 0;
+      font-style: italic;
       color: rgba(255,255,255,0.7);
     }
 
-    /* ===== NAVIGATION HINT ===== */
+    .story-beforeafter {
+      display: flex;
+      gap: 1.5vw;
+      margin-top: 2vh;
+    }
+
+    .story-ba-card {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 2vh 1.5vw;
+      text-align: center;
+    }
+
+    .story-ba-card .ba-label {
+      font-size: 0.85vw;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.8vh;
+    }
+
+    .story-ba-card .ba-value {
+      font-size: 1.8vw;
+      font-weight: 700;
+      color: var(--apex-orange);
+    }
+
+    .story-ba-card .ba-value.green { color: #69f0ae; }
+
+    .speedup-badge {
+      display: inline-block;
+      background: rgba(105,240,174,0.15);
+      border: 1px solid #69f0ae;
+      color: #69f0ae;
+      padding: 0.6vh 1.2vw;
+      border-radius: 20px;
+      font-size: 1vw;
+      font-weight: 700;
+      margin-top: 1.5vh;
+    }
+
+    .comparison-vs {
+      margin-top: 2vh;
+      padding: 1.5vh 1.5vw;
+      background: rgba(0,0,0,0.2);
+      border-radius: 10px;
+      font-size: 0.95vw;
+      line-height: 1.6;
+    }
+
+    .comparison-vs .vs-dataflint { color: #ff5252; }
+    .comparison-vs .vs-apex { color: #69f0ae; }
+
+    .validation-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1vw;
+      flex-wrap: wrap;
+      max-width: 90vw;
+      margin-top: 2vh;
+    }
+
+    .val-box {
+      border-radius: 10px;
+      padding: 1.5vh 1.2vw;
+      text-align: center;
+      min-width: 8vw;
+      font-size: 0.85vw;
+      font-weight: 600;
+      border: 2px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      position: relative;
+    }
+
+    .val-box .val-label {
+      font-size: 0.75vw;
+      font-weight: 400;
+      color: rgba(255,255,255,0.6);
+      margin-top: 0.3vh;
+    }
+
+    .val-box.valid { border-color: var(--tier-green); background: rgba(105,240,174,0.1); }
+    .val-box.invalid { border-color: var(--tier-red); background: rgba(255,82,82,0.1); }
+    .val-box.indeterminate { border-color: var(--tier-yellow); background: rgba(255,213,79,0.1); }
+
+    .val-decision {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5vh;
+      font-size: 0.8vw;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .val-decision .diamond {
+      width: 3vw;
+      height: 3vw;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.3);
+      transform: rotate(45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0.5vh 0;
+    }
+
+    .val-decision .diamond-inner {
+      transform: rotate(-45deg);
+      font-size: 0.75vw;
+      font-weight: 700;
+    }
+
+    .val-arrow { font-size: 1.6vw; color: rgba(255,255,255,0.4); }
+
+    .val-branch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5vh;
+      font-size: 0.75vw;
+    }
+
+    .val-branch .branch-label { font-weight: 700; }
+    .val-branch .branch-label.green { color: var(--tier-green); }
+    .val-branch .branch-label.yellow { color: var(--tier-yellow); }
+    .val-branch .branch-label.red { color: var(--tier-red); }
+
+    .val-bottom-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1vw;
+      margin-top: 1.5vh;
+      flex-wrap: wrap;
+    }
+
+    .tier-legend {
+      display: flex;
+      gap: 1.5vw;
+      margin-top: 2vh;
+      font-size: 0.85vw;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .tier-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4vw;
+    }
+
+    .tier-dot {
+      width: 0.8vw;
+      height: 0.8vw;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
     .nav-hint {
       position: fixed;
       bottom: 2vh;
@@ -473,7 +747,6 @@
       font-family: inherit;
     }
 
-    /* ===== PROGRESS BAR ===== */
     .progress-bar {
       position: fixed;
       bottom: 0;
@@ -484,7 +757,6 @@
       z-index: 100;
     }
 
-    /* ===== SLIDE NUMBER ===== */
     .slide-number {
       position: fixed;
       bottom: 2vh;
@@ -494,7 +766,6 @@
       z-index: 100;
     }
 
-    /* ===== RESPONSIVE ===== */
     @media (max-width: 1024px) {
       .slide { padding: 3vh 4vw; }
       .slide-title .logo { font-size: 8vw; }
@@ -508,6 +779,15 @@
       .roadmap-step::after { display: none; }
       .steps-grid { grid-template-columns: 1fr; }
       .two-col { flex-direction: column; }
+      .flow-pipeline { gap: 1.5vh; }
+      .flow-box { min-width: 15vw; font-size: 1.5vw; }
+      .flow-arrow { font-size: 3vw; }
+      .sequence-diagram { flex-wrap: wrap; gap: 2vw; }
+      .seq-actor-name { font-size: 1.5vw; }
+      .seq-msg { font-size: 1.2vw; }
+      .json-card { font-size: 1.4vw; }
+      .storytelling-wrap { flex-direction: column; }
+      .validation-flow { flex-direction: column; }
     }
 
     @media (max-width: 600px) {
@@ -516,6 +796,9 @@
       .slide-header h2 { font-size: 5vw; }
       .decision-item { flex-direction: column; gap: 1vh; }
       .decision-item .num { width: 8vw; height: 8vw; font-size: 3vw; }
+      .flow-pipeline { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+      .seq-actor { min-width: 20vw; }
     }
   </style>
 </head>
@@ -523,7 +806,6 @@
 
 <div class="presentation" id="presentation">
 
-  <!-- SLIDE 1: TÍTULO -->
   <div class="slide active" data-index="0">
     <div class="slide-title">
       <div class="logo">Apex</div>
@@ -533,7 +815,6 @@
     </div>
   </div>
 
-  <!-- SLIDE 2: CONTEXTO -->
   <div class="slide" data-index="1">
     <div class="slide-header">
       <h2>Contexto</h2>
@@ -552,7 +833,6 @@
     </div>
   </div>
 
-  <!-- SLIDE 3: BRANCH COWORK -->
   <div class="slide" data-index="2">
     <div class="slide-header">
       <h2>Branch <code>cowork</code></h2>
@@ -571,7 +851,6 @@
     </div>
   </div>
 
-  <!-- SLIDE 4: BRANCH KIMI -->
   <div class="slide" data-index="3">
     <div class="slide-header">
       <h2>Branch <code>kimi</code></h2>
@@ -590,7 +869,6 @@
     </div>
   </div>
 
-  <!-- SLIDE 5: COMPARATIVO -->
   <div class="slide" data-index="4">
     <div class="slide-header">
       <h2>Comparativo Lado a Lado</h2>
@@ -606,46 +884,17 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>Orquestração Multi-Agente</td>
-          <td class="check">✓ CrewAI nativo</td>
-          <td class="partial">~ Planejado</td>
-        </tr>
-        <tr>
-          <td>Performance / Latência</td>
-          <td class="partial">~ Python (média)</td>
-          <td class="check">✓ Go (alta)</td>
-        </tr>
-        <tr>
-          <td>Documentação Técnica</td>
-          <td class="partial">~ Básica</td>
-          <td class="check">✓ Completa + ADRs</td>
-        </tr>
-        <tr>
-          <td>Testes Automatizados</td>
-          <td class="check">✓ Suite existente</td>
-          <td class="partial">~ Em estruturação</td>
-        </tr>
-        <tr>
-          <td>API / Integração</td>
-          <td class="missing">✗ Não priorizado</td>
-          <td class="check">✓ REST definida</td>
-        </tr>
-        <tr>
-          <td>Memória / Estado</td>
-          <td class="check">✓ CrewAI tasks</td>
-          <td class="partial">~ Em definição</td>
-        </tr>
-        <tr>
-          <td>Desacoplamento</td>
-          <td class="partial">~ Acoplado ao CrewAI</td>
-          <td class="check">✓ Core isolado</td>
-        </tr>
+        <tr><td>Orquestração Multi-Agente</td><td class="check">✓ CrewAI nativo</td><td class="partial">~ Planejado</td></tr>
+        <tr><td>Performance / Latência</td><td class="partial">~ Python (média)</td><td class="check">✓ Go (alta)</td></tr>
+        <tr><td>Documentação Técnica</td><td class="partial">~ Básica</td><td class="check">✓ Completa + ADRs</td></tr>
+        <tr><td>Testes Automatizados</td><td class="check">✓ Suite existente</td><td class="partial">~ Em estruturação</td></tr>
+        <tr><td>API / Integração</td><td class="missing">✗ Não priorizado</td><td class="check">✓ REST definida</td></tr>
+        <tr><td>Memória / Estado</td><td class="check">✓ CrewAI tasks</td><td class="partial">~ Em definição</td></tr>
+        <tr><td>Desacoplamento</td><td class="partial">~ Acoplado ao CrewAI</td><td class="check">✓ Core isolado</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- SLIDE 6: GAPS -->
   <div class="slide" data-index="5">
     <div class="slide-header">
       <h2>Gaps Identificados</h2>
@@ -653,34 +902,15 @@
       <p class="lead">O que falta em cada vertente para atingir a V1.0 unificada</p>
     </div>
     <div class="gap-grid">
-      <div class="gap-card">
-        <h4>🔵 Orquestração</h4>
-        <p>A branch <strong>kimi</strong> ainda não tem orquestração multi-agente. Precisamos portar o modelo de tasks do CrewAI ou implementar equivalente nativo em Go.</p>
-      </div>
-      <div class="gap-card">
-        <h4>🟠 Performance</h4>
-        <p>A branch <strong>cowork</strong> depende do Python, o que impõe limites de latência. O core em Go da <strong>kimi</strong> pode ser o "motor", mas precisa de bindings.</p>
-      </div>
-      <div class="gap-card">
-        <h4>🟡 Testes</h4>
-        <p>A <strong>kimi</strong> carece de testes robustos. A <strong>cowork</strong> tem testes, mas precisam ser adaptados para uma arquitetura híbrida.</p>
-      </div>
-      <div class="gap-card">
-        <h4>🟢 Documentação</h4>
-        <p>A <strong>cowork</strong> tem docs esparsos. Precisamos unificar a documentação em um único portal com ADRs que cubram todo o sistema.</p>
-      </div>
-      <div class="gap-card">
-        <h4>🔴 API Unificada</h4>
-        <p>Não existe uma API única que exponha tanto a orquestração CrewAI quanto o core Go. Isso é crítico para integração.</p>
-      </div>
-      <div class="gap-card">
-        <h4>🟣 Estado / Memória</h4>
-        <p>A persistência de estado entre execuções é tratada de forma diferente em cada branch. Precisamos de uma camada comum.</p>
-      </div>
+      <div class="gap-card"><h4>🔵 Orquestração</h4><p>A branch <strong>kimi</strong> ainda não tem orquestração multi-agente. Precisamos portar o modelo de tasks do CrewAI ou implementar equivalente nativo em Go.</p></div>
+      <div class="gap-card"><h4>🟠 Performance</h4><p>A branch <strong>cowork</strong> depende do Python, o que impõe limites de latência. O core em Go da <strong>kimi</strong> pode ser o "motor", mas precisa de bindings.</p></div>
+      <div class="gap-card"><h4>🟡 Testes</h4><p>A <strong>kimi</strong> carece de testes robustos. A <strong>cowork</strong> tem testes, mas precisam ser adaptados para uma arquitetura híbrida.</p></div>
+      <div class="gap-card"><h4>🟢 Documentação</h4><p>A <strong>cowork</strong> tem docs esparsos. Precisamos unificar a documentação em um único portal com ADRs que cubram todo o sistema.</p></div>
+      <div class="gap-card"><h4>🔴 API Unificada</h4><p>Não existe uma API única que exponha tanto a orquestração CrewAI quanto o core Go. Isso é crítico para integração.</p></div>
+      <div class="gap-card"><h4>🟣 Estado / Memória</h4><p>A persistência de estado entre execuções é tratada de forma diferente em cada branch. Precisamos de uma camada comum.</p></div>
     </div>
   </div>
 
-  <!-- SLIDE 7: PROPOSTA DE UNIFICAÇÃO -->
   <div class="slide" data-index="6">
     <div class="slide-header">
       <h2>Proposta de Unificação</h2>
@@ -690,25 +920,13 @@
     <div class="content-card" style="max-width: 85vw;">
       <h3>🏗️ Visão Arquitetural</h3>
       <div class="arch-diagram">
-        <div class="arch-box">
-          <h4>API Gateway</h4>
-          <span>REST / WebSocket</span>
-        </div>
+        <div class="arch-box"><h4>API Gateway</h4><span>REST / WebSocket</span></div>
         <div class="arch-arrow">→</div>
-        <div class="arch-box core">
-          <h4>Core Engine</h4>
-          <span>Go — baixa latência</span>
-        </div>
+        <div class="arch-box core"><h4>Core Engine</h4><span>Go — baixa latência</span></div>
         <div class="arch-arrow">→</div>
-        <div class="arch-box">
-          <h4>Orquestrador</h4>
-          <span>CrewAI / Nativo</span>
-        </div>
+        <div class="arch-box"><h4>Orquestrador</h4><span>CrewAI / Nativo</span></div>
         <div class="arch-arrow">→</div>
-        <div class="arch-box">
-          <h4>Agentes</h4>
-          <span>Pluggable</span>
-        </div>
+        <div class="arch-box"><h4>Agentes</h4><span>Pluggable</span></div>
       </div>
       <div style="margin-top: 3vh; font-size: 1.1vw; line-height: 2; text-align: center; color: rgba(255,255,255,0.8);">
         <strong style="color: var(--apex-orange);">Princípio:</strong> O Core em Go gerencia estado, filas e API.<br>
@@ -718,7 +936,6 @@
     </div>
   </div>
 
-  <!-- SLIDE 8: ROADMAP -->
   <div class="slide" data-index="7">
     <div class="slide-header">
       <h2>Roadmap</h2>
@@ -727,39 +944,20 @@
     </div>
     <div class="roadmap">
       <div class="roadmap-step">
-        <div class="version">V0.1</div>
-        <div class="phase">Convergência</div>
-        <ul>
-          <li>Merge das branches</li>
-          <li>Definição de contratos</li>
-          <li>Estrutura de pastas unificada</li>
-          <li>CI/CD comum</li>
-        </ul>
+        <div class="version">V0.1</div><div class="phase">Convergência</div>
+        <ul><li>Merge das branches</li><li>Definição de contratos</li><li>Estrutura de pastas unificada</li><li>CI/CD comum</li></ul>
       </div>
       <div class="roadmap-step">
-        <div class="version">V0.2</div>
-        <div class="phase">Integração</div>
-        <ul>
-          <li>Core Go + CrewAI bridge</li>
-          <li>API unificada funcionando</li>
-          <li>Testes de integração</li>
-          <li>Docs migradas</li>
-        </ul>
+        <div class="version">V0.2</div><div class="phase">Integração</div>
+        <ul><li>Core Go + CrewAI bridge</li><li>API unificada funcionando</li><li>Testes de integração</li><li>Docs migradas</li></ul>
       </div>
       <div class="roadmap-step">
-        <div class="version">V1.0</div>
-        <div class="phase">Consolidação</div>
-        <ul>
-          <li>Orquestrador nativo opcional</li>
-          <li>Performance otimizada</li>
-          <li>100% test coverage</li>
-          <li>Release estável</li>
-        </ul>
+        <div class="version">V1.0</div><div class="phase">Consolidação</div>
+        <ul><li>Orquestrador nativo opcional</li><li>Performance otimizada</li><li>100% test coverage</li><li>Release estável</li></ul>
       </div>
     </div>
   </div>
 
-  <!-- SLIDE 9: DECISÕES PENDENTES -->
   <div class="slide" data-index="8">
     <div class="slide-header">
       <h2>Decisões Pendentes do Commander</h2>
@@ -767,26 +965,13 @@
       <p class="lead">O que precisamos que o Luan defina para seguir</p>
     </div>
     <div class="decision-list">
-      <div class="decision-item">
-        <div class="num">1</div>
-        <div class="text"><strong>Prioridade de performance vs. velocidade:</strong> Mantemos CrewAI como orquestrador principal (mais rápido de implementar) ou investimos no orquestrador nativo Go já na V0.2?</div>
-      </div>
-      <div class="decision-item">
-        <div class="num">2</div>
-        <div class="text"><strong>Stack de testes:</strong> Unificamos em Go (testes de integração) ou mantemos testes Python para a camada de agentes?</div>
-      </div>
-      <div class="decision-item">
-        <div class="num">3</div>
-        <div class="text"><strong>Timeline:</strong> Qual é a data-alvo para V0.1 estar em produção? Isso define se fazemos merge rápido ou refinamos antes.</div>
-      </div>
-      <div class="decision-item">
-        <div class="num">4</div>
-        <div class="text"><strong>Escopo de agentes:</strong> Quantos agentes-piloto na V0.1? Apenas os 3 do CrewAI ou incluímos novos papéis já na unificação?</div>
-      </div>
+      <div class="decision-item"><div class="num">1</div><div class="text"><strong>Prioridade de performance vs. velocidade:</strong> Mantemos CrewAI como orquestrador principal (mais rápido de implementar) ou investimos no orquestrador nativo Go já na V0.2?</div></div>
+      <div class="decision-item"><div class="num">2</div><div class="text"><strong>Stack de testes:</strong> Unificamos em Go (testes de integração) ou mantemos testes Python para a camada de agentes?</div></div>
+      <div class="decision-item"><div class="num">3</div><div class="text"><strong>Timeline:</strong> Qual é a data-alvo para V0.1 estar em produção? Isso define se fazemos merge rápido ou refinamos antes.</div></div>
+      <div class="decision-item"><div class="num">4</div><div class="text"><strong>Escopo de agentes:</strong> Quantos agentes-piloto na V0.1? Apenas os 3 do CrewAI ou incluímos novos papéis já na unificação?</div></div>
     </div>
   </div>
 
-  <!-- SLIDE 10: PRÓXIMOS PASSOS -->
   <div class="slide" data-index="9">
     <div class="slide-header">
       <h2>Próximos Passos</h2>
@@ -794,44 +979,192 @@
       <p class="lead">Ações imediatas após esta reunião</p>
     </div>
     <div class="steps-grid">
-      <div class="step-card">
-        <div class="icon">📋</div>
-        <div>
-          <h4>Coletar decisões</h4>
-          <p>Documentar as 4 decisões do Commander em ADR-007</p>
-        </div>
-      </div>
-      <div class="step-card">
-        <div class="icon">🔀</div>
-        <div>
-          <h4>Preparar merge</h4>
-          <p>Criar branch <code>unify/cowork-kimi</code> com estrutura unificada</p>
-        </div>
-      </div>
-      <div class="step-card">
-        <div class="icon">🧪</div>
-        <div>
-          <h4>Validar contratos</h4>
-          <p>Definir schema de mensagens entre Core Go e Orquestrador</p>
-        </div>
-      </div>
-      <div class="step-card">
-        <div class="icon">📅</div>
-        <div>
-          <h4>Agendar sprint</h4>
-          <p>Marcar sprint de 2 semanas para V0.1 com a equipe</p>
-        </div>
-      </div>
+      <div class="step-card"><div class="icon">📋</div><div><h4>Coletar decisões</h4><p>Documentar as 4 decisões do Commander em ADR-007</p></div></div>
+      <div class="step-card"><div class="icon">🔀</div><div><h4>Preparar merge</h4><p>Criar branch <code>unify/cowork-kimi</code> com estrutura unificada</p></div></div>
+      <div class="step-card"><div class="icon">🧪</div><div><h4>Validar contratos</h4><p>Definir schema de mensagens entre Core Go e Orquestrador</p></div></div>
+      <div class="step-card"><div class="icon">📅</div><div><h4>Agendar sprint</h4><p>Marcar sprint de 2 semanas para V0.1 com a equipe</p></div></div>
     </div>
     <div style="margin-top: 4vh; text-align: center; font-size: 1.2vw; color: rgba(255,255,255,0.6);">
       <em>"Duas vertentes, um caminho — juntos construímos o Apex."</em>
     </div>
   </div>
 
+  <div class="slide" data-index="10">
+    <div class="slide-header">
+      <h2>Apex vs DataFlint — Benchmark</h2>
+      <div class="bar"></div>
+      <p class="lead">Dados reais de performance e capacidade</p>
+    </div>
+    <table class="comparison-table" style="max-width: 88vw;">
+      <thead>
+        <tr><th>Dimensão</th><th style="color:#ff6f00">Apex</th><th style="color:#b0bec5">DataFlint</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>T1 Diagnostician</td><td class="check">✓ 136ms</td><td class="missing">✗ Não tem diagnóstico determinístico</td></tr>
+        <tr><td>T2 Recommender</td><td class="check">✓ 0.01ms (runbook)</td><td class="missing">✗ Não tem runbook</td></tr>
+        <tr><td>Validator</td><td class="check">✓ 197ms (7 regras)</td><td class="missing">✗ Não tem validação</td></tr>
+        <tr><td>Pipeline total</td><td class="check">✓ ~333ms</td><td class="missing">✗ Não tem pipeline</td></tr>
+        <tr><td>Intrusão</td><td class="check">✓ Zero JAR</td><td class="missing">✗ JAR obrigatório</td></tr>
+        <tr><td>Integração IDE</td><td class="check">✓ MCP nativo</td><td class="missing">✗ Não tem</td></tr>
+        <tr><td>Classificação</td><td class="check">✓ 4 tiers com confiança</td><td class="partial">~ Alerta binário</td></tr>
+        <tr><td>Extensibilidade</td><td class="check">✓ scenario.yaml</td><td class="missing">✗ Fixo (14 alertas)</td></tr>
+        <tr><td>Custo</td><td class="check">✓ Gratuito</td><td class="missing">✗ SaaS pago</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="slide" data-index="11">
+    <div class="slide-header">
+      <h2>Pipeline Apex — Fluxo Completo</h2>
+      <div class="bar"></div>
+      <p class="lead">Do Spark Job à recomendação no IDE em 333ms</p>
+    </div>
+    <div class="flow-pipeline">
+      <div class="flow-box tier-0"><div>Engenheiro</div><div class="flow-label">Humano</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box tier-1"><div>Spark Job</div><div class="flow-label">Processamento</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box tier-2"><div>Event Log</div><div class="flow-label">Saída</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box tier-3"><div>MinIO</div><div class="flow-label">Object Store</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box tier-4"><div>Loader Go</div><div class="flow-label">Parser</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box tier-5"><div>ClickHouse</div><div class="flow-label">Analytics</div></div>
+    </div>
+    <div class="flow-pipeline" style="margin-top: 2vh;">
+      <div class="flow-box tier-6"><div>Diagnostician T1</div><div class="flow-label">136ms</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box tier-7"><div>Validator</div><div class="flow-label">197ms</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box tier-8"><div>Recommender T2</div><div class="flow-label">0.01ms</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box tier-0"><div>MCP Server</div><div class="flow-label">Protocolo</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box tier-1"><div>Claude / Cursor</div><div class="flow-label">IDE</div></div>
+    </div>
+    <div class="tier-legend">
+      <div class="tier-legend-item"><span class="tier-dot" style="background:#4fc3f7;"></span>Humano / Interface</div>
+      <div class="tier-legend-item"><span class="tier-dot" style="background:#69f0ae;"></span>Execução Spark</div>
+      <div class="tier-legend-item"><span class="tier-dot" style="background:#ffd54f;"></span>Storage / Parse</div>
+      <div class="tier-legend-item"><span class="tier-dot" style="background:#ff8a65;"></span>Analytics DB</div>
+      <div class="tier-legend-item"><span class="tier-dot" style="background:#ff6f00;"></span>Diagnóstico</div>
+      <div class="tier-legend-item"><span class="tier-dot" style="background:#81c784;"></span>Validação</div>
+      <div class="tier-legend-item"><span class="tier-dot" style="background:#fff176;"></span>Recomendação</div>
+    </div>
+  </div>
+
+  <div class="slide" data-index="12">
+    <div class="slide-header">
+      <h2>Storytelling — Sequência de Execução</h2>
+      <div class="bar"></div>
+      <p class="lead">Passo a passo do pipeline, do job à correção</p>
+    </div>
+    <div class="sequence-diagram">
+      <div class="seq-actor"><div class="seq-actor-name">Engenheiro</div><div class="seq-lifeline"></div></div>
+      <div class="seq-actor"><div class="seq-actor-name">Spark</div><div class="seq-lifeline"></div></div>
+      <div class="seq-actor"><div class="seq-actor-name">MinIO</div><div class="seq-lifeline"></div></div>
+      <div class="seq-actor"><div class="seq-actor-name">ClickHouse</div><div class="seq-lifeline"></div></div>
+      <div class="seq-actor"><div class="seq-actor-name">Diagnostician</div><div class="seq-lifeline"></div></div>
+      <div class="seq-actor"><div class="seq-actor-name">Validator</div><div class="seq-lifeline"></div></div>
+      <div class="seq-actor"><div class="seq-actor-name">Recommender</div><div class="seq-lifeline"></div></div>
+      <div class="seq-actor"><div class="seq-actor-name">MCP</div><div class="seq-lifeline"></div></div>
+      <div class="seq-actor"><div class="seq-actor-name">Claude Code</div><div class="seq-lifeline"></div></div>
+      <div class="seq-msg" style="top:16%; left:2%; transform:translateX(8%);"><span class="seq-msg-num">1</span>Executa job PySpark com join</div>
+      <div class="seq-msg" style="top:22%; left:11%; transform:translateX(8%);"><span class="seq-msg-num">2</span>Grava event log</div>
+      <div class="seq-msg" style="top:28%; left:22%; transform:translateX(8%);"><span class="seq-msg-num">3</span>Parseia e persiste 5 stages, 7 tasks</div>
+      <div class="seq-msg" style="top:34%; left:34%; transform:translateX(8%);"><span class="seq-msg-num">4</span>SELECT skew_ratio...</div>
+      <div class="seq-msg" style="top:40%; left:34%; transform:translateX(-10%);"><span class="seq-msg-num">5</span>ratio = 29.5x</div>
+      <div class="seq-msg" style="top:46%; left:44%; transform:translateX(8%);"><span class="seq-msg-num">6</span>Evidence bundle → validação</div>
+      <div class="seq-msg" style="top:52%; left:56%; transform:translateX(-15%);"><span class="seq-msg-num">7</span>7/7 regras passaram → valid</div>
+      <div class="seq-msg" style="top:58%; left:56%; transform:translateX(8%);"><span class="seq-msg-num">8</span>Gera runbook skew_on_join</div>
+      <div class="seq-msg" style="top:64%; left:66%; transform:translateX(8%);"><span class="seq-msg-num">9</span>Entrega findings</div>
+      <div class="seq-msg" style="top:70%; left:78%; transform:translateX(-20%);"><span class="seq-msg-num">10</span>get_recommendations</div>
+      <div class="seq-msg" style="top:76%; left:66%; transform:translateX(-40%);"><span class="seq-msg-num">11</span>Stage 5 tem skew 29.5x. Aplique salting...</div>
+    </div>
+  </div>
+
+  <div class="slide" data-index="13">
+    <div class="slide-header">
+      <h2>Case: "O Job Lento da Sexta"</h2>
+      <div class="bar"></div>
+      <p class="lead">De 3h para 12 min — a diferença do Apex</p>
+    </div>
+    <div class="storytelling-wrap">
+      <div class="story-narrative">
+        <p><strong>Sexta-feira, 18h.</strong> O job de ETL que roda toda semana está demorando 3h em vez de 30min.</p>
+        <blockquote>O engenheiro abre o Claude Code e digita:<br><code>debug job app-20260706035238-0001</code></blockquote>
+        <p>Em <strong>333ms</strong>, o Apex responde:</p>
+        <div class="story-beforeafter">
+          <div class="story-ba-card"><div class="ba-label">Antes</div><div class="ba-value">3h</div></div>
+          <div class="story-ba-card"><div class="ba-label">Depois</div><div class="ba-value green">12min</div></div>
+        </div>
+        <div style="text-align: center;"><span class="speedup-badge">Speedup: 15x</span></div>
+        <div class="comparison-vs">
+          <div><span class="vs-dataflint">DataFlint:</span> "⚠ Partition Skew detected"</div>
+          <div><span class="vs-apex">Apex:</span> qual chave, qual stage, como corrigir, como validar</div>
+        </div>
+      </div>
+      <div class="json-card">
+        <span class="json-key">"pattern"</span>: <span class="json-str">"data_skew"</span>,<br>
+        <span class="json-key">"severity"</span>: <span class="json-str">"CRITICAL"</span>,<br>
+        <span class="json-key">"confidence"</span>: <span class="json-num">0.92</span>,<br>
+        <span class="json-key">"stage_id"</span>: <span class="json-num">5</span>,<br>
+        <span class="json-key">"skew_ratio"</span>: <span class="json-num">29.5</span>,<br>
+        <span class="json-key">"root_cause"</span>: <span class="json-str">"Shuffle join com chave 'customer_id' desbalanceada. Task 3 recebeu 1.2M registros vs mediana 40K."</span>,<br>
+        <span class="json-key">"recommendation"</span>: <span class="json-str">"Aplique salting com 10 buckets na chave de join. Ou use broadcast join se tabela menor < 10MB."</span>,<br>
+        <span class="json-key">"validation"</span>: <span class="json-str">"SELECT MAX(duration_ms)/AVG(duration_ms) FROM spark_tasks WHERE app_id = '...'"</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide" data-index="14">
+    <div class="slide-header">
+      <h2>Arquitetura de Validação — Evidence Validator</h2>
+      <div class="bar"></div>
+      <p class="lead">Fluxo de validação com decisões valid / invalid / indeterminate</p>
+    </div>
+    <div class="validation-flow">
+      <div class="val-box"><div>Scenario</div><div class="val-label">Cenário de teste</div></div>
+      <div class="val-arrow">→</div>
+      <div class="val-box"><div>Gerador</div><div class="val-label">Gera log sintético</div></div>
+      <div class="val-arrow">→</div>
+      <div class="val-box"><div>Log Sintético</div><div class="val-label">Evento Spark</div></div>
+      <div class="val-arrow">→</div>
+      <div class="val-box"><div>Parser</div><div class="val-label">Extração</div></div>
+      <div class="val-arrow">→</div>
+      <div class="val-box"><div>Correlator</div><div class="val-label">Correlação</div></div>
+      <div class="val-arrow">→</div>
+      <div class="val-box"><div>Validator</div><div class="val-label">7 regras</div></div>
+    </div>
+    <div class="val-bottom-flow">
+      <div class="val-branch">
+        <div class="val-arrow">↙</div><div class="branch-label green">valid</div>
+        <div class="val-box valid" style="margin-top:0.5vh;"><div>Watcher</div><div class="val-label">Monitora</div></div>
+      </div>
+      <div class="val-branch">
+        <div class="val-arrow">↓</div><div class="branch-label yellow">indeterminate</div>
+        <div class="val-box indeterminate" style="margin-top:0.5vh;"><div>Oracle</div><div class="val-label">Reavalia</div></div>
+      </div>
+      <div class="val-branch">
+        <div class="val-arrow">↘</div><div class="branch-label red">invalid</div>
+        <div class="val-box invalid" style="margin-top:0.5vh;"><div>Reject</div><div class="val-label">Descarta</div></div>
+      </div>
+    </div>
+    <div class="val-bottom-flow" style="margin-top: 2vh;">
+      <div class="val-box valid"><div>Finding</div><div class="val-label">Output validado</div></div>
+    </div>
+    <div class="tier-legend" style="margin-top: 2vh;">
+      <div class="tier-legend-item"><span class="tier-dot" style="background:#69f0ae;"></span>valid → aprovado</div>
+      <div class="tier-legend-item"><span class="tier-dot" style="background:#ffd54f;"></span>indeterminate → reavaliação</div>
+      <div class="tier-legend-item"><span class="tier-dot" style="background:#ff5252;"></span>invalid → rejeitado</div>
+    </div>
+  </div>
+
 </div>
 
 <div class="progress-bar" id="progressBar"></div>
-<div class="slide-number" id="slideNumber">1 / 10</div>
+<div class="slide-number" id="slideNumber">1 / 15</div>
 <div class="nav-hint"><kbd>←</kbd> <kbd>→</kbd> navegar</div>
 
 <script>
@@ -845,51 +1178,29 @@
     function update() {
       slides.forEach((slide, i) => {
         slide.classList.remove('active', 'prev');
-        if (i === current) {
-          slide.classList.add('active');
-        } else if (i < current) {
-          slide.classList.add('prev');
-        }
+        if (i === current) { slide.classList.add('active'); }
+        else if (i < current) { slide.classList.add('prev'); }
       });
       progressBar.style.width = ((current + 1) / total * 100) + '%';
       slideNumber.textContent = (current + 1) + ' / ' + total;
     }
 
-    function next() {
-      if (current < total - 1) { current++; update(); }
-    }
-
-    function prev() {
-      if (current > 0) { current--; update(); }
-    }
+    function next() { if (current < total - 1) { current++; update(); } }
+    function prev() { if (current > 0) { current--; update(); } }
 
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter' || e.key === 'PageDown') {
-        e.preventDefault();
-        next();
-      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-        e.preventDefault();
-        prev();
-      } else if (e.key === 'Home') {
-        e.preventDefault();
-        current = 0; update();
-      } else if (e.key === 'End') {
-        e.preventDefault();
-        current = total - 1; update();
-      }
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter' || e.key === 'PageDown') { e.preventDefault(); next(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+      else if (e.key === 'Home') { e.preventDefault(); current = 0; update(); }
+      else if (e.key === 'End') { e.preventDefault(); current = total - 1; update(); }
     });
 
-    // Touch support
     let touchStartX = 0;
-    document.addEventListener('touchstart', function(e) {
-      touchStartX = e.changedTouches[0].screenX;
-    });
+    document.addEventListener('touchstart', function(e) { touchStartX = e.changedTouches[0].screenX; });
     document.addEventListener('touchend', function(e) {
       const touchEndX = e.changedTouches[0].screenX;
       const diff = touchStartX - touchEndX;
-      if (Math.abs(diff) > 50) {
-        diff > 0 ? next() : prev();
-      }
+      if (Math.abs(diff) > 50) { diff > 0 ? next() : prev(); }
     });
 
     update();
