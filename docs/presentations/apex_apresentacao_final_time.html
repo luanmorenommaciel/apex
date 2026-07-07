@@ -172,7 +172,7 @@
      SLIDE 1 — CAPA
 ══════════════════════════════════════════════════════════════ -->
 <div class="slide active" id="s1">
-  <div class="slide-num">1 / 12</div>
+  <div class="slide-num">1 / 15</div>
   <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
     <div class="cover-badge"><span>●</span> Pipeline V1 Rodando em Produção</div>
     <h1>Apex<br><span class="grad-text">Captain's Report</span></h1>
@@ -195,7 +195,7 @@
      SLIDE 2 — O QUE VOCÊ PEDIU, REUNIÃO 30/06
 ══════════════════════════════════════════════════════════════ -->
 <div class="slide" id="s2">
-  <div class="slide-num">2 / 12</div>
+  <div class="slide-num">2 / 15</div>
   <div class="eyebrow">Reunião 30/06 — Commander's Plan</div>
   <h2>O que você pediu.<br>O que foi entregue.</h2>
   <div class="grow mt24" style="overflow:auto;">
@@ -235,7 +235,7 @@
      SLIDE 3 — PIPELINE V1 ARQUITETURA
 ══════════════════════════════════════════════════════════════ -->
 <div class="slide" id="s3">
-  <div class="slide-num">3 / 12</div>
+  <div class="slide-num">3 / 15</div>
   <div class="eyebrow">Branch cowork — gustocezar/feature/cowork-desacoplamento-geradores</div>
   <h2>Pipeline V1 — Arquitetura</h2>
   <p class="sub" style="margin-bottom:24px;">Rodando. Validado com dados reais hoje.</p>
@@ -305,7 +305,7 @@
      SLIDE 4 — DUAS BRANCHES: COWORK VS KIMI
 ══════════════════════════════════════════════════════════════ -->
 <div class="slide" id="s4">
-  <div class="slide-num">4 / 12</div>
+  <div class="slide-num">4 / 15</div>
   <div class="eyebrow">Duas abordagens paralelas — mesmo objetivo</div>
   <h2>Cowork (Claude) vs Kimi</h2>
 
@@ -390,7 +390,7 @@
      SLIDE 5 — BENCHMARK: NÚMEROS REAIS
 ══════════════════════════════════════════════════════════════ -->
 <div class="slide" id="s5">
-  <div class="slide-num">5 / 12</div>
+  <div class="slide-num">5 / 15</div>
   <div class="eyebrow">Benchmark · medido em produção · job app-20260706035238-0001</div>
   <h2>Apex: números reais medidos</h2>
 
@@ -497,7 +497,7 @@ spv0-spark-worker-1 Up 9h   ✅
      SLIDE 6 — DATAFLINT: COMPARAÇÃO COMPLETA
 ══════════════════════════════════════════════════════════════ -->
 <div class="slide" id="s6">
-  <div class="slide-num">6 / 12</div>
+  <div class="slide-num">6 / 15</div>
   <div class="eyebrow">Análise competitiva · docs/competitive/ · benchmark DataFlint</div>
   <h2>Apex vs DataFlint — Comparação completa</h2>
 
@@ -586,10 +586,461 @@ T1 → T2 → MCP
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     SLIDE 7 — RECOMENDAÇÃO DE MERGE
+     SLIDE 7 — STORYTELLING: O CASE
 ══════════════════════════════════════════════════════════════ -->
 <div class="slide" id="s7">
-  <div class="slide-num">7 / 12</div>
+  <div class="slide-num">7 / 15</div>
+  <div class="eyebrow">Storytelling · caso real · skew_on_join_30x · job app-20260706035238-0001</div>
+  <h2>João e o job que levava 2 horas</h2>
+
+  <div class="cols2 grow mt16" style="gap:24px;">
+    <div class="card card-red">
+      <div style="font-size:11px;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;">❌ Antes do Apex</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;gap:12px;">
+          <div style="font-size:20px;flex-shrink:0;margin-top:2px;">😤</div>
+          <div><div style="font-size:13.5px;font-weight:600;">Job submetido. SLA: 30 minutos.</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">join de customer_id em 200M de registros. Parece simples.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div style="font-size:20px;flex-shrink:0;margin-top:2px;">⏳</div>
+          <div><div style="font-size:13.5px;font-weight:600;">2 horas depois... ainda rodando.</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">1 executor com 85% dos dados. 15 esperando ociosos. Ninguém vê.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div style="font-size:20px;flex-shrink:0;margin-top:2px;">💸</div>
+          <div><div style="font-size:13.5px;font-weight:600;">$400 de cluster queimado.</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">16 máquinas, 15 ociosas. Hot key: <code style="font-family:var(--font-mono);color:var(--red);">customer_id = "AMAZON_B2B"</code>.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div style="font-size:20px;flex-shrink:0;margin-top:2px;">🔍</div>
+          <div><div style="font-size:13.5px;font-weight:600;">2 dias de debug manual.</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">Spark UI aberta. Stack Overflow consultado. Resposta: nenhuma.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-green">
+      <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;">✅ Com Apex</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;gap:12px;">
+          <div style="font-size:20px;flex-shrink:0;margin-top:2px;">⚡</div>
+          <div><div style="font-size:13.5px;font-weight:600;">Job termina. Apex detecta em 136ms.</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">T1 SQL: <code style="font-family:var(--font-mono);color:var(--red);">customer_id</code> com <strong>12.53x</strong> mais dados. Severidade: HIGH.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div style="font-size:20px;flex-shrink:0;margin-top:2px;">🛡️</div>
+          <div><div style="font-size:13.5px;font-weight:600;">EvidenceValidator: 7/7 regras. 198ms.</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">Zero falso positivo. Finding commitado em <code style="font-family:var(--font-mono);color:var(--accent);">apex.findings</code>.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div style="font-size:20px;flex-shrink:0;margin-top:2px;">💡</div>
+          <div><div style="font-size:13.5px;font-weight:600;">Crew.ai gera o fix com código.</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">"Adicione salting de 50 buckets em <code style="font-family:var(--font-mono);color:var(--accent);">customer_id</code> antes do join."</div></div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div style="font-size:20px;flex-shrink:0;margin-top:2px;">🔧</div>
+          <div><div style="font-size:13.5px;font-weight:600;"><code style="font-family:var(--font-mono);color:var(--green);">apply_fix()</code> no Cursor. 30 segundos.</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">MCP edita o .py + backup automático. João re-submete. Job: <strong style="color:var(--green);">4 minutos.</strong></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt16" style="display:flex;gap:0;justify-content:center;align-items:center;padding:12px 24px;flex-shrink:0;">
+    <div class="metric" style="padding:0 20px;"><div class="num" style="color:var(--red);font-size:28px;">2h</div><div class="label">runtime antes</div></div>
+    <div style="font-size:22px;color:var(--text3);">→</div>
+    <div class="metric" style="padding:0 20px;"><div class="num" style="color:var(--green);font-size:28px;">4min</div><div class="label">com salting</div></div>
+    <div style="width:1px;height:36px;background:var(--border);margin:0 16px;"></div>
+    <div class="metric" style="padding:0 20px;"><div class="num" style="color:var(--red);font-size:28px;">$400</div><div class="label">cluster desperdiçado</div></div>
+    <div style="font-size:22px;color:var(--text3);">→</div>
+    <div class="metric" style="padding:0 20px;"><div class="num" style="color:var(--green);font-size:28px;">$14</div><div class="label">custo real</div></div>
+    <div style="width:1px;height:36px;background:var(--border);margin:0 16px;"></div>
+    <div class="metric" style="padding:0 20px;"><div class="num" style="color:var(--red);font-size:28px;">2d</div><div class="label">debug manual</div></div>
+    <div style="font-size:22px;color:var(--text3);">→</div>
+    <div class="metric" style="padding:0 20px;"><div class="num" style="color:var(--green);font-size:28px;">334ms</div><div class="label">diagnóstico automático</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 8 — DIAGRAMA DE SEQUÊNCIA
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="slide-num">8 / 15</div>
+  <div class="eyebrow">Diagrama de Sequência · do event log ao fix no IDE</div>
+  <h2>Pipeline completo — passo a passo</h2>
+
+  <div class="cols2 grow mt16" style="gap:20px;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px;">Sequência de eventos</div>
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(88,166,255,.2);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--accent);flex-shrink:0;">1</div>
+        <div><div style="font-size:13px;font-weight:600;">Spark Job → MinIO</div><div style="font-size:11.5px;color:var(--text2);">Event log comprimido (zstd) gravado em <code style="font-family:var(--font-mono);">spark-logs/events/</code></div></div>
+        <div style="margin-left:auto;font-size:11px;color:var(--text3);">t=0</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(88,166,255,.2);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--accent);flex-shrink:0;">2</div>
+        <div><div style="font-size:13px;font-weight:600;">log_poller detecta novo arquivo</div><div style="font-size:11.5px;color:var(--text2);">Rolling watch a cada 15s. Auto-zstd detect → descomprime.</div></div>
+        <div style="margin-left:auto;font-size:11px;color:var(--text3);">≤15s</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(227,179,65,.2);border:1px solid var(--yellow2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--yellow2);flex-shrink:0;">3</div>
+        <div><div style="font-size:13px;font-weight:600;">event_log_ingest → ClickHouse</div><div style="font-size:11.5px;color:var(--text2);"><code style="font-family:var(--font-mono);">apex.stage_metrics</code> + <code style="font-family:var(--font-mono);">apex.task_metrics</code></div></div>
+        <div style="margin-left:auto;font-size:11px;color:var(--text3);">≈17s</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--bg2);border:1px solid rgba(63,185,80,.4);border-radius:8px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(63,185,80,.2);border:1px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--green);flex-shrink:0;">4</div>
+        <div><div style="font-size:13px;font-weight:600;">T1 SQL — diagnóstico</div><div style="font-size:11.5px;color:var(--text2);">SQL analítico no ClickHouse → skew <strong>12.53x HIGH</strong>. Sem LLM.</div></div>
+        <div style="margin-left:auto;font-size:11px;color:var(--green);font-weight:700;">+136ms</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--bg2);border:1px solid rgba(63,185,80,.4);border-radius:8px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(63,185,80,.2);border:1px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--green);flex-shrink:0;">5</div>
+        <div><div style="font-size:13px;font-weight:600;">EvidenceValidator — 7/7 regras</div><div style="font-size:11.5px;color:var(--text2);">Provenance, schema, operator, correlação, distribuição, estrutural, single_app.</div></div>
+        <div style="margin-left:auto;font-size:11px;color:var(--green);font-weight:700;">+198ms</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--bg2);border:1px solid rgba(188,140,255,.3);border-radius:8px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(188,140,255,.2);border:1px solid var(--purple);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--purple);flex-shrink:0;">6</div>
+        <div><div style="font-size:13px;font-weight:600;">Crew.ai — diagnóstico profundo <span style="font-size:10px;color:var(--text3);">(opcional)</span></div><div style="font-size:11.5px;color:var(--text2);">2 agentes: MetricsAnalyzer → RecommendationWriter. ApexFinding JSON.</div></div>
+        <div style="margin-left:auto;font-size:11px;color:var(--purple);font-weight:700;">+30s</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--bg2);border:1px solid rgba(57,211,83,.3);border-radius:8px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(57,211,83,.2);border:1px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--teal);flex-shrink:0;">7</div>
+        <div><div style="font-size:13px;font-weight:600;">IDE → MCP → apply_fix(file.py)</div><div style="font-size:11.5px;color:var(--text2);">Engenheiro chama no Cursor. LLM edita o .py + backup automático.</div></div>
+        <div style="margin-left:auto;font-size:11px;color:var(--teal);font-weight:700;">IDE</div>
+      </div>
+    </div>
+
+    <!-- SVG sequence flow visual -->
+    <div>
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:8px;">Fluxo de dados</div>
+      <svg viewBox="0 0 320 480" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:440px;">
+        <defs>
+          <marker id="ah" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#8b949e"/></marker>
+          <marker id="ag" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#3fb950"/></marker>
+          <marker id="ap" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#bc8cff"/></marker>
+          <marker id="at" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#39d353"/></marker>
+          <marker id="ar" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#f85149"/></marker>
+        </defs>
+
+        <!-- Spark Job box -->
+        <rect x="10" y="10" width="90" height="30" rx="6" fill="rgba(88,166,255,0.15)" stroke="#58a6ff" stroke-width="1"/>
+        <text x="55" y="29" text-anchor="middle" fill="#58a6ff" font-size="11" font-weight="bold">Spark Job</text>
+
+        <!-- Arrow down -->
+        <line x1="55" y1="40" x2="55" y2="68" stroke="#8b949e" stroke-width="1.5" marker-end="url(#ah)"/>
+        <text x="70" y="58" fill="#6e7681" font-size="9">event log</text>
+
+        <!-- MinIO box -->
+        <rect x="10" y="70" width="90" height="30" rx="6" fill="rgba(110,118,129,0.15)" stroke="#6e7681" stroke-width="1"/>
+        <text x="55" y="89" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="bold">MinIO</text>
+
+        <!-- Arrow right to log_poller -->
+        <line x1="100" y1="85" x2="148" y2="85" stroke="#8b949e" stroke-width="1.5" marker-end="url(#ah)"/>
+        <text x="124" y="80" text-anchor="middle" fill="#6e7681" font-size="8">poll 15s</text>
+
+        <!-- log_poller box -->
+        <rect x="150" y="70" width="80" height="30" rx="6" fill="rgba(110,118,129,0.15)" stroke="#6e7681" stroke-width="1"/>
+        <text x="190" y="89" text-anchor="middle" fill="#8b949e" font-size="10" font-weight="bold">log_poller</text>
+
+        <!-- Arrow down from log_poller -->
+        <line x1="190" y1="100" x2="190" y2="128" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#ah)"/>
+        <text x="205" y="117" fill="#58a6ff" font-size="9">trigger</text>
+
+        <!-- ingest box -->
+        <rect x="140" y="130" width="100" height="30" rx="6" fill="rgba(88,166,255,0.1)" stroke="#58a6ff" stroke-width="1"/>
+        <text x="190" y="149" text-anchor="middle" fill="#8b949e" font-size="10" font-weight="bold">event_log_ingest</text>
+
+        <!-- Arrow right to ClickHouse -->
+        <line x1="240" y1="145" x2="288" y2="145" stroke="#e3b341" stroke-width="1.5" marker-end="url(#ah)"/>
+        <text x="264" y="140" text-anchor="middle" fill="#e3b341" font-size="8">metrics</text>
+
+        <!-- ClickHouse box -->
+        <rect x="240" y="130" width="70" height="30" rx="6" fill="rgba(227,179,65,0.15)" stroke="#e3b341" stroke-width="1"/>
+        <text x="275" y="149" text-anchor="middle" fill="#e3b341" font-size="10" font-weight="bold">ClickHouse</text>
+
+        <!-- Arrow down ClickHouse → T1 -->
+        <line x1="275" y1="160" x2="275" y2="188" stroke="#3fb950" stroke-width="1.5" marker-end="url(#ag)"/>
+
+        <!-- T1+Validator box -->
+        <rect x="200" y="190" width="145" height="30" rx="6" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1"/>
+        <text x="272" y="209" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="bold">T1 SQL + Validator</text>
+        <text x="272" y="218" text-anchor="middle" fill="#3fb950" font-size="8">136ms + 198ms</text>
+
+        <!-- Arrow down T1 → Crew.ai (dashed optional) -->
+        <line x1="272" y1="222" x2="272" y2="258" stroke="#bc8cff" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ap)"/>
+        <text x="290" y="244" fill="#bc8cff" font-size="9">opcional</text>
+
+        <!-- Crew.ai box -->
+        <rect x="210" y="260" width="120" height="30" rx="6" fill="rgba(188,140,255,0.15)" stroke="#bc8cff" stroke-width="1"/>
+        <text x="270" y="279" text-anchor="middle" fill="#bc8cff" font-size="10" font-weight="bold">Crew.ai (2 agentes)</text>
+
+        <!-- Arrow Crew.ai → ClickHouse (back left) -->
+        <path d="M 210 275 Q 180 295 180 310 Q 180 330 220 335" fill="none" stroke="#bc8cff" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="165" y="315" fill="#bc8cff" font-size="8" text-anchor="middle">ApexFinding</text>
+
+        <!-- apex.findings box -->
+        <rect x="150" y="330" width="100" height="25" rx="6" fill="rgba(227,179,65,0.1)" stroke="#e3b341" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="200" y="346" text-anchor="middle" fill="#e3b341" font-size="9">apex.findings</text>
+
+        <!-- Arrow down → MCP -->
+        <line x1="200" y1="355" x2="200" y2="383" stroke="#39d353" stroke-width="1.5" marker-end="url(#at)"/>
+
+        <!-- MCP box -->
+        <rect x="140" y="385" width="120" height="30" rx="6" fill="rgba(57,211,83,0.15)" stroke="#39d353" stroke-width="1"/>
+        <text x="200" y="404" text-anchor="middle" fill="#39d353" font-size="10" font-weight="bold">MCP → IDE</text>
+        <text x="200" y="413" text-anchor="middle" fill="#39d353" font-size="8">apply_fix() → .py editado</text>
+
+        <!-- Time annotations on left -->
+        <text x="5" y="89" fill="#6e7681" font-size="8">t=0</text>
+        <text x="5" y="149" fill="#6e7681" font-size="8">≤17s</text>
+        <text x="5" y="209" fill="#3fb950" font-size="8">+334ms</text>
+        <text x="5" y="290" fill="#bc8cff" font-size="8">+30s</text>
+        <text x="5" y="404" fill="#39d353" font-size="8">IDE</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 9 — DIAGRAMA DE ESTADO DO FINDING
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div class="slide-num">9 / 15</div>
+  <div class="eyebrow">Diagrama de Estado · ciclo de vida de um Finding</div>
+  <h2>De "job rodando" a "fix aplicado"</h2>
+
+  <div class="grow mt20" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <svg viewBox="0 0 860 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:460px;">
+      <defs>
+        <marker id="sa" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L0,8 L8,4 z" fill="#8b949e"/></marker>
+        <marker id="sg" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L0,8 L8,4 z" fill="#3fb950"/></marker>
+        <marker id="sr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L0,8 L8,4 z" fill="#f85149"/></marker>
+        <marker id="sp" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L0,8 L8,4 z" fill="#bc8cff"/></marker>
+        <marker id="st" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L0,8 L8,4 z" fill="#39d353"/></marker>
+      </defs>
+
+      <!-- Row 1: JOB_RUNNING → LOG_READY → INGESTED → T1_ANALYZED -->
+      <!-- JOB_RUNNING -->
+      <rect x="20" y="60" width="120" height="40" rx="8" fill="rgba(110,118,129,0.15)" stroke="#6e7681" stroke-width="1.5"/>
+      <text x="80" y="76" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="bold">JOB_RUNNING</text>
+      <text x="80" y="91" text-anchor="middle" fill="#6e7681" font-size="9">Spark executando</text>
+
+      <!-- Arrow → LOG_READY -->
+      <line x1="140" y1="80" x2="178" y2="80" stroke="#8b949e" stroke-width="1.5" marker-end="url(#sa)"/>
+      <text x="159" y="74" text-anchor="middle" fill="#6e7681" font-size="8">termina</text>
+
+      <!-- LOG_READY -->
+      <rect x="180" y="60" width="110" height="40" rx="8" fill="rgba(110,118,129,0.15)" stroke="#6e7681" stroke-width="1.5"/>
+      <text x="235" y="76" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="bold">LOG_READY</text>
+      <text x="235" y="91" text-anchor="middle" fill="#6e7681" font-size="9">MinIO gravado</text>
+
+      <!-- Arrow → INGESTED -->
+      <line x1="290" y1="80" x2="328" y2="80" stroke="#8b949e" stroke-width="1.5" marker-end="url(#sa)"/>
+      <text x="309" y="74" text-anchor="middle" fill="#6e7681" font-size="8">poll ≤15s</text>
+
+      <!-- INGESTED -->
+      <rect x="330" y="60" width="110" height="40" rx="8" fill="rgba(227,179,65,0.15)" stroke="#e3b341" stroke-width="1.5"/>
+      <text x="385" y="76" text-anchor="middle" fill="#e3b341" font-size="11" font-weight="bold">INGESTED</text>
+      <text x="385" y="91" text-anchor="middle" fill="#6e7681" font-size="9">ClickHouse ✓</text>
+
+      <!-- Arrow → T1_ANALYZED -->
+      <line x1="440" y1="80" x2="478" y2="80" stroke="#3fb950" stroke-width="1.5" marker-end="url(#sg)"/>
+      <text x="459" y="74" text-anchor="middle" fill="#3fb950" font-size="8">T1 SQL</text>
+      <text x="459" y="82" text-anchor="middle" fill="#6e7681" font-size="7">136ms</text>
+
+      <!-- T1_ANALYZED -->
+      <rect x="480" y="60" width="120" height="40" rx="8" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="540" y="76" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="bold">T1_ANALYZED</text>
+      <text x="540" y="91" text-anchor="middle" fill="#3fb950" font-size="9">skew 12.53x HIGH</text>
+
+      <!-- Arrow → VALIDATED -->
+      <line x1="600" y1="80" x2="638" y2="80" stroke="#3fb950" stroke-width="1.5" marker-end="url(#sg)"/>
+      <text x="619" y="74" text-anchor="middle" fill="#3fb950" font-size="8">Validator</text>
+      <text x="619" y="82" text-anchor="middle" fill="#6e7681" font-size="7">198ms</text>
+
+      <!-- VALIDATED -->
+      <rect x="640" y="60" width="100" height="40" rx="8" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="690" y="76" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="bold">VALIDATED</text>
+      <text x="690" y="91" text-anchor="middle" fill="#3fb950" font-size="9">7/7 regras ✓</text>
+
+      <!-- Arrow down from VALIDATED → DIAGNOSED -->
+      <line x1="690" y1="100" x2="690" y2="148" stroke="#bc8cff" stroke-width="1.5" marker-end="url(#sp)"/>
+      <text x="707" y="130" fill="#bc8cff" font-size="8">Crew.ai</text>
+      <text x="707" y="140" fill="#6e7681" font-size="7">~30s</text>
+
+      <!-- Row 2 (reverse): DIAGNOSED ← FINDING_READY ← FIX_APPLIED + DISCARDED branch -->
+      <!-- DIAGNOSED -->
+      <rect x="640" y="150" width="100" height="40" rx="8" fill="rgba(188,140,255,0.15)" stroke="#bc8cff" stroke-width="1.5"/>
+      <text x="690" y="166" text-anchor="middle" fill="#bc8cff" font-size="11" font-weight="bold">DIAGNOSED</text>
+      <text x="690" y="181" text-anchor="middle" fill="#bc8cff" font-size="9">ApexFinding JSON</text>
+
+      <!-- Arrow left → FINDING_READY -->
+      <line x1="640" y1="170" x2="602" y2="170" stroke="#bc8cff" stroke-width="1.5" marker-end="url(#sp)"/>
+      <text x="621" y="165" text-anchor="middle" fill="#6e7681" font-size="7">→ findings</text>
+
+      <!-- FINDING_READY -->
+      <rect x="470" y="150" width="130" height="40" rx="8" fill="rgba(57,211,83,0.15)" stroke="#39d353" stroke-width="1.5"/>
+      <text x="535" y="166" text-anchor="middle" fill="#39d353" font-size="11" font-weight="bold">FINDING_READY</text>
+      <text x="535" y="181" text-anchor="middle" fill="#39d353" font-size="9">apex.findings ✓</text>
+
+      <!-- Arrow left → ENGINEER_ACT -->
+      <line x1="470" y1="170" x2="432" y2="170" stroke="#39d353" stroke-width="1.5" marker-end="url(#st)"/>
+      <text x="451" y="164" text-anchor="middle" fill="#6e7681" font-size="7">get_findings</text>
+
+      <!-- ENGINEER_ACT -->
+      <rect x="300" y="150" width="130" height="40" rx="8" fill="rgba(57,211,83,0.1)" stroke="#39d353" stroke-width="1"/>
+      <text x="365" y="166" text-anchor="middle" fill="#39d353" font-size="11" font-weight="bold">ENGINEER_ACT</text>
+      <text x="365" y="181" text-anchor="middle" fill="#39d353" font-size="9">apply_fix() no IDE</text>
+
+      <!-- Arrow left → FIX_APPLIED -->
+      <line x1="300" y1="170" x2="262" y2="170" stroke="#39d353" stroke-width="1.5" marker-end="url(#st)"/>
+
+      <!-- FIX_APPLIED -->
+      <rect x="120" y="150" width="140" height="40" rx="8" fill="rgba(63,185,80,0.25)" stroke="#3fb950" stroke-width="2"/>
+      <text x="190" y="166" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="bold">FIX_APPLIED ✅</text>
+      <text x="190" y="181" text-anchor="middle" fill="#3fb950" font-size="9">.py editado + backup</text>
+
+      <!-- DISCARDED branch from VALIDATED (if validator fails) -->
+      <line x1="540" y1="100" x2="540" y2="128" stroke="#f85149" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#sr)"/>
+      <rect x="480" y="130" width="120" height="28" rx="6" fill="rgba(248,81,73,0.1)" stroke="#f85149" stroke-width="1" stroke-dasharray="3,2"/>
+      <text x="540" y="148" text-anchor="middle" fill="#f85149" font-size="9">DISCARDED</text>
+      <text x="490" y="122" fill="#f85149" font-size="7">validator falhou</text>
+
+      <!-- Legend -->
+      <rect x="20" y="240" width="820" height="1" fill="#30363d"/>
+      <text x="20" y="260" fill="#6e7681" font-size="9">Linha cheia = fluxo normal</text>
+      <text x="200" y="260" fill="#f85149" font-size="9">Linha tracejada = falso positivo descartado</text>
+      <text x="450" y="260" fill="#bc8cff" font-size="9">Roxo = Crew.ai (opcional — só se confidence baixa)</text>
+      <text x="20" y="278" fill="#3fb950" font-size="9">Verde = fluxo determinístico (T1 SQL + Validator)</text>
+      <text x="300" y="278" fill="#39d353" font-size="9">Teal = ação do engenheiro via MCP</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 10 — FLUXOGRAMA DE DECISÃO T1/T2/T3
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s10">
+  <div class="slide-num">10 / 15</div>
+  <div class="eyebrow">Fluxograma de decisão · T1 → T2 → T3 · quando acionar cada tier</div>
+  <h2>Lógica de diagnóstico — como decidir</h2>
+
+  <div class="cols2 grow mt16" style="gap:20px;align-items:start;">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;">
+      <svg viewBox="0 0 380 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:500px;">
+        <defs>
+          <marker id="fa" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#8b949e"/></marker>
+          <marker id="fg" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#3fb950"/></marker>
+          <marker id="fr" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#f85149"/></marker>
+          <marker id="fp" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#bc8cff"/></marker>
+          <marker id="ft" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#39d353"/></marker>
+        </defs>
+
+        <!-- START -->
+        <ellipse cx="190" cy="22" rx="50" ry="16" fill="rgba(88,166,255,0.2)" stroke="#58a6ff" stroke-width="1.5"/>
+        <text x="190" y="27" text-anchor="middle" fill="#58a6ff" font-size="11" font-weight="bold">INICIO</text>
+        <text x="190" y="38" text-anchor="middle" fill="#6e7681" font-size="8">job terminou + log ingerido</text>
+
+        <line x1="190" y1="40" x2="190" y2="68" stroke="#8b949e" stroke-width="1.5" marker-end="url(#fa)"/>
+
+        <!-- T1 SQL box -->
+        <rect x="120" y="70" width="140" height="36" rx="8" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1.5"/>
+        <text x="190" y="84" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="bold">T1 — SQL Heurístico</text>
+        <text x="190" y="97" text-anchor="middle" fill="#6e7681" font-size="9">ClickHouse local · 136ms · sem LLM</text>
+
+        <line x1="190" y1="106" x2="190" y2="134" stroke="#8b949e" stroke-width="1.5" marker-end="url(#fa)"/>
+
+        <!-- Diamond: skew detectado? -->
+        <polygon points="190,136 260,166 190,196 120,166" fill="rgba(227,179,65,0.15)" stroke="#e3b341" stroke-width="1.5"/>
+        <text x="190" y="163" text-anchor="middle" fill="#e3b341" font-size="10" font-weight="bold">anomalia</text>
+        <text x="190" y="175" text-anchor="middle" fill="#e3b341" font-size="10" font-weight="bold">detectada?</text>
+
+        <!-- NO → left: JOB_SAUDÁVEL -->
+        <line x1="120" y1="166" x2="62" y2="166" stroke="#f85149" stroke-width="1.5" marker-end="url(#fr)"/>
+        <text x="91" y="160" text-anchor="middle" fill="#f85149" font-size="9">NÃO</text>
+        <rect x="10" y="150" width="50" height="32" rx="6" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1"/>
+        <text x="35" y="163" text-anchor="middle" fill="#3fb950" font-size="8" font-weight="bold">JOB</text>
+        <text x="35" y="174" text-anchor="middle" fill="#3fb950" font-size="8">SAUDÁVEL</text>
+
+        <!-- YES → down: EvidenceValidator -->
+        <line x1="190" y1="196" x2="190" y2="224" stroke="#3fb950" stroke-width="1.5" marker-end="url(#fg)"/>
+        <text x="206" y="214" fill="#3fb950" font-size="9">SIM</text>
+
+        <!-- EvidenceValidator -->
+        <rect x="105" y="226" width="170" height="36" rx="8" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1.5"/>
+        <text x="190" y="241" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="bold">EvidenceValidator</text>
+        <text x="190" y="254" text-anchor="middle" fill="#6e7681" font-size="9">8 regras de qualidade · 198ms</text>
+
+        <line x1="190" y1="262" x2="190" y2="290" stroke="#8b949e" stroke-width="1.5" marker-end="url(#fa)"/>
+
+        <!-- Diamond: 7/7 regras? -->
+        <polygon points="190,292 260,322 190,352 120,322" fill="rgba(63,185,80,0.1)" stroke="#3fb950" stroke-width="1.5"/>
+        <text x="190" y="319" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="bold">7/7</text>
+        <text x="190" y="331" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="bold">regras?</text>
+
+        <!-- NO → right: DESCARTADO -->
+        <line x1="260" y1="322" x2="318" y2="322" stroke="#f85149" stroke-width="1.5" marker-end="url(#fr)"/>
+        <text x="289" y="316" text-anchor="middle" fill="#f85149" font-size="9">NÃO</text>
+        <rect x="320" y="308" width="55" height="28" rx="6" fill="rgba(248,81,73,0.1)" stroke="#f85149" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="347" y="321" text-anchor="middle" fill="#f85149" font-size="9">DESCARTADO</text>
+        <text x="347" y="331" text-anchor="middle" fill="#6e7681" font-size="7">falso positivo</text>
+
+        <!-- YES → down: check confidence -->
+        <line x1="190" y1="352" x2="190" y2="378" stroke="#3fb950" stroke-width="1.5" marker-end="url(#fg)"/>
+        <text x="206" y="368" fill="#3fb950" font-size="9">SIM</text>
+
+        <!-- Diamond: confidence > 0.7? -->
+        <polygon points="190,380 260,405 190,430 120,405" fill="rgba(88,166,255,0.1)" stroke="#58a6ff" stroke-width="1.5"/>
+        <text x="190" y="401" text-anchor="middle" fill="#58a6ff" font-size="10" font-weight="bold">confidence</text>
+        <text x="190" y="413" text-anchor="middle" fill="#58a6ff" font-size="10" font-weight="bold">&gt; 0.7?</text>
+
+        <!-- YES → left: T2 Runbook -->
+        <line x1="120" y1="405" x2="82" y2="405" stroke="#39d353" stroke-width="1.5" marker-end="url(#ft)"/>
+        <text x="101" y="399" text-anchor="middle" fill="#39d353" font-size="9">SIM</text>
+        <rect x="10" y="390" width="70" height="30" rx="6" fill="rgba(57,211,83,0.15)" stroke="#39d353" stroke-width="1.5"/>
+        <text x="45" y="402" text-anchor="middle" fill="#39d353" font-size="9" font-weight="bold">T2 Runbook</text>
+        <text x="45" y="413" text-anchor="middle" fill="#6e7681" font-size="8">JSON · 0.01ms</text>
+
+        <!-- NO → right: T3 Crew.ai -->
+        <line x1="260" y1="405" x2="298" y2="405" stroke="#bc8cff" stroke-width="1.5" marker-end="url(#fp)"/>
+        <text x="279" y="399" text-anchor="middle" fill="#bc8cff" font-size="9">NÃO</text>
+        <rect x="300" y="390" width="70" height="30" rx="6" fill="rgba(188,140,255,0.15)" stroke="#bc8cff" stroke-width="1.5"/>
+        <text x="335" y="402" text-anchor="middle" fill="#bc8cff" font-size="9" font-weight="bold">T3 Crew.ai</text>
+        <text x="335" y="413" text-anchor="middle" fill="#6e7681" font-size="8">LLM · ~30s</text>
+
+        <!-- Both → FINDING_READY at bottom -->
+        <line x1="45" y1="420" x2="45" y2="470" stroke="#39d353" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="335" y1="420" x2="335" y2="470" stroke="#bc8cff" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="45" y1="470" x2="335" y2="470" stroke="#8b949e" stroke-width="1"/>
+        <line x1="190" y1="470" x2="190" y2="495" stroke="#39d353" stroke-width="1.5" marker-end="url(#ft)"/>
+
+        <rect x="120" y="497" width="140" height="22" rx="6" fill="rgba(57,211,83,0.2)" stroke="#39d353" stroke-width="1.5"/>
+        <text x="190" y="512" text-anchor="middle" fill="#39d353" font-size="10" font-weight="bold">FINDING_READY → MCP → IDE</text>
+      </svg>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card card-green">
+        <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">T1 — Determinístico</div>
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.6;">SQL direto no ClickHouse. Zero LLM, zero rede. <strong style="color:var(--green);">136ms</strong>. Detecta skew por records e por duration. Cobre: skew, spill, parallelism.</div>
+      </div>
+      <div class="card card-green">
+        <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">EvidenceValidator — Gate de qualidade</div>
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.6;">8 regras antes de qualquer ação. Previne falsos positivos. <strong style="color:var(--green);">198ms</strong>. Descarta se evidência insuficiente.</div>
+      </div>
+      <div class="card card-accent">
+        <div style="font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">T2 — Runbook JSON</div>
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.6;">Quando confidence > 0.7. <strong style="color:var(--accent);">0.01ms</strong>. JSON versionado com 4 steps + código PySpark. Auditável, on-premise, sem API externa.</div>
+      </div>
+      <div class="card card-purple">
+        <div style="font-size:11px;color:var(--purple);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">T3 — Crew.ai (fallback)</div>
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.6;">Quando confidence &lt; 0.7. <strong style="color:var(--purple);">~30s</strong>. 2 agentes LLM: MetricsAnalyzer → RecommendationWriter. Fix com código de exemplo.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Resultado</div>
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.6;"><strong style="color:var(--teal);">apply_fix()</strong> no IDE fecha o loop: MCP lê o finding, LLM edita o .py, backup automático salvo.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 11 — RECOMENDAÇÃO DE MERGE
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s11">
+  <div class="slide-num">11 / 15</div>
   <div class="eyebrow">As duas branches são complementares — não concorrentes</div>
   <h2>Recomendação de merge</h2>
 
@@ -662,8 +1113,8 @@ MCP Server (Cowork · 5 tools)
 <!-- ══════════════════════════════════════════════════════════════
      SLIDE 8 — ISSUES ABERTAS: O QUE O COMMANDER PRECISA DECIDIR
 ══════════════════════════════════════════════════════════════ -->
-<div class="slide" id="s8">
-  <div class="slide-num">8 / 12</div>
+<div class="slide" id="s12">
+  <div class="slide-num">12 / 15</div>
   <div class="eyebrow">luanmorenommaciel/apex — 24 issues abertas</div>
   <h2>O que o Commander precisa decidir</h2>
 
@@ -730,8 +1181,8 @@ MCP Server (Cowork · 5 tools)
 <!-- ══════════════════════════════════════════════════════════════
      SLIDE 9 — O QUE FALTA HONESTAMENTE
 ══════════════════════════════════════════════════════════════ -->
-<div class="slide" id="s9">
-  <div class="slide-num">9 / 12</div>
+<div class="slide" id="s13">
+  <div class="slide-num">13 / 15</div>
   <div class="eyebrow">Honestidade radical — CREW_A_OPERATING_STANDARD</div>
   <h2>O que ainda falta</h2>
 
@@ -799,8 +1250,8 @@ MCP Server (Cowork · 5 tools)
 <!-- ══════════════════════════════════════════════════════════════
      SLIDE 11 — BRANCHES ENTREGUES E LINKS
 ══════════════════════════════════════════════════════════════ -->
-<div class="slide" id="s11">
-  <div class="slide-num">11 / 12</div>
+<div class="slide" id="s14">
+  <div class="slide-num">14 / 15</div>
   <div class="eyebrow">Entregáveis desta sprint</div>
   <h2>O que está no repo do Luan hoje</h2>
 
@@ -848,8 +1299,8 @@ generators/ watchers/     # v4 base (40 testes)</div>
 <!-- ══════════════════════════════════════════════════════════════
      SLIDE 12 — PRÓXIMOS PASSOS E FECHAMENTO
 ══════════════════════════════════════════════════════════════ -->
-<div class="slide" id="s12">
-  <div class="slide-num">12 / 12</div>
+<div class="slide" id="s15">
+  <div class="slide-num">15 / 15</div>
   <div class="eyebrow">Captain's Report — encerramento</div>
   <h2>Próximos passos</h2>
 
@@ -931,7 +1382,7 @@ generators/ watchers/     # v4 base (40 testes)</div>
     cur = idx;
     slides[cur].classList.add('active');
     dots[cur].classList.add('on');
-    counter.textContent = `${cur + 1} / 12`;
+    counter.textContent = `${cur + 1} / ${N}`;
   }
 
   function go(d) { goTo(cur + d); }
