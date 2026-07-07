@@ -1,0 +1,69 @@
+{
+  "id": "runbook-skew-join-001",
+  "name": "skew_on_join",
+  "version": "1.0",
+  "summary": "Correção de skew intencional em joins por desbalanceamento de chave. Técnicas: salting, two-pass aggregation, isolamento de hot keys.",
+  "trigger": {
+    "anomaly_type": "SKEW",
+    "conditions": [
+      "max_task_duration / median_task_duration > 5",
+      "stage envolve shuffle (join, groupBy, cogroup)"
+    ],
+    "min_confidence": 0.5
+  },
+  "steps": [
+    {
+      "order": 1,
+      "action": "Identificar a chave de join desbalanceada",
+      "details": "Consultar spark_tasks para encontrar o partition_id com maior duração. Verificar spark_events para o stage correspondente e identificar a chave de join.",
+      "validation": {
+        "query": "SELECT partition_id, count(*) as cnt, max(task_duration_ms) FROM spark_tasks WHERE app_id = '{{app_id}}' AND stage_id = {{stage_id}} GROUP BY partition_id ORDER BY cnt DESC LIMIT 10",
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "order": 2,
+      "action": "Aplicar salting na chave de join",
+      "details": "Adicionar suffixo aleatório (salt) à chave de join no lado maior do join, e replicar o lado menor para cada valor de salt.",
+      "code_example": {
+        "language": "python",
+        "snippet": "from pyspark.sql.functions import col, rand, lit, concat, explode\n\nsalt_buckets = 10\n\n# Lado maior (df_left)\ndf_left_salted = df_left.withColumn(\n    '_salt', (rand() * salt_buckets).cast('int')\n).withColumn(\n    'join_key_salted', concat(col('join_key'), lit('_'), col('_salt'))\n)\n\n# Lado menor (df_right) — replicar para cada salt\nfrom pyspark.sql import Row\nsalt_values = [Row(_salt=i) for i in range(salt_buckets)]\nsalt_df = spark.createDataFrame(salt_values)\ndf_right_salted = df_right.crossJoin(salt_df).withColumn(\n    'join_key_salted', concat(col('join_key'), lit('_'), col('_salt'))\n)\n\nresult = df_left_salted.join(\n    df_right_salted, 'join_key_salted', 'inner'\n).drop('join_key_salted', '_salt')\n",
+        "description": "Salting na chave de join para distribuir carga"
+      }
+    },
+    {
+      "order": 3,
+      "action": "Alternativa: broadcast join se lado menor < 10MB",
+      "details": "Se o DataFrame menor couber em memória (estimativa < 10MB), use broadcast hint para evitar shuffle completamente.",
+      "code_example": {
+        "language": "python",
+        "snippet": "from pyspark.sql.functions import broadcast\n\nresult = df_left.join(broadcast(df_right), 'join_key', 'inner')\n",
+        "description": "Broadcast join para evitar shuffle"
+      }
+    },
+    {
+      "order": 4,
+      "action": "Habilitar AQE (Adaptive Query Execution)",
+      "details": "Se estiver em Spark 3.x, AQE pode mitigar skew automaticamente via skew join optimization.",
+      "code_example": {
+        "language": "python",
+        "snippet": "spark.conf.set('spark.sql.adaptive.enabled', 'true')\nspark.conf.set('spark.sql.adaptive.skewJoin.enabled', 'true')\nspark.conf.set('spark.sql.adaptive.skewJoin.skewedPartitionFactor', '5')\nspark.conf.set('spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes', '256MB')\n",
+        "description": "Configurações AQE para skew join"
+      }
+    },
+    {
+      "order": 5,
+      "action": "Validar correção",
+      "details": "Re-executar o job e verificar se o skew_ratio caiu para < 2x. Comparar duração total do stage antes/depois.",
+      "validation": {
+        "query": "SELECT max(task_duration_ms) / median(task_duration_ms) as skew_ratio FROM spark_tasks WHERE app_id = '{{app_id}}' AND stage_id = {{stage_id}}",
+        "timeout_seconds": 300
+      }
+    }
+  ],
+  "expected_impact": {
+    "summary": "Redução de 3-10x no tempo de execução do stage afetado. Eliminação de tasks stragglers.",
+    "performance_gain": "Redução de 3-10x no tempo de execução do stage afetado"
+  },
+  "severity": "HIGH"
+}

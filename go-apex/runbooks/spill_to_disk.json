@@ -1,0 +1,72 @@
+{
+  "id": "runbook-spill-001",
+  "name": "spill_to_disk",
+  "version": "1.0",
+  "summary": "Correção de spill para disco causado por operações de shuffle, sort ou agregação com dados maiores que a memória disponível do executor.",
+  "trigger": {
+    "anomaly_type": "SPILL",
+    "conditions": [
+      "shuffle_bytes_written > 100MB em múltiplas tasks",
+      "task_duration correlacionado com volume de spill"
+    ],
+    "min_confidence": 0.5
+  },
+  "steps": [
+    {
+      "order": 1,
+      "action": "Aumentar memória do executor (executor memory)",
+      "details": "O spill ocorre quando o executor não tem heap suficiente para manter partições em memória. Aumentar spark.executor.memory é a primeira medida.",
+      "code_example": {
+        "language": "python",
+        "snippet": "spark.conf.set('spark.executor.memory', '8g')\nspark.conf.set('spark.executor.memoryOverhead', '2g')\n",
+        "description": "Aumentar memória do executor"
+      }
+    },
+    {
+      "order": 2,
+      "action": "Reduzir spark.sql.shuffle.partitions",
+      "details": "Menos partições → mais dados por partição, mas menos overhead de shuffle. Ajuste para ~2x o número de cores do cluster.",
+      "code_example": {
+        "language": "python",
+        "snippet": "spark.conf.set('spark.sql.shuffle.partitions', '200')  # default 200, reduzir se cluster pequeno\n",
+        "description": "Reduzir número de partições de shuffle"
+      }
+    },
+    {
+      "order": 3,
+      "action": "Aumentar spark.sql.files.maxPartitionBytes",
+      "details": "Maior tamanho de partição de entrada reduz o número de tasks iniciais, diminuindo pressão de memória.",
+      "code_example": {
+        "language": "python",
+        "snippet": "spark.conf.set('spark.sql.files.maxPartitionBytes', '256MB')  # default 128MB\n",
+        "description": "Aumentar tamanho máximo de partição"
+      }
+    },
+    {
+      "order": 4,
+      "action": "Usar spill sort para operações de sort excessivas",
+      "details": "Se o spill está em sort, considere reescrever a lógica para evitar sort global. Use map-side reduce quando possível.",
+      "code_example": {
+        "language": "python",
+        "snippet": "# Evitar sort global se possível\nfrom pyspark.sql.functions import approx_count_distinct\n\n# Em vez de groupBy + countDistinct (que pode gerar spill):\n# Use aproximação se a cardinalidade for alta\ndf.select(approx_count_distinct('col')).show()\n",
+        "description": "Evitar sort global com aproximações"
+      }
+    },
+    {
+      "order": 5,
+      "action": "Monitorar após correção",
+      "details": "Re-executar job e verificar que shuffle_bytes_written = 0 ou reduziu drasticamente. Verificar GC time.",
+      "validation": {
+        "query": "SELECT sum(shuffle_bytes_written) / 1024 / 1024 as spill_mb FROM spark_tasks WHERE app_id = '{{app_id}}' AND stage_id = {{stage_id}}",
+        "timeout_seconds": 300
+      }
+    }
+  ],
+  "expected_impact": {
+    "summary": "Eliminação ou redução de 90%+ de spill. Ganho de 2-5x na latência do stage. Redução de GC pressure.",
+    "performance_gain": "Ganho de 2-5x na latência do stage",
+    "reliability_improvement": "Eliminação ou redução de 90%+ de spill"
+  },
+  "code_template": "# Ajustes de configuração para mitigar spill\nspark.conf.set('spark.executor.memory', '8g')\nspark.conf.set('spark.executor.memoryOverhead', '2g')\nspark.conf.set('spark.sql.shuffle.partitions', '200')\nspark.conf.set('spark.sql.adaptive.enabled', 'true')\nspark.conf.set('spark.sql.adaptive.coalescePartitions.enabled', 'true')\n",
+  "severity": "HIGH"
+}
