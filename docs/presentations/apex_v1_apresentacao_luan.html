@@ -1304,4 +1304,181 @@
        SLIDE 8 · PRÓXIMOS PASSOS
   ────────────────────────────────────────────────────── -->
   <section class="slide" id="slide-next">
-    <div clas
+    <div class="slide-badge">08 / 08</div>
+    <div class="kicker">Roadmap priorizado</div>
+    <h2>Próximos passos</h2>
+
+    <div class="card scroll-content" style="flex:1; padding:0; overflow:hidden; overflow-y:auto;">
+      <div class="sprint-row">
+        <div class="sprint-tag s1">Sprint 1</div>
+        <div class="sprint-content">
+          <div class="sprint-title">Ligar MCP no Claude Code do Luan</div>
+          <div class="sprint-desc">Conectar mcp/server.py ao IDE → demo ao vivo do fluxo completo. Engenheiro pergunta, Apex responde com root cause.</div>
+        </div>
+        <div class="sprint-time">~30 min</div>
+      </div>
+      <div class="sprint-row">
+        <div class="sprint-tag s1">Sprint 1</div>
+        <div class="sprint-content">
+          <div class="sprint-title">Demo log_poller.py com job real no plat-v0</div>
+          <div class="sprint-desc">Rodar job → poller detecta em ≤15s → diagnóstico automático → Finding no ClickHouse. Demonstração do "real-time" ao Luan.</div>
+        </div>
+        <div class="sprint-time">~2h</div>
+      </div>
+      <div class="sprint-row">
+        <div class="sprint-tag s2">Sprint 2</div>
+        <div class="sprint-content">
+          <div class="sprint-title">Adicionar 3–5 cenários novos</div>
+          <div class="sprint-desc">
+            <code style="font-size:11px">spill_on_join</code> ·
+            <code style="font-size:11px">broadcast_miss</code> ·
+            <code style="font-size:11px">parallelism_collapse</code> ·
+            <code style="font-size:11px">small_files_storm</code>
+            <br>Cada scenario.yaml = Watcher + Classifier + teste oracle.
+          </div>
+        </div>
+        <div class="sprint-time">~1-2 dias cada</div>
+      </div>
+      <div class="sprint-row">
+        <div class="sprint-tag s3">Sprint 3</div>
+        <div class="sprint-content">
+          <div class="sprint-title">Scala JAR listener — real-time verdadeiro</div>
+          <div class="sprint-desc">SparkListener in-process via spark.extraListeners → streaming para ClickHouse durante execução → remove dependência do event log pós-job. Fecha gap com DataFlint :4040.</div>
+        </div>
+        <div class="sprint-time">~1 sprint</div>
+      </div>
+      <div class="sprint-row">
+        <div class="sprint-tag s4">Sprint 4</div>
+        <div class="sprint-content">
+          <div class="sprint-title">Code correlation — callSite → git blame → fix</div>
+          <div class="sprint-desc">
+            Anti-pattern detectado → callSite no event log → git blame → "este anti-pattern foi introduzido no commit X por autor Y" → sugestão de fix inline no IDE.
+            <br><span style="color:var(--purple)">⭐ único no mercado</span>
+          </div>
+        </div>
+        <div class="sprint-time">~2 sprints</div>
+      </div>
+    </div>
+
+    <div class="hr" style="margin:16px 0 12px"></div>
+
+    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+      <div class="card" style="padding:12px 18px; flex:1; min-width:200px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:24px">🎯</span>
+        <div>
+          <div style="font-size:13px; font-weight:700; color:var(--text);">Próxima ação imediata</div>
+          <div style="font-size:12px; color:var(--text2);">Conectar MCP ao Claude Code do Luan · 30 minutos · hoje</div>
+        </div>
+      </div>
+      <div class="card" style="padding:12px 18px; flex:1; min-width:200px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:24px">📋</span>
+        <div>
+          <div style="font-size:13px; font-weight:700; color:var(--text);">Issues ativas</div>
+          <div style="font-size:12px; color:var(--text2);">#17 Pipeline · #18 OTel · #19 plat-v0 · #20 Rec Engine · #21 CI</div>
+        </div>
+      </div>
+      <div class="card" style="padding:12px 18px; flex:1; min-width:200px; display:flex; align-items:center; gap:12px;">
+        <div class="status-dot"></div>
+        <div>
+          <div style="font-size:13px; font-weight:700; color:var(--text);">Status do pipeline</div>
+          <div style="font-size:12px; color:var(--green);">LIVE · 06 Jul 2026 · 40 testes passando</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /#deck -->
+
+<!-- Navigation -->
+<div id="nav">
+  <button id="btn-prev" onclick="go(-1)" disabled>←</button>
+  <div id="dots"></div>
+  <span id="counter">1 / 8</span>
+  <button id="btn-next" onclick="go(1)">→</button>
+</div>
+
+<div id="hint">← → arrow keys to navigate</div>
+
+<script>
+(function () {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsContainer = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const progress = document.getElementById('progress');
+  const total = slides.length;
+  let current = 0;
+  let animating = false;
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotsContainer.appendChild(d);
+  });
+
+  function updateUI() {
+    const dots = dotsContainer.querySelectorAll('.dot');
+    dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    counter.textContent = (current + 1) + ' / ' + total;
+    btnPrev.disabled = current === 0;
+    btnNext.disabled = current === total - 1;
+    progress.style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  function goTo(idx) {
+    if (animating || idx === current || idx < 0 || idx >= total) return;
+    animating = true;
+
+    const prev = slides[current];
+    const next = slides[idx];
+
+    prev.classList.add('exit');
+    next.style.transform = 'translateX(60px)';
+    next.style.opacity = '0';
+    next.classList.add('active');
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        next.style.transform = '';
+        next.style.opacity = '';
+        setTimeout(() => {
+          prev.classList.remove('active', 'exit');
+          next.style.transform = null;
+          next.style.opacity = null;
+          animating = false;
+        }, 360);
+      });
+    });
+
+    current = idx;
+    updateUI();
+  }
+
+  window.go = function (delta) { goTo(current + delta); };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault(); go(1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault(); go(-1);
+    }
+  });
+
+  // Touch swipe
+  let touchX = null;
+  document.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    touchX = null;
+  }, { passive: true });
+
+  updateUI();
+})();
+</script>
+</body>
+</html>
