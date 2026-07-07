@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex — Captain's Report | Time | Jul 2026 — v2</title>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #21262d; --bg4: #2d333b;
+    --border: #30363d; --border2: #444c56;
+    --text: #e6edf3; --text2: #8b949e; --text3: #6e7681;
+    --accent: #58a6ff; --accent2: #79c0ff;
+    --green: #3fb950; --green2: #238636;
+    --yellow: #d29922; --yellow2: #e3b341;
+    --red: #f85149; --orange: #e3b341;
+    --purple: #bc8cff; --teal: #39d353; --pink: #ff7b72;
+    --font-mono: 'JetBrains Mono','Fira Code',Consolas,monospace;
+    --font: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width:100%; height:100%; background:var(--bg); color:var(--text); font-family:var(--font); overflow:hidden; }
+
+  #deck { width:100%; height:100%; position:relative; }
+
+  .slide {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding:48px 72px 56px;
+    opacity:0; transform:translateX(60px);
+    transition:opacity .32s ease, transform .32s ease;
+    pointer-events:none; overflow:hidden;
+  }
+  .slide.active { opacity:1; transform:translateX(0); pointer-events:all; }
+  .slide.exit { opacity:0; transform:translateX(-60px); transition:opacity .26s ease, transform .26s ease; }
+
+  /* NAV */
+  #nav {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:10px;
+    background:rgba(22,27,34,.9); border:1px solid var(--border);
+    border-radius:40px; padding:7px 18px; backdrop-filter:blur(12px); z-index:100;
+  }
+  #nav button {
+    background:none; border:none; color:var(--text2); cursor:pointer;
+    font-size:16px; padding:4px 8px; border-radius:6px; transition:all .15s;
+  }
+  #nav button:hover { color:var(--text); background:var(--bg3); }
+  #counter { color:var(--text2); font-size:13px; min-width:56px; text-align:center; font-variant-numeric:tabular-nums; }
+  .dot { width:6px; height:6px; border-radius:50%; background:var(--border2); cursor:pointer; transition:all .2s; }
+  .dot.on { background:var(--accent); transform:scale(1.3); }
+  #dots { display:flex; gap:6px; align-items:center; }
+
+  /* SLIDE NUMBER */
+  .slide-num {
+    position:absolute; top:28px; right:32px;
+    font-size:11px; color:var(--text3); font-variant-numeric:tabular-nums; letter-spacing:.04em;
+  }
+
+  /* TYPOGRAPHY */
+  .eyebrow { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:14px; }
+  h1 { font-size:52px; font-weight:700; line-height:1.08; letter-spacing:-.02em; }
+  h2 { font-size:34px; font-weight:700; line-height:1.15; letter-spacing:-.01em; }
+  h3 { font-size:20px; font-weight:600; color:var(--text); }
+  .sub { color:var(--text2); font-size:17px; margin-top:10px; line-height:1.5; }
+  .muted { color:var(--text3); font-size:13px; }
+
+  /* LAYOUT HELPERS */
+  .cols2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .cols3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; }
+  .cols4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:16px; }
+  .grow { flex:1; }
+  .mt8 { margin-top:8px; } .mt12 { margin-top:12px; } .mt16 { margin-top:16px; }
+  .mt20 { margin-top:20px; } .mt24 { margin-top:24px; } .mt32 { margin-top:32px; }
+
+  /* CARDS */
+  .card {
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:12px; padding:20px 22px;
+  }
+  .card-accent { border-color:var(--accent); background:rgba(88,166,255,.06); }
+  .card-green  { border-color:var(--green);  background:rgba(63,185,80,.06); }
+  .card-yellow { border-color:var(--yellow); background:rgba(210,153,34,.06); }
+  .card-red    { border-color:var(--red);    background:rgba(248,81,73,.06); }
+  .card-purple { border-color:var(--purple); background:rgba(188,140,255,.06); }
+
+  /* STATUS PILLS */
+  .pill { display:inline-block; border-radius:20px; padding:2px 10px; font-size:12px; font-weight:600; }
+  .pill-green  { background:rgba(63,185,80,.15);  color:var(--green); }
+  .pill-yellow { background:rgba(210,153,34,.15); color:var(--yellow2); }
+  .pill-red    { background:rgba(248,81,73,.15);  color:var(--red); }
+  .pill-blue   { background:rgba(88,166,255,.15); color:var(--accent); }
+  .pill-purple { background:rgba(188,140,255,.15);color:var(--purple); }
+
+  /* METRIC BLOCKS */
+  .metric { text-align:center; }
+  .metric .num { font-size:42px; font-weight:700; letter-spacing:-.02em; line-height:1; }
+  .metric .label { font-size:12px; color:var(--text2); margin-top:6px; line-height:1.3; }
+
+  /* TABLE */
+  .tbl { width:100%; border-collapse:collapse; font-size:13.5px; }
+  .tbl th { text-align:left; color:var(--text2); font-weight:500; padding:8px 12px; border-bottom:1px solid var(--border); font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
+  .tbl td { padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .tbl tr:last-child td { border-bottom:none; }
+  .tbl tr:hover td { background:rgba(255,255,255,.025); }
+
+  /* PIPELINE */
+  .pipe { display:flex; align-items:center; gap:0; }
+  .pipe-step {
+    background:var(--bg3); border:1px solid var(--border2);
+    border-radius:8px; padding:8px 14px;
+    font-size:13px; font-weight:600; white-space:nowrap;
+    position:relative;
+  }
+  .pipe-arrow { color:var(--text3); font-size:18px; padding:0 4px; flex-shrink:0; }
+
+  /* CODE */
+  .code {
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:8px; padding:14px 16px;
+    font-family:var(--font-mono); font-size:12.5px; line-height:1.6;
+    color:var(--text2);
+  }
+  .code .kw { color:var(--purple); } .code .str { color:var(--teal); }
+  .code .num { color:var(--yellow2); } .code .cm { color:var(--text3); }
+  .code .fn { color:var(--accent); }
+
+  /* DIVIDER */
+  .divider { height:1px; background:var(--border); margin:20px 0; }
+
+  /* CHECK LIST */
+  .check-item { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+  .check-item:last-child { border-bottom:none; }
+  .check-icon { font-size:16px; margin-top:1px; flex-shrink:0; }
+  .check-body { flex:1; }
+  .check-title { font-size:14px; font-weight:600; }
+  .check-desc  { font-size:12px; color:var(--text2); margin-top:2px; }
+
+  /* COVER SPECIAL */
+  .cover-badge {
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(63,185,80,.12); border:1px solid rgba(63,185,80,.3);
+    border-radius:24px; padding:6px 16px; font-size:13px; font-weight:600; color:var(--green);
+    margin-bottom:28px;
+  }
+
+  /* COMPARISON */
+  .cmp-col { display:flex; flex-direction:column; gap:10px; }
+  .cmp-row {
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:8px; padding:12px 16px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .cmp-icon { font-size:20px; width:28px; text-align:center; flex-shrink:0; }
+  .cmp-text { flex:1; }
+  .cmp-text .t { font-size:13.5px; font-weight:600; }
+  .cmp-text .d { font-size:12px; color:var(--text2); margin-top:2px; }
+
+  /* GRADIENT ACCENT */
+  .grad-text {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+
+  /* SCROLLABLE TABLE WRAPPER */
+  .table-wrap { overflow-y:auto; max-height:calc(100% - 20px); }
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 1 — CAPA
+══════════════════════════════════════════════════════════════ -->
+<div class="slide active" id="s1">
+  <div class="slide-num">1 / 12</div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+    <div class="cover-badge"><span>●</span> Pipeline V1 Rodando em Produção</div>
+    <h1>Apex<br><span class="grad-text">Captain's Report</span></h1>
+    <p class="sub" style="max-width:540px;margin-top:18px;">
+      Duas branches entregues. Pipeline end-to-end validado.<br>
+      Benchmark contra DataFlint. Recomendação de merge.
+    </p>
+    <div class="divider" style="margin-top:36px;margin-bottom:24px;max-width:480px;"></div>
+    <div style="display:flex;gap:40px;">
+      <div class="metric"><div class="num" style="color:var(--green);">2</div><div class="label">Branches entregues<br>prontas para review</div></div>
+      <div class="metric"><div class="num" style="color:var(--accent);">5</div><div class="label">MCP tools<br>no IDE do engenheiro</div></div>
+      <div class="metric"><div class="num" style="color:var(--yellow2);">40</div><div class="label">Testes passando<br>(base v4)</div></div>
+      <div class="metric"><div class="num" style="color:var(--purple);">136ms</div><div class="label">Diagnóstico T1<br>heurístico (kimi)</div></div>
+    </div>
+    <p class="muted" style="margin-top:32px;">Captain: Augusto · Commander: Luan · 06 Jul 2026</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 2 — O QUE VOCÊ PEDIU, REUNIÃO 30/06
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="slide-num">2 / 12</div>
+  <div class="eyebrow">Reunião 30/06 — Commander's Plan</div>
+  <h2>O que você pediu.<br>O que foi entregue.</h2>
+  <div class="grow mt24" style="overflow:auto;">
+    <table class="tbl">
+      <thead><tr><th style="width:36%">Pedido (citação direta)</th><th>Status</th><th>Evidência na branch</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--text2);font-style:italic;">"Spark Envy gerando ambiente + jobs Docker"</td>
+            <td><span class="pill pill-green">✅ Feito</span></td>
+            <td>dataship-spark-plat-v0 — docker compose up</td></tr>
+        <tr><td style="color:var(--text2);font-style:italic;">"SparkListener injetado no cluster"</td>
+            <td><span class="pill pill-yellow">🟡 Bridge</span></td>
+            <td>ADR-005: blocker py4j documentado. Bridge 15s via log_poller.py</td></tr>
+        <tr><td style="color:var(--text2);font-style:italic;">"ClickStack recebendo métricas"</td>
+            <td><span class="pill pill-green">✅ Feito</span></td>
+            <td>event_log_ingest.py → apex.stage_metrics + apex.task_metrics</td></tr>
+        <tr><td style="color:var(--text2);font-style:italic;">"Crew.ai vai olhar e falar qual o problema"</td>
+            <td><span class="pill pill-green">✅ Feito</span></td>
+            <td>crew_diagnose.py — 2 agentes → ApexFinding JSON validado</td></tr>
+        <tr><td style="color:var(--text2);font-style:italic;">"Fix entregue via MCP ao engenheiro no IDE"</td>
+            <td><span class="pill pill-green">✅ Feito</span></td>
+            <td>server.py — 5 tools MCP: get_findings, trigger_diagnosis, apply_fix…</td></tr>
+        <tr><td style="color:var(--text2);font-style:italic;">"Aplica nossa sugestão"</td>
+            <td><span class="pill pill-green">✅ Feito</span></td>
+            <td>apply_fix: LLM edita arquivo PySpark do engenheiro + backup automático</td></tr>
+        <tr><td style="color:var(--text2);font-style:italic;">"Análise individual do DataFlint"</td>
+            <td><span class="pill pill-green">✅ Feito</span></td>
+            <td>docs/competitive/ — análise completa + benchmark com métricas reais</td></tr>
+        <tr><td style="color:var(--text2);font-style:italic;">"On-premise / offline mode"</td>
+            <td><span class="pill pill-blue">⏸ Sprint 4</span></td>
+            <td>Decisão estratégica pendente</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 3 — PIPELINE V1 ARQUITETURA
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="slide-num">3 / 12</div>
+  <div class="eyebrow">Branch cowork — gustocezar/feature/cowork-desacoplamento-geradores</div>
+  <h2>Pipeline V1 — Arquitetura</h2>
+  <p class="sub" style="margin-bottom:24px;">Rodando. Validado com dados reais hoje.</p>
+
+  <div class="cols2 grow">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="card" style="text-align:center;">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Event Log (MinIO / local)</div>
+        <div style="font-size:22px;">📦</div>
+      </div>
+      <div style="text-align:center;color:var(--text3);">↓ log_poller.py · 15s polling</div>
+      <div class="card card-accent">
+        <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;">INGEST</div>
+        <div style="font-size:13px;">event_log_ingest.py</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px;">→ apex.stage_metrics · apex.task_metrics</div>
+      </div>
+      <div style="text-align:center;color:var(--text3);">↓ ClickHouse</div>
+      <div class="card card-purple">
+        <div style="font-size:11px;color:var(--purple);font-weight:600;margin-bottom:4px;">CREW.AI · 2 AGENTES</div>
+        <div style="font-size:13px;">MetricsAnalyzer → RecommendationWriter</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px;">ApexFinding (Pydantic · anti-alucinação)</div>
+      </div>
+      <div style="text-align:center;color:var(--text3);">↓ apex.findings</div>
+      <div class="card card-green">
+        <div style="font-size:11px;color:var(--green);font-weight:600;margin-bottom:4px;">MCP SERVER · 5 TOOLS</div>
+        <div style="font-size:13px;">get_findings · get_stage_metrics · list_slow_apps</div>
+        <div style="font-size:13px;">trigger_diagnosis · <strong style="color:var(--green);">apply_fix</strong> ← novo</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="card card-green">
+        <h3 style="font-size:15px;color:var(--green);margin-bottom:10px;">✅ Validado hoje</h3>
+        <div class="code" style="font-size:12px;">
+<span class="cm"># Output real do pipeline</span>
+{
+  <span class="str">"pattern"</span>: <span class="str">"skew"</span>,
+  <span class="str">"severity"</span>: <span class="str">"high"</span>,
+  <span class="str">"confidence"</span>: <span class="num">0.87</span>,
+  <span class="str">"bottleneck_stage_id"</span>: <span class="num">2</span>,
+  <span class="str">"root_cause"</span>: <span class="str">"Hot key customer_id..."</span>,
+  <span class="str">"recommendation"</span>: <span class="str">"Adicione salting..."</span>
+}
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:14px;margin-bottom:10px;">apply_fix — exclusivo desta branch</h3>
+        <div style="font-size:13px;color:var(--text2);line-height:1.6;">
+          O engenheiro chama no IDE:<br>
+          <code style="color:var(--accent);font-family:var(--font-mono);">apply_fix(app_id, file_path)</code><br><br>
+          O MCP lê o finding, passa para o LLM,<br>
+          edita o arquivo <code>.py</code> e salva backup automático.
+        </div>
+      </div>
+      <div class="card">
+        <div class="cols4" style="gap:12px;text-align:center;">
+          <div><div style="font-size:24px;font-weight:700;color:var(--green);">5</div><div style="font-size:11px;color:var(--text2);">MCP tools</div></div>
+          <div><div style="font-size:24px;font-weight:700;color:var(--accent);">2</div><div style="font-size:11px;color:var(--text2);">Agentes LLM</div></div>
+          <div><div style="font-size:24px;font-weight:700;color:var(--yellow2);">40</div><div style="font-size:11px;color:var(--text2);">Testes passando</div></div>
+          <div><div style="font-size:24px;font-weight:700;color:var(--purple);">15s</div><div style="font-size:11px;color:var(--text2);">Poll interval</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 4 — DUAS BRANCHES: COWORK VS KIMI
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="slide-num">4 / 12</div>
+  <div class="eyebrow">Duas abordagens paralelas — mesmo objetivo</div>
+  <h2>Cowork (Claude) vs Kimi</h2>
+
+  <div class="cols2 grow mt20">
+    <!-- COWORK -->
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span style="font-size:20px;">🤝</span>
+        <div>
+          <div style="font-weight:700;font-size:15px;">cowork-desacoplamento-geradores</div>
+          <div class="muted">Claude · deploy: scripts Python diretos</div>
+        </div>
+      </div>
+      <div class="cmp-col">
+        <div class="cmp-row" style="border-color:var(--green);">
+          <div class="cmp-icon">✅</div>
+          <div class="cmp-text"><div class="t">apply_fix MCP tool</div><div class="d">Edita arquivo PySpark do engenheiro + backup</div></div>
+        </div>
+        <div class="cmp-row" style="border-color:var(--green);">
+          <div class="cmp-icon">✅</div>
+          <div class="cmp-text"><div class="t">5 MCP tools</div><div class="d">list_slow_apps, trigger_diagnosis, apply_fix…</div></div>
+        </div>
+        <div class="cmp-row" style="border-color:var(--green);">
+          <div class="cmp-icon">✅</div>
+          <div class="cmp-text"><div class="t">ADR-005 formalizado</div><div class="d">SparkListener vs zero-JAR — decisão registrada</div></div>
+        </div>
+        <div class="cmp-row" style="border-color:var(--green);">
+          <div class="cmp-icon">✅</div>
+          <div class="cmp-text"><div class="t">Docs competitivos DataFlint</div><div class="d">docs/competitive/ — análise completa</div></div>
+        </div>
+        <div class="cmp-row" style="border-color:var(--border2);">
+          <div class="cmp-icon" style="color:var(--red);">❌</div>
+          <div class="cmp-text"><div class="t">T1 heurístico (sem LLM)</div><div class="d">Todo diagnóstico passa pelo Crew.ai (~30-60s)</div></div>
+        </div>
+        <div class="cmp-row" style="border-color:var(--border2);">
+          <div class="cmp-icon" style="color:var(--red);">❌</div>
+          <div class="cmp-text"><div class="t">Baseline negativo</div><div class="d">Sem validação de falsos positivos</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KIMI -->
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span style="font-size:20px;">🧠</span>
+        <div>
+          <div style="font-weight:700;font-size:15px;">kimi-desacoplamento-geradores</div>
+          <div class="muted">Kimi · deploy: Docker Compose (serviços)</div>
+        </div>
+      </div>
+      <div class="cmp-col">
+        <div class="cmp-row" style="border-color:var(--green);">
+          <div class="cmp-icon">✅</div>
+          <div class="cmp-text"><div class="t">T1 heurístico · 136ms</div><div class="d">Diagnóstico determinístico sem LLM</div></div>
+        </div>
+        <div class="cmp-row" style="border-color:var(--green);">
+          <div class="cmp-icon">✅</div>
+          <div class="cmp-text"><div class="t">EvidenceValidator · 7/7 regras</div><div class="d">Gate de qualidade antes de acionar LLM</div></div>
+        </div>
+        <div class="cmp-row" style="border-color:var(--green);">
+          <div class="cmp-icon">✅</div>
+          <div class="cmp-text"><div class="t">Runbooks JSON versionados</div><div class="d">skew_on_join.json · spill_to_disk.json</div></div>
+        </div>
+        <div class="cmp-row" style="border-color:var(--green);">
+          <div class="cmp-icon">✅</div>
+          <div class="cmp-text"><div class="t">Baseline negativo</div><div class="d">no_skew_baseline.yaml — testa falsos positivos</div></div>
+        </div>
+        <div class="cmp-row" style="border-color:var(--border2);">
+          <div class="cmp-icon" style="color:var(--red);">❌</div>
+          <div class="cmp-text"><div class="t">apply_fix</div><div class="d">Entrega runbook mas engenheiro aplica manualmente</div></div>
+        </div>
+        <div class="cmp-row" style="border-color:var(--border2);">
+          <div class="cmp-icon" style="color:var(--red);">❌</div>
+          <div class="cmp-text"><div class="t">ADR / docs formais</div><div class="d">Sem registro arquitetural</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 5 — BENCHMARK: NÚMEROS REAIS
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="slide-num">5 / 12</div>
+  <div class="eyebrow">Benchmark · medido em produção · job app-20260706035238-0001</div>
+  <h2>Apex: números reais medidos</h2>
+
+  <div class="cols2 grow mt20" style="align-items:start;gap:20px;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <!-- T1 -->
+      <div class="card card-green">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:12px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">T1 — Diagnostician (SQL)</div>
+          <span class="pill pill-green">Sem LLM</span>
+        </div>
+        <div class="cols3" style="text-align:center;gap:8px;margin-bottom:10px;">
+          <div><div style="font-size:28px;font-weight:700;color:var(--green);">136ms</div><div style="font-size:10px;color:var(--text2);">avg (5 runs)</div></div>
+          <div><div style="font-size:28px;font-weight:700;color:var(--teal);">103ms</div><div style="font-size:10px;color:var(--text2);">mínimo</div></div>
+          <div><div style="font-size:28px;font-weight:700;color:var(--yellow2);">229ms</div><div style="font-size:10px;color:var(--text2);">máximo</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--text2);">2 findings detectados: skew <strong style="color:var(--red);">12.53x HIGH</strong> + <strong style="color:var(--yellow2);">5.03x MEDIUM</strong></div>
+      </div>
+      <!-- Validator -->
+      <div class="card card-accent">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:12px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">EvidenceValidator (8 regras)</div>
+          <span class="pill pill-blue">7/7 pass</span>
+        </div>
+        <div class="cols3" style="text-align:center;gap:8px;margin-bottom:10px;">
+          <div><div style="font-size:28px;font-weight:700;color:var(--accent);">198ms</div><div style="font-size:10px;color:var(--text2);">avg (5 runs)</div></div>
+          <div><div style="font-size:28px;font-weight:700;color:var(--teal);">136ms</div><div style="font-size:10px;color:var(--text2);">mínimo</div></div>
+          <div><div style="font-size:28px;font-weight:700;color:var(--yellow2);">277ms</div><div style="font-size:10px;color:var(--text2);">máximo</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--text2);">Gate de qualidade antes de qualquer ação. DataFlint não documenta equivalente.</div>
+      </div>
+      <!-- T2 -->
+      <div class="card card-purple">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:12px;color:var(--purple);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">T2 — Recommender (Runbook JSON)</div>
+          <span class="pill pill-purple">Sub-ms</span>
+        </div>
+        <div class="cols3" style="text-align:center;gap:8px;margin-bottom:6px;">
+          <div><div style="font-size:28px;font-weight:700;color:var(--purple);">0.01ms</div><div style="font-size:10px;color:var(--text2);">total</div></div>
+          <div><div style="font-size:28px;font-weight:700;color:var(--purple);">4</div><div style="font-size:10px;color:var(--text2);">steps acionáveis</div></div>
+          <div><div style="font-size:28px;font-weight:700;color:var(--purple);">0</div><div style="font-size:10px;color:var(--text2);">chamadas de rede</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--text2);">Runbook skew_on_join + código PySpark de salting. Determinístico, zero latência de rede.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <!-- Pipeline total -->
+      <div class="card">
+        <div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Pipeline end-to-end</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="background:rgba(63,185,80,.15);border-radius:4px;padding:4px 8px;font-size:12px;font-weight:600;color:var(--green);min-width:90px;">T1 + T2</div>
+            <div style="flex:1;background:var(--bg3);border-radius:4px;height:24px;position:relative;">
+              <div style="position:absolute;inset:0;background:var(--green);border-radius:4px;width:40%;opacity:.4;"></div>
+              <span style="position:absolute;left:8px;top:4px;font-size:11px;font-weight:700;color:var(--green);">~137ms</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="background:rgba(88,166,255,.15);border-radius:4px;padding:4px 8px;font-size:12px;font-weight:600;color:var(--accent);min-width:90px;">T1+Val+T2</div>
+            <div style="flex:1;background:var(--bg3);border-radius:4px;height:24px;position:relative;">
+              <div style="position:absolute;inset:0;background:var(--accent);border-radius:4px;width:100%;opacity:.25;"></div>
+              <span style="position:absolute;left:8px;top:4px;font-size:11px;font-weight:700;color:var(--accent);">~334ms</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="background:rgba(248,81,73,.1);border-radius:4px;padding:4px 8px;font-size:12px;font-weight:600;color:var(--red);min-width:90px;">DataFlint</div>
+            <div style="flex:1;background:var(--bg3);border-radius:4px;height:24px;position:relative;overflow:hidden;">
+              <div style="position:absolute;inset:0;background:var(--red);border-radius:4px;opacity:.2;"></div>
+              <span style="position:absolute;left:8px;top:4px;font-size:11px;font-weight:700;color:var(--red);">1-5s (SaaS + rede + LLM) — estimado</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- evidence rules -->
+      <div class="card">
+        <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">EvidenceValidator — 7 regras (job_v4)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
+          <div style="color:var(--green);">✅ R1 · provenance — 12 tasks</div>
+          <div style="color:var(--green);">✅ R2 · schema — campos OK</div>
+          <div style="color:var(--green);">✅ R3 · operator — Shuffle+Result</div>
+          <div style="color:var(--green);">✅ R4 · correlation — variância OK</div>
+          <div style="color:var(--green);">✅ R5 · distribution — mediana > 0</div>
+          <div style="color:var(--green);">✅ R6 · structural — 3 stages</div>
+          <div style="color:var(--green);">✅ R7 · single_app — 1 appId</div>
+          <div style="color:var(--text3);font-style:italic;">DataFlint: não documentado</div>
+        </div>
+      </div>
+      <!-- infra verificada -->
+      <div class="card">
+        <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Infra verificada (Docker)</div>
+        <div class="code" style="font-size:11.5px;">
+spv0-minio          Up 9h   ✅
+spv0-clickhouse     Up 9h   ✅
+spv0-spark-master   Up 9h   ✅
+spv0-spark-worker-1 Up 9h   ✅
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 6 — DATAFLINT: COMPARAÇÃO COMPLETA
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="slide-num">6 / 12</div>
+  <div class="eyebrow">Análise competitiva · docs/competitive/ · benchmark DataFlint</div>
+  <h2>Apex vs DataFlint — Comparação completa</h2>
+
+  <div class="cols2 grow mt16" style="gap:20px;">
+    <!-- Capability matrix -->
+    <div>
+      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Matriz de capacidades (12 pontos)</div>
+      <table class="tbl" style="font-size:12.5px;">
+        <thead><tr><th style="width:40%;">Capacidade</th><th style="width:30%;">DataFlint</th><th style="width:30%;">Apex</th></tr></thead>
+        <tbody>
+          <tr><td>Detecção de skew</td><td>✅ AI-based</td><td style="color:var(--green);">✅ SQL · 136ms</td></tr>
+          <tr><td>Runbooks acionáveis</td><td>✅ AI suggestions</td><td style="color:var(--green);">✅ JSON det. · 0.01ms</td></tr>
+          <tr><td>Validação de evidências</td><td><span style="color:var(--text3);">❓ Não documentado</span></td><td style="color:var(--green);">✅ 7 regras · 198ms</td></tr>
+          <tr><td>Código aberto</td><td><span style="color:var(--yellow2);">⚠️ OSS parcial (plugin)</span></td><td style="color:var(--green);">✅ MIT completo</td></tr>
+          <tr><td>Integração ClickHouse</td><td><span style="color:var(--red);">❌</span></td><td style="color:var(--green);">✅ Nativa</td></tr>
+          <tr><td>apply_fix no IDE</td><td><span style="color:var(--red);">❌</span></td><td style="color:var(--green);">✅ MCP (cowork)</td></tr>
+          <tr><td>On-premise / air-gapped</td><td><span style="color:var(--red);">❌ Cloud only</span></td><td style="color:var(--green);">✅ Docker local</td></tr>
+          <tr><td>Preço</td><td><span style="color:var(--yellow2);">💰 Resource-based SaaS</span></td><td style="color:var(--green);">🆓 Gratuito</td></tr>
+          <tr><td>Detecção de spill</td><td>✅</td><td style="color:var(--green);">✅ SpillWatcher</td></tr>
+          <tr><td>UI / Web dashboard</td><td style="color:var(--green);">✅ Visual rico</td><td><span style="color:var(--red);">❌ CLI (Sprint 2)</span></td></tr>
+          <tr><td>Alertas Slack/Email</td><td style="color:var(--green);">✅ Nativo</td><td><span style="color:var(--red);">❌ Sprint 2</span></td></tr>
+          <tr><td>Case study economia</td><td style="color:var(--green);">✅ 100x (SimilarWeb)</td><td><span style="color:var(--red);">❌ Pendente</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Architecture comparison + decision matrix -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <!-- Arch comparison -->
+      <div class="card">
+        <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Arquitetura — diferença chave</div>
+        <div class="cols2" style="gap:12px;">
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:6px;">DataFlint</div>
+            <div class="code" style="font-size:10.5px;text-align:left;">
+Spark Job
+  ↓ plugin
+SaaS Cloud
+  ↓ compressão
+AI Agents (LLM)
+  ↓ latência rede
+UI + Alertas
+            </div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px;">Apex</div>
+            <div class="code" style="font-size:10.5px;text-align:left;">
+Spark Job
+  ↓ MinIO
+Go Loader
+  ↓ parse
+ClickHouse
+  ↓ SQL local
+T1 → T2 → MCP
+            </div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+          <strong style="color:var(--green);">Apex:</strong> dados ficam na rede · SQL determinístico · zero custo de inferência<br>
+          <strong style="color:var(--red);">DataFlint:</strong> dados saem da rede · AI black-box · custo variável de SaaS
+        </div>
+      </div>
+
+      <!-- Decision matrix -->
+      <div class="card card-green">
+        <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Use Apex se...</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;">
+          ✅ Dados sensíveis (on-premise obrigatório)<br>
+          ✅ Custo zero de licença<br>
+          ✅ Runbooks auditáveis e versionados<br>
+          ✅ Latência sub-segundo para diagnóstico<br>
+          ✅ Integração ClickHouse + fork Gabriel
+        </div>
+      </div>
+      <div class="card card-yellow">
+        <div style="font-size:11px;color:var(--yellow2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Use DataFlint se...</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;">
+          🟡 UI visual para stakeholders não-técnicos<br>
+          🟡 Alertas Slack/Email plug-and-play<br>
+          🟡 Databricks / EMR / Dataproc sem customização<br>
+          🟡 Case study de redução de custo comprovado
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 7 — RECOMENDAÇÃO DE MERGE
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="slide-num">7 / 12</div>
+  <div class="eyebrow">As duas branches são complementares — não concorrentes</div>
+  <h2>Recomendação de merge</h2>
+
+  <div class="cols2 grow mt20">
+    <div>
+      <p class="sub" style="font-size:14px;margin-bottom:16px;">O V1 ideal combina o melhor das duas:</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="card" style="display:flex;gap:12px;align-items:center;">
+          <div style="font-size:22px;">⚡</div>
+          <div><div style="font-size:13.5px;font-weight:600;">T1 heurístico (Kimi)</div><div style="font-size:12px;color:var(--text2);">136ms · sem LLM · diagnóstico imediato</div></div>
+          <div style="margin-left:auto;"><span class="pill pill-blue">Kimi</span></div>
+        </div>
+        <div class="card" style="display:flex;gap:12px;align-items:center;">
+          <div style="font-size:22px;">🛡️</div>
+          <div><div style="font-size:13.5px;font-weight:600;">EvidenceValidator 8 regras (Kimi)</div><div style="font-size:12px;color:var(--text2);">Gate antes de acionar LLM · falsos positivos</div></div>
+          <div style="margin-left:auto;"><span class="pill pill-blue">Kimi</span></div>
+        </div>
+        <div class="card" style="display:flex;gap:12px;align-items:center;">
+          <div style="font-size:22px;">🤖</div>
+          <div><div style="font-size:13.5px;font-weight:600;">Crew.ai 2 agentes (Cowork)</div><div style="font-size:12px;color:var(--text2);">Análise profunda com código de exemplo</div></div>
+          <div style="margin-left:auto;"><span class="pill pill-purple">Cowork</span></div>
+        </div>
+        <div class="card" style="display:flex;gap:12px;align-items:center;">
+          <div style="font-size:22px;">🔧</div>
+          <div><div style="font-size:13.5px;font-weight:600;">apply_fix MCP (Cowork)</div><div style="font-size:12px;color:var(--text2);">LLM edita o arquivo PySpark no IDE</div></div>
+          <div style="margin-left:auto;"><span class="pill pill-purple">Cowork</span></div>
+        </div>
+        <div class="card" style="display:flex;gap:12px;align-items:center;">
+          <div style="font-size:22px;">📋</div>
+          <div><div style="font-size:13.5px;font-weight:600;">Runbooks JSON versionados (Kimi)</div><div style="font-size:12px;color:var(--text2);">Determinístico · auditável · on-premise</div></div>
+          <div style="margin-left:auto;"><span class="pill pill-blue">Kimi</span></div>
+        </div>
+        <div class="card" style="display:flex;gap:12px;align-items:center;">
+          <div style="font-size:22px;">📄</div>
+          <div><div style="font-size:13.5px;font-weight:600;">ADR-005 + docs (Cowork)</div><div style="font-size:12px;color:var(--text2);">Decisões registradas e auditáveis</div></div>
+          <div style="margin-left:auto;"><span class="pill pill-purple">Cowork</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="sub" style="font-size:14px;margin-bottom:16px;">Fluxo combinado ideal:</p>
+      <div class="code" style="font-size:12.5px;line-height:1.8;">
+<span class="cm"># Fluxo V1 ideal — merge cowork + kimi</span>
+
+Event Log
+  → log_poller (15s)
+  → event_log_ingest → ClickHouse
+
+<span class="kw">T1 heurístico</span> (Kimi · 136ms)
+  ├─ confiança alta → finding direto
+  └─ confiança baixa → <span class="kw">EvidenceValidator</span> (Kimi)
+        └─ válido → <span class="kw">Crew.ai 2 agentes</span> (Cowork)
+              └─ ApexFinding → ClickHouse
+
+MCP Server (Cowork · 5 tools)
+  └─ <span class="fn">apply_fix</span>() → edita arquivo PySpark
+                   → backup automático
+      </div>
+      <div class="card card-green mt12">
+        <div style="font-size:13px;line-height:1.7;">
+          <strong style="color:var(--green);">Resultado:</strong> Diagnóstico em 136ms para casos conhecidos.
+          Crew.ai acionado apenas quando necessário.
+          Fix aplicado diretamente no IDE do engenheiro.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 8 — ISSUES ABERTAS: O QUE O COMMANDER PRECISA DECIDIR
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="slide-num">8 / 12</div>
+  <div class="eyebrow">luanmorenommaciel/apex — 24 issues abertas</div>
+  <h2>O que o Commander precisa decidir</h2>
+
+  <div class="cols2 grow mt20">
+    <div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">Blocker · type:commander-attention</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="card card-red">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span class="pill pill-red">P0</span>
+            <span style="font-size:13.5px;font-weight:700;">#26 — Deprioritização do Gabriel</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5;">Gabriel planejou apresentar "depriorizamos intencionalmente" como fato consumado. Luan precisa: <strong style="color:var(--yellow2);">bless / push back / pedir justificativa</strong>. Ver ADR-003.</div>
+        </div>
+        <div class="card card-red">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span class="pill pill-red">P0</span>
+            <span style="font-size:13.5px;font-weight:700;">#28 — Acesso ao repo para a Crew A</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text2);">Blocker: nenhum membro da Crew A consegue contribuir formalmente sem acesso.</div>
+        </div>
+        <div class="card card-yellow">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span class="pill pill-yellow">P1</span>
+            <span style="font-size:13.5px;font-weight:700;">#27 — Gabriel vs Guilherme: stacks desconectadas</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5;">Gabriel (plataforma) e Guilherme (Go/Collector) trabalhando sem sinal de integração. Risco: parallelism sem plano de merge. <strong style="color:var(--yellow2);">Quem coordena?</strong></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">Features técnicas em aberto</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-size:13.5px;font-weight:600;">#17 — Watcher/Classifier/Judger</div><div style="font-size:12px;color:var(--text2);">Bridge session Jeff DeVerter (Pythian fCTO)</div></div>
+          <span class="pill pill-yellow">🟡 Parcial</span>
+        </div>
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-size:13.5px;font-weight:600;">#18 — OTel Collector Go (Guilherme)</div><div style="font-size:12px;color:var(--text2);">4 sub-issues abertas — fase: build</div></div>
+          <span class="pill pill-blue">Guilherme</span>
+        </div>
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-size:13.5px;font-weight:600;">#19 — plat-v0 bootstrap</div><div style="font-size:12px;color:var(--text2);">dataship-spark-plat-v0 existente</div></div>
+          <span class="pill pill-green">✅ Existe</span>
+        </div>
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-size:13.5px;font-weight:600;">#20 — Recommendation Engine</div><div style="font-size:12px;color:var(--text2);">crew_diagnose.py entrega fix com código</div></div>
+          <span class="pill pill-green">✅ Cowork</span>
+        </div>
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-size:13.5px;font-weight:600;">#21 — CI Integration</div><div style="font-size:12px;color:var(--text2);">scenario-gate.yml existe para Mundo A</div></div>
+          <span class="pill pill-yellow">Sprint 2</span>
+        </div>
+      </div>
+      <div class="card card-accent mt12">
+        <div style="font-size:13px;color:var(--text2);line-height:1.5;">
+          <strong style="color:var(--accent);">Nota:</strong> O trabalho mais avançado (V1 pipeline) está no <code style="font-family:var(--font-mono);color:var(--accent);">apex-workspace/cowork</code>, fora do repo do Luan. Esta PR conecta os dois.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 9 — O QUE FALTA HONESTAMENTE
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div class="slide-num">9 / 12</div>
+  <div class="eyebrow">Honestidade radical — CREW_A_OPERATING_STANDARD</div>
+  <h2>O que ainda falta</h2>
+
+  <div class="cols3 grow mt24">
+    <div>
+      <div style="font-size:12px;color:var(--red);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Sprint 2 — próximo</div>
+      <div class="check-item">
+        <div class="check-icon">🏗️</div>
+        <div class="check-body"><div class="check-title">Merge cowork + kimi</div><div class="check-desc">T1 heurístico + Crew.ai + apply_fix + EvidenceValidator em um pipeline unificado</div></div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon">🎭</div>
+        <div class="check-body"><div class="check-title">+3 cenários</div><div class="check-desc">spill, broadcast_miss, parallelism_collapse — hoje só skew (vs 14 do DataFlint)</div></div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon">🧪</div>
+        <div class="check-body"><div class="check-title">Baseline negativo</div><div class="check-desc">Validar falsos positivos com no_skew_baseline.yaml</div></div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon">⚙️</div>
+        <div class="check-body"><div class="check-title">CI para V1</div><div class="check-desc">scenario-gate.yml cobre Mundo A; V1 sem gate ainda</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--yellow2);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Sprint 3 — médio prazo</div>
+      <div class="check-item">
+        <div class="check-icon">⚡</div>
+        <div class="check-body"><div class="check-title">SparkListener real-time verdadeiro</div><div class="check-desc">Scala JAR — blocker py4j documentado no ADR-005. 15s poller é bridge.</div></div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon">📊</div>
+        <div class="check-body"><div class="check-title">Web Dashboard (Streamlit)</div><div class="check-desc">Maior lacuna vs DataFlint — UI visual para stakeholders</div></div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon">🔔</div>
+        <div class="check-body"><div class="check-title">Alertas Slack / Email</div><div class="check-desc">DataFlint tem nativo — Apex ainda não</div></div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon">🔗</div>
+        <div class="check-body"><div class="check-title">Go Loader oficial</div><div class="check-desc">Coordenar com Guilherme (#18) para ingest via OTel</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Sprint 4+ — estratégico</div>
+      <div class="check-item">
+        <div class="check-icon">🏢</div>
+        <div class="check-body"><div class="check-title">On-premise LLM</div><div class="check-desc">Decisão estratégica — Ollama / Bedrock / Azure. Jaime levantou na reunião.</div></div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon">🔄</div>
+        <div class="check-body"><div class="check-title">Variáveis em execução + stop</div><div class="check-desc">Intervenção enquanto o job roda — requer Scala real-time</div></div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon">📈</div>
+        <div class="check-body"><div class="check-title">Case study de redução de custo</div><div class="check-desc">DataFlint publica 100x. Apex precisa de evidência equivalente.</div></div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon">🌐</div>
+        <div class="check-body"><div class="check-title">Databricks / EMR / Dataproc</div><div class="check-desc">Hoje: standalone Docker. Expansão para clouds managed.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 11 — BRANCHES ENTREGUES E LINKS
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s11">
+  <div class="slide-num">11 / 12</div>
+  <div class="eyebrow">Entregáveis desta sprint</div>
+  <h2>O que está no repo do Luan hoje</h2>
+
+  <div class="cols2 grow mt20">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="card card-accent">
+        <div style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:8px;">BRANCH PRINCIPAL</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px;">gustocezar/feature/cowork-desacoplamento-geradores</div>
+        <div class="code" style="font-size:11.5px;margin-top:8px;">v1-skeleton/listener/     # SparkListener (bridge ADR-005)
+v1-skeleton/ingest/       # event_log_ingest + log_poller
+v1-skeleton/analysis/     # crew_diagnose.py (Crew.ai)
+v1-skeleton/mcp/          # server.py 5 tools + config
+docs/adr/ADR-005-*.md     # decisão arquitetural formal
+docs/presentations/       # esta apresentação
+docs/competitive/         # análise DataFlint completa
+VALIDACAO.md              # mapa issues → entregue
+generators/ watchers/     # v4 base (40 testes)</div>
+      </div>
+      <div class="card">
+        <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.08em;margin-bottom:8px;">BRANCH PARALELA</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px;">gustocezar/feature/kimi-desacoplamento-geradores</div>
+        <div style="font-size:12.5px;color:var(--text2);margin-top:4px;line-height:1.6;">T1 heurístico · EvidenceValidator · runbooks JSON · Docker Compose · baseline negativo</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="card card-green">
+        <h3 style="font-size:14px;color:var(--green);margin-bottom:10px;">✅ Abrir PR quando validar</h3>
+        <div style="font-size:13px;color:var(--text2);line-height:1.6;">
+          PR de <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent);">gustocezar/feature/cowork-desacoplamento-geradores</code> → <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent);">main</code>
+          <br><br>
+          GitHub já sugeriu o link após o push. Me fala quando o time validar.
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:14px;margin-bottom:10px;">Documentos entregues</h3>
+        <div class="check-item"><div class="check-icon">📄</div><div class="check-body"><div class="check-title">VALIDACAO.md</div><div class="check-desc">Issues 30/06 + repo → status por item</div></div></div>
+        <div class="check-item"><div class="check-icon">📊</div><div class="check-body"><div class="check-title">COMPARACAO_BRANCHES.md</div><div class="check-desc">cowork vs kimi — diferenças técnicas + recomendação de merge</div></div></div>
+        <div class="check-item"><div class="check-icon">🎯</div><div class="check-body"><div class="check-title">ADR-005</div><div class="check-desc">SparkListener vs zero-JAR — decisão formalizada</div></div></div>
+        <div class="check-item"><div class="check-icon">🔬</div><div class="check-body"><div class="check-title">DataFlint benchmark</div><div class="check-desc">docs/competitive/ — análise completa com métricas</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 12 — PRÓXIMOS PASSOS E FECHAMENTO
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s12">
+  <div class="slide-num">12 / 12</div>
+  <div class="eyebrow">Captain's Report — encerramento</div>
+  <h2>Próximos passos</h2>
+
+  <div class="cols2 grow mt20">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:4px;">O que o <strong style="color:var(--accent);">time</strong> faz agora:</div>
+      <div class="card" style="display:flex;gap:12px;">
+        <div style="font-size:20px;flex-shrink:0;">1️⃣</div>
+        <div><div style="font-size:13.5px;font-weight:600;">Revisar a branch cowork</div><div style="font-size:12px;color:var(--text2);">Ler VALIDACAO.md primeiro, depois rodar o pipeline localmente</div></div>
+      </div>
+      <div class="card" style="display:flex;gap:12px;">
+        <div style="font-size:20px;flex-shrink:0;">2️⃣</div>
+        <div><div style="font-size:13.5px;font-weight:600;">Comparar com branch kimi</div><div style="font-size:12px;color:var(--text2);">COMPARACAO_BRANCHES.md — ver o que cada um tem de exclusivo</div></div>
+      </div>
+      <div class="card" style="display:flex;gap:12px;">
+        <div style="font-size:20px;flex-shrink:0;">3️⃣</div>
+        <div><div style="font-size:13.5px;font-weight:600;">Abrir acesso ao repo (#28)</div><div style="font-size:12px;color:var(--text2);">Blocker P0 — sem acesso ninguém contribui formalmente</div></div>
+      </div>
+      <div class="card" style="display:flex;gap:12px;">
+        <div style="font-size:20px;flex-shrink:0;">4️⃣</div>
+        <div><div style="font-size:13.5px;font-weight:600;">Decidir sobre Gabriel (#26)</div><div style="font-size:12px;color:var(--text2);">bless / push back / pedir doc — antes do próximo sync</div></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:4px;">O que o <strong style="color:var(--purple);">Commander</strong> decide:</div>
+      <div class="card card-accent" style="display:flex;gap:12px;">
+        <div style="font-size:20px;flex-shrink:0;">🏛️</div>
+        <div><div style="font-size:13.5px;font-weight:600;">Aprovar merge das duas branches</div><div style="font-size:12px;color:var(--text2);">T1 kimi + Crew.ai cowork + apply_fix = V1 ideal</div></div>
+      </div>
+      <div class="card card-yellow" style="display:flex;gap:12px;">
+        <div style="font-size:20px;flex-shrink:0;">🏗️</div>
+        <div><div style="font-size:13.5px;font-weight:600;">Coordenar Gabriel + Guilherme (#27)</div><div style="font-size:12px;color:var(--text2);">Quem é tech lead de quê? Plano de integração explícito</div></div>
+      </div>
+      <div class="card" style="display:flex;gap:12px;">
+        <div style="font-size:20px;flex-shrink:0;">📝</div>
+        <div><div style="font-size:13.5px;font-weight:600;">Documento V1 spec (#22)</div><div style="font-size:12px;color:var(--text2);">Compilar Aguimar + Augusto + Kimi em PDF do Luan</div></div>
+      </div>
+      <div class="card card-green" style="display:flex;gap:12px;margin-top:auto;">
+        <div style="font-size:20px;flex-shrink:0;">🎯</div>
+        <div><div style="font-size:13.5px;font-weight:600;color:var(--green);">Apex V1 está rodando hoje</div><div style="font-size:12px;color:var(--text2);">Event log → ClickHouse → Crew.ai → MCP → IDE do engenheiro. Pipeline validado com dados reais.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- NAVIGATION -->
+<div id="nav">
+  <button id="prev" onclick="go(-1)">←</button>
+  <div id="dots"></div>
+  <button id="next" onclick="go(1)">→</button>
+  <span id="counter">1 / 10</span>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const N = slides.length;
+  let cur = 0;
+
+  const dotsEl = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  const dots = [];
+
+  for (let i = 0; i < N; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' on' : '');
+    d.onclick = () => goTo(i);
+    dotsEl.appendChild(d);
+    dots.push(d);
+  }
+
+  function goTo(idx) {
+    if (idx < 0 || idx >= N || idx === cur) return;
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add('exit');
+    setTimeout(() => slides[cur > idx ? cur : cur].classList.remove('exit'), 300);
+    dots[cur].classList.remove('on');
+    cur = idx;
+    slides[cur].classList.add('active');
+    dots[cur].classList.add('on');
+    counter.textContent = `${cur + 1} / 12`;
+  }
+
+  function go(d) { goTo(cur + d); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') go(1);
+    if (e.key === 'ArrowLeft') go(-1);
+  });
+</script>
+</body>
+</html>
