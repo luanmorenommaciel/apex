@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex — Duas Vertentes, Um Caminho</title>
+  <style>
+    :root {
+      --apex-blue: #1a237e;
+      --apex-blue-light: #283593;
+      --apex-orange: #ff6f00;
+      --apex-orange-light: #ff8f00;
+      --apex-white: #ffffff;
+      --apex-gray: #f5f5f5;
+      --apex-text: #212121;
+      --apex-text-light: #757575;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--apex-blue);
+      color: var(--apex-white);
+    }
+
+    .presentation {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4vh 6vw;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(60px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateX(0);
+    }
+
+    .slide.prev {
+      transform: translateX(-60px);
+    }
+
+    /* ===== SLIDE 1: TITLE ===== */
+    .slide-title {
+      text-align: center;
+    }
+
+    .slide-title .logo {
+      font-size: 6vw;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 2vh;
+      background: linear-gradient(135deg, var(--apex-white) 0%, var(--apex-orange) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide-title .subtitle {
+      font-size: 2.4vw;
+      font-weight: 300;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 4vh;
+    }
+
+    .slide-title .tagline {
+      display: inline-block;
+      background: var(--apex-orange);
+      color: var(--apex-white);
+      padding: 1vh 3vw;
+      border-radius: 50px;
+      font-size: 1.3vw;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .slide-title .meta {
+      margin-top: 6vh;
+      font-size: 1vw;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ===== HEADERS ===== */
+    .slide-header {
+      text-align: center;
+      margin-bottom: 4vh;
+    }
+
+    .slide-header h2 {
+      font-size: 2.8vw;
+      font-weight: 700;
+      margin-bottom: 1vh;
+    }
+
+    .slide-header .bar {
+      width: 6vw;
+      height: 4px;
+      background: var(--apex-orange);
+      margin: 0 auto;
+      border-radius: 2px;
+    }
+
+    .slide-header p.lead {
+      font-size: 1.2vw;
+      color: rgba(255,255,255,0.7);
+      margin-top: 1.5vh;
+    }
+
+    /* ===== CONTENT CARDS ===== */
+    .content-card {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      padding: 3vh 3vw;
+      max-width: 80vw;
+      width: 100%;
+    }
+
+    .content-card h3 {
+      font-size: 1.6vw;
+      color: var(--apex-orange);
+      margin-bottom: 2vh;
+      display: flex;
+      align-items: center;
+      gap: 0.8vw;
+    }
+
+    .content-card ul {
+      list-style: none;
+      font-size: 1.15vw;
+      line-height: 2.2;
+    }
+
+    .content-card ul li {
+      position: relative;
+      padding-left: 1.8vw;
+    }
+
+    .content-card ul li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: var(--apex-orange);
+      font-weight: bold;
+    }
+
+    /* ===== TWO COLUMN ===== */
+    .two-col {
+      display: flex;
+      gap: 3vw;
+      width: 100%;
+      max-width: 85vw;
+    }
+
+    .two-col .col {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 3vh 2.5vw;
+      border-top: 4px solid var(--apex-orange);
+    }
+
+    .two-col .col h3 {
+      font-size: 1.5vw;
+      margin-bottom: 2vh;
+      color: var(--apex-white);
+    }
+
+    .two-col .col.branch-cowork {
+      border-top-color: #4fc3f7;
+    }
+
+    .two-col .col.branch-kimi {
+      border-top-color: #ff8a65;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.4vh 1vw;
+      border-radius: 20px;
+      font-size: 0.85vw;
+      font-weight: 600;
+      margin-bottom: 1.5vh;
+    }
+
+    .badge.cowork {
+      background: rgba(79,195,247,0.2);
+      color: #4fc3f7;
+    }
+
+    .badge.kimi {
+      background: rgba(255,138,101,0.2);
+      color: #ff8a65;
+    }
+
+    /* ===== TABLE ===== */
+    .comparison-table {
+      width: 100%;
+      max-width: 85vw;
+      border-collapse: collapse;
+      font-size: 1.1vw;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+      padding: 1.8vh 1.5vw;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .comparison-table th {
+      background: rgba(255,255,255,0.1);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.9vw;
+      letter-spacing: 0.05em;
+      color: var(--apex-orange);
+    }
+
+    .comparison-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .check {
+      color: #69f0ae;
+      font-weight: bold;
+    }
+
+    .partial {
+      color: #ffd54f;
+    }
+
+    .missing {
+      color: #ff5252;
+    }
+
+    /* ===== GAP CARDS ===== */
+    .gap-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2vw;
+      width: 100%;
+      max-width: 85vw;
+    }
+
+    .gap-card {
+      background: rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 2.5vh 2vw;
+      border-left: 4px solid var(--apex-orange);
+    }
+
+    .gap-card h4 {
+      font-size: 1.1vw;
+      margin-bottom: 1vh;
+      color: var(--apex-orange);
+    }
+
+    .gap-card p {
+      font-size: 1vw;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.75);
+    }
+
+    /* ===== ARCHITECTURE ===== */
+    .arch-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2vw;
+      margin-top: 2vh;
+    }
+
+    .arch-box {
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 2vh 2vw;
+      text-align: center;
+      min-width: 12vw;
+    }
+
+    .arch-box.core {
+      background: rgba(255,111,0,0.15);
+      border-color: var(--apex-orange);
+    }
+
+    .arch-box h4 {
+      font-size: 1vw;
+      margin-bottom: 0.5vh;
+    }
+
+    .arch-box span {
+      font-size: 0.85vw;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .arch-arrow {
+      font-size: 2vw;
+      color: var(--apex-orange);
+    }
+
+    /* ===== ROADMAP ===== */
+    .roadmap {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 2vw;
+      width: 100%;
+      max-width: 85vw;
+      margin-top: 2vh;
+    }
+
+    .roadmap-step {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 2.5vh 2vw;
+      position: relative;
+      text-align: center;
+    }
+
+    .roadmap-step::after {
+      content: "→";
+      position: absolute;
+      right: -2.2vw;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 2vw;
+      color: var(--apex-orange);
+    }
+
+    .roadmap-step:last-child::after {
+      display: none;
+    }
+
+    .roadmap-step .version {
+      font-size: 1.4vw;
+      font-weight: 700;
+      color: var(--apex-orange);
+      margin-bottom: 1vh;
+    }
+
+    .roadmap-step .phase {
+      font-size: 1vw;
+      font-weight: 600;
+      margin-bottom: 1.5vh;
+    }
+
+    .roadmap-step ul {
+      list-style: none;
+      font-size: 0.95vw;
+      line-height: 1.9;
+      color: rgba(255,255,255,0.75);
+      text-align: left;
+    }
+
+    .roadmap-step ul li::before {
+      content: "•";
+      color: var(--apex-orange);
+      margin-right: 0.5vw;
+    }
+
+    /* ===== DECISIONS ===== */
+    .decision-list {
+      width: 100%;
+      max-width: 70vw;
+    }
+
+    .decision-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.5vw;
+      background: rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 2vh 2vw;
+      margin-bottom: 1.5vh;
+      border-left: 4px solid var(--apex-orange);
+    }
+
+    .decision-item .num {
+      background: var(--apex-orange);
+      color: var(--apex-white);
+      width: 2.5vw;
+      height: 2.5vw;
+      min-width: 2.5vw;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1vw;
+    }
+
+    .decision-item .text {
+      font-size: 1.1vw;
+      line-height: 1.6;
+      padding-top: 0.3vh;
+    }
+
+    /* ===== NEXT STEPS ===== */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2vw;
+      width: 100%;
+      max-width: 70vw;
+    }
+
+    .step-card {
+      background: rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 2.5vh 2vw;
+      display: flex;
+      align-items: center;
+      gap: 1vw;
+    }
+
+    .step-card .icon {
+      font-size: 2vw;
+    }
+
+    .step-card h4 {
+      font-size: 1.1vw;
+      margin-bottom: 0.3vh;
+    }
+
+    .step-card p {
+      font-size: 0.95vw;
+      color: rgba(255,255,255,0.7);
+    }
+
+    /* ===== NAVIGATION HINT ===== */
+    .nav-hint {
+      position: fixed;
+      bottom: 2vh;
+      right: 2vw;
+      font-size: 0.8vw;
+      color: rgba(255,255,255,0.35);
+      z-index: 100;
+    }
+
+    .nav-hint kbd {
+      background: rgba(255,255,255,0.15);
+      padding: 0.3vh 0.6vw;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+
+    /* ===== PROGRESS BAR ===== */
+    .progress-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      background: var(--apex-orange);
+      transition: width 0.3s ease;
+      z-index: 100;
+    }
+
+    /* ===== SLIDE NUMBER ===== */
+    .slide-number {
+      position: fixed;
+      bottom: 2vh;
+      left: 2vw;
+      font-size: 0.85vw;
+      color: rgba(255,255,255,0.35);
+      z-index: 100;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1024px) {
+      .slide { padding: 3vh 4vw; }
+      .slide-title .logo { font-size: 8vw; }
+      .slide-title .subtitle { font-size: 3.5vw; }
+      .slide-title .tagline { font-size: 2vw; padding: 1vh 4vw; }
+      .slide-header h2 { font-size: 4vw; }
+      .content-card h3, .two-col .col h3 { font-size: 2.2vw; }
+      .content-card ul, .comparison-table { font-size: 1.6vw; }
+      .gap-grid { grid-template-columns: 1fr; }
+      .roadmap { flex-direction: column; }
+      .roadmap-step::after { display: none; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .two-col { flex-direction: column; }
+    }
+
+    @media (max-width: 600px) {
+      .slide-title .logo { font-size: 10vw; }
+      .slide-title .subtitle { font-size: 4.5vw; }
+      .slide-header h2 { font-size: 5vw; }
+      .decision-item { flex-direction: column; gap: 1vh; }
+      .decision-item .num { width: 8vw; height: 8vw; font-size: 3vw; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="presentation" id="presentation">
+
+  <!-- SLIDE 1: TÍTULO -->
+  <div class="slide active" data-index="0">
+    <div class="slide-title">
+      <div class="logo">Apex</div>
+      <div class="subtitle">Duas Vertentes, Um Caminho</div>
+      <div class="tagline">Unificação Cowork ↔ Kimi</div>
+      <div class="meta">Apresentação para o Commander &middot; Reunião de Alinhamento &middot; 2025</div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: CONTEXTO -->
+  <div class="slide" data-index="1">
+    <div class="slide-header">
+      <h2>Contexto</h2>
+      <div class="bar"></div>
+      <p class="lead">Reunião de alinhamento de 30/06 &mdash; Escopo V0.1</p>
+    </div>
+    <div class="content-card">
+      <h3>📌 O que está em discussão</h3>
+      <ul>
+        <li>Durante a reunião de 30/06, identificamos duas frentes de desenvolvimento paralelas para o Apex</li>
+        <li>A branch <strong>cowork</strong> evoluiu com agentes CrewAI, testes e estrutura V1</li>
+        <li>A branch <strong>kimi</strong> avançou com Go, documentação técnica e ADRs</li>
+        <li>Ambas possuem valor, mas correm o risco de divergir permanentemente</li>
+        <li>Esta apresentação propõe uma <strong>arquitetura híbrida</strong> que unifique o melhor das duas vertentes</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: BRANCH COWORK -->
+  <div class="slide" data-index="2">
+    <div class="slide-header">
+      <h2>Branch <code>cowork</code></h2>
+      <div class="bar"></div>
+      <p class="lead">Agentes colaborativos e orquestração com CrewAI</p>
+    </div>
+    <div class="content-card">
+      <h3>🚀 O que entrega hoje</h3>
+      <ul>
+        <li><strong>CrewAI:</strong> Orquestração multi-agente com papéis definidos (pesquisador, escritor, revisor)</li>
+        <li><strong>V1 Architecture:</strong> Estrutura modular de agentes com memória e ferramentas</li>
+        <li><strong>Testes:</strong> Suite de testes unitários e de integração para os agentes</li>
+        <li><strong>Flows:</strong> Pipelines de execução sequencial e hierárquica de tarefas</li>
+        <li><strong>Callbacks:</strong> Hooks para monitoramento e telemetria da execução</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: BRANCH KIMI -->
+  <div class="slide" data-index="3">
+    <div class="slide-header">
+      <h2>Branch <code>kimi</code></h2>
+      <div class="bar"></div>
+      <p class="lead">Core em Go, documentação estratégica e decisões arquiteturais</p>
+    </div>
+    <div class="content-card">
+      <h3>⚙️ O que entrega hoje</h3>
+      <ul>
+        <li><strong>Go Core:</strong> Engine de execução em Go com alta performance e baixa latência</li>
+        <li><strong>Documentação:</strong> Docs técnicos completos (README, arquitetura, guias)</li>
+        <li><strong>ADRs:</strong> Architecture Decision Records registrando porquê de cada escolha</li>
+        <li><strong>Desacoplamento:</strong> Separação clara entre geração de conteúdo e orquestração</li>
+        <li><strong>API REST:</strong> Interface limpa para integração com outros sistemas</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: COMPARATIVO -->
+  <div class="slide" data-index="4">
+    <div class="slide-header">
+      <h2>Comparativo Lado a Lado</h2>
+      <div class="bar"></div>
+      <p class="lead">Análise das capacidades de cada vertente no momento atual</p>
+    </div>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Dimensão</th>
+          <th style="color:#4fc3f7">Branch cowork</th>
+          <th style="color:#ff8a65">Branch kimi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Orquestração Multi-Agente</td>
+          <td class="check">✓ CrewAI nativo</td>
+          <td class="partial">~ Planejado</td>
+        </tr>
+        <tr>
+          <td>Performance / Latência</td>
+          <td class="partial">~ Python (média)</td>
+          <td class="check">✓ Go (alta)</td>
+        </tr>
+        <tr>
+          <td>Documentação Técnica</td>
+          <td class="partial">~ Básica</td>
+          <td class="check">✓ Completa + ADRs</td>
+        </tr>
+        <tr>
+          <td>Testes Automatizados</td>
+          <td class="check">✓ Suite existente</td>
+          <td class="partial">~ Em estruturação</td>
+        </tr>
+        <tr>
+          <td>API / Integração</td>
+          <td class="missing">✗ Não priorizado</td>
+          <td class="check">✓ REST definida</td>
+        </tr>
+        <tr>
+          <td>Memória / Estado</td>
+          <td class="check">✓ CrewAI tasks</td>
+          <td class="partial">~ Em definição</td>
+        </tr>
+        <tr>
+          <td>Desacoplamento</td>
+          <td class="partial">~ Acoplado ao CrewAI</td>
+          <td class="check">✓ Core isolado</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SLIDE 6: GAPS -->
+  <div class="slide" data-index="5">
+    <div class="slide-header">
+      <h2>Gaps Identificados</h2>
+      <div class="bar"></div>
+      <p class="lead">O que falta em cada vertente para atingir a V1.0 unificada</p>
+    </div>
+    <div class="gap-grid">
+      <div class="gap-card">
+        <h4>🔵 Orquestração</h4>
+        <p>A branch <strong>kimi</strong> ainda não tem orquestração multi-agente. Precisamos portar o modelo de tasks do CrewAI ou implementar equivalente nativo em Go.</p>
+      </div>
+      <div class="gap-card">
+        <h4>🟠 Performance</h4>
+        <p>A branch <strong>cowork</strong> depende do Python, o que impõe limites de latência. O core em Go da <strong>kimi</strong> pode ser o "motor", mas precisa de bindings.</p>
+      </div>
+      <div class="gap-card">
+        <h4>🟡 Testes</h4>
+        <p>A <strong>kimi</strong> carece de testes robustos. A <strong>cowork</strong> tem testes, mas precisam ser adaptados para uma arquitetura híbrida.</p>
+      </div>
+      <div class="gap-card">
+        <h4>🟢 Documentação</h4>
+        <p>A <strong>cowork</strong> tem docs esparsos. Precisamos unificar a documentação em um único portal com ADRs que cubram todo o sistema.</p>
+      </div>
+      <div class="gap-card">
+        <h4>🔴 API Unificada</h4>
+        <p>Não existe uma API única que exponha tanto a orquestração CrewAI quanto o core Go. Isso é crítico para integração.</p>
+      </div>
+      <div class="gap-card">
+        <h4>🟣 Estado / Memória</h4>
+        <p>A persistência de estado entre execuções é tratada de forma diferente em cada branch. Precisamos de uma camada comum.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: PROPOSTA DE UNIFICAÇÃO -->
+  <div class="slide" data-index="6">
+    <div class="slide-header">
+      <h2>Proposta de Unificação</h2>
+      <div class="bar"></div>
+      <p class="lead">Arquitetura híbrida: o melhor das duas vertentes</p>
+    </div>
+    <div class="content-card" style="max-width: 85vw;">
+      <h3>🏗️ Visão Arquitetural</h3>
+      <div class="arch-diagram">
+        <div class="arch-box">
+          <h4>API Gateway</h4>
+          <span>REST / WebSocket</span>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box core">
+          <h4>Core Engine</h4>
+          <span>Go — baixa latência</span>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box">
+          <h4>Orquestrador</h4>
+          <span>CrewAI / Nativo</span>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box">
+          <h4>Agentes</h4>
+          <span>Pluggable</span>
+        </div>
+      </div>
+      <div style="margin-top: 3vh; font-size: 1.1vw; line-height: 2; text-align: center; color: rgba(255,255,255,0.8);">
+        <strong style="color: var(--apex-orange);">Princípio:</strong> O Core em Go gerencia estado, filas e API.<br>
+        O Orquestrador (CrewAI ou nativo) executa o fluxo de agentes.<br>
+        Ambos comunicam-se via contrato de mensagens bem definido.
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: ROADMAP -->
+  <div class="slide" data-index="7">
+    <div class="slide-header">
+      <h2>Roadmap</h2>
+      <div class="bar"></div>
+      <p class="lead">De V0.1 até V1.0 — caminho de unificação</p>
+    </div>
+    <div class="roadmap">
+      <div class="roadmap-step">
+        <div class="version">V0.1</div>
+        <div class="phase">Convergência</div>
+        <ul>
+          <li>Merge das branches</li>
+          <li>Definição de contratos</li>
+          <li>Estrutura de pastas unificada</li>
+          <li>CI/CD comum</li>
+        </ul>
+      </div>
+      <div class="roadmap-step">
+        <div class="version">V0.2</div>
+        <div class="phase">Integração</div>
+        <ul>
+          <li>Core Go + CrewAI bridge</li>
+          <li>API unificada funcionando</li>
+          <li>Testes de integração</li>
+          <li>Docs migradas</li>
+        </ul>
+      </div>
+      <div class="roadmap-step">
+        <div class="version">V1.0</div>
+        <div class="phase">Consolidação</div>
+        <ul>
+          <li>Orquestrador nativo opcional</li>
+          <li>Performance otimizada</li>
+          <li>100% test coverage</li>
+          <li>Release estável</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: DECISÕES PENDENTES -->
+  <div class="slide" data-index="8">
+    <div class="slide-header">
+      <h2>Decisões Pendentes do Commander</h2>
+      <div class="bar"></div>
+      <p class="lead">O que precisamos que o Luan defina para seguir</p>
+    </div>
+    <div class="decision-list">
+      <div class="decision-item">
+        <div class="num">1</div>
+        <div class="text"><strong>Prioridade de performance vs. velocidade:</strong> Mantemos CrewAI como orquestrador principal (mais rápido de implementar) ou investimos no orquestrador nativo Go já na V0.2?</div>
+      </div>
+      <div class="decision-item">
+        <div class="num">2</div>
+        <div class="text"><strong>Stack de testes:</strong> Unificamos em Go (testes de integração) ou mantemos testes Python para a camada de agentes?</div>
+      </div>
+      <div class="decision-item">
+        <div class="num">3</div>
+        <div class="text"><strong>Timeline:</strong> Qual é a data-alvo para V0.1 estar em produção? Isso define se fazemos merge rápido ou refinamos antes.</div>
+      </div>
+      <div class="decision-item">
+        <div class="num">4</div>
+        <div class="text"><strong>Escopo de agentes:</strong> Quantos agentes-piloto na V0.1? Apenas os 3 do CrewAI ou incluímos novos papéis já na unificação?</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 10: PRÓXIMOS PASSOS -->
+  <div class="slide" data-index="9">
+    <div class="slide-header">
+      <h2>Próximos Passos</h2>
+      <div class="bar"></div>
+      <p class="lead">Ações imediatas após esta reunião</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="icon">📋</div>
+        <div>
+          <h4>Coletar decisões</h4>
+          <p>Documentar as 4 decisões do Commander em ADR-007</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="icon">🔀</div>
+        <div>
+          <h4>Preparar merge</h4>
+          <p>Criar branch <code>unify/cowork-kimi</code> com estrutura unificada</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="icon">🧪</div>
+        <div>
+          <h4>Validar contratos</h4>
+          <p>Definir schema de mensagens entre Core Go e Orquestrador</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="icon">📅</div>
+        <div>
+          <h4>Agendar sprint</h4>
+          <p>Marcar sprint de 2 semanas para V0.1 com a equipe</p>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top: 4vh; text-align: center; font-size: 1.2vw; color: rgba(255,255,255,0.6);">
+      <em>"Duas vertentes, um caminho — juntos construímos o Apex."</em>
+    </div>
+  </div>
+
+</div>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="slide-number" id="slideNumber">1 / 10</div>
+<div class="nav-hint"><kbd>←</kbd> <kbd>→</kbd> navegar</div>
+
+<script>
+  (function() {
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let current = 0;
+    const progressBar = document.getElementById('progressBar');
+    const slideNumber = document.getElementById('slideNumber');
+
+    function update() {
+      slides.forEach((slide, i) => {
+        slide.classList.remove('active', 'prev');
+        if (i === current) {
+          slide.classList.add('active');
+        } else if (i < current) {
+          slide.classList.add('prev');
+        }
+      });
+      progressBar.style.width = ((current + 1) / total * 100) + '%';
+      slideNumber.textContent = (current + 1) + ' / ' + total;
+    }
+
+    function next() {
+      if (current < total - 1) { current++; update(); }
+    }
+
+    function prev() {
+      if (current > 0) { current--; update(); }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter' || e.key === 'PageDown') {
+        e.preventDefault();
+        next();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prev();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        current = 0; update();
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        current = total - 1; update();
+      }
+    });
+
+    // Touch support
+    let touchStartX = 0;
+    document.addEventListener('touchstart', function(e) {
+      touchStartX = e.changedTouches[0].screenX;
+    });
+    document.addEventListener('touchend', function(e) {
+      const touchEndX = e.changedTouches[0].screenX;
+      const diff = touchStartX - touchEndX;
+      if (Math.abs(diff) > 50) {
+        diff > 0 ? next() : prev();
+      }
+    });
+
+    update();
+  })();
+</script>
+
+</body>
+</html>
