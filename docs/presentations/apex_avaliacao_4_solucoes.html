@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex — Avaliação 4 Soluções</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --blue: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --orange: #ffa657;
+    --teal: #39d353;
+
+    --spike: #58a6ff;
+    --cowork: #bc8cff;
+    --kimi: #3fb950;
+    --dataflint: #ffa657;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .deck {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: 48px 64px;
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* NAV */
+  .nav {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .dot.active { background: var(--blue); }
+
+  .slide-num {
+    position: fixed;
+    bottom: 20px;
+    right: 24px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: monospace;
+  }
+
+  .kbd {
+    position: fixed;
+    bottom: 20px;
+    left: 24px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* TYPOGRAPHY */
+  h1 { font-size: 3rem; font-weight: 700; line-height: 1.1; }
+  h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 24px; color: var(--text); }
+  h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; }
+  p { line-height: 1.6; color: var(--muted); }
+  code { font-family: monospace; font-size: 0.9em; background: var(--bg3); padding: 2px 6px; border-radius: 4px; }
+
+  /* SLIDE HEADER */
+  .slide-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .slide-header .tag {
+    font-size: 11px;
+    font-family: monospace;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+    color: var(--muted);
+  }
+
+  /* COVER */
+  .cover-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: auto;
+  }
+  .cover-meta span {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-family: monospace;
+  }
+  .cover-subtitle {
+    font-size: 1.2rem;
+    color: var(--muted);
+    margin-top: 12px;
+    font-weight: 400;
+  }
+  .llm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(188,140,255,0.12);
+    border: 1px solid rgba(188,140,255,0.3);
+    color: var(--purple);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-family: monospace;
+    margin-top: 8px;
+    width: fit-content;
+  }
+
+  /* SOLUTION CARDS */
+  .sol-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    flex: 1;
+  }
+  .sol-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color 0.2s;
+  }
+  .sol-card:hover { border-color: var(--blue); }
+  .sol-card .sol-name {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+  .sol-card .sol-by {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: monospace;
+  }
+  .sol-card .sol-stat {
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sol-card .sol-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    flex: 1;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-blue { background: rgba(88,166,255,0.15); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
+  .badge-green { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .badge-purple { background: rgba(188,140,255,0.15); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
+  .badge-orange { background: rgba(255,166,87,0.15); color: var(--orange); border: 1px solid rgba(255,166,87,0.3); }
+  .badge-red { background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+  .badge-muted { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
+
+  /* TABLE */
+  .matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    flex: 1;
+  }
+  .matrix-table th {
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.78rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .matrix-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    color: var(--muted);
+    vertical-align: middle;
+  }
+  .matrix-table tr:last-child td { border-bottom: none; }
+  .matrix-table .dim { color: var(--text); font-weight: 500; }
+  th.spike { color: var(--spike); }
+  th.cowork { color: var(--cowork); }
+  th.kimi { color: var(--kimi); }
+  th.dataflint { color: var(--dataflint); }
+  .cell-good { color: var(--green); }
+  .cell-bad { color: var(--red); }
+  .cell-ok { color: var(--yellow); }
+  .cell-na { color: var(--border); }
+
+  /* TWO COL */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    flex: 1;
+  }
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .panel h3 { font-size: 0.95rem; }
+  .panel-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--bg3);
+  }
+  .panel-row .label { flex: 1; color: var(--muted); }
+  .panel-row .val { color: var(--text); font-family: monospace; font-weight: 600; }
+
+  /* DETECTOR GRID */
+  .detector-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .det-cell {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    font-size: 0.75rem;
+  }
+  .det-cell .icon { font-size: 1.4rem; margin-bottom: 4px; }
+  .det-cell .name { font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .det-solutions { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+
+  /* PERF BARS */
+  .perf-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .perf-label {
+    width: 80px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .bar-wrap {
+    flex: 1;
+    height: 24px;
+    background: var(--bg3);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: width 0.6s ease;
+  }
+  .perf-num {
+    width: 80px;
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  /* SCORE */
+  .score-wrap {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .score-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+  .score-card .score-num {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    margin: 8px 0;
+  }
+  .score-card .score-name { font-size: 0.8rem; color: var(--muted); }
+  .score-card .score-label { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+  .score-spike { color: var(--spike); border-color: rgba(88,166,255,0.3); }
+  .score-cowork { color: var(--purple); border-color: rgba(188,140,255,0.3); }
+  .score-kimi { color: var(--green); border-color: rgba(63,185,80,0.3); }
+  .score-dataflint { color: var(--orange); border-color: rgba(255,166,87,0.3); }
+
+  /* MCP TOOLS */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    flex: 1;
+  }
+  .tools-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .tools-card h3 { font-size: 0.85rem; margin-bottom: 12px; }
+  .tool-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 0.75rem;
+    border-bottom: 1px solid var(--bg3);
+  }
+  .tool-item:last-child { border-bottom: none; }
+  .tool-item code { font-size: 0.7rem; flex: 1; }
+  .tool-check { font-size: 0.8rem; }
+
+  /* MERGE PATH */
+  .merge-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+  }
+  .merge-step {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+  .merge-step .step-content h3 { font-size: 0.9rem; margin-bottom: 4px; }
+  .merge-step .step-content p { font-size: 0.78rem; }
+
+  /* ISSUES LIST */
+  .issues-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .issue-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8rem;
+  }
+  .issue-id {
+    font-family: monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    width: 80px;
+    flex-shrink: 0;
+  }
+  .issue-title { flex: 1; color: var(--text); }
+  .issue-prio {
+    font-size: 0.7rem;
+    font-weight: 700;
+    width: 28px;
+    text-align: center;
+  }
+  .p0 { color: var(--red); }
+  .p1 { color: var(--yellow); }
+  .p2 { color: var(--blue); }
+  .p3 { color: var(--muted); }
+
+  /* DATAFLINT COMPARE */
+  .vs-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    flex: 1;
+    align-items: start;
+  }
+  .vs-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .vs-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .vs-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 0.78rem;
+    border-bottom: 1px solid var(--bg3);
+  }
+  .vs-item:last-child { border-bottom: none; }
+  .vs-icon { flex-shrink: 0; margin-top: 1px; }
+  .vs-label { color: var(--muted); }
+  .vs-label strong { color: var(--text); }
+  .vs-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--border);
+    padding-top: 40px;
+  }
+
+  /* DISCLAIMER */
+  .disclaimer {
+    background: rgba(210,153,34,0.08);
+    border: 1px solid rgba(210,153,34,0.25);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.75rem;
+    color: var(--yellow);
+    margin-bottom: 20px;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .slide.active > * { animation: fadeIn 0.3s ease; }
+</style>
+</head>
+<body>
+
+<div class="deck">
+
+  <!-- SLIDE 1: COVER -->
+  <div class="slide active" id="s1">
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+      <div style="margin-bottom:16px;">
+        <span class="badge badge-purple">avaliação técnica</span>
+      </div>
+      <h1>4 Abordagens para<br><span style="color:var(--blue)">Diagnóstico Spark</span></h1>
+      <p class="cover-subtitle">spike/apex-v0.1 · cowork · kimi · DataFlint</p>
+      <div class="llm-badge">🤖 Avaliador: Cowork (Claude / Anthropic)</div>
+    </div>
+    <div class="cover-meta">
+      <span>📅 2026-07-07</span>
+      <span>👤 Para: Luan Moreno & time Apex</span>
+      <span>⚠️ Conflito de interesse declarado — o avaliador implementou a solução <code>cowork</code></span>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: AS 4 SOLUÇÕES -->
+  <div class="slide" id="s2">
+    <div class="slide-header">
+      <h2>As 4 Soluções Avaliadas</h2>
+      <span class="tag">overview</span>
+    </div>
+    <div class="sol-grid">
+      <div class="sol-card" style="border-color:rgba(88,166,255,0.4)">
+        <div>
+          <div class="sol-name" style="color:var(--spike)">spike/apex-v0.1</div>
+          <div class="sol-by">Aguimar · branch spike/apex-v0.1</div>
+        </div>
+        <div class="sol-desc">Full stack Docker: Spark 4.1.2 + Delta Lake + MinIO + ClickHouse 26.5.1 + HyperDX. Go eventlog-loader. A implementação mais completa.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          <span class="badge badge-blue">5 detectores</span>
+          <span class="badge badge-blue">6 MCP tools</span>
+          <span class="badge badge-blue">HyperDX UI</span>
+          <span class="badge badge-muted">sem apply_fix</span>
+        </div>
+      </div>
+      <div class="sol-card" style="border-color:rgba(188,140,255,0.4)">
+        <div>
+          <div class="sol-name" style="color:var(--cowork)">cowork</div>
+          <div class="sol-by">Claude (Anthropic) · feature/cowork-*</div>
+        </div>
+        <div class="sol-desc">Pipeline com Crew.ai, log_poller 15s, ClickHouse. Único com apply_fix. ADR-005 documentado. 1 detector.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          <span class="badge badge-purple">apply_fix ✓</span>
+          <span class="badge badge-purple">5 MCP tools</span>
+          <span class="badge badge-purple">ADR-005</span>
+          <span class="badge badge-muted">1 detector</span>
+        </div>
+      </div>
+      <div class="sol-card" style="border-color:rgba(63,185,80,0.4)">
+        <div>
+          <div class="sol-name" style="color:var(--kimi)">kimi</div>
+          <div class="sol-by">Kimi Work · feature/kimi-*</div>
+        </div>
+        <div class="sol-desc">T1 heurístico 136ms (sem LLM). EvidenceValidator 7/7 regras. T2 runbook JSON 0.01ms. Benchmarks reais medidos e publicados.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          <span class="badge badge-green">134ms T1</span>
+          <span class="badge badge-green">7/7 validator</span>
+          <span class="badge badge-green">benchmark real</span>
+          <span class="badge badge-muted">sem apply_fix</span>
+        </div>
+      </div>
+      <div class="sol-card" style="border-color:rgba(255,166,87,0.4)">
+        <div>
+          <div class="sol-name" style="color:var(--dataflint)">DataFlint</div>
+          <div class="sol-by">Produto SaaS externo</div>
+        </div>
+        <div class="sol-desc">SaaS cloud, AI agents, EMR/Databricks/Dataproc. UI visual, Slack/Email alerts. 100x redução de custo (SimilarWeb). Pago.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          <span class="badge badge-orange">10+ detectores</span>
+          <span class="badge badge-orange">UI visual</span>
+          <span class="badge badge-orange">SaaS pronto</span>
+          <span class="badge badge-red">pago / cloud</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: COBERTURA DE DETECTORES -->
+  <div class="slide" id="s3">
+    <div class="slide-header">
+      <h2>Cobertura de Anti-patterns</h2>
+      <span class="tag">detecção</span>
+    </div>
+    <div class="detector-grid">
+      <div class="det-cell">
+        <div class="icon">⚖️</div>
+        <div class="name">Skew</div>
+        <div class="det-solutions">
+          <span class="badge badge-blue">spike</span>
+          <span class="badge badge-purple">cowork</span>
+          <span class="badge badge-green">kimi</span>
+          <span class="badge badge-orange">DFlint</span>
+        </div>
+      </div>
+      <div class="det-cell">
+        <div class="icon">🔀</div>
+        <div class="name">Shuffle</div>
+        <div class="det-solutions">
+          <span class="badge badge-blue">spike</span>
+          <span class="badge badge-green">kimi</span>
+          <span class="badge badge-orange">DFlint</span>
+          <span class="badge badge-muted">cowork ✗</span>
+        </div>
+      </div>
+      <div class="det-cell">
+        <div class="icon">🔄</div>
+        <div class="name">Re-plans AQE</div>
+        <div class="det-solutions">
+          <span class="badge badge-blue">spike</span>
+          <span class="badge badge-orange">DFlint</span>
+          <span class="badge badge-muted">cowork ✗</span>
+          <span class="badge badge-muted">kimi ✗</span>
+        </div>
+      </div>
+      <div class="det-cell">
+        <div class="icon">🗑️</div>
+        <div class="name">GC Pressure</div>
+        <div class="det-solutions">
+          <span class="badge badge-blue">spike</span>
+          <span class="badge badge-orange">DFlint</span>
+          <span class="badge badge-muted">cowork ✗</span>
+          <span class="badge badge-muted">kimi ✗</span>
+        </div>
+      </div>
+      <div class="det-cell">
+        <div class="icon">💀</div>
+        <div class="name">OOM</div>
+        <div class="det-solutions">
+          <span class="badge badge-blue">spike</span>
+          <span class="badge badge-orange">DFlint</span>
+          <span class="badge badge-muted">cowork ✗</span>
+          <span class="badge badge-muted">kimi ✗</span>
+        </div>
+      </div>
+    </div>
+    <div class="matrix-table" style="flex:none">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th>Solução</th>
+            <th>Detectores</th>
+            <th>Cobertura</th>
+            <th>LLM obrigatório?</th>
+            <th>Config external?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="dim" style="color:var(--spike)">spike/apex-v0.1</td>
+            <td><strong style="color:var(--green)">5</strong></td>
+            <td><span class="badge badge-blue">skew+shuffle+plans+gc+oom</span></td>
+            <td class="cell-good">❌ opcional</td>
+            <td class="cell-good">✅ diagnostics.yaml</td>
+          </tr>
+          <tr>
+            <td class="dim" style="color:var(--cowork)">cowork</td>
+            <td><strong style="color:var(--red)">1</strong></td>
+            <td><span class="badge badge-purple">skew only</span></td>
+            <td class="cell-bad">✅ sempre</td>
+            <td class="cell-bad">❌ hardcoded</td>
+          </tr>
+          <tr>
+            <td class="dim" style="color:var(--kimi)">kimi</td>
+            <td><strong style="color:var(--yellow)">~3</strong></td>
+            <td><span class="badge badge-green">skew+spill+memory</span></td>
+            <td class="cell-good">❌ opcional</td>
+            <td class="cell-ok">JSON runbooks</td>
+          </tr>
+          <tr>
+            <td class="dim" style="color:var(--dataflint)">DataFlint</td>
+            <td><strong style="color:var(--green)">10+</strong></td>
+            <td><span class="badge badge-orange">full coverage</span></td>
+            <td class="cell-ok">✅ SaaS AI</td>
+            <td class="cell-bad">❌ caixa preta</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: VELOCIDADE E QUALIDADE -->
+  <div class="slide" id="s4">
+    <div class="slide-header">
+      <h2>Velocidade e Qualidade do Diagnóstico</h2>
+      <span class="tag">benchmark</span>
+    </div>
+    <div class="disclaimer">
+      ⚠️ Apenas o <strong>kimi</strong> publicou benchmarks medidos (job <code>app-20260706035238-0001</code>). Os demais são estimativas.
+    </div>
+    <div style="flex:1">
+      <h3 style="color:var(--muted);font-size:0.8rem;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px">Latência T1 (heurística — sem LLM)</h3>
+      <div class="perf-row">
+        <div class="perf-label" style="color:var(--kimi)">kimi</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:14%;background:var(--kimi);color:#000">136ms</div></div>
+        <div class="perf-num">136ms ✅ medido</div>
+      </div>
+      <div class="perf-row">
+        <div class="perf-label" style="color:var(--spike)">spike</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:20%;background:var(--spike);color:#000">~200ms</div></div>
+        <div class="perf-num">~200ms estimado</div>
+      </div>
+      <div class="perf-row">
+        <div class="perf-label" style="color:var(--cowork)">cowork</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:100%;background:rgba(188,140,255,0.4)"></div></div>
+        <div class="perf-num" style="color:var(--red)">sem T1</div>
+      </div>
+
+      <h3 style="color:var(--muted);font-size:0.8rem;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px;margin-top:24px">Latência LLM (Crew.ai / T3)</h3>
+      <div class="perf-row">
+        <div class="perf-label" style="color:var(--kimi)">kimi T2</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:0.5%;background:var(--kimi);min-width:40px;color:#000">0.01ms</div></div>
+        <div class="perf-num">0.01ms (JSON runbook)</div>
+      </div>
+      <div class="perf-row">
+        <div class="perf-label" style="color:var(--spike)">spike</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:55%;background:rgba(88,166,255,0.5)">5-30s CrewAI</div></div>
+        <div class="perf-num">5-30s estimado</div>
+      </div>
+      <div class="perf-row">
+        <div class="perf-label" style="color:var(--cowork)">cowork</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:55%;background:rgba(188,140,255,0.5)">5-30s CrewAI</div></div>
+        <div class="perf-num">5-30s sempre</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px">
+        <div class="panel" style="padding:14px">
+          <div style="font-size:0.75rem;color:var(--muted)">Total pipeline kimi</div>
+          <div style="font-size:2rem;font-weight:700;color:var(--kimi)">334ms</div>
+          <div style="font-size:0.7rem;color:var(--muted)">T1 + Validator + T2</div>
+        </div>
+        <div class="panel" style="padding:14px">
+          <div style="font-size:0.75rem;color:var(--muted)">EvidenceValidator kimi</div>
+          <div style="font-size:2rem;font-weight:700;color:var(--green)">7/7</div>
+          <div style="font-size:0.7rem;color:var(--muted)">regras, 198ms</div>
+        </div>
+        <div class="panel" style="padding:14px">
+          <div style="font-size:0.75rem;color:var(--muted)">False positives cowork</div>
+          <div style="font-size:2rem;font-weight:700;color:var(--red)">?</div>
+          <div style="font-size:0.7rem;color:var(--muted)">sem gate de qualidade</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: MCP TOOLS -->
+  <div class="slide" id="s5">
+    <div class="slide-header">
+      <h2>MCP Tools — Integração com IDE</h2>
+      <span class="tag">mcp</span>
+    </div>
+    <div class="tools-grid">
+      <div class="tools-card" style="border-color:rgba(88,166,255,0.3)">
+        <h3 style="color:var(--spike)">spike/apex-v0.1 — 6 tools</h3>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>list_runs</code></div>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>detect_skew</code></div>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>detect_shuffle</code></div>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>detect_plans</code></div>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>get_report</code></div>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>analyze_run</code></div>
+        <div class="tool-item"><span class="tool-check cell-bad">✗</span><code style="color:var(--muted)">apply_fix</code></div>
+      </div>
+      <div class="tools-card" style="border-color:rgba(188,140,255,0.3)">
+        <h3 style="color:var(--cowork)">cowork — 5 tools</h3>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>get_findings</code></div>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>get_stage_metrics</code></div>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>list_slow_apps</code></div>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>trigger_diagnosis</code></div>
+        <div class="tool-item" style="background:rgba(188,140,255,0.1);border:1px solid rgba(188,140,255,0.3);border-radius:6px">
+          <span class="tool-check" style="color:var(--purple)">★</span>
+          <code style="color:var(--purple);font-weight:700">apply_fix</code>
+          <span class="badge badge-purple" style="font-size:0.65rem">único</span>
+        </div>
+      </div>
+      <div class="tools-card" style="border-color:rgba(63,185,80,0.3)">
+        <h3 style="color:var(--kimi)">kimi — 2 tools</h3>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>query_job</code></div>
+        <div class="tool-item"><span class="tool-check cell-good">✓</span><code>get_recommendations</code></div>
+        <div style="margin-top:12px;padding:10px;background:var(--bg3);border-radius:6px;font-size:0.72rem;color:var(--muted)">
+          ⚡ Compensa com velocidade — T1 sem LLM. Menos tools, mais rápido.
+        </div>
+      </div>
+      <div class="tools-card" style="border-color:rgba(255,166,87,0.3)">
+        <h3 style="color:var(--dataflint)">DataFlint — sem MCP</h3>
+        <div style="padding:10px;background:var(--bg3);border-radius:6px;font-size:0.75rem;color:var(--muted);margin-bottom:8px">
+          Entrega por Slack / Email / UI Web — não por IDE.
+        </div>
+        <div class="tool-item"><span class="tool-check cell-ok">~</span><span style="font-size:0.75rem">Slack alert</span></div>
+        <div class="tool-item"><span class="tool-check cell-ok">~</span><span style="font-size:0.75rem">Email report</span></div>
+        <div class="tool-item"><span class="tool-check cell-ok">~</span><span style="font-size:0.75rem">Web dashboard</span></div>
+        <div class="tool-item"><span class="tool-check cell-bad">✗</span><span style="font-size:0.75rem;color:var(--muted)">IDE / MCP</span></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;padding:12px 16px;background:rgba(188,140,255,0.08);border:1px solid rgba(188,140,255,0.2);border-radius:8px;font-size:0.8rem">
+      💡 <strong style="color:var(--purple)">apply_fix</strong> é o diferencial competitivo real vs DataFlint — fecha o loop diagnóstico → IDE → correção. Nenhum outro tem.
+    </div>
+  </div>
+
+  <!-- SLIDE 6: ARQUITETURA COMPARADA -->
+  <div class="slide" id="s6">
+    <div class="slide-header">
+      <h2>Arquitetura Comparada</h2>
+      <span class="tag">infraestrutura</span>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="panel" style="margin-bottom:16px;border-color:rgba(88,166,255,0.3)">
+          <h3 style="color:var(--spike)">spike/apex-v0.1 — Full Stack</h3>
+          <div style="font-family:monospace;font-size:0.75rem;color:var(--muted);line-height:1.8">
+            <span style="color:var(--green)">Spark 4.1.2</span> + <span style="color:var(--blue)">Delta Lake</span><br>
+            → <span style="color:var(--blue)">MinIO</span> (event logs)<br>
+            → <span style="color:var(--yellow)">Go eventlog-loader</span> 🔥<br>
+            → <span style="color:var(--blue)">ClickHouse 26.5.1</span><br>
+            → <span style="color:var(--blue)">5 detectores SQL</span><br>
+            → <span style="color:var(--purple)">CrewAI</span> (opcional)<br>
+            → <span style="color:var(--green)">HyperDX UI</span> 📊<br>
+            → <span style="color:var(--blue)">MCP (6 tools)</span> → IDE
+          </div>
+        </div>
+        <div class="panel" style="border-color:rgba(63,185,80,0.3)">
+          <h3 style="color:var(--kimi)">kimi — Pipeline 3 Tiers</h3>
+          <div style="font-family:monospace;font-size:0.75rem;color:var(--muted);line-height:1.8">
+            Event Log → MinIO<br>
+            → <span style="color:var(--green)">T1: SQL 136ms</span> (sem LLM)<br>
+            → <span style="color:var(--green)">Validator 7/7 · 198ms</span><br>
+            → <span style="color:var(--green)">T2: Runbook JSON · 0.01ms</span><br>
+            → T3: CrewAI (fallback)<br>
+            → MCP (2 tools) → IDE
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="panel" style="margin-bottom:16px;border-color:rgba(188,140,255,0.3)">
+          <h3 style="color:var(--cowork)">cowork — Crew.ai Central</h3>
+          <div style="font-family:monospace;font-size:0.75rem;color:var(--muted);line-height:1.8">
+            Event Log → MinIO<br>
+            → <span style="color:var(--yellow)">log_poller (15s)</span><br>
+            → event_log_ingest<br>
+            → ClickHouse<br>
+            → <span style="color:var(--purple)">MetricsAnalyzer</span><br>
+            → <span style="color:var(--purple)">RecommendationWriter</span><br>
+            → MCP (5 tools)<br>
+            → IDE → <span style="color:var(--purple)">apply_fix ★</span>
+          </div>
+        </div>
+        <div class="panel" style="border-color:rgba(255,166,87,0.3)">
+          <h3 style="color:var(--dataflint)">DataFlint — SaaS</h3>
+          <div style="font-family:monospace;font-size:0.75rem;color:var(--muted);line-height:1.8">
+            SDK instalado no cluster<br>
+            → <span style="color:var(--orange)">Cloud DataFlint</span><br>
+            → AI agents (black box)<br>
+            → Slack alert 📬<br>
+            → Email report 📧<br>
+            → Web dashboard 🖥️<br>
+            ❌ sem on-premise<br>
+            ❌ sem MCP / IDE
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: QUALIDADE DE ENGENHARIA -->
+  <div class="slide" id="s7">
+    <div class="slide-header">
+      <h2>Qualidade de Engenharia</h2>
+      <span class="tag">maturidade</span>
+    </div>
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>Dimensão</th>
+          <th class="spike">spike/apex-v0.1</th>
+          <th class="cowork">cowork</th>
+          <th class="kimi">kimi</th>
+          <th class="dataflint">DataFlint</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="dim">Workloads sintéticos</td>
+          <td class="cell-good">6 (skew,shuffle,gc,oom,cross_join,cache)</td>
+          <td class="cell-bad">1 (skew)</td>
+          <td class="cell-ok">3 (skew,spill,memory)</td>
+          <td class="cell-na">N/A</td>
+        </tr>
+        <tr>
+          <td class="dim">Baseline negativo</td>
+          <td class="cell-ok">não confirmado</td>
+          <td class="cell-bad">❌</td>
+          <td class="cell-good">✅ no_skew_baseline.yaml</td>
+          <td class="cell-na">N/A</td>
+        </tr>
+        <tr>
+          <td class="dim">Testes automatizados</td>
+          <td class="cell-good">✅ fake Spark + fake CH</td>
+          <td class="cell-good">✅ 40 testes (Mundo A)</td>
+          <td class="cell-good">✅ unit + integration</td>
+          <td class="cell-na">N/A</td>
+        </tr>
+        <tr>
+          <td class="dim">Gestão de dependências</td>
+          <td class="cell-good">uv + pyproject.toml</td>
+          <td class="cell-ok">pip + requirements.txt</td>
+          <td class="cell-ok">pip</td>
+          <td class="cell-na">N/A</td>
+        </tr>
+        <tr>
+          <td class="dim">Thresholds</td>
+          <td class="cell-good">YAML versionado</td>
+          <td class="cell-bad">hardcoded</td>
+          <td class="cell-ok">JSON runbooks</td>
+          <td class="cell-bad">caixa preta</td>
+        </tr>
+        <tr>
+          <td class="dim">ADRs / Decisões doc.</td>
+          <td class="cell-ok">não confirmado</td>
+          <td class="cell-good">✅ ADR-005</td>
+          <td class="cell-ok">não confirmado</td>
+          <td class="cell-na">N/A</td>
+        </tr>
+        <tr>
+          <td class="dim">Dashboard / UI</td>
+          <td class="cell-good">✅ HyperDX</td>
+          <td class="cell-bad">❌ CLI only</td>
+          <td class="cell-bad">❌ CLI only</td>
+          <td class="cell-good">✅ visual rico</td>
+        </tr>
+        <tr>
+          <td class="dim">Loader de produção</td>
+          <td class="cell-good">Go (concorrente)</td>
+          <td class="cell-ok">Python 15s poll</td>
+          <td class="cell-ok">Python 15s poll</td>
+          <td class="cell-good">SDK gerenciado</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SLIDE 8: SCORE GERAL -->
+  <div class="slide" id="s8">
+    <div class="slide-header">
+      <h2>Score Comparativo</h2>
+      <span class="tag">resultado</span>
+    </div>
+    <div class="disclaimer">
+      ⚠️ Score produzido por <strong>Cowork (Claude)</strong> — avaliador com conflito de interesse. Escala 0–5 por categoria (7 categorias, máx 35).
+    </div>
+    <div class="score-wrap">
+      <div class="score-card score-spike">
+        <div class="score-name" style="color:var(--spike)">spike/apex-v0.1</div>
+        <div class="score-num" style="color:var(--spike)">31</div>
+        <div class="score-label">Aguimar · 5 detectores · Go loader</div>
+      </div>
+      <div class="score-card score-kimi">
+        <div class="score-name" style="color:var(--kimi)">kimi</div>
+        <div class="score-num" style="color:var(--kimi)">28</div>
+        <div class="score-label">Kimi Work · 334ms · 7/7 validator</div>
+      </div>
+      <div class="score-card score-cowork">
+        <div class="score-name" style="color:var(--cowork)">cowork</div>
+        <div class="score-num" style="color:var(--cowork)">21</div>
+        <div class="score-label">Claude · apply_fix · ADR-005</div>
+      </div>
+      <div class="score-card score-dataflint">
+        <div class="score-name" style="color:var(--dataflint)">DataFlint</div>
+        <div class="score-num" style="color:var(--dataflint)">18</div>
+        <div class="score-label">SaaS · pago · sem MCP · sem on-prem</div>
+      </div>
+    </div>
+    <div style="margin-top:8px">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th>Categoria</th>
+            <th class="spike">spike</th>
+            <th class="kimi">kimi</th>
+            <th class="cowork">cowork</th>
+            <th class="dataflint">DataFlint</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="dim">Cobertura detectores</td><td class="cell-good">5</td><td class="cell-ok">3</td><td class="cell-bad">1</td><td class="cell-good">5</td></tr>
+          <tr><td class="dim">Velocidade diagnóstico</td><td class="cell-ok">3</td><td class="cell-good">5</td><td class="cell-bad">2</td><td class="cell-ok">3</td></tr>
+          <tr><td class="dim">Qualidade / falsos positivos</td><td class="cell-ok">4</td><td class="cell-good">5</td><td class="cell-bad">2</td><td class="cell-ok">3</td></tr>
+          <tr><td class="dim">MCP + IDE integration</td><td class="cell-ok">4</td><td class="cell-ok">3</td><td class="cell-good">5</td><td class="cell-bad">1</td></tr>
+          <tr><td class="dim">Maturidade engenharia</td><td class="cell-good">5</td><td class="cell-ok">4</td><td class="cell-ok">3</td><td class="cell-ok">4</td></tr>
+          <tr><td class="dim">Extensibilidade</td><td class="cell-good">5</td><td class="cell-ok">3</td><td class="cell-ok">3</td><td class="cell-bad">1</td></tr>
+          <tr><td class="dim">Custo operação</td><td class="cell-good">5</td><td class="cell-good">5</td><td class="cell-good">5</td><td class="cell-bad">1</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: APEX vs DATAFLINT -->
+  <div class="slide" id="s9">
+    <div class="slide-header">
+      <h2>Apex (merged) vs DataFlint</h2>
+      <span class="tag">competitivo</span>
+    </div>
+    <div class="vs-grid">
+      <div class="vs-panel" style="border-color:rgba(88,166,255,0.3)">
+        <div class="vs-title" style="color:var(--blue)">✅ Apex supera DataFlint em</div>
+        <div class="vs-item">
+          <span class="vs-icon">🔒</span>
+          <span class="vs-label"><strong>Privacidade</strong> — dados ficam no seu cluster, sem cloud terceira</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-icon">🔧</span>
+          <span class="vs-label"><strong>Detectores custom</strong> — adicione regras em diagnostics.yaml</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-icon">⚡</span>
+          <span class="vs-label"><strong>apply_fix no IDE</strong> — corrige o job sem sair do editor</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-icon">💰</span>
+          <span class="vs-label"><strong>Custo zero</strong> — infraestrutura local, sem SaaS</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-icon">🔓</span>
+          <span class="vs-label"><strong>Sem vendor lock-in</strong> — OSS, on-premise</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-icon">🏗️</span>
+          <span class="vs-label"><strong>Lógica auditável</strong> — thresholds no YAML, não caixa preta</span>
+        </div>
+      </div>
+      <div class="vs-center">VS</div>
+      <div class="vs-panel" style="border-color:rgba(255,166,87,0.3)">
+        <div class="vs-title" style="color:var(--orange)">✅ DataFlint supera Apex hoje em</div>
+        <div class="vs-item">
+          <span class="vs-icon">📊</span>
+          <span class="vs-label"><strong>UI visual</strong> — dashboard rico, drill-down por stage/task</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-icon">☁️</span>
+          <span class="vs-label"><strong>Cloud nativo</strong> — EMR, Databricks, Dataproc out-of-the-box</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-icon">🎯</span>
+          <span class="vs-label"><strong>Cobertura imediata</strong> — 10+ detectores funcionando hoje</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-icon">📬</span>
+          <span class="vs-label"><strong>Slack/Email alerts</strong> — time recebe sem abrir IDE</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-icon">🛡️</span>
+          <span class="vs-label"><strong>Suporte gerenciado</strong> — produto com SLA e roadmap</span>
+        </div>
+        <div class="vs-item">
+          <span class="vs-icon">📈</span>
+          <span class="vs-label"><strong>Case study 100x</strong> — SimilarWeb validou em prod</span>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px;padding:12px;background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.2);border-radius:8px;font-size:0.8rem;color:var(--green)">
+      🎯 DataFlint valida o mercado — não é o alvo. O Apex precisa superar DataFlint em privacidade, extensibilidade e apply_fix. Nas outras dimensões, DataFlint ganha no curto prazo.
+    </div>
+  </div>
+
+  <!-- SLIDE 10: RECOMENDAÇÃO DE MERGE -->
+  <div class="slide" id="s10">
+    <div class="slide-header">
+      <h2>Caminho de Merge Recomendado</h2>
+      <span class="tag">recomendação · Cowork (Claude)</span>
+    </div>
+    <div class="merge-steps">
+      <div class="merge-step" style="border-color:rgba(88,166,255,0.3)">
+        <div class="step-num" style="background:rgba(88,166,255,0.2);color:var(--spike)">1</div>
+        <div class="step-content">
+          <h3>Base de detecção — do <span style="color:var(--spike)">spike/apex-v0.1</span> (P0)</h3>
+          <p>5 detectores · diagnostics.yaml · Go eventlog-loader · HyperDX UI · 6 workloads sintéticos. Aguimar construiu a fundação correta.</p>
+        </div>
+      </div>
+      <div class="merge-step" style="border-color:rgba(63,185,80,0.3)">
+        <div class="step-num" style="background:rgba(63,185,80,0.2);color:var(--kimi)">2</div>
+        <div class="step-content">
+          <h3>Qualidade e velocidade — do <span style="color:var(--kimi)">kimi</span> (P1)</h3>
+          <p>EvidenceValidator como gate obrigatório antes do LLM · T1 heurístico 136ms sem LLM · Baseline negativo no CI · Benchmarks publicados.</p>
+        </div>
+      </div>
+      <div class="merge-step" style="border-color:rgba(188,140,255,0.3)">
+        <div class="step-num" style="background:rgba(188,140,255,0.2);color:var(--cowork)">3</div>
+        <div class="step-content">
+          <h3>Ciclo fechado — do <span style="color:var(--cowork)">cowork</span> (P1)</h3>
+          <p><code>apply_fix</code> como MCP tool #7 (único diferencial vs DataFlint) · ADR-005 como padrão de documentação de decisões · formato VALIDACAO.md para rastreamento.</p>
+        </div>
+      </div>
+      <div class="merge-step" style="border-color:rgba(255,166,87,0.2)">
+        <div class="step-num" style="background:rgba(255,166,87,0.1);color:var(--orange)">4</div>
+        <div class="step-content">
+          <h3>O que NÃO copiar (aprendizado negativo)</h3>
+          <p><span style="color:var(--red)">Crew.ai obrigatório</span> (cowork) — single point of failure · <span style="color:var(--red)">log_poller Python 15s</span> como solução final · <span style="color:var(--red)">thresholds hardcoded</span> (cowork) → usar YAML do spike.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: ISSUES -->
+  <div class="slide" id="s11">
+    <div class="slide-header">
+      <h2>Issues Abertas pela Avaliação</h2>
+      <span class="tag">ação · Cowork (Claude)</span>
+    </div>
+    <div class="issues-list">
+      <div class="issue-item">
+        <div class="issue-id">A01</div>
+        <div class="issue-title">Portar 4 detectores do spike (shuffle, re-plans, GC, OOM) para pipeline principal</div>
+        <div class="badge badge-red"><span class="issue-prio p0">P0</span></div>
+      </div>
+      <div class="issue-item">
+        <div class="issue-id">A02</div>
+        <div class="issue-title">Adotar Go eventlog-loader do spike como substituto do log_poller Python</div>
+        <div class="badge badge-orange"><span class="issue-prio p1">P1</span></div>
+      </div>
+      <div class="issue-item">
+        <div class="issue-id">A03</div>
+        <div class="issue-title">Implementar EvidenceValidator do kimi como gate obrigatório antes do LLM</div>
+        <div class="badge badge-orange"><span class="issue-prio p1">P1</span></div>
+      </div>
+      <div class="issue-item">
+        <div class="issue-id">A04</div>
+        <div class="issue-title">Adicionar baseline negativo por detector como teste de regressão no CI</div>
+        <div class="badge badge-orange"><span class="issue-prio p1">P1</span></div>
+      </div>
+      <div class="issue-item">
+        <div class="issue-id">A05</div>
+        <div class="issue-title">Portar apply_fix do cowork para spike como MCP tool #7</div>
+        <div class="badge badge-orange"><span class="issue-prio p1">P1</span></div>
+      </div>
+      <div class="issue-item">
+        <div class="issue-id">A06</div>
+        <div class="issue-title">Publicar benchmarks de latência por tier para todas as soluções</div>
+        <div class="badge badge-blue"><span class="issue-prio p2">P2</span></div>
+      </div>
+      <div class="issue-item">
+        <div class="issue-id">A07</div>
+        <div class="issue-title">Unificar thresholds em diagnostics.yaml — migrar de hardcoded para config YAML</div>
+        <div class="badge badge-blue"><span class="issue-prio p2">P2</span></div>
+      </div>
+      <div class="issue-item">
+        <div class="issue-id">A08</div>
+        <div class="issue-title">Avaliar HyperDX como dashboard (ADR de decisão UI)</div>
+        <div class="badge badge-muted"><span class="issue-prio p3">P3</span></div>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-size:0.75rem;color:var(--muted)">
+      📄 Formato completo em <code>docs/avaliacao/ISSUES_AVALIACAO.md</code>
+    </div>
+  </div>
+
+  <!-- SLIDE 12: CONCLUSÃO -->
+  <div class="slide" id="s12">
+    <div class="slide-header">
+      <h2>Conclusão</h2>
+      <span class="tag">síntese · Cowork (Claude)</span>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="panel" style="border-color:rgba(63,185,80,0.3);margin-bottom:16px">
+          <h3 style="color:var(--green)">O que cada branch entregou de único</h3>
+          <div class="panel-row">
+            <span style="color:var(--spike)">spike</span>
+            <span class="label">Base técnica mais sólida — 5 detectores, Go, YAML config</span>
+          </div>
+          <div class="panel-row">
+            <span style="color:var(--kimi)">kimi</span>
+            <span class="label">Velocidade + qualidade — 334ms, 7/7, baseline negativo</span>
+          </div>
+          <div class="panel-row">
+            <span style="color:var(--cowork)">cowork</span>
+            <span class="label">Ciclo fechado — único com apply_fix + ADR-005</span>
+          </div>
+          <div class="panel-row">
+            <span style="color:var(--orange)">DataFlint</span>
+            <span class="label">Validação de mercado — UI, cloud, case studies</span>
+          </div>
+        </div>
+        <div class="panel" style="border-color:rgba(248,81,73,0.3)">
+          <h3 style="color:var(--red)">Gaps críticos (ninguém resolveu)</h3>
+          <div class="panel-row">
+            <span class="label">Alertas Slack/Email (só DataFlint tem)</span>
+          </div>
+          <div class="panel-row">
+            <span class="label">Cobertura de cloud (EMR/Databricks/Dataproc)</span>
+          </div>
+          <div class="panel-row">
+            <span class="label">UI para times não-engenheiros</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="border-color:rgba(88,166,255,0.3);justify-content:space-between">
+        <h3>V1 Apex (merged) = as melhores peças</h3>
+        <div style="font-size:0.8rem;line-height:2;color:var(--muted)">
+          <div>🏗️ <span style="color:var(--spike)">spike</span> — base: 5 detectores + Go loader + YAML</div>
+          <div>⚡ <span style="color:var(--kimi)">kimi</span> — qualidade: validator + T1 sem LLM + CI</div>
+          <div>🔧 <span style="color:var(--cowork)">cowork</span> — diferencial: apply_fix + ADRs</div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px">
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Superação do DataFlint em:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <span class="badge badge-green">privacidade local</span>
+            <span class="badge badge-green">apply_fix IDE</span>
+            <span class="badge badge-green">extensível</span>
+            <span class="badge badge-green">custo zero</span>
+            <span class="badge badge-green">sem lock-in</span>
+          </div>
+        </div>
+        <div class="llm-badge" style="margin-top:16px">🤖 Avaliação: Cowork (Claude / Anthropic) — 2026-07-07</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- NAVIGATION -->
+<div class="nav" id="nav"></div>
+<div class="kbd">← → navegar</div>
+<div class="slide-num" id="slideNum"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const N = slides.length;
+  let cur = 0;
+
+  const nav = document.getElementById('nav');
+  const slideNum = document.getElementById('slideNum');
+
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goto(i);
+    nav.appendChild(d);
+  });
+
+  function goto(n) {
+    slides[cur].classList.remove('active');
+    nav.children[cur].classList.remove('active');
+    cur = (n + N) % N;
+    slides[cur].classList.add('active');
+    nav.children[cur].classList.add('active');
+    slideNum.textContent = `${cur + 1} / ${N}`;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goto(cur + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goto(cur - 1);
+  });
+
+  goto(0);
+</script>
+</body>
+</html>
