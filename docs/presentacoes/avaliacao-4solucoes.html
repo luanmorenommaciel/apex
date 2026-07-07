@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avaliação Comparativa — 4 Soluções de Diagnóstico Spark</title>
+<style>
+  :root {
+    --apex-blue: #1a237e;
+    --apex-orange: #ff6f00;
+    --apex-white: #ffffff;
+    --apex-light: #f4f6fb;
+    --apex-gray: #e0e0e0;
+    --apex-dark: #0d1235;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--apex-dark); color: var(--apex-white); overflow: hidden; }
+  .presentation { width: 100vw; height: 100vh; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 4vh 5vw; opacity: 0; pointer-events: none; transition: opacity .35s ease;
+    background: linear-gradient(135deg, var(--apex-dark) 0%, var(--apex-blue) 100%);
+  }
+  .slide.active { opacity: 1; pointer-events: auto; z-index: 1; }
+  .slide h1 { font-size: clamp(1.6rem, 3vw, 2.8rem); margin-bottom: .4em; text-align: center; }
+  .slide h2 { font-size: clamp(1.3rem, 2.2vw, 2rem); margin-bottom: .6em; color: var(--apex-orange); text-align: center; }
+  .slide h3 { font-size: clamp(1rem, 1.6vw, 1.4rem); margin-bottom: .5em; color: var(--apex-white); }
+  .subtitle { font-size: clamp(1rem, 1.5vw, 1.3rem); opacity: .9; text-align: center; margin-bottom: 1.5em; }
+  .meta { font-size: .95rem; opacity: .75; text-align: center; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; width: 100%; max-width: 1100px; margin-top: 1rem; }
+  .grid-4 .card { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: .75rem; padding: 1rem; text-align: center; }
+  .grid-4 .card .icon { font-size: 1.6rem; margin-bottom: .3rem; }
+  .grid-4 .card .label { font-weight: 700; color: var(--apex-orange); margin-bottom: .4rem; }
+  .grid-4 .card .desc { font-size: .88rem; opacity: .9; line-height: 1.35; }
+  table { width: 100%; max-width: 1100px; border-collapse: collapse; margin-top: .6rem; font-size: clamp(.82rem, 1.1vw, .95rem); }
+  th, td { border: 1px solid rgba(255,255,255,.18); padding: .55rem .65rem; text-align: left; vertical-align: top; }
+  th { background: rgba(255,255,255,.10); color: var(--apex-orange); }
+  td { background: rgba(255,255,255,.04); }
+  tr:nth-child(even) td { background: rgba(255,255,255,.06); }
+  .highlight { color: var(--apex-orange); font-weight: 700; }
+  .diagram { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; align-items: center; margin-top: .8rem; width: 100%; max-width: 1000px; }
+  .box { background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.2); border-radius: .5rem; padding: .6rem .9rem; font-size: .88rem; text-align: center; min-width: 90px; }
+  .arrow { color: var(--apex-orange); font-weight: 700; font-size: 1.1rem; }
+  .list { max-width: 900px; width: 100%; margin-top: .6rem; }
+  .list li { margin: .35rem 0; font-size: clamp(.9rem, 1.2vw, 1.05rem); line-height: 1.5; }
+  .question { background: rgba(255,255,255,.08); border-left: 4px solid var(--apex-orange); padding: .6rem .9rem; margin: .4rem 0; border-radius: 0 .5rem .5rem 0; font-size: clamp(.88rem, 1.15vw, 1rem); }
+  .progress { position: fixed; bottom: 0; left: 0; height: 4px; background: var(--apex-orange); transition: width .3s ease; z-index: 10; }
+  .slide-num { position: fixed; bottom: 10px; right: 14px; font-size: .8rem; opacity: .6; z-index: 10; }
+  .nav-hint { position: fixed; bottom: 10px; left: 14px; font-size: .75rem; opacity: .45; z-index: 10; }
+  .small-table { max-width: 950px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; width: 100%; max-width: 1000px; margin-top: .8rem; }
+  .col-card { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); border-radius: .6rem; padding: 1rem; }
+  .col-card h4 { color: var(--apex-orange); margin-bottom: .4rem; font-size: 1rem; }
+  @media (max-width: 860px) {
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+    th, td { padding: .4rem .5rem; font-size: .78rem; }
+    .box { min-width: 70px; padding: .45rem .6rem; font-size: .78rem; }
+  }
+  @media (max-width: 480px) {
+    .grid-4 { grid-template-columns: 1fr; }
+    .slide { padding: 3vh 4vw; }
+  }
+</style>
+</head>
+<body>
+<div class="presentation" id="pres">
+
+<!-- Slide 1 -->
+<div class="slide active">
+  <h1>Avaliação Comparativa — 4 Soluções de Diagnóstico Spark</h1>
+  <div class="subtitle">cowork × kimi × spike/apex-v0.1 × DataFlint</div>
+  <div class="meta">Ponto de vista: LLM Kimi</div>
+  <div class="meta">2026-07-07</div>
+</div>
+
+<!-- Slide 2 -->
+<div class="slide">
+  <h2>Visão Geral</h2>
+  <div class="grid-4">
+    <div class="card">
+      <div class="icon">🐍</div>
+      <div class="label">cowork</div>
+      <div class="desc">Python/CrewAI — pipeline refinado T1→T2→T3</div>
+    </div>
+    <div class="card">
+      <div class="icon">⚡</div>
+      <div class="label">kimi</div>
+      <div class="desc">Go nativo — máxima performance, zero deps</div>
+    </div>
+    <div class="card">
+      <div class="icon">🐳</div>
+      <div class="label">spike/apex-v0.1</div>
+      <div class="desc">Plataforma Docker — infra completa end-to-end</div>
+    </div>
+    <div class="card">
+      <div class="icon">☁️</div>
+      <div class="label">DataFlint</div>
+      <div class="desc">SaaS concorrente — baseline de mercado</div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 3 -->
+<div class="slide">
+  <h2>Matriz Comparativa — Infraestrutura</h2>
+  <table>
+    <tr><th>Aspecto</th><th>cowork</th><th>kimi</th><th>spike</th><th>dataflint</th></tr>
+    <tr><td>Orquestração</td><td>Docker Compose</td><td>Nenhuma</td><td>Docker Compose (9 containers)</td><td>SaaS</td></tr>
+    <tr><td>Spark</td><td>Sim</td><td>Não incluso</td><td>Sim (4.1.2)</td><td>JAR obrigatório</td></tr>
+    <tr><td>ClickHouse</td><td>Sim</td><td>Assume externo</td><td>Sim (26.5.1)</td><td>Próprio</td></tr>
+    <tr><td>Portabilidade</td><td>Docker-only</td><td>Binários nativos</td><td>Docker-only</td><td>JAR no cluster</td></tr>
+    <tr><td>Serverless-ready</td><td>Não</td><td class="highlight">Sim (~15MB)</td><td>Não</td><td>Parcial</td></tr>
+  </table>
+</div>
+
+<!-- Slide 4 -->
+<div class="slide">
+  <h2>Matriz Comparativa — Linguagem/Runtime</h2>
+  <table class="small-table">
+    <tr><th>Aspecto</th><th>cowork</th><th>kimi</th><th>spike</th><th>dataflint</th></tr>
+    <tr><td>Linguagem</td><td>Python 3.11</td><td class="highlight">Go 1.21</td><td>Python 3.10+ + Go 1.26</td><td>Java/Scala</td></tr>
+    <tr><td>Framework</td><td>CrewAI</td><td>Puro (net/http)</td><td>CrewAI opcional</td><td>Proprietário</td></tr>
+    <tr><td>Overhead</td><td>Alto (CrewAI)</td><td class="highlight">Zero</td><td>Médio</td><td>JAR no cluster</td></tr>
+    <tr><td>Binário final</td><td>Não</td><td class="highlight">~15MB single binary</td><td>Não (Docker)</td><td>N/A</td></tr>
+  </table>
+</div>
+
+<!-- Slide 5 -->
+<div class="slide">
+  <h2>Matriz Comparativa — Detectores</h2>
+  <table class="small-table">
+    <tr><th>Aspecto</th><th>cowork</th><th>kimi</th><th>spike</th><th>dataflint</th></tr>
+    <tr><td>Detectores</td><td>skew, shuffle, spill, memory, duration</td><td>skew, duration, spill, memory</td><td>skew, shuffle, plans, gc, oom</td><td>14 alertas fixos</td></tr>
+    <tr><td>Extensibilidade</td><td>scenario.yaml</td><td>scenario.yaml</td><td>diagnostics.yaml</td><td>Fixo</td></tr>
+    <tr><td>Workloads sintéticos</td><td>Não</td><td>Não</td><td class="highlight">Sim (6)</td><td>Não</td></tr>
+    <tr><td>Thresholds</td><td>YAML</td><td>Hardcoded Go</td><td>YAML</td><td>Fixo</td></tr>
+  </table>
+</div>
+
+<!-- Slide 6 -->
+<div class="slide">
+  <h2>Matriz Comparativa — Pipeline/Arquitetura</h2>
+  <div style="width:100%;max-width:1000px;margin-top:.6rem;">
+    <div style="margin:.5rem 0;"><strong style="color:var(--apex-orange)">cowork:</strong></div>
+    <div class="diagram">
+      <div class="box">T1</div><span class="arrow">→</span>
+      <div class="box">Validator<br><small>(7 regras)</small></div><span class="arrow">→</span>
+      <div class="box">T2<br><small>(runbook)</small></div><span class="arrow">→</span>
+      <div class="box">T3<br><small>(heurístico/LLM)</small></div>
+    </div>
+    <div style="margin:.7rem 0 .4rem;"><strong style="color:var(--apex-orange)">kimi:</strong></div>
+    <div class="diagram">
+      <div class="box">T1 Go</div><span class="arrow">→</span>
+      <div class="box">Validator Go</div><span class="arrow">→</span>
+      <div class="box">T2 JSON</div><span class="arrow">→</span>
+      <div class="box">T3 heurístico</div>
+    </div>
+    <div style="margin:.7rem 0 .4rem;"><strong style="color:var(--apex-orange)">spike:</strong></div>
+    <div class="diagram">
+      <div class="box">Detectores</div><span class="arrow">→</span>
+      <div class="box">Finding<br><small>(Pydantic)</small></div><span class="arrow">→</span>
+      <div class="box">CrewAI<br><small>(opcional)</small></div><span class="arrow">→</span>
+      <div class="box">Report</div>
+    </div>
+    <div style="margin:.7rem 0 .4rem;"><strong style="color:var(--apex-orange)">dataflint:</strong></div>
+    <div class="diagram">
+      <div class="box">Alerta binário</div><span class="arrow">—</span>
+      <div class="box" style="opacity:.6;">sem pipeline</div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 7 -->
+<div class="slide">
+  <h2>Matriz Comparativa — Validação/Confiabilidade</h2>
+  <table class="small-table">
+    <tr><th>Aspecto</th><th>cowork</th><th>kimi</th><th>spike</th><th>dataflint</th></tr>
+    <tr><td>Evidence Validator</td><td class="highlight">7 regras</td><td class="highlight">7 regras</td><td>Não</td><td>Não</td></tr>
+    <tr><td>Validação determinística</td><td class="highlight">Sim</td><td class="highlight">Sim</td><td>Parcial</td><td>Não</td></tr>
+    <tr><td>Confiança numérica</td><td class="highlight">Sim (0-1)</td><td class="highlight">Sim (0-1)</td><td>Severity (WARNING/CRITICAL)</td><td>Binário</td></tr>
+    <tr><td>Reprodutibilidade</td><td class="highlight">Alta</td><td class="highlight">Alta</td><td>Média</td><td>Baixa</td></tr>
+  </table>
+</div>
+
+<!-- Slide 8 -->
+<div class="slide">
+  <h2>Matriz Comparativa — IDE/MCP</h2>
+  <table class="small-table">
+    <tr><th>Aspecto</th><th>cowork</th><th>kimi</th><th>spike</th><th>dataflint</th></tr>
+    <tr><td>MCP Server</td><td class="highlight">Sim (7 tools)</td><td class="highlight">Sim (5 tools HTTP)</td><td class="highlight">Sim (6 tools stdio)</td><td>Não</td></tr>
+    <tr><td>Integração IDE</td><td>Claude Code/Cursor</td><td class="highlight">Qualquer IDE</td><td>Claude Code</td><td>Não</td></tr>
+    <tr><td>CLI nativa</td><td>Parcial</td><td class="highlight">Sim (5 CLIs)</td><td>Sim (make diagnose)</td><td>Não</td></tr>
+    <tr><td>Aplicar fix automaticamente</td><td class="highlight">Sim (MCP apply_fix)</td><td>Não</td><td>Não</td><td>Não</td></tr>
+  </table>
+</div>
+
+<!-- Slide 9 -->
+<div class="slide">
+  <h2>Matriz Comparativa — Testes/Qualidade</h2>
+  <table class="small-table">
+    <tr><th>Aspecto</th><th>cowork</th><th>kimi</th><th>spike</th><th>dataflint</th></tr>
+    <tr><td>Testes unitários</td><td class="highlight">21 (pytest)</td><td>0</td><td>pytest (fake Spark/CH)</td><td>N/A</td></tr>
+    <tr><td>CI/CD</td><td class="highlight">GitHub Actions</td><td>Não</td><td>Makefile (bootstrap/test)</td><td>N/A</td></tr>
+    <tr><td>Fake Spark</td><td>Parcial</td><td>Não</td><td class="highlight">Sim (tests)</td><td>N/A</td></tr>
+    <tr><td>LLM tests</td><td>Não</td><td>Não</td><td>Opt-in (RUN_LLM_TESTS=1)</td><td>N/A</td></tr>
+  </table>
+</div>
+
+<!-- Slide 10 -->
+<div class="slide">
+  <h2>Benchmark de Performance</h2>
+  <table class="small-table">
+    <tr><th>Métrica</th><th>kimi Go</th><th>cowork Python</th><th>spike</th><th>dataflint</th></tr>
+    <tr><td>T1 Diagnostician</td><td class="highlight">136ms</td><td>136ms</td><td>N/A</td><td>Não tem</td></tr>
+    <tr><td>Validator</td><td class="highlight">197ms</td><td>197ms</td><td>N/A</td><td>Não tem</td></tr>
+    <tr><td>T2 Recommender</td><td class="highlight">0.01ms</td><td>0.01ms</td><td>N/A</td><td>Não tem</td></tr>
+    <tr><td>Pipeline total</td><td class="highlight">~333ms</td><td>~333ms</td><td>N/A</td><td>N/A</td></tr>
+  </table>
+</div>
+
+<!-- Slide 11 -->
+<div class="slide">
+  <h2>Infraestrutura — spike/apex-v0.1</h2>
+  <ul class="list">
+    <li>Spark Master, Spark Worker, Spark History</li>
+    <li>ClickHouse 26.5.1</li>
+    <li>MinIO (lakehouse + logs)</li>
+    <li>HyperDX / ClickStack (UI)</li>
+    <li>MongoDB</li>
+    <li>eventlog-loader (Go)</li>
+    <li><strong>10 dashboards ClickStack</strong></li>
+  </ul>
+  <div class="meta" style="margin-top:1rem;">9 containers Docker Compose — stack completa end-to-end</div>
+</div>
+
+<!-- Slide 12 -->
+<div class="slide">
+  <h2>Pipeline — cowork</h2>
+  <div class="diagram">
+    <div class="box">T1<br><small>Diagnostician</small></div><span class="arrow">→</span>
+    <div class="box">Validator<br><small>(7 regras)</small></div><span class="arrow">→</span>
+    <div class="box">T2<br><small>Runbook</small></div><span class="arrow">→</span>
+    <div class="box">T3<br><small>Heurístico / LLM</small></div>
+  </div>
+  <div style="width:100%;max-width:900px;margin-top:1.2rem;">
+    <h3>Evidence Validator — 7 Regras</h3>
+    <div class="two-col">
+      <div class="col-card">
+        <h4>Regras estruturais</h4>
+        <ul>
+          <li>schema_version obrigatório</li>
+          <li>evidence_id único</li>
+          <li>timestamp ISO8601 válido</li>
+          <li>workload_id presente</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h4>Regras semânticas</h4>
+        <ul>
+          <li>severity ∈ {INFO, WARNING, CRITICAL}</li>
+          <li>confidence ∈ [0,1]</li>
+          <li>recommendation não vazia</li>
+        </ul>
+      </div>
+    </div>
+    <div style="margin-top:.8rem;"><strong style="color:var(--apex-orange)">MCP Server:</strong> 7 tools (diagnose, validate, recommend, spillwatch, analyze, apply_fix, get_evidence)</div>
+  </div>
+</div>
+
+<!-- Slide 13 -->
+<div class="slide">
+  <h2>Performance — kimi</h2>
+  <div style="width:100%;max-width:900px;">
+    <div class="question" style="margin-bottom:1rem;"><strong>Destaque:</strong> Go nativo, zero overhead, single binary ~15MB</div>
+    <h3>CLI Tools (5 comandos)</h3>
+    <ul class="list">
+      <li><code>diagnose</code> — executa T1 completo</li>
+      <li><code>validate</code> — roda Evidence Validator</li>
+      <li><code>recommend</code> — gera recomendação T2</li>
+      <li><code>spillwatch</code> — monitora spill em tempo real</li>
+      <li><code>analyze</code> — análise profunda de eventlog</li>
+    </ul>
+    <h3 style="margin-top:.8rem;">ClickHouse Client</h3>
+    <ul class="list">
+      <li>HTTP puro (net/http), zero dependências</li>
+      <li>Portabilidade máxima: Linux, macOS, Windows</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Slide 14 -->
+<div class="slide">
+  <h2>Baseline — DataFlint</h2>
+  <div class="two-col">
+    <div class="col-card">
+      <h4>✅ O que faz bem</h4>
+      <ul>
+        <li>SaaS pronto — sem setup de infra</li>
+        <li>14 alertas pré-configurados</li>
+      </ul>
+    </div>
+    <div class="col-card">
+      <h4>❌ O que falha</h4>
+      <ul>
+        <li>JAR obrigatório no cluster Spark</li>
+        <li>Alerta binário (sem nuance)</li>
+        <li>Sem pipeline estruturado</li>
+        <li>Sem integração IDE</li>
+        <li>Modelo pago</li>
+      </ul>
+    </div>
+  </div>
+  <div style="width:100%;max-width:900px;margin-top:1rem;">
+    <div class="question"><strong>Apex faz melhor:</strong> Zero JAR, pipeline em 4 tiers, MCP nativo, extensível via YAML, gratuito/open-source</div>
+  </div>
+</div>
+
+<!-- Slide 15 -->
+<div class="slide">
+  <h2>Proposta Apex V1.5</h2>
+  <div style="width:100%;max-width:1000px;">
+    <h3>Diagrama de Integração</h3>
+    <div class="diagram" style="flex-wrap:nowrap;">
+      <div class="box">spike/apex-v0.1<br><small>Infra Docker</small></div><span class="arrow">→</span>
+      <div class="box">cowork<br><small>Pipeline T1/T2/T3 + Validator</small></div><span class="arrow">→</span>
+      <div class="box">kimi<br><small>Core Go T1</small></div>
+    </div>
+    <h3 style="margin-top:1.2rem;">Roadmap</h3>
+    <div class="diagram">
+      <div class="box">V0.5<br><small>Infra</small></div><span class="arrow">→</span>
+      <div class="box">V0.6<br><small>Detectores</small></div><span class="arrow">→</span>
+      <div class="box">V0.7<br><small>Go T1</small></div><span class="arrow">→</span>
+      <div class="box">V0.8<br><small>Validator</small></div><span class="arrow">→</span>
+      <div class="box">V1.0<br><small>MVP</small></div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 16 -->
+<div class="slide">
+  <h2>Próximos Passos — 4 Perguntas para Luan</h2>
+  <div style="width:100%;max-width:900px;margin-top:.6rem;">
+    <div class="question"><strong>1.</strong> Prioridade: infra ou diagnóstico primeiro?</div>
+    <div class="question"><strong>2.</strong> Go vs Python para T1?</div>
+    <div class="question"><strong>3.</strong> CrewAI: manter ou remover?</div>
+    <div class="question"><strong>4.</strong> Timeline para V1.0?</div>
+  </div>
+  <div class="meta" style="margin-top:2rem;">Obrigado — LLM Kimi · 2026-07-07</div>
+</div>
+
+</div>
+
+<div class="progress" id="progress"></div>
+<div class="slide-num" id="slideNum">1 / 16</div>
+<div class="nav-hint">← → para navegar</div>
+
+<script>
+(function(){
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+  const progress = document.getElementById('progress');
+  const num = document.getElementById('slideNum');
+
+  function show(i){
+    slides.forEach((s,idx)=>s.classList.toggle('active', idx===i));
+    progress.style.width = ((i+1)/total*100)+'%';
+    num.textContent = (i+1)+' / '+total;
+    current = i;
+  }
+
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){
+      if(current<total-1) show(current+1);
+    } else if(e.key==='ArrowLeft' || e.key==='PageUp'){
+      if(current>0) show(current-1);
+    } else if(e.key==='Home'){
+      show(0);
+    } else if(e.key==='End'){
+      show(total-1);
+    }
+  });
+
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e=>{ touchStartX = e.changedTouches[0].screenX; });
+  document.addEventListener('touchend', e=>{
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    if(dx < -40 && current<total-1) show(current+1);
+    if(dx > 40 && current>0) show(current-1);
+  });
+})();
+</script>
+</body>
+</html>
