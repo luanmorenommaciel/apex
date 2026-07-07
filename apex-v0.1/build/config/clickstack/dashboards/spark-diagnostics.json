@@ -1,0 +1,164 @@
+{
+  "name": "Spark Diagnostics",
+  "tags": [
+    "provisioned",
+    "spark-plat-v0"
+  ],
+  "tiles": [
+    {
+      "id": "findings-severity",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 9,
+      "config": {
+        "name": "Relatórios de diagnóstico por severidade",
+        "source": "Spark Diagnostic Reports",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "relatorios"
+          }
+        ],
+        "groupBy": "max_severity",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "spill-mem-app",
+      "x": 0,
+      "y": 9,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Spill de memória por app (bytes)",
+        "source": "Spark Tasks",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "memory_bytes_spilled",
+            "alias": "spill_memoria"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "spill-disk-app",
+      "x": 12,
+      "y": 9,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Spill de disco por app (bytes)",
+        "source": "Spark Tasks",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "disk_bytes_spilled",
+            "alias": "spill_disco"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "shuffle-app",
+      "x": 0,
+      "y": 18,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Volume de shuffle por app (bytes)",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "shuffle_read_bytes + shuffle_write_bytes",
+            "alias": "shuffle_total"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "gc-app",
+      "x": 12,
+      "y": 18,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "GC máximo por app (ms)",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "max",
+            "valueExpression": "jvm_gc_time_ms",
+            "alias": "gc_max_ms"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "skew-max-stage",
+      "x": 0,
+      "y": 27,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Skew: task mais lenta por stage (ms) — filtre por app",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "max",
+            "valueExpression": "duration_ms",
+            "alias": "task_max_ms"
+          }
+        ],
+        "groupBy": "stage_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "skew-p50-stage",
+      "x": 12,
+      "y": 27,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Mediana de duração por stage (ms) — compare com a task mais lenta",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "quantile",
+            "level": 0.5,
+            "valueExpression": "duration_ms",
+            "alias": "task_p50_ms"
+          }
+        ],
+        "groupBy": "stage_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    }
+  ]
+}

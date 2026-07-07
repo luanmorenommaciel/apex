@@ -1,0 +1,115 @@
+{
+  "name": "Cluster Status — Real-time",
+  "tags": [
+    "provisioned",
+    "spark-plat-v0"
+  ],
+  "tiles": [
+    {
+      "id": "event-throughput",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 9,
+      "config": {
+        "name": "Throughput de eventos Spark por tipo",
+        "source": "Spark Raw Events",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "eventos"
+          }
+        ],
+        "groupBy": "event_type",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "active-apps",
+      "x": 0,
+      "y": 9,
+      "w": 12,
+      "h": 5,
+      "config": {
+        "name": "Apps ativos na janela",
+        "source": "Spark Tasks",
+        "displayType": "number",
+        "select": [
+          {
+            "aggFn": "count_distinct",
+            "valueExpression": "app_id",
+            "alias": "apps"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "tasks-finishing",
+      "x": 12,
+      "y": 9,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Tasks finalizando (todas as apps)",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "tasks"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "mem-spill-now",
+      "x": 0,
+      "y": 18,
+      "w": 12,
+      "h": 5,
+      "config": {
+        "name": "Spill de memória na janela (bytes)",
+        "source": "Spark Tasks",
+        "displayType": "number",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "memory_bytes_spilled",
+            "alias": "spill_memoria"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "gc-now",
+      "x": 12,
+      "y": 18,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "GC máximo na janela (ms)",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "max",
+            "valueExpression": "jvm_gc_time_ms",
+            "alias": "gc_max_ms"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    }
+  ]
+}

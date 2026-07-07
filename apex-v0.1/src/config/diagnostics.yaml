@@ -1,0 +1,22 @@
+# Thresholds and severity rules for apex_diagnostics detectors (design D-002).
+# Ratios only apply after the false-positive guards pass, so tiny healthy runs
+# (make smoke) can never produce critical findings (acceptance test AT-003).
+
+skew:
+  warning_ratio: 3.0
+  critical_ratio: 6.0
+  min_tasks: 8
+  min_duration_ms: 5000
+
+shuffle:
+  warning_shuffle_bytes: 268435456    # 256 MiB
+  critical_shuffle_bytes: 1073741824  # 1 GiB
+  min_shuffle_bytes: 16777216         # 16 MiB guard before any spill/volume rule fires
+
+plans:
+  info_replan_count: 3
+
+gc:
+  warning_ratio: 0.10             # >=10% do tempo somado de tasks em GC (regra clássica de tuning)
+  critical_ratio: 0.20
+  min_stage_duration_ms: 5000     # guard: soma de duração de tasks do stage

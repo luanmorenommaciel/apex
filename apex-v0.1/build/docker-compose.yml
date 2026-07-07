@@ -1,0 +1,266 @@
+name: apex-v0.1
+
+x-spark-env: &spark-env
+  AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+  AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+  AWS_REGION: us-east-1
+  AWS_DEFAULT_REGION: us-east-1
+  PYTHONPATH: /opt/spark/src
+  SPARK_PLAT_CONFIG_ENV: ${SPARK_PLAT_CONFIG_ENV:-local}
+
+services:
+  minio:
+    image: ${MINIO_IMAGE:-apex-v01-minio:2025-09-07}
+    container_name: spv0-minio
+    # TODO(hardening): confirmed via MCP that the official minio/minio image
+    # runs as root unless --user/UID-GID is set. 1000:1000 is the common
+    # convention from MinIO's own non-root guide; host dir permissions on
+    # ./var/minio-data were adjusted locally to allow this UID to write.
+    # Re-verify with `docker compose up minio` + `docker compose logs minio`
+    # if MinIO fails to start after this change on a different host/OS.
+    user: "1000:1000"
+    command:
+      - server
+      - /data
+      - --console-address
+      - :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-29000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-29001}:9001"
+    volumes:
+      - ./var/minio-data:/data
+    networks:
+      - spv0-net
+    mem_limit: "${MINIO_MEM_LIMIT:-1g}"
+    cpus: "${MINIO_CPU_LIMIT:-1.0}"
+    # Official minio/minio image bundles `mc` and documents `mc ready local`
+    # as the current recommended self-healthcheck (curl was removed from the
+    # image years ago); confirmed via MCP against minio/minio's own compose
+    # examples.
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  minio-init:
+    image: ${MINIO_MC_IMAGE:-apex-v01-minio-mc:2025-08-13}
+    container_name: spv0-minio-init
+    # TODO(hardening): same non-root rationale as `minio` above. HOME=/tmp
+    # avoids the classic "no /etc/passwd entry for this UID" failure when `mc`
+    # tries to write its ~/.mc config as a non-root, unmapped user.
+    user: "1000:1000"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      HOME: /tmp
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+      MINIO_LAKEHOUSE_BUCKET: ${MINIO_LAKEHOUSE_BUCKET:-lakehouse}
+      MINIO_LOG_BUCKET: ${MINIO_LOG_BUCKET:-spark-logs}
+    networks:
+      - spv0-net
+
+  clickhouse:
+    image: ${CLICKHOUSE_IMAGE:-apex-v01-clickhouse:26.5.1}
+    container_name: spv0-clickhouse
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-spark_observability}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:?Set CLICKHOUSE_USER in .env}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?Set CLICKHOUSE_PASSWORD in .env}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ports:
+      - "127.0.0.1:${CLICKHOUSE_HTTP_PORT:-28123}:8123"
+      - "127.0.0.1:${CLICKHOUSE_NATIVE_PORT:-29002}:9000"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --user $${CLICKHOUSE_USER} --password $${CLICKHOUSE_PASSWORD} --query 'SELECT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - ./var/clickhouse-data:/var/lib/clickhouse
+      - ./var/clickhouse-logs:/var/log/clickhouse-server
+    networks:
+      - spv0-net
+
+  mongo:
+    image: ${MONGO_IMAGE:-apex-v01-mongo:7}
+    container_name: spv0-mongo
+    command: ["mongod", "--quiet", "--logpath", "/dev/null"]
+    volumes:
+      - ./var/mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - spv0-net
+
+  hyperdx:
+    image: ${HYPERDX_IMAGE:-apex-v01-hyperdx:2-beta}
+    container_name: spv0-hyperdx
+    depends_on:
+      mongo:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://mongo:27017/hyperdx
+      FRONTEND_URL: http://localhost:${HYPERDX_UI_PORT:-28088}
+      USAGE_STATS_ENABLED: "false"
+      DASHBOARD_PROVISIONER_DIR: /etc/hyperdx/dashboards
+      DASHBOARD_PROVISIONER_ALL_TEAMS: "true"
+      DEFAULT_CONNECTIONS: '[{"name":"Spark ClickHouse","host":"http://clickhouse:8123","username":"${CLICKHOUSE_USER:?Set CLICKHOUSE_USER in .env}","password":"${CLICKHOUSE_PASSWORD:?Set CLICKHOUSE_PASSWORD in .env}"}]'
+      DEFAULT_SOURCES: '[{"name":"Spark Diagnostic Reports","kind":"log","connection":"Spark ClickHouse","from":{"databaseName":"${CLICKHOUSE_DB:-spark_observability}","tableName":"spark_diagnostic_reports"},"timestampValueExpression":"generated_at","defaultTableSelectExpression":"generated_at, app_id, status, max_severity, findings_count","severityTextExpression":"max_severity","bodyExpression":"report_json"},{"name":"Spark Raw Events","kind":"log","connection":"Spark ClickHouse","from":{"databaseName":"${CLICKHOUSE_DB:-spark_observability}","tableName":"spark_raw_events"},"timestampValueExpression":"fromUnixTimestamp64Milli(event_time_ms)","defaultTableSelectExpression":"event_time_ms, app_id, event_type","serviceNameExpression":"app_id","bodyExpression":"raw"},{"name":"Spark Tasks","kind":"log","connection":"Spark ClickHouse","from":{"databaseName":"${CLICKHOUSE_DB:-spark_observability}","tableName":"spark_tasks"},"timestampValueExpression":"fromUnixTimestamp64Milli(finish_time_ms)","defaultTableSelectExpression":"finish_time_ms, app_id, stage_id, task_id, duration_ms, shuffle_read_bytes, shuffle_write_bytes, memory_bytes_spilled, disk_bytes_spilled, jvm_gc_time_ms","serviceNameExpression":"app_id","bodyExpression":"concat(app_id, '' stage='', toString(stage_id), '' task='', toString(task_id))"}]'
+    ports:
+      - "127.0.0.1:${HYPERDX_UI_PORT:-28088}:8080"
+    volumes:
+      - ./config/clickstack/dashboards:/etc/hyperdx/dashboards:ro
+    networks:
+      - spv0-net
+    # TODO(hardening): could not confirm whether wget/curl is present in this
+    # image without daemon access. Nothing else depends_on hyperdx being
+    # healthy (seed-clickstack.sh does its own HTTP polling), so a false
+    # "unhealthy" here only affects `docker compose ps` output, not startup.
+    # Verify with `docker compose exec hyperdx wget --version`.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  spark-master:
+    image: ${SPARK_RUNTIME_IMAGE:-apex-v01-spark:4.1.2}
+    container_name: spv0-spark-master
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    environment: *spark-env
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
+    ports:
+      - "127.0.0.1:${SPARK_MASTER_UI_PORT:-28081}:8080"
+    volumes:
+      - ../src:/opt/spark/src:ro
+      - ./var/metrics:/opt/spark/metrics
+    networks:
+      - spv0-net
+    mem_limit: "${SPARK_MASTER_MEM_LIMIT:-1g}"
+    cpus: "${SPARK_MASTER_CPU_LIMIT:-1.0}"
+    # apache/spark base image installs `wget` (confirmed via MCP against the
+    # upstream apache/spark-docker Dockerfile template), so it is used here
+    # instead of curl, which is not part of that image.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  spark-worker:
+    image: ${SPARK_RUNTIME_IMAGE:-apex-v01-spark:4.1.2}
+    container_name: spv0-spark-worker-1
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    environment: *spark-env
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+      - --cores
+      - "${SPARK_WORKER_CORES:-1}"
+      - --memory
+      - "${SPARK_WORKER_MEMORY:-1g}"
+      - --webui-port
+      - "8081"
+    volumes:
+      - ../src:/opt/spark/src:ro
+      - ./var/metrics:/opt/spark/metrics
+    networks:
+      - spv0-net
+    # Container memory/CPU cap sits above SPARK_WORKER_MEMORY/CORES (the JVM's
+    # own heap/core request) on purpose: leaves headroom for off-heap usage so
+    # intentional OOM workloads (`make workload-oom`) are contained to this
+    # container instead of pressuring the host.
+    mem_limit: "${SPARK_WORKER_MEM_LIMIT:-2g}"
+    cpus: "${SPARK_WORKER_CPU_LIMIT:-2.0}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  spark-history:
+    image: ${SPARK_HISTORY_IMAGE:-apex-v01-spark-history:4.1.2}
+    container_name: spv0-spark-history
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      spark-master:
+        condition: service_healthy
+      spark-worker:
+        condition: service_healthy
+    environment: *spark-env
+    ports:
+      - "127.0.0.1:${SPARK_HISTORY_UI_PORT:-28080}:18080"
+    volumes:
+      - ./var/metrics:/opt/spark/metrics
+    networks:
+      - spv0-net
+    mem_limit: "${SPARK_HISTORY_MEM_LIMIT:-1g}"
+    cpus: "${SPARK_HISTORY_CPU_LIMIT:-1.0}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:18080/api/v1/applications || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  eventlog-loader:
+    profiles:
+      - tools
+    image: ${LOADER_IMAGE:-apex-v01-eventlog-loader:go1.26}
+    container_name: spv0-eventlog-loader
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+      MINIO_BUCKET: ${MINIO_LOG_BUCKET:-spark-logs}
+      MINIO_PREFIX: events/
+      MINIO_USE_SSL: "false"
+      CLICKHOUSE_ADDR: clickhouse:9000
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-spark_observability}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:?Set CLICKHOUSE_USER in .env}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?Set CLICKHOUSE_PASSWORD in .env}
+      LOADER_INTERVAL_SECONDS: "5"
+      LOADER_ONCE: "true"
+    networks:
+      - spv0-net
+
+networks:
+  spv0-net:
+    name: spv0-net

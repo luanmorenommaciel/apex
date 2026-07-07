@@ -1,0 +1,75 @@
+{
+  "name": "SQL Plans",
+  "tags": [
+    "provisioned",
+    "spark-plat-v0"
+  ],
+  "tiles": [
+    {
+      "id": "aqe-replans-app",
+      "x": 0,
+      "y": 0,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Atualizações de plano AQE por app (modo adaptativo em ação)",
+        "source": "Spark SQL Plans",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "replans_aqe"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "sql-execs-app",
+      "x": 12,
+      "y": 0,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Execuções SQL iniciadas por app",
+        "source": "Spark SQL Executions",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "execucoes"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "execs-outcome",
+      "x": 0,
+      "y": 9,
+      "w": 24,
+      "h": 9,
+      "config": {
+        "name": "Execuções encerradas: ok vs erro",
+        "source": "Spark SQL Execution Ends",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "execucoes"
+          }
+        ],
+        "groupBy": "if(error_message != '', 'error', 'ok')",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+**
+!Dockerfile
+!go.mod
+!go.sum
+!vendor/
+!vendor/**
+!main.go
+!schema.sql

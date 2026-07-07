@@ -1,0 +1,6 @@
+# Python runtime dependencies installed into the Spark image.
+# Do not install pyspark or delta-spark here: the official Spark image owns PySpark,
+# and Delta is provided by local Spark/Scala jars under build/config/spark/jars.
+pandas==2.3.3
+pyarrow==21.0.0
+PyYAML==6.0.2

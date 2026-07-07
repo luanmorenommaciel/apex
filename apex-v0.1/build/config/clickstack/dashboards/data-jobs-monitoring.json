@@ -1,0 +1,141 @@
+{
+  "name": "Data Jobs Monitoring",
+  "tags": [
+    "provisioned",
+    "spark-plat-v0"
+  ],
+  "tiles": [
+    {
+      "id": "jobs-lifecycle",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 9,
+      "config": {
+        "name": "Ciclo de vida: jobs concluídos vs sem conclusão registrada",
+        "source": "Spark Jobs",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "jobs"
+          }
+        ],
+        "groupBy": "if(completion_time_ms > 0, 'concluído', 'sem conclusão')",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "jobs-incomplete",
+      "x": 0,
+      "y": 9,
+      "w": 12,
+      "h": 5,
+      "config": {
+        "name": "Jobs sem conclusão registrada (possível travamento/falha)",
+        "source": "Spark Jobs",
+        "displayType": "number",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "jobs_sem_fim"
+          }
+        ],
+        "where": "completion_time_ms = 0",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "job-duration-p95",
+      "x": 12,
+      "y": 9,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Duração de jobs p95 (s) — anomalias de performance",
+        "source": "Spark Jobs",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "quantile",
+            "level": 0.95,
+            "valueExpression": "(completion_time_ms - submission_time_ms) / 1000",
+            "alias": "duracao_p95_s"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "completion_time_ms > 0",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "stage-duration-max",
+      "x": 0,
+      "y": 18,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Drill-down: duração máxima de stage por app (s)",
+        "source": "Spark Stages",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "max",
+            "valueExpression": "(completion_time_ms - submission_time_ms) / 1000",
+            "alias": "stage_max_s"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "completion_time_ms > 0",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "cost-core-hours",
+      "x": 12,
+      "y": 18,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Custo estimado (moeda = {{COST_PER_CORE_HOUR}}/core-hour, via COST_PER_CORE_HOUR)",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "executor_run_time_ms / 3600000 * {{COST_PER_CORE_HOUR}}",
+            "alias": "custo_estimado"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "executors-per-app",
+      "x": 0,
+      "y": 27,
+      "w": 24,
+      "h": 9,
+      "config": {
+        "name": "Right-sizing: executores efetivamente usados por app",
+        "source": "Spark Tasks",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "count_distinct",
+            "valueExpression": "executor_id",
+            "alias": "executores"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    }
+  ]
+}

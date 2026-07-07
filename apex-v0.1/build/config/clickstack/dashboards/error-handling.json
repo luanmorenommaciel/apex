@@ -1,0 +1,118 @@
+{
+  "name": "Error Handling",
+  "tags": [
+    "provisioned",
+    "spark-plat-v0"
+  ],
+  "tiles": [
+    {
+      "id": "critical-reports",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 5,
+      "config": {
+        "name": "Relatórios de diagnóstico CRÍTICOS",
+        "source": "Spark Diagnostic Reports",
+        "displayType": "number",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "criticos"
+          }
+        ],
+        "where": "max_severity = 'critical'",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "failed-tasks-app",
+      "x": 0,
+      "y": 5,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Tasks falhadas por app",
+        "source": "Spark Tasks",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "tasks_falhas"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "successful = 0",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "failure-reasons",
+      "x": 12,
+      "y": 5,
+      "w": 12,
+      "h": 10,
+      "config": {
+        "name": "Motivos de falha de task",
+        "source": "Spark Tasks",
+        "displayType": "table",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "falhas"
+          }
+        ],
+        "groupBy": "reason",
+        "where": "successful = 0",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "sql-errors",
+      "x": 0,
+      "y": 15,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Execuções SQL encerradas com erro",
+        "source": "Spark SQL Execution Ends",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "sql_com_erro"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "error_message != ''",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "jobs-not-succeeded",
+      "x": 12,
+      "y": 15,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Jobs com resultado diferente de JobSucceeded",
+        "source": "Spark Jobs",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "jobs_falhos"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "result != 'JobSucceeded'",
+        "whereLanguage": "sql"
+      }
+    }
+  ]
+}

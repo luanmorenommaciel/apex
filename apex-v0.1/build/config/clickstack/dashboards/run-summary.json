@@ -1,0 +1,189 @@
+{
+  "name": "Run Summary",
+  "tags": [
+    "provisioned",
+    "spark-plat-v0"
+  ],
+  "tiles": [
+    {
+      "id": "kpi-core-hours",
+      "x": 0,
+      "y": 0,
+      "w": 8,
+      "h": 5,
+      "config": {
+        "name": "Core hours (janela)",
+        "source": "Spark Tasks",
+        "displayType": "number",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "round(executor_run_time_ms / 3600000, 4)",
+            "alias": "core_hours"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "spill-disk-app",
+      "x": 8,
+      "y": 0,
+      "w": 8,
+      "h": 5,
+      "config": {
+        "name": "Spill to disk (janela, MiB)",
+        "source": "Spark Tasks",
+        "displayType": "number",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "round(disk_bytes_spilled / 1048576)",
+            "alias": "spill_disco"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "kpi-peak-memory",
+      "x": 16,
+      "y": 0,
+      "w": 8,
+      "h": 5,
+      "config": {
+        "name": "Pico de memória de execução (MiB)",
+        "source": "Spark Tasks",
+        "displayType": "number",
+        "select": [
+          {
+            "aggFn": "max",
+            "valueExpression": "round(peak_execution_memory / 1048576)",
+            "alias": "pico_memoria_mib"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "run-table",
+      "x": 0,
+      "y": 5,
+      "w": 24,
+      "h": 10,
+      "config": {
+        "name": "Resumo por run",
+        "source": "Spark Tasks",
+        "displayType": "table",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "round(executor_run_time_ms / 3600000, 4)",
+            "alias": "core_hours"
+          },
+          {
+            "aggFn": "max",
+            "valueExpression": "round(peak_execution_memory / 1048576)",
+            "alias": "peak_memory_mib"
+          },
+          {
+            "aggFn": "sum",
+            "valueExpression": "round(shuffle_read_bytes / 1048576)",
+            "alias": "shuffle_read_mib"
+          },
+          {
+            "aggFn": "sum",
+            "valueExpression": "round(shuffle_write_bytes / 1048576)",
+            "alias": "shuffle_write_mib"
+          },
+          {
+            "aggFn": "sum",
+            "valueExpression": "round(disk_bytes_spilled / 1048576)",
+            "alias": "spill_disk_mib"
+          },
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "tasks"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "duration-app",
+      "x": 0,
+      "y": 15,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Duration por run (s, maior job do app)",
+        "source": "Spark Jobs",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "max",
+            "valueExpression": "(completion_time_ms - submission_time_ms) / 1000",
+            "alias": "duracao_s"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "completion_time_ms > 0",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "activity-rate",
+      "x": 12,
+      "y": 15,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Activity rate: tasks concluídas ao longo do tempo",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "tasks"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "shuffle-rw",
+      "x": 0,
+      "y": 24,
+      "w": 24,
+      "h": 9,
+      "config": {
+        "name": "Shuffle read vs write (bytes, séries empilhadas)",
+        "source": "Spark Tasks",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "shuffle_read_bytes",
+            "alias": "shuffle_read"
+          },
+          {
+            "aggFn": "sum",
+            "valueExpression": "shuffle_write_bytes",
+            "alias": "shuffle_write"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    }
+  ]
+}

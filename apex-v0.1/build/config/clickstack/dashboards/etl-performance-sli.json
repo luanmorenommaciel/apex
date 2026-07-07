@@ -1,0 +1,186 @@
+{
+  "name": "ETL Performance (SLI)",
+  "tags": [
+    "provisioned",
+    "spark-plat-v0"
+  ],
+  "tiles": [
+    {
+      "id": "task-error-rate",
+      "x": 0,
+      "y": 0,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Error rate: % de tasks falhadas por app",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "avg",
+            "valueExpression": "(1 - successful) * 100",
+            "alias": "erro_pct"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "task-latency-p95",
+      "x": 12,
+      "y": 0,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Response time: latência de task p95 (ms)",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "quantile",
+            "level": 0.95,
+            "valueExpression": "duration_ms",
+            "alias": "latencia_p95_ms"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "slow-queries",
+      "x": 0,
+      "y": 9,
+      "w": 24,
+      "h": 10,
+      "config": {
+        "name": "Queries lentas: duração por execução SQL individual (s)",
+        "source": "Spark SQL Durations",
+        "displayType": "table",
+        "select": [
+          {
+            "aggFn": "max",
+            "valueExpression": "duration_ms / 1000",
+            "alias": "duracao_s"
+          }
+        ],
+        "groupBy": "concat(app_id, ' #', toString(execution_id))",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "sql-latency-p95",
+      "x": 0,
+      "y": 19,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Latência de execução SQL p95 por app (s)",
+        "source": "Spark SQL Durations",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "quantile",
+            "level": 0.95,
+            "valueExpression": "duration_ms / 1000",
+            "alias": "latencia_p95_s"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "sql-error-execs",
+      "x": 12,
+      "y": 19,
+      "w": 12,
+      "h": 5,
+      "config": {
+        "name": "Execuções SQL com erro por app",
+        "source": "Spark SQL Durations",
+        "displayType": "number",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "sql_com_erro"
+          }
+        ],
+        "where": "has_error = 1",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "throughput-records-in",
+      "x": 0,
+      "y": 28,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Throughput: registros lidos por app",
+        "source": "Spark Tasks",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "input_records",
+            "alias": "registros_lidos"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "throughput-records-out",
+      "x": 12,
+      "y": 28,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Throughput: registros escritos por app",
+        "source": "Spark Tasks",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "output_records",
+            "alias": "registros_escritos"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "volume-bytes",
+      "x": 0,
+      "y": 37,
+      "w": 24,
+      "h": 9,
+      "config": {
+        "name": "Volume de dados: bytes lidos + escritos por app",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "input_bytes + output_bytes",
+            "alias": "bytes_total"
+          }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    }
+  ]
+}

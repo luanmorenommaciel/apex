@@ -1,0 +1,85 @@
+default:
+  app:
+    log_level: "INFO"
+
+  spark:
+    log_level: "WARN"
+    # Spark config has one home per concern to avoid drift (previously the Delta
+    # keys were duplicated here and in SparkSessionFactory.DEFAULT_CONF, and
+    # shuffle.partitions=4 leaked from the shuffle_heavy demo into every job):
+    #   - Delta extensions + catalog -> SparkSessionFactory.DEFAULT_CONF (invariant)
+    #   - AQE default + infra (S3A/MinIO, eventLog) -> build/config/spark/spark-defaults.conf
+    #   - per-workload overrides (shuffle.partitions, etc.) -> src/workloads/catalog.py
+    # Put an app-level override here only if it is none of the above.
+    config: {}
+
+  lakehouse:
+    bucket: "${MINIO_LAKEHOUSE_BUCKET:-lakehouse}"
+    uri: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}"
+    layers:
+      landing:
+        path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/landing"
+      bronze:
+        path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/bronze"
+      silver:
+        path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/silver"
+      gold:
+        path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/gold"
+
+  entities:
+    customer:
+      description: "Customer entity used by the smoke pipeline."
+      landing:
+        read:
+          format: "json"
+          path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/landing/customer"
+          options: {}
+        write:
+          format: "json"
+          path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/landing/customer"
+          mode: "overwrite"
+          options: {}
+      bronze:
+        read:
+          format: "delta"
+          path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/bronze/customer"
+          options: {}
+        write:
+          format: "delta"
+          path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/bronze/customer"
+          mode: "overwrite"
+          # No blanket overwriteSchema: overwrite the DATA but let a schema
+          # change fail loudly (drift detection) instead of silently rewriting
+          # the table schema. Re-add overwriteSchema per-layer only for an
+          # intentional schema migration/reset.
+          options: {}
+      silver:
+        read:
+          format: "delta"
+          path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/silver/customer"
+          options: {}
+        write:
+          format: "delta"
+          path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/silver/customer"
+          mode: "overwrite"
+          # No blanket overwriteSchema: overwrite the DATA but let a schema
+          # change fail loudly (drift detection) instead of silently rewriting
+          # the table schema. Re-add overwriteSchema per-layer only for an
+          # intentional schema migration/reset.
+          options: {}
+      gold:
+        read:
+          format: "delta"
+          path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/gold/customer"
+          options: {}
+        write:
+          format: "delta"
+          path: "s3a://${MINIO_LAKEHOUSE_BUCKET:-lakehouse}/gold/customer"
+          mode: "overwrite"
+          # No blanket overwriteSchema: overwrite the DATA but let a schema
+          # change fail loudly (drift detection) instead of silently rewriting
+          # the table schema. Re-add overwriteSchema per-layer only for an
+          # intentional schema migration/reset.
+          options: {}
+
+local: {}

@@ -1,0 +1,141 @@
+{
+  "name": "Cluster Status",
+  "tags": [
+    "provisioned",
+    "spark-plat-v0"
+  ],
+  "tiles": [
+    {
+      "id": "tasks-executor",
+      "x": 0,
+      "y": 0,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Tasks por executor",
+        "source": "Spark Tasks",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "tasks"
+          }
+        ],
+        "groupBy": "executor_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "tasks-host",
+      "x": 12,
+      "y": 0,
+      "w": 12,
+      "h": 10,
+      "config": {
+        "name": "Tasks por host",
+        "source": "Spark Tasks",
+        "displayType": "table",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "tasks"
+          }
+        ],
+        "groupBy": "host",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "gc-host",
+      "x": 0,
+      "y": 10,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "GC máximo por host (ms)",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "max",
+            "valueExpression": "jvm_gc_time_ms",
+            "alias": "gc_max_ms"
+          }
+        ],
+        "groupBy": "host",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "mem-executor",
+      "x": 12,
+      "y": 10,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Memória de pico por executor (bytes)",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [
+          {
+            "aggFn": "max",
+            "valueExpression": "peak_execution_memory",
+            "alias": "pico_memoria"
+          }
+        ],
+        "groupBy": "executor_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "shuffle-host",
+      "x": 0,
+      "y": 19,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Shuffle total por host (bytes)",
+        "source": "Spark Tasks",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "sum",
+            "valueExpression": "shuffle_read_bytes + shuffle_write_bytes",
+            "alias": "shuffle_total"
+          }
+        ],
+        "groupBy": "host",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "jobs-result",
+      "x": 12,
+      "y": 19,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Jobs por resultado",
+        "source": "Spark Jobs",
+        "displayType": "stacked_bar",
+        "select": [
+          {
+            "aggFn": "count",
+            "valueExpression": "",
+            "alias": "jobs"
+          }
+        ],
+        "groupBy": "result",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    }
+  ]
+}

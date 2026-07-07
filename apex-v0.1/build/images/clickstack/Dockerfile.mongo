@@ -1,0 +1,13 @@
+# Pinned to the current patch release (confirmed via MCP web search against
+# Docker Hub, 2026-07-06: mongo:7.0.37-jammy is the latest 7.0.x Docker
+# Official Image build). Previously `mongo:7-jammy`, a floating major tag.
+# TODO(hardening): digest-pin (FROM mongo@sha256:...) once a Docker
+# daemon/registry is available to resolve the current digest.
+ARG MONGO_BASE_IMAGE=mongo:7.0.37-jammy
+FROM ${MONGO_BASE_IMAGE}
+# TODO(hardening): could not confirm via daemon whether this image runs as
+# non-root by default. Verify with `docker inspect --format '{{.Config.User}}'`
+# and add a numeric USER here (or in compose) if it defaults to root.
+
+LABEL org.opencontainers.image.title="apex-v01-mongo"
+LABEL org.opencontainers.image.description="Project-local MongoDB image wrapper backing HyperDX app state for Spark Platform v0."

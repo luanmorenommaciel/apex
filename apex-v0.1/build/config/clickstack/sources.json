@@ -1,0 +1,87 @@
+[
+  {
+    "name": "Spark Diagnostic Reports",
+    "kind": "log",
+    "from": { "databaseName": "spark_observability", "tableName": "spark_diagnostic_reports" },
+    "timestampValueExpression": "generated_at",
+    "defaultTableSelectExpression": "generated_at, app_id, status, max_severity, findings_count",
+    "severityTextExpression": "max_severity",
+    "bodyExpression": "report_json"
+  },
+  {
+    "name": "Spark Raw Events",
+    "kind": "log",
+    "from": { "databaseName": "spark_observability", "tableName": "spark_raw_events" },
+    "timestampValueExpression": "fromUnixTimestamp64Milli(event_time_ms)",
+    "defaultTableSelectExpression": "event_time_ms, app_id, event_type",
+    "serviceNameExpression": "app_id",
+    "bodyExpression": "raw"
+  },
+  {
+    "name": "Spark Tasks",
+    "kind": "log",
+    "from": { "databaseName": "spark_observability", "tableName": "spark_tasks" },
+    "timestampValueExpression": "fromUnixTimestamp64Milli(finish_time_ms)",
+    "defaultTableSelectExpression": "finish_time_ms, app_id, stage_id, task_id, duration_ms, shuffle_read_bytes, shuffle_write_bytes, memory_bytes_spilled, disk_bytes_spilled, jvm_gc_time_ms",
+    "serviceNameExpression": "app_id",
+    "bodyExpression": "concat(app_id, ' stage=', toString(stage_id), ' task=', toString(task_id))"
+  },
+  {
+    "name": "Spark Jobs",
+    "kind": "log",
+    "from": { "databaseName": "spark_observability", "tableName": "spark_jobs" },
+    "timestampValueExpression": "fromUnixTimestamp64Milli(submission_time_ms)",
+    "serviceNameExpression": "app_id",
+    "bodyExpression": "concat(app_id, ' job=', toString(job_id), ' result=', result)"
+  },
+  {
+    "name": "Spark SQL Executions",
+    "kind": "log",
+    "from": { "databaseName": "spark_observability", "tableName": "spark_sql_executions" },
+    "timestampValueExpression": "fromUnixTimestamp64Milli(start_time_ms)",
+    "serviceNameExpression": "app_id",
+    "bodyExpression": "physical_plan"
+  },
+  {
+    "name": "Spark SQL Execution Ends",
+    "kind": "log",
+    "from": { "databaseName": "spark_observability", "tableName": "spark_sql_execution_ends" },
+    "timestampValueExpression": "fromUnixTimestamp64Milli(end_time_ms)",
+    "serviceNameExpression": "app_id",
+    "bodyExpression": "error_message"
+  },
+  {
+    "name": "Spark Stages",
+    "kind": "log",
+    "from": { "databaseName": "spark_observability", "tableName": "spark_stages" },
+    "timestampValueExpression": "fromUnixTimestamp64Milli(completion_time_ms)",
+    "serviceNameExpression": "app_id",
+    "bodyExpression": "concat(app_id, ' stage=', toString(stage_id), ' ', stage_name)"
+  },
+  {
+    "name": "Spark SQL Durations",
+    "kind": "log",
+    "from": { "databaseName": "spark_observability", "tableName": "spark_sql_execution_durations" },
+    "timestampValueExpression": "fromUnixTimestamp64Milli(start_time_ms)",
+    "defaultTableSelectExpression": "start_time_ms, app_id, execution_id, duration_ms, has_error, description",
+    "serviceNameExpression": "app_id",
+    "bodyExpression": "description"
+  },
+  {
+    "name": "Spark Cache Blocks",
+    "kind": "log",
+    "from": { "databaseName": "spark_observability", "tableName": "spark_cache_blocks" },
+    "timestampValueExpression": "fromUnixTimestamp64Milli(event_time_ms)",
+    "defaultTableSelectExpression": "event_time_ms, app_id, block_id, executor_id, in_memory, on_disk, memory_size, disk_size",
+    "serviceNameExpression": "app_id",
+    "bodyExpression": "concat(block_id, ' mem=', toString(memory_size), ' disk=', toString(disk_size))"
+  },
+  {
+    "name": "Spark SQL Plans",
+    "kind": "log",
+    "from": { "databaseName": "spark_observability", "tableName": "spark_sql_adaptive_plans" },
+    "timestampValueExpression": "ingested_at",
+    "serviceNameExpression": "app_id",
+    "bodyExpression": "physical_plan"
+  }
+]

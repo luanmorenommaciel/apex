@@ -1,0 +1,69 @@
+{
+  "name": "Heat Map",
+  "tags": [
+    "provisioned",
+    "spark-plat-v0"
+  ],
+  "tiles": [
+    {
+      "id": "hm-task-duration",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 9,
+      "config": {
+        "name": "Heatmap: duração de tasks (ms) — stragglers aparecem como pontos isolados no topo",
+        "source": "Spark Tasks",
+        "displayType": "heatmap",
+        "select": [
+          {
+            "aggFn": "heatmap",
+            "valueExpression": "duration_ms"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "hm-shuffle-write",
+      "x": 0,
+      "y": 9,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Heatmap: shuffle write por task (bytes)",
+        "source": "Spark Tasks",
+        "displayType": "heatmap",
+        "select": [
+          {
+            "aggFn": "heatmap",
+            "valueExpression": "shuffle_write_bytes"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "hm-gc",
+      "x": 12,
+      "y": 9,
+      "w": 12,
+      "h": 9,
+      "config": {
+        "name": "Heatmap: GC por task (ms)",
+        "source": "Spark Tasks",
+        "displayType": "heatmap",
+        "select": [
+          {
+            "aggFn": "heatmap",
+            "valueExpression": "jvm_gc_time_ms"
+          }
+        ],
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Run crítico detectado",
+    "dashboard": "Error Handling",
+    "tile": "critical-reports",
+    "threshold": 1,
+    "threshold_type": "above",
+    "interval": "5m",
+    "webhook": "local-sink (troque por Slack)"
+  },
+  {
+    "name": "Spill de disco em algum run",
+    "dashboard": "Run Summary",
+    "tile": "spill-disk-app",
+    "threshold": 1,
+    "threshold_type": "above",
+    "interval": "5m",
+    "webhook": "local-sink (troque por Slack)"
+  },
+  {
+    "name": "Tasks falhando",
+    "dashboard": "Error Handling",
+    "tile": "failed-tasks-app",
+    "threshold": 1,
+    "threshold_type": "above",
+    "interval": "5m",
+    "webhook": "local-sink (troque por Slack)"
+  },
+  {
+    "name": "Job sem conclusão registrada",
+    "dashboard": "Data Jobs Monitoring",
+    "tile": "jobs-incomplete",
+    "threshold": 1,
+    "threshold_type": "above",
+    "interval": "5m",
+    "webhook": "local-sink (troque por Slack)"
+  },
+  {
+    "name": "Taxa de erro de tasks acima de 5%",
+    "dashboard": "ETL Performance (SLI)",
+    "tile": "task-error-rate",
+    "threshold": 5,
+    "threshold_type": "above",
+    "interval": "5m",
+    "webhook": "local-sink (troque por Slack)"
+  }
+]

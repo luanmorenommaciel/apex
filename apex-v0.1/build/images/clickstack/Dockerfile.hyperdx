@@ -1,0 +1,17 @@
+# TODO(hardening): ClickHouse has migrated ClickStack image publishing from
+# `docker.hyperdx.io/hyperdx/*` to `clickhouse/clickstack-*` (confirmed via
+# MCP web search, 2026-07-06). We did NOT switch registries here because we
+# could not confirm a stable, non-beta tag for the standalone HyperDX-only
+# component in that new namespace without registry/daemon access. `2-beta` is
+# kept intentionally for now (it is what the stack was validated against);
+# re-evaluate this pin against `clickhouse/clickstack-hyperdx` once a stable
+# tag is confirmed. Also digest-pin (FROM ...@sha256:...) once daemon access
+# is available.
+ARG HYPERDX_BASE_IMAGE=docker.hyperdx.io/hyperdx/hyperdx:2-beta
+FROM ${HYPERDX_BASE_IMAGE}
+# TODO(hardening): could not confirm via daemon whether this image runs as
+# non-root by default. Verify with `docker inspect --format '{{.Config.User}}'`
+# and add a numeric USER here (or in compose) if it defaults to root.
+
+LABEL org.opencontainers.image.title="apex-v01-hyperdx"
+LABEL org.opencontainers.image.description="Project-local HyperDX (ClickStack UI) image wrapper for Spark Platform v0."

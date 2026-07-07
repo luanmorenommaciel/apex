@@ -1,0 +1,75 @@
+{
+  "name": "Memory & Cache",
+  "tags": ["provisioned", "spark-plat-v0"],
+  "tiles": [
+    {
+      "id": "gc-ratio-app",
+      "x": 0, "y": 0, "w": 12, "h": 9,
+      "config": {
+        "name": "Pressão de GC: % do tempo de task em GC por app",
+        "source": "Spark Tasks",
+        "displayType": "line",
+        "select": [{ "aggFn": "sum", "valueExpression": "jvm_gc_time_ms", "alias": "gc_ms" }],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "oom-tasks",
+      "x": 12, "y": 0, "w": 12, "h": 9,
+      "config": {
+        "name": "Tasks mortas por OOM / executor perdido",
+        "source": "Spark Tasks",
+        "displayType": "stacked_bar",
+        "select": [{ "aggFn": "count", "valueExpression": "", "alias": "tasks_oom" }],
+        "groupBy": "app_id",
+        "where": "successful = 0 AND (reason LIKE '%OutOfMemoryError%' OR reason LIKE '%ExecutorLostFailure%')",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "cache-mem-bytes",
+      "x": 0, "y": 9, "w": 12, "h": 9,
+      "config": {
+        "name": "Cache: bytes na camada de memória (blocos RDD)",
+        "source": "Spark Cache Blocks",
+        "displayType": "line",
+        "select": [{ "aggFn": "sum", "valueExpression": "memory_size", "alias": "cache_memoria" }],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "cache-disk-bytes",
+      "x": 12, "y": 9, "w": 12, "h": 9,
+      "config": {
+        "name": "Cache: bytes derramados para a camada de disco",
+        "source": "Spark Cache Blocks",
+        "displayType": "line",
+        "select": [{ "aggFn": "sum", "valueExpression": "disk_size", "alias": "cache_disco" }],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    },
+    {
+      "id": "cache-blocks-table",
+      "x": 0, "y": 18, "w": 24, "h": 10,
+      "config": {
+        "name": "Blocos de cache por app (contagem, memória e disco)",
+        "source": "Spark Cache Blocks",
+        "displayType": "table",
+        "select": [
+          { "aggFn": "count_distinct", "valueExpression": "block_id", "alias": "blocos" },
+          { "aggFn": "sum", "valueExpression": "memory_size", "alias": "bytes_memoria" },
+          { "aggFn": "sum", "valueExpression": "disk_size", "alias": "bytes_disco" }
+        ],
+        "groupBy": "app_id",
+        "where": "",
+        "whereLanguage": "sql"
+      }
+    }
+  ]
+}

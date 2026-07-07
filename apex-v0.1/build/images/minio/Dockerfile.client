@@ -1,0 +1,11 @@
+# TODO(hardening): digest-pin MINIO_MC_BASE_IMAGE (FROM ...@sha256:...) once a
+# Docker daemon/registry is available to resolve the current digest. Non-root
+# execution for this image is enforced at the compose level (`user:` +
+# `HOME=/tmp` on the `minio-init` service in build/docker-compose.yml).
+ARG MINIO_MC_BASE_IMAGE=quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z-cpuv1
+FROM ${MINIO_MC_BASE_IMAGE}
+
+COPY init-buckets.sh /usr/local/bin/spv0-init-buckets
+RUN chmod 755 /usr/local/bin/spv0-init-buckets
+
+ENTRYPOINT ["/usr/local/bin/spv0-init-buckets"]

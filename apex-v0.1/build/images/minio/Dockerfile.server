@@ -1,0 +1,10 @@
+# TODO(hardening): digest-pin MINIO_BASE_IMAGE (FROM ...@sha256:...) once a
+# Docker daemon/registry is available to resolve the current digest. Non-root
+# execution for this image is enforced at the compose level (`user:` on the
+# `minio` service in build/docker-compose.yml) rather than here, since this
+# Dockerfile only relabels the upstream image unchanged.
+ARG MINIO_BASE_IMAGE=quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
+FROM ${MINIO_BASE_IMAGE}
+
+LABEL org.opencontainers.image.title="apex-v01-minio"
+LABEL org.opencontainers.image.description="Project-local MinIO server image wrapper for Spark Platform v0."

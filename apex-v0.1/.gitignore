@@ -1,0 +1,24 @@
+.env
+build/config/spark/jars/*.jar
+build/config/spark/jars/.bootstrap-manifest
+build/images/eventlog-loader/vendor/
+build/images/eventlog-loader/go.sum
+build/var/
+build/cache/
+__pycache__/
+*.pyc
+build/images/spark/context/
+.playwright-mcp/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+*.py[cod]
+
+# OS / editor junk
+.DS_Store
+*.swp
+
