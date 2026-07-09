@@ -33,7 +33,7 @@ _Atualizar a cada fix fechado. Ver `CHANGELOG.md` para histórico._
 | P2-9 | Sem teste de manifesto `job.meta.json` | `tests/test_slice.py` | #21 | ✅ resolvido na v4 — `compute_scenario_hash` + provenance validation adicionados |
 | P2-10 | Só 1 cenário — loop multi-cenário nunca exercitado | `scenarios/` | #21 | 🟡 aberto (bloqueia P1-7) |
 | P2-11 | `status: prototype` sem critério de progressão | `scenarios/skew_on_join_30x.yaml:4` | — | 🟡 aberto |
-| P2-12 | Sem CI agendado para oráculo — drift silencioso | `.github/workflows/` | #21 | 🟡 aberto |
+| P2-12 | Sem CI agendado para oráculo — drift silencioso | `.github/workflows/` | #21 | 🟠 quase — `oracle-weekly.yml` corrigido em 08/07 (`fetch_real_log.py` criado, filtro world B). Falta: secrets `MINIO_*` + 1 run manual |
 
 ---
 
@@ -92,5 +92,4 @@ Comparações em andamento — resultados em `docs/llm-evals/`.
 | P0-2 Stage errado — seleção por join op + executionId | v4 | feature/desacoplamento-geradores | 08 jun 2026 |
 | P0-3 Rolling logs — aceita diretório + sort numérico | v4 | feature/desacoplamento-geradores | 08 jun 2026 |
 | P1-6 executionId filter em `join_operator` | v4 | feature/desacoplamento-geradores | 08 jun 2026 |
-| P2-9 Manifesto — `compute_scenario_hash` + provenance | v4 | feature/desacoplamento-geradores | 08 jun 2026 |
-| Oracle ratio corrigido: 15392x → 27.9x (real 29.5x) | v4 | feature/desacoplamento-geradores | 08 jun 2026 |
+| P2-9 Manifesto — `compute_scenario_hash` + provenance | v4 | feature/desacoplamento-geradores 

@@ -121,4 +121,6 @@ python v1-skeleton/ingest/log_poller.py --interval 15
 
 ---
 
-*Qualquer dúvida ou feedback — abrir como comentário na PR ou mencionar `@gustocezar`.*
+## 7. Reavaliação 08/07 — correções de CI e caminho para o V1 final
+
+> Adendo pós-rev
