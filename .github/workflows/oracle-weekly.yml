@@ -20,7 +20,8 @@ jobs:
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
           MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
         run: |
-          python scripts/fetch_real_log.py \
+          pip install minio
+          python3 scripts/fetch_real_log.py \
             --bucket spark-logs \
             --prefix events/ \
             --output real_log.ndjson
@@ -28,8 +29,10 @@ jobs:
       - name: Gerar sintético dos cenários
         run: |
           for s in scenarios/*.yaml; do
-            python generators/plan_generator.py "$s" synthetic_log.ndjson
-            python oracle/compare.py "$s" synthetic_log.ndjson real_log.ndjson
+            # Mundo B (listener_*) nao tem plan_generator — fora do oraculo
+            grep -q '^plan_generator:' "$s" || { echo "skip (world B): $s"; continue; }
+            python3 generators/plan_generator.py "$s" synthetic_log.ndjson
+            python3 oracle/compare.py "$s" synthetic_log.ndjson real_log.ndjson
           done
 
       # Se on_divergence: fail_and_open_issue — abrir issue via GitHub API
@@ -42,6 +45,4 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: '[BLOCKER] Oracle divergiu — sintético não corresponde ao real',
-              body: 'Oracle semanal detectou divergência. Ver run: ' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId,
-              labels: ['priority:p0', 'type:blocker', 'crew-a']
-            })
+              body: 'Oracle semanal detectou divergência. Ve

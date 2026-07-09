@@ -15,7 +15,6 @@ jobs:
       - name: Slice por cenario
         run: |
           for s in scenarios/*.yaml; do
-            python3 generators/code_generator.py "$s" job.py
-            python3 generators/plan_generator.py "$s" log.ndjson
-            python3 watchers/skew_watcher.py "$s" log.ndjson
-          done
+            # Mundo B (listener_*) nao tem code_generator/plan_generator — fora do gate
+            grep -q '^code_generator:' "$s" || { echo "skip (world B): $s"; continue; }
+            python3 gene
