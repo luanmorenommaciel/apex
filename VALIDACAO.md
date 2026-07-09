@@ -123,4 +123,39 @@ python v1-skeleton/ingest/log_poller.py --interval 15
 
 ## 7. Reavaliação 08/07 — correções de CI e caminho para o V1 final
 
-> Adendo pós-rev
+> Adendo pós-revisão completa da branch em 2026-07-08. Detalhes no Captain's Report: `docs/meetings/captains-report-2026-07-08.md`
+
+### 7.1 Bugs de CI encontrados e corrigidos (commit `0ddb550`)
+
+| Bug | Impacto | Fix |
+|-----|---------|-----|
+| `scenario-gate.yml` iterava `scenarios/*.yaml` incluindo os 3 `listener_*.yaml` (Mundo B, sem `code_generator`) | **KeyError → gate vermelho em qualquer PR** | Loop pula cenários sem `code_generator:` (validado localmente: skips corretos + GATE VERDE 27.9x) |
+| `oracle-weekly.yml` chamava `scripts/fetch_real_log.py` que não existia + `python` em vez de `python3` | Oráculo semanal (P2-12) falhava silenciosamente toda segunda | Script criado (`scripts/fetch_real_log.py`, MinIO → log mais recente) + `python3` + mesmo filtro world B |
+
+**Pendente para fechar P2-12:** configurar secrets `MINIO_*` no repo e disparar um `workflow_dispatch` manual do oracle-weekly.
+
+### 7.2 O que falta para a solução final (proposta ao Commander)
+
+Conclusão da avaliação comparativa (`docs/avaliacao/`): nenhuma das 3 branches resolve sozinha. Proposta — **spike/apex-v0.1 (Aguimar) como base do merge**, absorvendo:
+
+1. **T1 heurístico + EvidenceValidator** do kimi (diagnóstico em ~136ms, LLM só como fallback)
+2. **`apply_fix` MCP** do cowork (única branch que fecha o loop no IDE — pedido direto do Luan em 30/06)
+3. **Go eventlog-loader** do spike substitui o `log_poller.py`
+
+**Decisão que precisamos do Luan:** bater o martelo na direção de merge acima. Sem isso, as 3 branches continuam divergindo.
+
+### 7.3 Caminho crítico pós-decisão (issues prontas em `docs/avaliacao/ISSUES_AVALIACAO.md`)
+
+| Ordem | Item | Prioridade |
+|-------|------|-----------|
+| 1 | A01 — portar 4 detectores do spike (GC, shuffle, OOM, replans) | P0 — blocker V1 |
+| 2 | A04 — baseline negativo `no_skew_baseline.yaml` (destrava P1-7 e P2-10; sem ele não há garantia contra falso positivo) | P1 |
+| 3 | A03 — EvidenceValidator como gate antes do LLM | P1 |
+| 4 | A05 — `apply_fix` integrado à base escolhida | P1 |
+| 5 | P1-7 chave de join dinâmica + P2-8 confiança defensável | P1/P2 |
+| 6 | CI para V1 (hoje só Mundo A tem gate) + validação multi-core 8 tasks | P2 |
+| 7 | Listener real-time verdadeiro (JAR Scala) | Sprint 3 — ADR-005 |
+
+---
+
+*Qualquer dúvida ou feedback — abrir como comentário na PR ou mencionar `@gustocezar`.*

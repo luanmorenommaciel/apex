@@ -92,4 +92,5 @@ Comparações em andamento — resultados em `docs/llm-evals/`.
 | P0-2 Stage errado — seleção por join op + executionId | v4 | feature/desacoplamento-geradores | 08 jun 2026 |
 | P0-3 Rolling logs — aceita diretório + sort numérico | v4 | feature/desacoplamento-geradores | 08 jun 2026 |
 | P1-6 executionId filter em `join_operator` | v4 | feature/desacoplamento-geradores | 08 jun 2026 |
-| P2-9 Manifesto — `comput
+| P2-9 Manifesto — `compute_scenario_hash` + provenance | v4 | feature/desacoplamento-geradores | 08 jun 2026 |
+| Oracle ratio corrigido: 15392x → 27.9x (real 29.5x) | v4 | feature/desacoplamento-geradores | 08 jun 2026 |

@@ -92,6 +92,8 @@ BASE:        spike/apex-v0.1 (plataforma + 5 detectores + diagnostics.yaml + Go 
 
 DataFlint permanece como **régua**: ~14 detectores, UI madura, alertas. Nossa vantagem defensável: on-premise, extensível, e L6 (aplicar o fix no IDE) — que o SaaS não faz.
 
+**Matriz DataFlint completa** (capability por capability): `docs/competitive/dataflint-vs-apex-matrix.md` + `docs/avaliacao/MATRIX_COMPARATIVA.md`. Estudo de arquitetura e pain points da comunidade: `docs/competitive/dataflint-apex-study.html`. (Snapshot de 07/07 — reverificar o produto antes de decisões de roadmap.)
+
 ---
 
 ## 7. Gates de validação — implementar nesta ordem
@@ -104,4 +106,21 @@ Cada gate tem critério binário. Componente que falha não avança; falha regis
 | **G1** Baseline negativo | Zero falso positivo em job saudável | `no_skew_baseline.yaml` → nenhum finding severity≥medium | ✅ **verde 09/07** — portado do kimi-Py, adaptado ao contrato v4; watcher com threshold de produção (10x): baseline 1.0x limpo + teste de falso positivo forçado passa; 25 testes verdes; fecha P2-10 |
 | **G2** Detecção sintética | Cada detector pega seu cenário | gate de cenário verde por detector (hoje: só skew 27.9x ✅) | 🟡 1/5 |
 | **G3** Dado real | Sintético ≈ real no plat-v0 | oráculo dentro da tolerância + run multi-core 8 tasks | 🟡 oráculo ok em 1-core; multi-core nunca rodou |
-| **G4** Latência | Diagnóstico contínuo sem LLM obrigatório | T1 determinístico < 1s; LLM só quando confidence < threshold 
+| **G4** Latência | Diagnóstico contínuo sem LLM obrigatório | T1 determinístico < 1s; LLM só quando confidence < threshold | ❌ cowork chama LLM sempre |
+| **G5** Loop no IDE | MCP end-to-end no Cursor/Claude Code | `get_findings` → `apply_fix` com backup + diff revisável | 🟡 validado ad-hoc 06/07; falta roteiro reproduzível |
+| **G6** CI contínuo | Nada entra sem gate | scenario-gate + oracle-weekly verdes no PR (fix de 08/07: `0ddb550`) | 🟡 corrigido; falta secrets `MINIO_*` + 1 run |
+
+**Sequência de implementação:** G0(kimi-Py: corrigir a falha de spill) → G1 → G2(portar detectores spike, ISSUE-A01) → G4(T1 antes do LLM, ISSUE-A03) → G3 → G5(A05) → G6.
+
+---
+
+## 8. Decisões que este documento pede ao Luan
+
+1. Aprovar (ou repesar) os critérios C1–C6.
+2. Bater o martelo: **spike como base do merge** + composição do §6.
+3. Secrets `MINIO_*` no repo para o G6 fechar.
+4. A branch codex (`gustocezar/feature/codex-desacoplamento-geradores`) está só no repo pessoal — decidir se entra na revisão do time (push para `luanmorenommaciel/apex`).
+
+---
+
+*Método: cada LLM gera a melhor solução dela; uma LLM compara com evidência executável, valida gate por gate e compõe a solução única, testável e segura. Sem gate verde, não entra.*
