@@ -4,6 +4,8 @@ Date: 2026-07-09
 Branch: `gustocezar/feature/codex-desacoplamento-geradores`
 Authoring note: this reassessment was prepared by Codex as the local integration proposal for the Commander/Luan direction.
 
+Related detailed comparison: `docs/architecture/codex-branch-solution-comparison-2026-07-09.md`.
+
 ## Executive Decision
 
 The best solution for the Luan request is not to merge one remote branch wholesale. The safest path is a Codex integration branch that keeps the current validated `Commander V0.1` contract, then selectively absorbs the best pieces from the updated branches:
