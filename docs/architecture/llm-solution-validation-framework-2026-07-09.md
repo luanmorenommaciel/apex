@@ -101,8 +101,7 @@ Cada gate tem critério binário. Componente que falha não avança; falha regis
 | Gate | O que valida | Critério de verde | Status hoje |
 |------|--------------|-------------------|-------------|
 | **G0** Reprodutibilidade | Build+testes de cada candidata num ambiente limpo | `pytest`/`go build` verdes documentados | spike ✅ · cowork ✅ · **codex ✅ (44 testes)** · kimi-Py 🟡 (1 falha real) · kimi-Go ❌ |
-| **G1** Baseline negativo | Zero falso positivo em job saudável | `no_skew_baseline.yaml` → nenhum finding severity≥medium | ❌ pendente (portar do kimi-Py; fecha P2-10 e destrava P1-7) |
+| **G1** Baseline negativo | Zero falso positivo em job saudável | `no_skew_baseline.yaml` → nenhum finding severity≥medium | ✅ **verde 09/07** — portado do kimi-Py, adaptado ao contrato v4; watcher com threshold de produção (10x): baseline 1.0x limpo + teste de falso positivo forçado passa; 25 testes verdes; fecha P2-10 |
 | **G2** Detecção sintética | Cada detector pega seu cenário | gate de cenário verde por detector (hoje: só skew 27.9x ✅) | 🟡 1/5 |
 | **G3** Dado real | Sintético ≈ real no plat-v0 | oráculo dentro da tolerância + run multi-core 8 tasks | 🟡 oráculo ok em 1-core; multi-core nunca rodou |
-| **G4** Latência | Diagnóstico contínuo sem LLM obrigatório | T1 determinístico < 1s; LLM só quando confidence < threshold | ❌ cowork chama LLM sempre |
-| **G5** Loop no IDE | MCP end-to-end no Cursor/Claude Code | `get_findings` → `apply_fix` com backup + diff
+| **G4** Latência | Diagnóstico contínuo sem LLM obrigatório | T1 determinístico < 1s; LLM só quando confidence < threshold 

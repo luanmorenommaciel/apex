@@ -1,0 +1,43 @@
+# Baseline negativo — job saudável, SEM anti-pattern. [G1 / P2-10]
+# Se o watcher emitir finding severity high aqui, é FALSO POSITIVO → gate vermelho.
+# Portado do kimi-Py (apex-kimi-product-v0.1) e adaptado ao contrato v4.
+
+scenario_id: no_skew_baseline
+version: 1
+owner: pod-validation
+status: baseline
+
+anti_pattern:
+  class: none
+  severity: none
+
+code_generator:
+  language: pyspark
+  emits: job.py
+  data:
+    orders:    { rows: 200000, distinct_keys: 100, hot_key: null, hot_share: 0.0 }
+    customers: { rows: 100, distinct_keys: 100 }
+  spark_config:
+    spark.sql.adaptive.enabled: "true"
+    spark.sql.adaptive.skewJoin.enabled: "true"
+    spark.sql.shuffle.partitions: "8"
+
+plan_generator:
+  emits: event-log.ndjson
+  strategy: synthesize
+  expected_signals:
+    join_operator: SortMergeJoin
+    hot_stage: null          # sem stage quente — distribuição uniforme
+    skew_ratio_max: 2.0
+
+oracle:
+  enabled: true
+  cadence: weekly
+  tolerance: { skew_ratio: 0.40, records: 0.30 }
+  on_divergence: warn
+
+acceptance:
+  expected_gate: GREEN       # verde = NENHUM finding severity high
+  max_skew_ratio: 2.0
+  root_cause_includes: []
+  max_recommendations: 0

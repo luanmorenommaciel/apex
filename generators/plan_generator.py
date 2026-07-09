@@ -4,6 +4,7 @@ Gerador de plano (v4) — sintetiza event log fiel ao Spark, sem executar.
 
 Correcao central: distribuicao derivada de rows * hot_share, nao de single_task_shuffle_read_records.
 Ratio ~27.9x (real 29.5x). NUNCA 15392x.
+[G1] Suporte a cenario baseline (anti_pattern.class: none) — distribuicao uniforme.
 """
 import sys
 import json
@@ -23,24 +24,32 @@ def synthesize_events(config, scenario_hash):
     sig = config["plan_generator"]["expected_signals"]
     line = code.get("anti_pattern_line", 0)
     rows = code["data"]["orders"]["rows"]
-    hot_share = code["data"]["orders"]["hot_share"]
+    hot_share = code["data"]["orders"].get("hot_share") or 0.0
     parts = int(code["spark_config"]["spark.sql.shuffle.partitions"])
-    stage = sig["hot_stage"]
+    stage = sig.get("hot_stage") or 4
     join_op = sig["join_operator"]
+    baseline = config.get("anti_pattern", {}).get("class", "none") == "none"
 
-    if not (0 < hot_share < 1):
-        raise ValueError(f"hot_share deve estar em (0,1), recebido {hot_share}")
     if parts < 2:
         raise ValueError(f"shuffle.partitions deve ser >= 2, recebido {parts}")
 
-    hot_records = int(rows * hot_share)
-    cold_total = rows - hot_records
-    cold_each = max(cold_total // (parts - 1), 1)
-    if hot_records <= cold_each:
-        raise ValueError(
-            f"distribuicao impossivel: hot ({hot_records}) <= cold ({cold_each}). "
-            f"Verifique hot_share e shuffle.partitions."
-        )
+    if baseline:
+        # [G1] distribuicao uniforme com jitter leve — ratio ~1.0x, nunca dispara o watcher
+        if hot_share:
+            raise ValueError(f"scenario baseline (class: none) nao pode ter hot_share > 0, recebido {hot_share}")
+        base_each = rows // parts
+        hot_records = cold_each = base_each
+    else:
+        if not (0 < hot_share < 1):
+            raise ValueError(f"hot_share deve estar em (0,1), recebido {hot_share}")
+        hot_records = int(rows * hot_share)
+        cold_total = rows - hot_records
+        cold_each = max(cold_total // (parts - 1), 1)
+        if hot_records <= cold_each:
+            raise ValueError(
+                f"distribuicao impossivel: hot ({hot_records}) <= cold ({cold_each}). "
+                f"Verifique hot_share e shuffle.partitions."
+            )
 
     app_id = f"app-{int(time.time())}-0001"
     t0 = int(time.time() * 1000)

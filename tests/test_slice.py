@@ -233,3 +233,49 @@ def test_oracle_catches_join_mismatch(tmp_path):
                          *[task_end(4, i, 160000 if i == 0 else 5400) for i in range(8)]])
     r = run("oracle/compare.py", SCENARIO, syn, real)
     assert r.returncode != 0 and "join operator divergiu" in r.stdout
+
+
+# ---------- G1: baseline negativo (P2-10) ----------
+BASELINE = str(ROOT / "scenarios" / "no_skew_baseline.yaml")
+
+
+def test_baseline_plan_is_uniform(tmp_path):
+    syn = str(tmp_path / "syn.ndjson")
+    r = run("generators/plan_generator.py", BASELINE, syn)
+    assert r.returncode == 0, r.stderr
+    events = apexlib.read_events(syn)
+    op, _ = apexlib.join_operator(events)
+    _, records = apexlib.hottest_reduce_stage(events, join_op=op)
+    m = apexlib.skew_metrics(records)
+    assert not m["collapsed"]
+    assert m["ratio"] <= 2.0, f"baseline gerou ratio {m['ratio']}x — nao uniforme"
+
+
+def test_watcher_green_on_baseline(tmp_path):
+    syn = str(tmp_path / "syn.ndjson")
+    run("generators/plan_generator.py", BASELINE, syn)
+    r = run("watchers/skew_watcher.py", BASELINE, syn)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "Baseline limpo" in r.stdout and "GATE VERDE" in r.stdout
+
+
+def test_watcher_flags_false_positive_on_skewed_baseline(tmp_path):
+    # log "real" (sem provenance) com skew severo — no scenario baseline isso e falso positivo
+    real = write_ndjson(tmp_path, "real.ndjson",
+                        [sql_start("SortMergeJoin"),
+                         *[task_end(4, i, 160000 if i == 0 else 5400) for i in range(8)]])
+    r = run("watchers/skew_watcher.py", BASELINE, real)
+    assert r.returncode == 1, r.stdout
+    assert "FALSO POSITIVO" in r.stdout
+
+
+def test_code_generator_baseline_has_no_sentinel(tmp_path):
+    job = str(tmp_path / "job.py")
+    r = run("generators/code_generator.py", BASELINE, job)
+    assert r.returncode == 0, r.stderr
+    source = Path(job).read_text()
+    assert "APEX::ANTIPATTERN" not in source
+    assert "withColumn" not in source  # sem injecao de hot key
+    meta = json.loads(Path(str(tmp_path / "job.meta.json")).read_text())
+    assert meta["anti_pattern_line"] is None
+    assert meta["anti_pattern_class"] == "none"

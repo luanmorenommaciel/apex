@@ -6,6 +6,7 @@ Sobre a v3:
 - Valida a proveniencia (scenario_hash) ANTES de analisar — rejeita log stale.
 - root_cause inclui a chave e o hot_key do scenario (customer_id = N).
 - Isola o stage do join passando o operador para hottest_reduce_stage.
+- [G1] Suporte a cenario baseline (anti_pattern.class: none) — verde = zero finding.
 """
 import sys
 import json
@@ -14,6 +15,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from apex import apexlib
+
+# Threshold padrao do detector quando o scenario nao declara skew_ratio_min.
+# Usado nos baselines (G1): o watcher roda com a MESMA regra de producao —
+# se disparar num job uniforme, e falso positivo real, nao artefato de config.
+DEFAULT_SKEW_RATIO_MIN = 10
 
 
 def build_finding(scenario, events):
@@ -38,7 +44,8 @@ def build_finding(scenario, events):
         )
         ratio_txt = f"{m['ratio']}x"
 
-    is_skew = op == sig["join_operator"] and (m["collapsed"] or m["ratio"] >= sig["skew_ratio_min"])
+    threshold = sig.get("skew_ratio_min", DEFAULT_SKEW_RATIO_MIN)
+    is_skew = op == sig["join_operator"] and (m["collapsed"] or m["ratio"] >= threshold)
     confidence = 0.95 if m["collapsed"] else round(min(0.99, m["ratio"] / (m["ratio"] + 3)), 2) if m["ratio"] != float("inf") else 0.99
 
     finding = {
@@ -57,7 +64,7 @@ def build_finding(scenario, events):
             f"salgar a chave {join_key}",
         ],
     }
-    return finding, is_skew
+    return finding, is_skew, m
 
 
 def check_acceptance(finding, scenario):
@@ -83,11 +90,26 @@ def main(scenario_path, log_path):
     for w in apexlib.validate_schema(events):
         print(f"⚠️  schema: {w}", file=sys.stderr)
 
-    finding, is_skew = build_finding(scenario, events)
+    finding, is_skew, m = build_finding(scenario, events)
     print(json.dumps(finding, indent=2, ensure_ascii=False))
 
-    ok, missing, enough = check_acceptance(finding, scenario)
     print("\n--- ACCEPTANCE ---")
+
+    # [G1] Cenario baseline (class: none): verde = NENHUM finding. Detectar = falso positivo.
+    if scenario.get("anti_pattern", {}).get("class", "none") == "none":
+        max_ratio = scenario["acceptance"].get("max_skew_ratio", 2.0)
+        if is_skew:
+            print(f"❌ FALSO POSITIVO: watcher emitiu finding severity high em job saudavel "
+                  f"(ratio {m['ratio']}x). GATE VERMELHO.")
+            sys.exit(1)
+        if not m["collapsed"] and m["ratio"] > max_ratio:
+            print(f"❌ BASELINE SUSPEITO: ratio {m['ratio']}x excede max_skew_ratio "
+                  f"{max_ratio}x — distribuicao do gerador nao esta uniforme. GATE VERMELHO.")
+            sys.exit(1)
+        print(f"✅ Baseline limpo: nenhum falso positivo (ratio {m['ratio']}x <= {max_ratio}x). GATE VERDE.")
+        return
+
+    ok, missing, enough = check_acceptance(finding, scenario)
     if not is_skew:
         print("❌ Watcher NAO detectou o anti-pattern declarado.")
         sys.exit(1)
