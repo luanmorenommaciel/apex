@@ -69,3 +69,31 @@ def test_skew_scenario_does_not_trip_other_detectors(tmp_path):
     findings = detectors.run_all(events)
     bad = [f for f in findings if f["severity"] in ("warning", "critical")]
     assert not bad, f"cross-fire indevido: {bad}"
+
+
+# ---------- G3: gate multi-core (logica local do script) ----------
+def test_g3_gate_logic_green_and_red(tmp_path):
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import g3_multicore_gate as g3
+
+    # log "real" com 8 tasks distribuidas -> criterio 1 e 3 verdes
+    real = tmp_path / "real.ndjson"
+    events = [{"Event": "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart",
+               "executionId": 1, "physicalPlanDescription": "SortMergeJoin"}]
+    events += [{"Event": "SparkListenerTaskEnd", "Stage ID": 4,
+                "Task Info": {"Task ID": i},
+                "Task Metrics": {"Shuffle Read Metrics": {"Total Records Read": 160000 if i == 0 else 5400 + i}}}
+               for i in range(8)]
+    real.write_text("\n".join(json.dumps(e) for e in events))
+    results = g3.check(str(real))
+    assert results[0][0], results[0][1]          # distribuicao ok
+    assert results[2][0], results[2][1]          # watcher verde no log real
+
+    # log colapsado (1 task) -> criterio 1 vermelho
+    collapsed = tmp_path / "collapsed.ndjson"
+    collapsed.write_text("\n".join(json.dumps(e) for e in [
+        events[0],
+        {"Event": "SparkListenerTaskEnd", "Stage ID": 4, "Task Info": {"Task ID": 0},
+         "Task Metrics": {"Shuffle Read Metrics": {"Total Records Read": 200100}}}]))
+    results = g3.check(str(collapsed))
+    assert not results[0][0]
