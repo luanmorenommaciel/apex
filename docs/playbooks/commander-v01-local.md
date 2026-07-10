@@ -158,3 +158,53 @@ Limite consciente deste gate:
 - ainda nao ha ClickHouse real;
 - ainda nao ha MCP server real;
 - ainda nao ha aplicacao automatica de fix.
+
+## Gate 3: Baseline negativo executavel
+
+O Gate 3 transforma controle de falso positivo em contrato executavel.
+
+Novo componente:
+
+- `evaluate_negative_baseline(store_path, job_id)`: roda `diagnose_findings` contra um job que deveria ser saudavel.
+
+Resultado esperado para job saudavel:
+
+```json
+{
+  "job_id": "healthy-job",
+  "status": "passed",
+  "unexpected_findings": [],
+  "unexpected_finding_count": 0
+}
+```
+
+Resultado esperado quando qualquer detector dispara:
+
+```json
+{
+  "job_id": "spill-job",
+  "status": "failed",
+  "unexpected_finding_count": 1
+}
+```
+
+Rodar:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_negative_baselines.py -q --basetemp .pytest-commander-gate3
+```
+
+Esperado:
+
+```text
+2 passed
+```
+
+O que este gate prova:
+
+- job com skew balanceado nao gera finding;
+- spill abaixo do threshold nao gera finding;
+- GC saudavel nao gera finding;
+- menos de 3 updates AQE nao gera finding;
+- se um detector dispara em baseline, o gate retorna `failed`.

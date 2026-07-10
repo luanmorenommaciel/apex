@@ -166,7 +166,7 @@ Cells must use one of:
 
 Gate 1 is complete locally: Codex has a deterministic `debug_job(job_id)` contract, no-LLM diagnosis, evidence validation, negative skew baseline, and preview-first fix support.
 
-Gate 2 is the active local detector validation line. The Codex branch now carries these local deterministic finding kinds:
+Gate 2 is complete locally. The Codex branch now carries these local deterministic finding kinds:
 
 - `shuffle_skew_candidate`
 - `shuffle_spill_candidate`
@@ -183,6 +183,12 @@ The public contract is still intentionally local:
 - no LLM call is required for basic diagnosis.
 
 What this does not prove yet: SparkListener JVM ingestion, ClickHouse/ClickStack persistence, real MCP server, UI, CI oracle, or guarded `apply_fix`.
+
+Gate 3 is now the active false-positive control line. Codex has an executable negative-baseline evaluator:
+
+- `evaluate_negative_baseline(store_path, job_id)` returns `passed` when no unexpected finding exists;
+- the same gate returns `failed` and exposes `unexpected_findings` when any detector fires;
+- healthy local telemetry covers balanced skew, low shuffle spill, healthy GC, and low AQE update count.
 
 ## DataFlint Benchmark Targets
 
@@ -257,6 +263,19 @@ Required:
 - healthy shuffle produces no shuffle warning;
 - healthy GC produces no GC warning;
 - baseline runs in CI.
+
+Current Codex evidence:
+
+```text
+tests/test_commander_negative_baselines.py: 2 passed
+evaluate_negative_baseline(job_id): returns passed/failed with unexpected_findings[]
+```
+
+Remaining gap:
+
+```text
+CI remote is not configured in this local-only branch.
+```
 
 ### Gate 4: Multi-Detector Coverage
 
@@ -348,7 +367,8 @@ No remote publication happens without explicit user approval.
 | P0 | Done locally: implement `debug_job(job_id)` contract | Codex |
 | P0 | Done locally: add `EvidenceValidator` MVP | Kimi concept, Codex implementation |
 | P0 | Done locally: add `no_skew_baseline` | Kimi concept |
-| P1 | Active Gate 2: validate skew, spill, GC, OOM, and plan/AQE findings | Codex + Spike concepts |
+| P1 | Done locally: validate skew, spill, GC, OOM, and plan/AQE findings | Codex + Spike concepts |
+| P1 | Done locally: add executable negative baseline gate | Codex |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
 | P1 | Create MCP server around Codex contract | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork `apply_fix` to preview-first | Cowork |
