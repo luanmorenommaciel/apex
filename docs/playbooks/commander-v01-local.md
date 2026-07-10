@@ -94,3 +94,28 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests -q 
 | CrewAI | Diagnostico deterministico | Agente lendo evidencias do store |
 | MCP | CLI local por `job_id` | MCP tool `debug_job(job_id)` |
 | Sugestao de correcao | Recomendacao textual | Patch/review com aprovacao humana |
+
+## Gate 1: Contrato executavel do Luan
+
+Este gate transforma a branch Codex em uma validacao local da arquitetura do Luan.
+
+Componentes:
+
+- `debug_job(job_id)`: retorna diagnostico deterministico e validacao de evidencia.
+- `explain_evidence(job_id)`: mostra a telemetria armazenada para o job.
+- `EvidenceValidator`: bloqueia findings fracos antes de qualquer agente/LLM.
+- Baseline negativo: job balanceado nao pode gerar skew.
+- `fix_preview`: gera diff sem alterar arquivo.
+
+Rodar:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_v01.py tests/test_commander_evidence_validator.py tests/test_commander_mcp_contract.py tests/test_commander_fix_preview.py -q --basetemp .pytest-commander-gate1
+```
+
+Esperado:
+
+```text
+13 passed
+```
