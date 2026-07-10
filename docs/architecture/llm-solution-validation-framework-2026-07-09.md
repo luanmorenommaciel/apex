@@ -104,13 +104,13 @@ Cada gate tem critério binário. Componente que falha não avança; falha regis
 |------|--------------|-------------------|-------------|
 | **G0** Reprodutibilidade | Build+testes de cada candidata num ambiente limpo | `pytest`/`go build` verdes documentados | spike ✅ · cowork ✅ · **codex ✅ (44 testes)** · kimi-Py 🟡 (1 falha real) · kimi-Go ❌ |
 | **G1** Baseline negativo | Zero falso positivo em job saudável | `no_skew_baseline.yaml` → nenhum finding severity≥medium | ✅ **verde 09/07** — portado do kimi-Py, adaptado ao contrato v4; watcher com threshold de produção (10x): baseline 1.0x limpo + teste de falso positivo forçado passa; 25 testes verdes; fecha P2-10 |
-| **G2** Detecção sintética | Cada detector pega seu cenário | gate de cenário verde por detector (hoje: só skew 27.9x ✅) | 🟡 1/5 |
+| **G2** Detecção sintética | Cada detector pega seu cenário | gate de cenário verde por detector | ✅ **verde 09/07** — 5/5: skew 27.9x + gc 25% + shuffle/spill 400MiB + oom 2 tasks + CartesianProduct; dispatch por classe no CI; 31 testes |
 | **G3** Dado real | Sintético ≈ real no plat-v0 | oráculo dentro da tolerância + run multi-core 8 tasks | 🟡 oráculo ok em 1-core; multi-core nunca rodou |
 | **G4** Latência | Diagnóstico contínuo sem LLM obrigatório | T1 determinístico < 1s; LLM só quando confidence < threshold | ❌ cowork chama LLM sempre |
-| **G5** Loop no IDE | MCP end-to-end no Cursor/Claude Code | `get_findings` → `apply_fix` com backup + diff revisável | 🟡 validado ad-hoc 06/07; falta roteiro reproduzível |
+| **G5** Loop no IDE | MCP end-to-end no Cursor/Claude Code | `get_findings` → `apply_fix` com backup + diff revisável | 🟡 roteiro reproduzível pronto (`docs/playbooks/demo-apply-fix-g5.md`); falta executar com o plat-v0 vivo |
 | **G6** CI contínuo | Nada entra sem gate | scenario-gate + oracle-weekly verdes no PR (fix de 08/07: `0ddb550`) | 🟡 corrigido; falta secrets `MINIO_*` + 1 run |
 
-**Sequência de implementação:** G0(kimi-Py: corrigir a falha de spill) → G1 → G2(portar detectores spike, ISSUE-A01) → G4(T1 antes do LLM, ISSUE-A03) → G3 → G5(A05) → G6.
+**Sequência de implementação:** ~~G1~~ ✅ → ~~G2~~ ✅ → G4(T1 antes do LLM, ISSUE-A03) → G3(run multi-core real) → G5(executar o roteiro) → G6(secrets). Contrato de schema do merge: `docs/specs/telemetry-schema-contract-v1.md`.
 
 ---
 
