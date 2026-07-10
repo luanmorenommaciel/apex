@@ -19,6 +19,11 @@ def telemetry_envelope():
                 "ratio": 29.5,
                 "evidence_status": "valid",
                 "quality_issues": [],
+                "disk_bytes_spilled": 2 * 1024 * 1024,
+                "memory_bytes_spilled": 0,
+                "jvm_gc_time_ms": 0,
+                "executor_run_time_ms": 10000,
+                "failure_reasons": [],
             }
         ],
         "skew_candidates": [
@@ -44,6 +49,10 @@ def test_debug_job_returns_validated_finding(tmp_path):
     assert result["finding"]["title"] == "shuffle_skew_candidate"
     assert result["validation"]["accepted"] is True
     assert result["validation"]["status"] == "valid"
+    assert [item["kind"] for item in result["findings"]] == [
+        "shuffle_skew_candidate",
+        "shuffle_spill_candidate",
+    ]
 
 
 def test_debug_job_reports_not_found(tmp_path):

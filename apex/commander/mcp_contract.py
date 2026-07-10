@@ -1,26 +1,32 @@
 """Local tool contract for Commander before a real MCP server is introduced."""
 
 from apex.commander.clickstack_mvp import query_by_job_id
-from apex.commander.diagnostic_mvp import diagnose_job
+from apex.commander.diagnostic_mvp import diagnose_findings, diagnose_job
 from apex.commander.evidence_validator import validate_finding
 
 
 def debug_job(store_path, job_id):
-    """Return a finding plus validation status for one job_id."""
-    finding = diagnose_job(store_path, job_id)
-    if finding.get("status") == "finding":
-        validation = validate_finding(finding)
+    """Return findings plus validation status for one job_id."""
+    findings = diagnose_findings(store_path, job_id)
+    if findings:
+        validations = [validate_finding(finding) for finding in findings]
+        finding = findings[0]
+        validation = validations[0]
     else:
+        finding = diagnose_job(store_path, job_id)
         validation = {
             "rule_set": "apex.commander.evidence_validator.v1",
             "accepted": False,
             "status": "invalid",
             "issues": [finding.get("status", "no_finding")],
         }
+        validations = []
     return {
         "job_id": job_id,
         "finding": finding,
         "validation": validation,
+        "findings": findings,
+        "validations": validations,
     }
 
 

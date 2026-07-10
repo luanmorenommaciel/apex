@@ -1,6 +1,17 @@
 """Deterministic diagnosis for the Commander V0.1 local harness."""
 
 from apex.commander.clickstack_mvp import query_by_job_id
+from apex.commander.detectors import detect_findings
+from apex.commander.findings import build_finding
+
+
+def diagnose_findings(store_path, job_id):
+    """Return all local deterministic findings for one job."""
+    envelopes = query_by_job_id(store_path, job_id)
+    if not envelopes:
+        return []
+
+    return _findings_from_envelope(envelopes[-1], job_id)
 
 
 def diagnose_job(store_path, job_id):
@@ -19,8 +30,8 @@ def diagnose_job(store_path, job_id):
         }
 
     envelope = envelopes[-1]
-    candidates = envelope.get("skew_candidates") or []
-    if not candidates:
+    findings = _findings_from_envelope(envelope, job_id)
+    if not findings:
         return {
             "status": "no_finding",
             "job_id": job_id,
@@ -32,23 +43,40 @@ def diagnose_job(store_path, job_id):
             ],
         }
 
+    return findings[0]
+
+
+def _findings_from_envelope(envelope, job_id):
+    findings = []
+    findings.extend(_skew_findings(envelope, job_id))
+    findings.extend(detect_findings(envelope))
+    return findings
+
+
+def _skew_findings(envelope, job_id):
+    candidates = envelope.get("skew_candidates") or []
+    if not candidates:
+        return []
+
     candidate = max(candidates, key=lambda item: item["ratio"])
-    return {
-        "status": "finding",
-        "job_id": job_id,
-        "title": "shuffle_skew_candidate",
-        "confidence": "medium",
-        "evidence": {
-            "schema_version": envelope.get("schema_version"),
-            "app_id": envelope.get("app_id"),
-            "stage_id": candidate["stage_id"],
-            "ratio": candidate["ratio"],
-            "hot_records": candidate["hot_records"],
-            "median_cold_records": candidate["median_cold_records"],
-            "task_count": candidate["task_count"],
-        },
-        "recommendations": [
-            "Validar habilitacao de spark.sql.adaptive.skewJoin.enabled para este job.",
-            "Confirmar chave de join e avaliar salting/repartition antes de aplicar mudanca.",
-        ],
-    }
+    return [
+        build_finding(
+            "shuffle_skew_candidate",
+            job_id,
+            "warning",
+            "medium",
+            {
+                "schema_version": envelope.get("schema_version"),
+                "app_id": envelope.get("app_id"),
+                "stage_id": candidate["stage_id"],
+                "ratio": candidate["ratio"],
+                "hot_records": candidate["hot_records"],
+                "median_cold_records": candidate["median_cold_records"],
+                "task_count": candidate["task_count"],
+            },
+            [
+                "Validar habilitacao de spark.sql.adaptive.skewJoin.enabled para este job.",
+                "Confirmar chave de join e avaliar salting/repartition antes de aplicar mudanca.",
+            ],
+        )
+    ]
