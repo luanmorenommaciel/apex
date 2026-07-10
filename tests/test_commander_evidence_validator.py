@@ -51,3 +51,49 @@ def test_rejects_insufficient_task_count():
     result = validate_finding(finding)
     assert result["status"] == "invalid"
     assert "insufficient_task_count" in result["issues"]
+
+
+def test_accepts_complete_shuffle_spill_finding():
+    finding = {
+        "status": "finding",
+        "kind": "shuffle_spill_candidate",
+        "title": "shuffle_spill_candidate",
+        "confidence": "medium",
+        "job_id": "job-42",
+        "evidence": {
+            "app_id": "app-skew",
+            "stage_id": 2,
+            "spilled_bytes": 2 * 1024 * 1024,
+        },
+        "recommendations": ["Reduzir spill de shuffle."],
+    }
+
+    result = validate_finding(finding)
+
+    assert result["status"] == "valid"
+    assert result["accepted"] is True
+    assert result["issues"] == []
+
+
+def test_accepts_complete_gc_pressure_finding():
+    finding = {
+        "status": "finding",
+        "kind": "gc_pressure_candidate",
+        "title": "gc_pressure_candidate",
+        "confidence": "medium",
+        "job_id": "job-42",
+        "evidence": {
+            "app_id": "app-skew",
+            "stage_id": 2,
+            "gc_ratio": 0.3,
+            "jvm_gc_time_ms": 3000,
+            "executor_run_time_ms": 10000,
+        },
+        "recommendations": ["Avaliar memoria e particionamento."],
+    }
+
+    result = validate_finding(finding)
+
+    assert result["status"] == "valid"
+    assert result["accepted"] is True
+    assert result["issues"] == []
