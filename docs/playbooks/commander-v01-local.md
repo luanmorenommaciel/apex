@@ -119,3 +119,42 @@ Esperado:
 ```text
 13 passed
 ```
+
+## Gate 2: Detectores locais multiplos
+
+O Gate 2 amplia `debug_job(job_id)` para retornar uma lista de findings validados, mantendo `finding` como campo legado para o primeiro finding.
+
+Detectores locais:
+
+- `shuffle_skew_candidate`
+- `shuffle_spill_candidate`
+- `gc_pressure_candidate`
+- `oom_candidate`
+- `plan_aqe_replan_candidate`
+
+Contrato atualizado:
+
+- `diagnose_findings(store_path, job_id)` retorna todos os findings deterministico locais;
+- `debug_job(store_path, job_id)` retorna `findings` e `validations`;
+- `debug_job(store_path, job_id)` preserva `finding` e `validation` para compatibilidade;
+- `EvidenceValidator` aceita os cinco tipos de finding com regras especificas por tipo.
+
+Rodar:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_detectors.py tests/test_commander_mcp_contract.py tests/test_commander_evidence_validator.py -q --basetemp .pytest-commander-gate2
+```
+
+Esperado:
+
+```text
+16 passed
+```
+
+Limite consciente deste gate:
+
+- os thresholds ainda estao fixos no codigo;
+- ainda nao ha ClickHouse real;
+- ainda nao ha MCP server real;
+- ainda nao ha aplicacao automatica de fix.

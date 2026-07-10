@@ -162,6 +162,28 @@ Cells must use one of:
 | Kimi | Validation discipline source | Useful validator/runbook concepts; needs runnable proof before adoption |
 | DataFlint | Market benchmark | Mature product; Apex must beat it on openness, transparency, local control, and safe fix flow |
 
+## Current Codex Status
+
+Gate 1 is complete locally: Codex has a deterministic `debug_job(job_id)` contract, no-LLM diagnosis, evidence validation, negative skew baseline, and preview-first fix support.
+
+Gate 2 is the active local detector validation line. The Codex branch now carries these local deterministic finding kinds:
+
+- `shuffle_skew_candidate`
+- `shuffle_spill_candidate`
+- `gc_pressure_candidate`
+- `oom_candidate`
+- `plan_aqe_replan_candidate`
+
+The public contract is still intentionally local:
+
+- `diagnose_findings(store_path, job_id)` returns all local findings for one job;
+- `debug_job(store_path, job_id)` returns `findings` and `validations`;
+- legacy `finding` and `validation` fields remain for CLI and older tests;
+- no remote branch is changed;
+- no LLM call is required for basic diagnosis.
+
+What this does not prove yet: SparkListener JVM ingestion, ClickHouse/ClickStack persistence, real MCP server, UI, CI oracle, or guarded `apply_fix`.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -204,11 +226,11 @@ Required:
 Current Codex evidence:
 
 ```text
-pytest: 44 passed
+baseline before Gate 2: 53 passed
 real_log.ndjson: shuffle_skew_candidate, ratio 29.5, stage_id 2, task_count 8
 ```
 
-### Gate 2: Evidence Validator
+### Gate 2: Evidence Validator And Local Multi-Detectors
 
 Required:
 
@@ -217,6 +239,15 @@ Required:
 - rejects stage correlation by name only on real logs;
 - rejects low-ratio false positives;
 - returns a machine-readable validation status.
+- exposes multiple deterministic findings for one `job_id`;
+- validates skew, shuffle spill, GC pressure, OOM, and plan/AQE findings.
+
+Current Codex evidence:
+
+```text
+focused Commander validation: 21 passed
+debug_job(job_id): returns findings[] and validations[]
+```
 
 ### Gate 3: Negative Baseline
 
@@ -314,10 +345,11 @@ No remote publication happens without explicit user approval.
 
 | Priority | Work | Source |
 | --- | --- | --- |
-| P0 | Implement `debug_job(job_id)` contract | Codex |
-| P0 | Add `EvidenceValidator` MVP | Kimi concept, Codex implementation |
-| P0 | Add `no_skew_baseline` | Kimi concept |
-| P1 | Port Spike detector contracts one by one | Spike |
+| P0 | Done locally: implement `debug_job(job_id)` contract | Codex |
+| P0 | Done locally: add `EvidenceValidator` MVP | Kimi concept, Codex implementation |
+| P0 | Done locally: add `no_skew_baseline` | Kimi concept |
+| P1 | Active Gate 2: validate skew, spill, GC, OOM, and plan/AQE findings | Codex + Spike concepts |
+| P1 | Port Spike detector contracts one by one after local tests exist | Spike |
 | P1 | Create MCP server around Codex contract | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork `apply_fix` to preview-first | Cowork |
 | P2 | Add ClickHouse adapter with fake-client tests | Spike/Cowork |
