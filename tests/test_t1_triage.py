@@ -58,3 +58,19 @@ def test_t1_is_fast():
     t0 = time.perf_counter()
     t1_triage.triage_rows(rows, tasks)
     assert (time.perf_counter() - t0) < 1.0  # criterio G4: < 1s sem LLM
+
+
+def test_skew_by_records_with_uniform_duration():
+    # regressao do run app-20260710021939-0000: skew de REGISTROS (29x) com
+    # duracao uniforme (1.01x) — dataset pequeno. T1 deve detectar pelos registros.
+    tasks = [{"duration_ms": 11000 + i, "shuffle_records": 164956 if i == 0 else 5600 + i}
+             for i in range(8)]
+    f = t1_triage.triage_rows([stage()], {4: tasks})
+    assert f and f[0]["pattern"] == "skew", f
+    assert "shuffle_records" in f[0]["evidence"]["key_metric"]
+    assert f[0]["confidence"] >= 0.6  # resolve sem LLM
+
+
+def test_no_skew_by_records_when_uniform():
+    tasks = [{"duration_ms": 11000 + i, "shuffle_records": 5600 + i} for i in range(8)]
+    assert t1_triage.triage_rows([stage()], {4: tasks}) == []

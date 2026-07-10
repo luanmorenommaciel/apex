@@ -153,6 +153,7 @@ def ingest(log_path: str, app_id: str) -> None:
                     (sr.get("Remote Bytes Read", 0) or 0) +
                     (sr.get("Local Bytes Read",  0) or 0)
                 ),
+                "shuffle_records": sr.get("Total Records Read", 0) or 0,
                 "shuffle_write": sw.get("Shuffle Bytes Written", 0) or 0,
                 "memory_spill":  tm.get("Memory Bytes Spilled", 0) or 0,
                 "disk_spill":    tm.get("Disk Bytes Spilled",   0) or 0,
@@ -210,7 +211,7 @@ def ingest(log_path: str, app_id: str) -> None:
         "app_id", "stage_id", "task_id", "attempt_number", "executor_id",
         "launch_time", "finish_time", "duration_ms",
         "input_bytes", "output_bytes",
-        "shuffle_read", "shuffle_write", "memory_spill", "disk_spill", "status",
+        "shuffle_read", "shuffle_records", "shuffle_write", "memory_spill", "disk_spill", "status",
     ]
     task_rows = []
     for sid, tasks in tasks_by_stage.items():
@@ -220,7 +221,7 @@ def ingest(log_path: str, app_id: str) -> None:
                 t["task_id"], t["attempt_number"], t["executor_id"],
                 t["launch_time"], t["finish_time"], t["duration_ms"],
                 t["input_bytes"], t["output_bytes"],
-                t["shuffle_read"], t["shuffle_write"],
+                t["shuffle_read"], t["shuffle_records"], t["shuffle_write"],
                 t["memory_spill"], t["disk_spill"], t["status"],
             ])
 

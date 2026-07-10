@@ -119,12 +119,14 @@ def fetch_task_distribution(app_id: str, stage_id: int) -> str:
         ch = _get_ch()
         rows = ch.query("""
             SELECT
-                count()           AS total_tasks,
-                max(duration_ms)  AS max_task_ms,
-                min(duration_ms)  AS min_task_ms,
-                avg(duration_ms)  AS avg_task_ms,
-                sum(disk_spill)   AS total_spill_bytes,
-                sum(memory_spill) AS total_memory_spill
+                count()                 AS total_tasks,
+                max(duration_ms)        AS max_task_ms,
+                min(duration_ms)        AS min_task_ms,
+                avg(duration_ms)        AS avg_task_ms,
+                max(shuffle_records)    AS max_task_shuffle_records,
+                median(shuffle_records) AS median_task_shuffle_records,
+                sum(disk_spill)         AS total_spill_bytes,
+                sum(memory_spill)       AS total_memory_spill
             FROM apex.task_metrics
             WHERE app_id = {app_id:String}
               AND stage_id = {stage_id:UInt32}
@@ -209,7 +211,8 @@ def build_analyze_task(agent: Agent, app_id: str) -> Task:
             "3. Chame fetch_task_distribution no stage mais lento\n"
             f"4. Classifique usando APENAS: {KNOWN_PATTERNS}\n"
             "5. Sinais por padrão:\n"
-            "   skew: max_task_ms/avg_task_ms > 3\n"
+            "   skew: max_task_ms/avg_task_ms > 3 OU max_task_shuffle_records/median_task_shuffle_records > 10\n"
+            "   (skew de registros nem sempre vira skew de duração em datasets pequenos!)\n"
             "   spill: disk_spill > 0\n"
             "   parallelism_collapse: num_tasks < 8 com input_bytes > 1GB\n"
         ),

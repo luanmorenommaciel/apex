@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS apex.task_metrics (
     input_bytes     UInt64,
     output_bytes    UInt64,
     shuffle_read    UInt64,
+    shuffle_records UInt64,  -- registros lidos no shuffle — skew de registros nem sempre vira skew de duracao
     shuffle_write   UInt64,
     -- Spill
     memory_spill    UInt64,

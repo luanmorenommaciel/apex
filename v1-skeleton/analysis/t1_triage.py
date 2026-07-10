@@ -132,18 +132,29 @@ def triage_rows(stage_rows, tasks_by_stage=None, thresholds=None):
                 {"key_metric": "num_tasks", "key_value": str(s["num_tasks"]),
                  "expected_value": f">= {t['parallelism']['min_tasks']}"}))
 
-        # skew por distribuicao de duracao das tasks
-        durs = sorted(tasks_by_stage.get(sid, []))
-        if len(durs) >= t["skew"]["min_tasks"]:
-            median = durs[len(durs) // 2]
-            ratio = durs[-1] / max(median, 1)
+        # skew por distribuicao entre tasks — registros de shuffle E duracao.
+        # Licao do run app-20260710021939-0000: skew de registros (29.4x) nao virou
+        # skew de duracao (1.01x) em dataset pequeno — registros detectam antes.
+        task_list = tasks_by_stage.get(sid, [])
+        if task_list and isinstance(task_list[0], dict):
+            series = {"shuffle_records": [x.get("shuffle_records", 0) for x in task_list],
+                      "task_duration_ms": [x.get("duration_ms", 0) for x in task_list]}
+        else:  # retrocompat: lista simples = duracoes
+            series = {"task_duration_ms": list(task_list)}
+        for metric, values in series.items():
+            vals = sorted(values)
+            if len(vals) < t["skew"]["min_tasks"] or vals[-1] <= 0:
+                continue
+            median = vals[len(vals) // 2]
+            ratio = vals[-1] / max(median, 1)
             if ratio >= t["skew"]["ratio_min"]:
                 findings.append(_finding(
                     "skew", "critical" if ratio >= 3 * t["skew"]["ratio_min"] else "high", sid,
-                    f"Stage {sid}: task mais lenta {durs[-1]}ms vs mediana {median}ms "
-                    f"-> ratio {ratio:.1f}x ({len(durs)} tasks)",
-                    {"key_metric": "task_duration_ratio", "key_value": f"{ratio:.1f}x",
+                    f"Stage {sid}: task quente {vals[-1]} vs mediana {median} ({metric}) "
+                    f"-> ratio {ratio:.1f}x ({len(vals)} tasks)",
+                    {"key_metric": f"{metric}_ratio", "key_value": f"{ratio:.1f}x",
                      "expected_value": f"< {t['skew']['ratio_min']}x"}))
+                break  # um finding de skew por stage basta
 
     findings.sort(key=lambda f: (-f["confidence"], f["pattern"]))
     return findings
@@ -160,10 +171,12 @@ def fetch_rows(app_id):
     """, parameters={"app_id": app_id}).named_results())
     tasks = {}
     for r in ch.query("""
-        SELECT stage_id, duration_ms FROM apex.task_metrics
+        SELECT stage_id, duration_ms, shuffle_records FROM apex.task_metrics
         WHERE app_id = {app_id:String} AND status = 'SUCCESS'
     """, parameters={"app_id": app_id}).named_results():
-        tasks.setdefault(int(r["stage_id"]), []).append(int(r["duration_ms"]))
+        tasks.setdefault(int(r["stage_id"]), []).append(
+            {"duration_ms": int(r["duration_ms"]),
+             "shuffle_records": int(r.get("shuffle_records", 0) or 0)})
     return stage_rows, tasks
 
 
