@@ -1,13 +1,13 @@
 """Deterministic diagnosis for the Commander V0.1 local harness."""
 
-from apex.commander.clickstack_mvp import query_by_job_id
 from apex.commander.detectors import detect_findings
 from apex.commander.findings import build_finding
+from apex.commander.telemetry_store import query_envelopes
 
 
 def diagnose_findings(store_path, job_id):
     """Return all local deterministic findings for one job."""
-    envelopes = query_by_job_id(store_path, job_id)
+    envelopes = query_envelopes(store_path, job_id)
     if not envelopes:
         return []
 
@@ -16,7 +16,7 @@ def diagnose_findings(store_path, job_id):
 
 def diagnose_job(store_path, job_id):
     """Diagnose one job from the local ClickStack MVP store."""
-    envelopes = query_by_job_id(store_path, job_id)
+    envelopes = query_envelopes(store_path, job_id)
     if not envelopes:
         return {
             "status": "not_found",

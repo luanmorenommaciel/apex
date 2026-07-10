@@ -1,8 +1,8 @@
 """Local tool contract for Commander before a real MCP server is introduced."""
 
-from apex.commander.clickstack_mvp import query_by_job_id
 from apex.commander.diagnostic_mvp import diagnose_findings, diagnose_job
 from apex.commander.evidence_validator import validate_finding
+from apex.commander.telemetry_store import query_envelopes
 
 
 def debug_job(store_path, job_id):
@@ -32,7 +32,7 @@ def debug_job(store_path, job_id):
 
 def explain_evidence(store_path, job_id):
     """Return the latest stored telemetry envelope for one job_id."""
-    matches = query_by_job_id(store_path, job_id)
+    matches = query_envelopes(store_path, job_id)
     if not matches:
         return {
             "job_id": job_id,
