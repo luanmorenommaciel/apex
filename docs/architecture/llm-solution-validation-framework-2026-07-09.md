@@ -204,6 +204,13 @@ Gate 5 is complete locally as an in-process tool contract:
 - `debug_job`, `explain_evidence`, `evaluate_negative_baseline`, and `preview_fix` are available;
 - `apply_fix` is intentionally absent and rejected as `unknown_tool`.
 
+Gate 6 is complete locally as a read-only MCP stdio layer:
+
+- `handle_jsonrpc_message` supports `initialize`, `notifications/initialized`, `tools/list`, and `tools/call`;
+- `serve_stdio` processes line-delimited JSON-RPC over stdin/stdout;
+- `tools/list` maps local tool metadata to MCP-style `inputSchema` and read-only annotations;
+- `tools/call` returns JSON payloads as text content without mutating files.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -336,20 +343,43 @@ focused tool contract validation: 13 passed
 Remaining gap:
 
 ```text
-No MCP stdio server is started yet; recommend_fix and apply_fix are intentionally absent.
+No external MCP SDK/client interoperability test yet; recommend_fix and apply_fix are intentionally absent.
 ```
 
-### Gate 6: ClickHouse/ClickStack
+### Gate 6: MCP Stdio Local
+
+Required:
+
+- JSON-RPC `initialize`;
+- `notifications/initialized` notification handling;
+- `tools/list`;
+- `tools/call`;
+- stdio loop over line-delimited JSON;
+- read-only tools only.
+
+Current Codex evidence:
+
+```text
+tests/test_commander_mcp_stdio_server.py: 6 passed
+focused MCP stdio validation: 16 passed
+```
+
+Remaining gap:
+
+```text
+No external MCP SDK/client interoperability test yet; no network server is started.
+```
+
+### Gate 7: ClickHouse/ClickStack Real Validation
 
 Required:
 
 - telemetry persisted by `job_id` or `app_id`;
 - stage/task evidence queryable;
 - findings queryable;
-- fake client tests before real client;
-- local docker validation when platform is available.
+- local Docker/ClickHouse validation when platform is available.
 
-### Gate 7: Closed Loop
+### Gate 8: Closed Loop
 
 Required:
 
@@ -403,8 +433,9 @@ No remote publication happens without explicit user approval.
 | P1 | Done locally: add executable negative baseline gate | Codex |
 | P1 | Done locally: add ClickHouse adapter with fake-client tests | Codex + Spike/Cowork concept |
 | P1 | Done locally: add read-only local tool contract | Codex + Cowork concept |
+| P1 | Done locally: add MCP stdio local read-only server | Codex |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
-| P1 | Create MCP stdio server around Codex contract | Codex + Spike/Cowork patterns |
+| P1 | Validate MCP stdio against an external MCP client/SDK | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork `apply_fix` to preview-first | Cowork |
 | P2 | Validate ClickHouse adapter against local Docker/ClickHouse | Spike/Cowork |
 | P2 | Add DataFlint parity table to every review | DataFlint official docs |

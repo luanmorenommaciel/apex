@@ -287,3 +287,44 @@ Limite consciente deste gate:
 - ainda nao ha `recommend_fix`;
 - ainda nao ha `apply_fix`;
 - nao ha escrita automatica em arquivo alvo.
+
+## Gate 6: MCP stdio local read-only
+
+O Gate 6 embrulha o `CommanderToolContract` em um servidor stdio local baseado em JSON-RPC.
+
+Metodos suportados:
+
+| Metodo | O que retorna |
+| --- | --- |
+| `initialize` | versao de protocolo, capacidades e `serverInfo` |
+| `notifications/initialized` | notificacao sem resposta |
+| `tools/list` | lista MCP das tools read-only |
+| `tools/call` | resultado da tool em `content[0].text` como JSON |
+
+Tools continuam as mesmas do Gate 5:
+
+- `debug_job`
+- `explain_evidence`
+- `evaluate_negative_baseline`
+- `preview_fix`
+
+Rodar:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_mcp_stdio_server.py tests/test_commander_tool_contract.py tests/test_commander_mcp_contract.py -q --basetemp .pytest-commander-gate6
+```
+
+Esperado:
+
+```text
+16 passed
+```
+
+Limite consciente deste gate:
+
+- nao usa SDK MCP externo;
+- nao valida contra cliente MCP real;
+- nao abre socket de rede;
+- nao expoe `apply_fix`;
+- nao altera arquivo alvo.
