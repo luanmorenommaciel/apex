@@ -1,8 +1,9 @@
 """
-Apex V1 — Diagnóstico Crew.ai (crewai >= 1.0)
+Apex V1 — Diagnóstico: T1 determinístico + Crew.ai como fallback [G4]
 
-Pipeline multi-agent sequencial:
-  MetricsAnalyzer  → lê ClickHouse, identifica padrão e bottleneck
+Fluxo:
+  T1 (t1_triage)   → regras determinísticas (<1s, sem LLM) — resolve o caso comum
+  MetricsAnalyzer  → lê ClickHouse, identifica padrão e bottleneck (só se T1 não decidir)
   RecommendationWriter → recebe análise, escreve fix concreto
 
 Uso:
@@ -60,7 +61,7 @@ class ApexFinding(BaseModel):
 
 # ── Padrões válidos e contratos ───────────────────────────────────────────────
 
-KNOWN_PATTERNS = ["skew", "parallelism_collapse", "spill", "broadcast_miss", "small_files", "other"]
+KNOWN_PATTERNS = ["skew", "parallelism_collapse", "spill", "broadcast_miss", "small_files", "gc_pressure", "oom", "other"]
 SEVERITY_LEVELS = ["critical", "high", "medium", "low"]
 
 PATTERN_KEYWORDS = {
@@ -294,11 +295,45 @@ def _validate_against_contract(finding: dict) -> dict:
 
 # ── Pipeline principal ────────────────────────────────────────────────────────
 
-def diagnose(app_id: str, model: str = DEFAULT_MODEL) -> dict:
+T1_CONFIDENCE_GATE = 0.6  # mesmo threshold do Judge: abaixo disso, LLM entra
+
+
+def diagnose_t1(app_id: str) -> Optional[dict]:
+    """[G4] Tier 1 determinístico — se decide com confiança, o LLM nem é chamado."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import t1_triage
+    findings, elapsed_ms = t1_triage.triage(app_id)
+    logger.info(f"[T1] {len(findings)} finding(s) em {elapsed_ms:.0f}ms")
+    if not findings:
+        return None
+    primary = findings[0]
+    if primary["confidence"] < T1_CONFIDENCE_GATE:
+        logger.info(f"[T1] confidence {primary['confidence']:.2f} < {T1_CONFIDENCE_GATE} → fallback LLM")
+        return None
+    primary["t1_elapsed_ms"] = round(elapsed_ms)
+    primary["t1_total_findings"] = len(findings)
+    return primary
+
+
+def diagnose(app_id: str, model: str = DEFAULT_MODEL, force_llm: bool = False) -> dict:
     """
-    Pipeline Crew.ai: ClickHouse → MetricsAnalyzer → RecommendationWriter → finding validado.
+    [G4] T1 determinístico primeiro; Crew.ai (MetricsAnalyzer → RecommendationWriter)
+    apenas quando o T1 não produz finding com confiança >= 0.6.
     """
-    logger.info(f"Iniciando diagnóstico Crew.ai | app_id={app_id} | model={model}")
+    if not force_llm:
+        try:
+            t1 = diagnose_t1(app_id)
+        except Exception as e:
+            logger.warning(f"[T1] indisponível ({e}) → fallback LLM")
+            t1 = None
+        if t1 is not None:
+            t1 = _validate_against_contract(t1)
+            t1["app_id"] = app_id
+            logger.info(f"[T1] resolvido sem LLM: {t1['pattern']} | {t1['severity']} "
+                        f"| confidence={t1['confidence']} | {t1['t1_elapsed_ms']}ms")
+            return t1
+
+    logger.info(f"Iniciando diagnóstico Crew.ai (fallback T2) | app_id={app_id} | model={model}")
 
     llm = _get_llm(model)
 
@@ -343,7 +378,7 @@ def diagnose(app_id: str, model: str = DEFAULT_MODEL) -> dict:
 
     finding["app_id"]   = app_id
     finding["llm_model"] = model
-    finding["pipeline"] = "crewai-1x"
+    finding["pipeline"] = "crewai-1x-t2-fallback"
 
     logger.info(f"Diagnóstico concluído: {finding.get('pattern')} | {finding.get('severity')} | confidence={finding.get('confidence')}")
     return finding
@@ -382,14 +417,15 @@ def main():
     parser.add_argument("--app-id",    required=True,        help="Spark application ID")
     parser.add_argument("--model",     default=DEFAULT_MODEL, help="Modelo Anthropic")
     parser.add_argument("--no-persist",action="store_true",  help="Não salva no ClickHouse")
+    parser.add_argument("--force-llm", action="store_true",  help="Pula o T1 e vai direto ao Crew.ai")
     args = parser.parse_args()
 
-    finding = diagnose(args.app_id, args.model)
+    finding = diagnose(args.app_id, args.model, force_llm=args.force_llm)
     if not args.no_persist:
         persist_finding(finding)
 
     print("\n" + "=" * 60)
-    print("APEX FINDING (Crew.ai 1.x)")
+    print(f"APEX FINDING ({finding.get('pipeline', '?')})")
     print("=" * 60)
     print(json.dumps(finding, indent=2, ensure_ascii=False))
 

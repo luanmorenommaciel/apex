@@ -16,3 +16,11 @@ plans:
   info_replan_count: 3
 
 oom: {}                           # sem threshold: qualquer OOM/executor perdido e critical
+
+skew:
+  ratio_min: 10        # max/mediana de duration_ms das tasks do stage
+  min_tasks: 4         # guard: nao classificar skew com poucas tasks
+
+parallelism:
+  min_tasks: 4         # abaixo disso com input grande = collapse
+  min_input_bytes: 1073741824   # 1 GiB
