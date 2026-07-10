@@ -197,6 +197,13 @@ Gate 4 is complete locally as an adapter preparation step:
 - `diagnose_findings` and `explain_evidence` can read from either NDJSON paths or store objects exposing `query_by_job_id`;
 - unsafe table names are rejected before SQL is composed.
 
+Gate 5 is complete locally as an in-process tool contract:
+
+- `CommanderToolContract.call_tool(name, arguments)` dispatches approved Commander tools;
+- `list_tools()` exposes only read-only tools;
+- `debug_job`, `explain_evidence`, `evaluate_negative_baseline`, and `preview_fix` are available;
+- `apply_fix` is intentionally absent and rejected as `unknown_tool`.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -308,7 +315,7 @@ Remaining gap:
 No real ClickHouse driver, Docker service, or network validation is used in this local-only gate.
 ```
 
-### Gate 5: MCP Contract
+### Gate 5: Local MCP/Tool Contract
 
 Required tools:
 
@@ -316,9 +323,21 @@ Required tools:
 | --- | --- |
 | `debug_job(job_id)` | read-only |
 | `explain_evidence(job_id)` | read-only |
-| `recommend_fix(job_id)` | read-only |
-| `preview_fix(job_id, file_path)` | read-only diff |
-| `apply_fix(job_id, file_path, confirmation)` | explicit confirmation + backup |
+| `evaluate_negative_baseline(job_id)` | read-only |
+| `preview_fix(path, recommendation, replacement)` | read-only diff |
+
+Current Codex evidence:
+
+```text
+tests/test_commander_tool_contract.py: 7 passed
+focused tool contract validation: 13 passed
+```
+
+Remaining gap:
+
+```text
+No MCP stdio server is started yet; recommend_fix and apply_fix are intentionally absent.
+```
 
 ### Gate 6: ClickHouse/ClickStack
 
@@ -383,8 +402,9 @@ No remote publication happens without explicit user approval.
 | P1 | Done locally: validate skew, spill, GC, OOM, and plan/AQE findings | Codex + Spike concepts |
 | P1 | Done locally: add executable negative baseline gate | Codex |
 | P1 | Done locally: add ClickHouse adapter with fake-client tests | Codex + Spike/Cowork concept |
+| P1 | Done locally: add read-only local tool contract | Codex + Cowork concept |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
-| P1 | Create MCP server around Codex contract | Codex + Spike/Cowork patterns |
+| P1 | Create MCP stdio server around Codex contract | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork `apply_fix` to preview-first | Cowork |
 | P2 | Validate ClickHouse adapter against local Docker/ClickHouse | Spike/Cowork |
 | P2 | Add DataFlint parity table to every review | DataFlint official docs |

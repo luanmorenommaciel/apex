@@ -244,3 +244,46 @@ Limite consciente deste gate:
 - nao instala driver ClickHouse;
 - nao valida Docker/ClickHouse real;
 - nao cria schema de findings separado.
+
+## Gate 5: MCP/Tool Contract local
+
+O Gate 5 cria uma camada local de ferramentas, pronta para ser embrulhada por MCP depois.
+
+Novo componente:
+
+- `CommanderToolContract(store)`: dispatcher local em processo.
+
+Tools expostas:
+
+| Tool | Seguranca | O que faz |
+| --- | --- | --- |
+| `debug_job` | `read_only` | retorna findings e validacoes para um `job_id` |
+| `explain_evidence` | `read_only` | retorna a evidencia de telemetria mais recente |
+| `evaluate_negative_baseline` | `read_only` | executa o gate de falso positivo para um `job_id` |
+| `preview_fix` | `read_only` | retorna diff unificado sem alterar o arquivo |
+
+Contrato de seguranca:
+
+- `list_tools()` nao expõe `apply_fix`;
+- `call_tool("apply_fix", ...)` falha com `unknown_tool`;
+- `preview_fix` usa `build_fix_preview` e preserva o arquivo original.
+
+Rodar:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_tool_contract.py tests/test_commander_mcp_contract.py tests/test_commander_fix_preview.py tests/test_commander_negative_baselines.py -q --basetemp .pytest-commander-gate5
+```
+
+Esperado:
+
+```text
+13 passed
+```
+
+Limite consciente deste gate:
+
+- ainda nao ha servidor MCP stdio real;
+- ainda nao ha `recommend_fix`;
+- ainda nao ha `apply_fix`;
+- nao ha escrita automatica em arquivo alvo.
