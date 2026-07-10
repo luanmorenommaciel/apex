@@ -41,9 +41,9 @@ _Atualizar a cada fix fechado. Ver `CHANGELOG.md` para histórico._
 
 | Item | Issue | Status |
 |---|---|---|
-| Escalar worker para 2+ cores no plat-v0 | #19 | 🔴 bloqueado (travado pelo P0s) |
-| Re-rodar job com distribuição real de 8 tasks | #19 | ⏳ aguardando worker 2+ cores |
-| Fechar ratio real do oráculo em multi-core | #19 | ⏳ aguardando run real |
+| Escalar worker para 2+ cores no plat-v0 | #19 | ✅ 09/07 — SPARK_WORKER_CORES=8 no .env do plat-v0 |
+| Re-rodar job com distribuição real de 8 tasks | #19 | ✅ 09/07 — `app-20260710021939-0000`: 8 tasks, hot 164956 records |
+| Fechar ratio real do oráculo em multi-core | #19 | ✅ 09/07 — **real 29.4x vs sintético 27.9x**, dentro da tolerância (G3 VERDE) |
 | Memory/Cost Watcher — Pod A2 | #17 | ⏳ aguardando P1-7 |
 | OTel Collector Stage 02 (Go) | #18 | 🔵 outra lane (Gabriel/Guilherme) |
 
