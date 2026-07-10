@@ -208,3 +208,39 @@ O que este gate prova:
 - GC saudavel nao gera finding;
 - menos de 3 updates AQE nao gera finding;
 - se um detector dispara em baseline, o gate retorna `failed`.
+
+## Gate 4: Adapter ClickHouse/ClickStack com fake client
+
+O Gate 4 prepara a troca do NDJSON local por ClickHouse/ClickStack sem exigir servidor real nesta etapa.
+
+Novos componentes:
+
+- `ClickHouseTelemetryStore`: adapter injetavel que usa um client com `command`, `insert` e `query`;
+- `query_envelopes(store, job_id)`: helper que permite ao Commander ler tanto path NDJSON quanto stores com `query_by_job_id`;
+- fake client em teste cobrindo schema, insert, query e protecao contra nome de tabela inseguro.
+
+Contrato preservado:
+
+- `append_envelope(path, envelope)` e `query_by_job_id(path, job_id)` continuam funcionando com NDJSON;
+- `diagnose_findings(store, job_id)` aceita o adapter fake;
+- `explain_evidence(store, job_id)` aceita o adapter fake.
+
+Rodar:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_clickhouse_adapter.py tests/test_commander_negative_baselines.py tests/test_commander_mcp_contract.py tests/test_commander_v01.py -q --basetemp .pytest-commander-gate4
+```
+
+Esperado:
+
+```text
+15 passed
+```
+
+Limite consciente deste gate:
+
+- nao abre conexao de rede;
+- nao instala driver ClickHouse;
+- nao valida Docker/ClickHouse real;
+- nao cria schema de findings separado.

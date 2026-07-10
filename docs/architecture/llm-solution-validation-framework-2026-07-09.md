@@ -190,6 +190,13 @@ Gate 3 is now the active false-positive control line. Codex has an executable ne
 - the same gate returns `failed` and exposes `unexpected_findings` when any detector fires;
 - healthy local telemetry covers balanced skew, low shuffle spill, healthy GC, and low AQE update count.
 
+Gate 4 is complete locally as an adapter preparation step:
+
+- `ClickHouseTelemetryStore` supports schema creation, envelope insert, and query by `job_id`;
+- fake-client tests validate the adapter without network or a real ClickHouse driver;
+- `diagnose_findings` and `explain_evidence` can read from either NDJSON paths or store objects exposing `query_by_job_id`;
+- unsafe table names are rejected before SQL is composed.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -277,23 +284,29 @@ Remaining gap:
 CI remote is not configured in this local-only branch.
 ```
 
-### Gate 4: Multi-Detector Coverage
+### Gate 4: ClickHouse/ClickStack Adapter Preparation
 
 Required:
 
-- skew;
-- shuffle/spill;
-- GC pressure;
-- OOM/lost executor;
-- plan/AQE/cross-join signal.
+- injectable ClickHouse client boundary;
+- schema creation command;
+- telemetry envelope insert;
+- query by `job_id`;
+- fake-client tests before real client;
+- NDJSON compatibility remains intact.
 
-Each detector must have:
+Current Codex evidence:
 
-- config threshold;
-- positive test;
-- negative test;
-- MCP exposure;
-- evidence payload.
+```text
+tests/test_commander_clickhouse_adapter.py: 5 passed
+focused adapter + Commander compatibility: 15 passed
+```
+
+Remaining gap:
+
+```text
+No real ClickHouse driver, Docker service, or network validation is used in this local-only gate.
+```
 
 ### Gate 5: MCP Contract
 
@@ -369,10 +382,11 @@ No remote publication happens without explicit user approval.
 | P0 | Done locally: add `no_skew_baseline` | Kimi concept |
 | P1 | Done locally: validate skew, spill, GC, OOM, and plan/AQE findings | Codex + Spike concepts |
 | P1 | Done locally: add executable negative baseline gate | Codex |
+| P1 | Done locally: add ClickHouse adapter with fake-client tests | Codex + Spike/Cowork concept |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
 | P1 | Create MCP server around Codex contract | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork `apply_fix` to preview-first | Cowork |
-| P2 | Add ClickHouse adapter with fake-client tests | Spike/Cowork |
+| P2 | Validate ClickHouse adapter against local Docker/ClickHouse | Spike/Cowork |
 | P2 | Add DataFlint parity table to every review | DataFlint official docs |
 
 ## Decision Template For Commander
