@@ -39,10 +39,16 @@ def main():
     client = Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
 
     prefix = args.prefix + args.app_id if args.app_id else args.prefix
-    objects = [
-        o for o in client.list_objects(args.bucket, prefix=prefix, recursive=True)
-        if not o.is_dir and not o.object_name.endswith(".inprogress")
-    ]
+    def _is_event_log(o):
+        name = o.object_name.rsplit("/", 1)[-1]
+        if o.is_dir or o.size == 0:
+            return False
+        if name.endswith(".inprogress") or name.startswith("appstatus"):
+            return False  # marcadores do rolling event log, nao sao o log
+        return True
+
+    objects = [o for o in client.list_objects(args.bucket, prefix=prefix, recursive=True)
+               if _is_event_log(o)]
     if not objects:
         sys.exit(f"erro: nenhum event log em {args.bucket}/{prefix}")
 

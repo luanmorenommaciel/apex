@@ -16,9 +16,13 @@ Ou baixando direto do MinIO (env MINIO_* configuradas):
 Exit 0 = G3 VERDE. Ver runbook: docs/playbooks/g3-multicore-runbook.md
 """
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
+
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")  # Windows: console cp1252 quebra prints unicode
+os.environ.setdefault("PYTHONUTF8", "1")
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -48,19 +52,19 @@ def check(real_log, min_tasks=MIN_TASKS):
     with tempfile.TemporaryDirectory() as td:
         syn = str(Path(td) / "syn.ndjson")
         r = subprocess.run([sys.executable, str(ROOT / "generators/plan_generator.py"),
-                            SCENARIO, syn], capture_output=True, text=True)
+                            SCENARIO, syn], capture_output=True, text=True, encoding="utf-8", errors="replace")
         if r.returncode != 0:
             results.append((False, f"plan_generator falhou: {r.stderr[:200]}"))
         else:
             r = subprocess.run([sys.executable, str(ROOT / "oracle/compare.py"),
-                                SCENARIO, syn, real_log], capture_output=True, text=True)
+                                SCENARIO, syn, real_log], capture_output=True, text=True, encoding="utf-8", errors="replace")
             ok = r.returncode == 0
             tail = [l for l in r.stdout.splitlines() if l.strip()][-1] if r.stdout else ""
             results.append((ok, f"oraculo: {tail}"))
 
     # -- 3. watcher no log real
     r = subprocess.run([sys.executable, str(ROOT / "watchers/skew_watcher.py"),
-                        SCENARIO, real_log], capture_output=True, text=True)
+                        SCENARIO, real_log], capture_output=True, text=True, encoding="utf-8", errors="replace")
     ok = r.returncode == 0 and "GATE VERDE" in r.stdout
     results.append((ok, "watcher no log real: " + ("GATE VERDE" if ok else "NAO detectou / falhou")))
 
