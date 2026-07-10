@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Gerador de codigo (v4) — sentinela + cadeia de custodia.
-[G1] Suporte a cenario baseline (anti_pattern.class: none) — sem injecao de hot key, sem sentinela.
+[G1] baseline (anti_pattern.class: none) — sem injecao de hot key, sem sentinela.
+[G2] templates de job por classe de anti-pattern (ISSUE-A01).
 """
 import sys
 import json
@@ -15,6 +16,22 @@ from apex import apexlib
 SENTINEL = "# APEX::ANTIPATTERN"
 GENERATOR_VERSION = "4"
 
+# corpo do job por classe — a linha marcada e o anti-pattern
+CLASS_BODIES = {
+    "data_skew_on_join_key":
+        'result = orders.join(customers.hint("shuffle_merge"), "customer_id", "inner")',
+    "gc_pressure":
+        "result = orders.groupBy('customer_id').agg(collect_list('order_id').alias('all_orders'))",
+    "shuffle_spill":
+        "result = orders.orderBy('order_id')",
+    "oom_task_failure":
+        "result = orders.groupBy().agg(collect_list('order_id').alias('everything'))",
+    "cartesian_product":
+        "result = orders.crossJoin(customers)",
+    "none":
+        'result = orders.join(customers.hint("shuffle_merge"), "customer_id", "inner")',
+}
+
 
 def build_job_source(config):
     sid = config["scenario_id"]
@@ -23,16 +40,20 @@ def build_job_source(config):
     conf = cfg.get("spark_config", {})
     conf_lines = "".join(f'    .config("{k}", "{v}")\n' for k, v in conf.items())
 
-    baseline = config.get("anti_pattern", {}).get("class", "none") == "none"
-    # [G1] baseline (class: none): sem injecao de hot key e sem sentinela — job saudavel
-    skew_injection = "" if baseline else f'''orders = orders.withColumn('customer_id',
+    klass = config.get("anti_pattern", {}).get("class", "none")
+    if klass not in CLASS_BODIES:
+        raise ValueError(f"classe de anti-pattern sem template de job: {klass}")
+    baseline = klass == "none"
+    skewed = klass == "data_skew_on_join_key"
+
+    skew_injection = f'''orders = orders.withColumn('customer_id',
     when(rand(13) < {data['orders']['hot_share']}, {data['orders']['hot_key']}).otherwise(col('customer_id')))
-'''
-    join_suffix = "" if baseline else f"  {SENTINEL}"
+''' if skewed else ""
+    suffix = "" if baseline else f"  {SENTINEL}"
 
     header = f'''# Auto-gerado por code_generator v4 — scenario: {sid}
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, rand, when
+from pyspark.sql.functions import col, rand, when, collect_list
 
 spark = (SparkSession.builder.appName("{sid}")
 {conf_lines}    .getOrCreate())
@@ -43,7 +64,7 @@ orders = spark.range({data['orders']['rows']}).select(
 {skew_injection}customers = spark.range({data['customers']['rows']}).select(
     col('id').alias('customer_id'), col('id').alias('customer_name'))
 '''
-    body = f'''result = orders.join(customers.hint("shuffle_merge"), "customer_id", "inner"){join_suffix}
+    body = f'''{CLASS_BODIES[klass]}{suffix}
 result.write.mode("overwrite").parquet("/tmp/apex_output")
 spark.stop()
 '''

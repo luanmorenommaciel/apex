@@ -1,0 +1,39 @@
+# GC pressure — >=20% do tempo de task em garbage collection. [G2 / ISSUE-A01]
+scenario_id: gc_pressure_25pct
+version: 1
+owner: pod-a1
+status: prototype
+
+anti_pattern:
+  class: gc_pressure
+  severity: high
+
+code_generator:
+  language: pyspark
+  emits: job.py
+  data:
+    orders:    { rows: 200000, distinct_keys: 100, hot_key: null, hot_share: 0.0 }
+    customers: { rows: 100, distinct_keys: 100 }
+  spark_config:
+    spark.sql.shuffle.partitions: "8"
+    spark.executor.memory: "512m"
+
+plan_generator:
+  emits: event-log.ndjson
+  strategy: synthesize
+  expected_signals:
+    join_operator: SortMergeJoin
+    hot_stage: 4
+    task_run_time_ms: 2000     # 8 tasks x 2s = 16s > guard de 5s
+    gc_ratio: 0.25             # 25% em GC -> critical (>= 0.20)
+
+oracle:
+  enabled: true
+  cadence: weekly
+  tolerance: { skew_ratio: 0.40, records: 0.30 }
+  on_divergence: warn
+
+acceptance:
+  expected_detector: gc
+  min_severity: critical
+  title_includes: ["GC"]

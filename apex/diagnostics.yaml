@@ -1,0 +1,18 @@
+# Thresholds versionados dos detectores Apex (portado do spike/apex-v0.1, ISSUE-A07).
+# Guards de falso positivo aplicam ANTES de qualquer regra de ratio — runs
+# pequenos e saudaveis (baseline) nunca produzem finding critical.
+
+gc:
+  warning_ratio: 0.10             # >=10% do tempo somado de tasks em GC
+  critical_ratio: 0.20
+  min_stage_duration_ms: 5000     # guard: soma de duracao das tasks do stage
+
+shuffle:
+  warning_shuffle_bytes: 268435456    # 256 MiB
+  critical_shuffle_bytes: 1073741824  # 1 GiB
+  min_shuffle_bytes: 16777216         # 16 MiB guard antes de qualquer regra
+
+plans:
+  info_replan_count: 3
+
+oom: {}                           # sem threshold: qualquer OOM/executor perdido e critical
