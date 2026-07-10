@@ -147,10 +147,8 @@ func buildFallbackDiagnosis(appID string, jobData *models.JobQueryResult) map[st
 	diagnosisParts := []string{}
 	rootCause := []string{}
 	recommendations := []string{}
-	severity := "low"
 
 	if len(anomalies) > 0 {
-		severity = "high"
 		for _, a := range anomalies {
 			diagnosisParts = append(diagnosisParts, a["detail"].(string))
 			rootCause = append(rootCause, a["type"].(string))

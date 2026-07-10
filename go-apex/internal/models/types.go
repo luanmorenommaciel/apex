@@ -400,39 +400,6 @@ type HottestReduceStageDetails struct {
 	CorrelationMethod string                   `json:"correlation_method"`
 }
 
-// ReviewResult represents the result of a recommendation review.
-type ReviewResult struct {
-	Passed     bool     `json:"passed"`
-	Issues     []string `json:"issues"`
-	Confidence float64  `json:"confidence"`
-	Severity   string   `json:"severity"`
-}
-
-// AnalysisResult represents the final result of a CREI analysis.
-type AnalysisResult struct {
-	AppID           string                   `json:"app_id"`
-	Status          string                   `json:"status"` // HEALTHY, NEEDS_ATTENTION, ACTIONABLE
-	Anomalies       []AnomalyReport          `json:"anomalies"`
-	Recommendations []Recommendation         `json:"recommendations"`
-	Reviews         []map[string]interface{} `json:"reviews"`
-	Message         string                   `json:"message,omitempty"`
-}
-
-// JobQueryResult represents the result of querying a job from ClickHouse.
-type JobQueryResult struct {
-	AppID          string                   `json:"app_id"`
-	Found          bool                     `json:"found"`
-	Events         []map[string]interface{} `json:"eventos"`
-	Stages         []map[string]interface{} `json:"stages"`
-	Tasks          []map[string]interface{} `json:"tasks"`
-	MetricsSummary []map[string]interface{} `json:"metrics_summary"`
-	TotalEvents    int                      `json:"total_events"`
-	Anomalies      []map[string]interface{} `json:"anomalies"`
-	ErrorEvents    string                   `json:"error_events,omitempty"`
-	ErrorStages    string                   `json:"error_stages,omitempty"`
-	ErrorTasks     string                   `json:"error_tasks,omitempty"`
-	ErrorMetrics   string                   `json:"error_metrics,omitempty"`
-}
 
 // Anomaly represents a detected anomaly for MCP tools.
 type Anomaly struct {

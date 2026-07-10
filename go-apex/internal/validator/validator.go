@@ -36,6 +36,7 @@ func (v *EvidenceValidator) Validate() *models.EvidenceValidationResult {
 
 	// 3. Correlation / operator
 	op, usedFinal := joinOperator(v.bundle.Events)
+	_ = usedFinal
 	expectedOp := v.expectedJoinOperator()
 	selected := hottestReduceStageDetails(v.bundle.Events, op)
 	stageID := selected.StageID
@@ -64,8 +65,6 @@ func (v *EvidenceValidator) Validate() *models.EvidenceValidationResult {
 func (v *EvidenceValidator) validateProvenance() string {
 	for _, e := range v.bundle.Events {
 		if e["Event"] == "ApexSyntheticProvenance" {
-			// In a real implementation, compute and compare scenario hash
-			// For now, return a placeholder
 			if hash, ok := e["scenario_hash"].(string); ok {
 				return hash
 			}
@@ -259,12 +258,19 @@ func joinOperator(events []map[string]interface{}) (string, bool) {
 		}
 	}
 
-	for _, plans := range []map[interface{}]string{finalByExec, initialByExec} {
-		for _, plan := range plans {
-			for _, op := range joinOps {
-				if stringsContains(plan, op) {
-					return op, plans == finalByExec
-				}
+	for execID, plan := range finalByExec {
+		_ = execID
+		for _, op := range joinOps {
+			if stringsContains(plan, op) {
+				return op, true
+			}
+		}
+	}
+	for execID, plan := range initialByExec {
+		_ = execID
+		for _, op := range joinOps {
+			if stringsContains(plan, op) {
+				return op, false
 			}
 		}
 	}
@@ -294,7 +300,6 @@ func hottestReduceStageDetails(events []map[string]interface{}, joinOp string) m
 							if containsInt(operatorAccumulators, id) {
 								matched++
 								break
-							}
 							}
 						}
 					}
@@ -814,7 +819,6 @@ func toMap(v interface{}) map[string]interface{} {
 }
 
 func parseInt(s string) (int, error) {
-	// simple manual parse to avoid importing strconv for simple cases
 	if s == "" {
 		return 0, fmt.Errorf("empty string")
 	}

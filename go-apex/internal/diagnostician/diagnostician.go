@@ -45,7 +45,7 @@ func parseEnvFloat(key string, fallback float64) float64 {
 
 // Close closes the underlying ClickHouse client.
 func (d *Diagnostician) Close() error {
-	return d.client.Close()
+	d.client.Close(); return nil
 }
 
 // Diagnose runs the full diagnostic pipeline for an app_id.

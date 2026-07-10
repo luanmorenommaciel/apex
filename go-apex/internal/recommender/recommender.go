@@ -345,10 +345,8 @@ func (r *Recommender) buildFallbackDiagnosis(appID string, jobData map[string]in
 		CodeFix:    "",
 		Validation: "",
 	}
-	severity := "low"
 
 	if len(anomalies) > 0 {
-		severity = "high"
 		for _, a := range anomalies {
 			if anomalyMap, ok := a.(map[string]interface{}); ok {
 				detail, _ := anomalyMap["detail"].(string)
