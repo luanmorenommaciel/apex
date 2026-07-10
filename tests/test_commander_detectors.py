@@ -1,4 +1,5 @@
 from apex.commander.findings import build_finding
+from apex.commander.telemetry import build_telemetry
 
 
 def test_build_finding_keeps_legacy_title_and_new_kind():
@@ -16,3 +17,52 @@ def test_build_finding_keeps_legacy_title_and_new_kind():
     assert finding["title"] == "shuffle_spill_candidate"
     assert finding["job_id"] == "job-42"
     assert finding["evidence"]["stage_id"] == 3
+
+
+def task_end(
+    stage,
+    partition,
+    records,
+    *,
+    disk_spill=0,
+    memory_spill=0,
+    gc_time=0,
+    duration=1000,
+    reason="Success",
+):
+    return {
+        "Event": "SparkListenerTaskEnd",
+        "App ID": "app-detectors",
+        "Stage ID": stage,
+        "Task End Reason": {"Reason": reason},
+        "Task Info": {
+            "Task ID": partition,
+            "Index": partition,
+            "Duration": duration,
+        },
+        "Task Metrics": {
+            "Executor Run Time": duration,
+            "JVM GC Time": gc_time,
+            "Disk Bytes Spilled": disk_spill,
+            "Memory Bytes Spilled": memory_spill,
+            "Shuffle Read Metrics": {
+                "Total Records Read": records,
+            },
+        },
+    }
+
+
+def test_build_telemetry_captures_extended_stage_metrics():
+    envelope = build_telemetry(
+        [
+            task_end(3, 0, 1000, disk_spill=2048, memory_spill=1024, gc_time=200, duration=1000),
+            task_end(3, 1, 1000, disk_spill=0, memory_spill=0, gc_time=100, duration=1000),
+        ],
+        job_id="job-42",
+    )
+
+    stage = envelope["stages"][0]
+    assert stage["disk_bytes_spilled"] == 2048
+    assert stage["memory_bytes_spilled"] == 1024
+    assert stage["jvm_gc_time_ms"] == 300
+    assert stage["executor_run_time_ms"] == 2000

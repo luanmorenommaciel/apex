@@ -42,22 +42,63 @@ def build_telemetry(events, job_id=None):
 def stage_summaries(events):
     """Summarize effective shuffle-read records by stage."""
     summaries = []
+    extra_by_stage = _task_metric_by_stage(events)
     for stage_id, records in sorted(apexlib.shuffle_read_by_stage(events).items()):
         metrics = apexlib.skew_metrics(records)
-        summaries.append(
-            {
-                "stage_id": stage_id,
-                "task_count": metrics["n_tasks"],
-                "records": records,
-                "total_records": sum(records),
-                "max_records": metrics["hot"],
-                "median_cold_records": metrics["median_cold"],
-                "ratio": metrics["ratio"],
-                "evidence_status": metrics["evidence_status"],
-                "quality_issues": metrics["quality_issues"],
-            }
+        summary = {
+            "stage_id": stage_id,
+            "task_count": metrics["n_tasks"],
+            "records": records,
+            "total_records": sum(records),
+            "max_records": metrics["hot"],
+            "median_cold_records": metrics["median_cold"],
+            "ratio": metrics["ratio"],
+            "evidence_status": metrics["evidence_status"],
+            "quality_issues": metrics["quality_issues"],
+        }
+        summary.update(
+            extra_by_stage.get(
+                stage_id,
+                {
+                    "disk_bytes_spilled": 0,
+                    "memory_bytes_spilled": 0,
+                    "jvm_gc_time_ms": 0,
+                    "executor_run_time_ms": 0,
+                    "failure_reasons": [],
+                },
+            )
         )
+        summaries.append(summary)
     return summaries
+
+
+def _task_metric_by_stage(events):
+    by_stage = {}
+    for event in events:
+        if event.get("Event") != "SparkListenerTaskEnd":
+            continue
+        stage_id = event.get("Stage ID")
+        if stage_id is None:
+            continue
+        metrics = event.get("Task Metrics") or {}
+        stage = by_stage.setdefault(
+            stage_id,
+            {
+                "disk_bytes_spilled": 0,
+                "memory_bytes_spilled": 0,
+                "jvm_gc_time_ms": 0,
+                "executor_run_time_ms": 0,
+                "failure_reasons": [],
+            },
+        )
+        stage["disk_bytes_spilled"] += int(metrics.get("Disk Bytes Spilled") or 0)
+        stage["memory_bytes_spilled"] += int(metrics.get("Memory Bytes Spilled") or 0)
+        stage["jvm_gc_time_ms"] += int(metrics.get("JVM GC Time") or 0)
+        stage["executor_run_time_ms"] += int(metrics.get("Executor Run Time") or 0)
+        reason = (event.get("Task End Reason") or {}).get("Reason")
+        if reason and reason != "Success":
+            stage["failure_reasons"].append(reason)
+    return by_stage
 
 
 def _candidate_from_stage(stage):
