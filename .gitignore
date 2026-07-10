@@ -2,3 +2,7 @@ __pycache__/
 **/__pycache__/
 
 apex-kimi-product-v0.1/
+
+# artefatos de gate baixados localmente
+g3_real_log.ndjson
+*.apex_backup_*
