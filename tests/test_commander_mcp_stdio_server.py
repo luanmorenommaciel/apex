@@ -56,6 +56,7 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
         "preview_recommendation",
         "apply_recommendation",
         "verify_recommendation_apply",
+        "compare_job_telemetry",
         "preview_fix",
     ]
     assert tools[0]["inputSchema"]["required"] == ["job_id"]
@@ -100,6 +101,21 @@ def telemetry_envelope(job_id="job-42"):
             }
         ],
     }
+
+
+def healthy_telemetry_envelope(job_id="job-healthy"):
+    envelope = telemetry_envelope(job_id)
+    envelope["stages"][0].update(
+        {
+            "records": [1000, 1000, 1000, 1000],
+            "total_records": 4000,
+            "max_records": 1000,
+            "median_cold_records": 1000,
+            "ratio": 1.0,
+        }
+    )
+    envelope["skew_candidates"] = []
+    return envelope
 
 
 def persisted_skew_record():
@@ -270,6 +286,31 @@ def test_tools_call_can_apply_recommendation_with_matching_token(tmp_path):
     assert payload["status"] == "applied"
     assert payload["verification"]["status"] == "verified"
     assert source.read_text(encoding="utf-8") == replacement
+
+
+def test_tools_call_can_compare_job_telemetry(tmp_path):
+    store = tmp_path / "store.ndjson"
+    append_envelope(store, telemetry_envelope("before-job"))
+    append_envelope(store, healthy_telemetry_envelope("after-job"))
+    response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "method": "tools/call",
+            "params": {
+                "name": "compare_job_telemetry",
+                "arguments": {
+                    "before_job_id": "before-job",
+                    "after_job_id": "after-job",
+                },
+            },
+        },
+        CommanderToolContract(store),
+    )
+
+    payload = json.loads(response["result"]["content"][0]["text"])
+    assert payload["status"] == "improved"
+    assert payload["summary"]["resolved_findings"] == ["shuffle_skew_candidate"]
 
 
 def test_initialized_notification_returns_no_response(tmp_path):

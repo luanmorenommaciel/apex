@@ -7,6 +7,7 @@ from apex.commander.clickhouse_adapter import ClickHouseTelemetryStore
 from apex.commander.clickhouse_http_client import ClickHouseHttpClient
 from apex.commander.diagnostic_mvp import diagnose_findings
 from apex.commander.mcp_contract import explain_evidence
+from apex.commander.telemetry_compare import compare_job_telemetry
 
 
 def real_clickhouse_config():
@@ -57,6 +58,21 @@ def skew_envelope(job_id):
     }
 
 
+def healthy_envelope(job_id):
+    envelope = skew_envelope(job_id)
+    envelope["stages"][0].update(
+        {
+            "records": [1000, 1000, 1000, 1000],
+            "total_records": 4000,
+            "max_records": 1000,
+            "median_cold_records": 1000,
+            "ratio": 1.0,
+        }
+    )
+    envelope["skew_candidates"] = []
+    return envelope
+
+
 def test_real_clickhouse_roundtrip_and_diagnosis():
     config = real_clickhouse_config()
     client = ClickHouseHttpClient(
@@ -67,14 +83,17 @@ def test_real_clickhouse_roundtrip_and_diagnosis():
     table = f"commander_gate7_{uuid.uuid4().hex}"
     store = ClickHouseTelemetryStore(client, table=table)
     job_id = f"gate7-real-{uuid.uuid4().hex}"
+    after_job_id = f"gate12-real-after-{uuid.uuid4().hex}"
 
     try:
         client.command(f"DROP TABLE IF EXISTS {table}")
         store.ensure_schema()
         store.append_envelope(skew_envelope(job_id))
+        store.append_envelope(healthy_envelope(after_job_id))
 
         assert store.query_by_job_id(job_id)[0]["job_id"] == job_id
         assert diagnose_findings(store, job_id)[0]["kind"] == "shuffle_skew_candidate"
         assert explain_evidence(store, job_id)["status"] == "found"
+        assert compare_job_telemetry(store, job_id, after_job_id)["status"] == "improved"
     finally:
         client.command(f"DROP TABLE IF EXISTS {table}")

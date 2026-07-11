@@ -17,6 +17,7 @@ from apex.commander.recommendations import (
     preview_recommendation,
     recommend_fix,
 )
+from apex.commander.telemetry_compare import compare_job_telemetry
 
 TOOL_SPECS = [
     {
@@ -120,6 +121,19 @@ TOOL_SPECS = [
         },
     },
     {
+        "name": "compare_job_telemetry",
+        "description": "Compare before/after Commander telemetry for two job ids.",
+        "safety": "read_only",
+        "input_schema": {
+            "type": "object",
+            "required": ["before_job_id", "after_job_id"],
+            "properties": {
+                "before_job_id": {"type": "string"},
+                "after_job_id": {"type": "string"},
+            },
+        },
+    },
+    {
         "name": "preview_fix",
         "description": "Return a unified diff preview without modifying the target file.",
         "safety": "read_only",
@@ -184,6 +198,12 @@ class CommanderToolContract:
                 _required(args, "path"),
                 _required(args, "expected_sha256"),
                 apply_root=self.apply_root,
+            )
+        if name == "compare_job_telemetry":
+            return compare_job_telemetry(
+                self.store,
+                _required(args, "before_job_id"),
+                _required(args, "after_job_id"),
             )
         if name == "preview_fix":
             return build_fix_preview(

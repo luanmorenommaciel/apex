@@ -249,6 +249,14 @@ Gate 11 is complete locally for guarded apply/verify:
 - MCP marks `apply_recommendation` as non-read-only guarded mutation;
 - `apply_fix` remains absent and rejected.
 
+Gate 12 is complete locally for before/after telemetry comparison:
+
+- `compare_job_telemetry(before_job_id, after_job_id)` compares telemetry already collected in NDJSON or ClickHouse stores;
+- comparison covers finding count, resolved/new finding kinds, skew ratio, spill bytes, GC ratio, OOM failures, and AQE updates;
+- result status is `improved`, `regressed`, `unchanged`, `mixed`, or `not_comparable`;
+- MCP exposes the tool as read-only;
+- real ClickHouse integration validates before/after comparison when a local service is configured.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -374,13 +382,14 @@ Required tools:
 | `preview_recommendation(job_id, recommendation_id, path, replacement)` | read-only diff |
 | `apply_recommendation(job_id, recommendation_id, path, replacement, approval_token)` | guarded mutation |
 | `verify_recommendation_apply(path, expected_sha256)` | read-only |
+| `compare_job_telemetry(before_job_id, after_job_id)` | read-only |
 | `preview_fix(path, recommendation, replacement)` | read-only diff |
 
 Current Codex evidence:
 
 ```text
-tests/test_commander_tool_contract.py: 14 passed
-focused tool contract validation: 20 passed
+tests/test_commander_tool_contract.py: 15 passed
+focused tool contract validation: 21 passed
 ```
 
 Remaining gap:
@@ -403,8 +412,8 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_mcp_stdio_server.py: 10 passed
-focused MCP stdio validation: 27 passed
+tests/test_commander_mcp_stdio_server.py: 11 passed
+focused MCP stdio validation: 29 passed
 ```
 
 Remaining gap:
@@ -466,7 +475,7 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 29 passed
+tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 31 passed
 ```
 
 Remaining gap:
@@ -489,7 +498,7 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 34 passed
+tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 36 passed
 ```
 
 Remaining gap:
@@ -512,16 +521,39 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_apply_verify.py + tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_fix_preview.py: 36 passed
+tests/test_commander_apply_verify.py + tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_fix_preview.py: 38 passed
 ```
 
 Remaining gap:
 
 ```text
-No automatic Spark re-run or before/after telemetry comparison yet.
+No automatic Spark re-run yet; telemetry comparison is covered by Gate 12.
 ```
 
 ### Gate 12: Re-Run/Compare Closed Loop
+
+Required:
+
+- compare a before `job_id` against an after `job_id`;
+- support NDJSON and ClickHouse telemetry stores;
+- expose metric-level deltas;
+- classify outcome as improved/regressed/unchanged/mixed/not_comparable;
+- expose the comparison through MCP as read-only.
+
+Current Codex evidence:
+
+```text
+tests/test_commander_telemetry_compare.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_adapter.py: 35 passed
+real local ClickHouse integration: comparison covered when opt-in env is set
+```
+
+Remaining gap:
+
+```text
+No automatic Spark job orchestration yet; after_job_id must already have telemetry collected.
+```
+
+### Gate 13: Automatic Re-Run Orchestration
 
 Required:
 
@@ -581,10 +613,11 @@ No remote publication happens without explicit user approval.
 | P1 | Done locally: expose persisted findings as a read-only MCP tool | Codex |
 | P1 | Done locally: add recommendation and preview loop over persisted findings | Codex + Cowork concept |
 | P1 | Done locally: add guarded apply/verify after approval token | Codex + Cowork concept |
+| P1 | Done locally: compare before/after telemetry after re-run | Codex |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
 | P1 | Validate MCP stdio against an external MCP client/SDK | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork raw `apply_fix` ideas to guarded apply token flow | Cowork |
-| P2 | Add re-run/compare telemetry after guarded apply | Codex |
+| P2 | Add automatic Spark re-run orchestration | Codex + Spike platform |
 | P2 | Add DataFlint parity table to every review | DataFlint official docs |
 
 ## Decision Template For Commander

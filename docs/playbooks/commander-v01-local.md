@@ -265,6 +265,7 @@ Tools expostas:
 | `preview_recommendation` | `read_only` | gera diff para uma recomendacao selecionada sem alterar arquivo |
 | `apply_recommendation` | `guarded_mutation` | aplica a recomendacao somente com token de aprovacao e `apply_root` |
 | `verify_recommendation_apply` | `read_only` | verifica o hash final apos apply guardado |
+| `compare_job_telemetry` | `read_only` | compara telemetria antes/depois por `job_id` |
 | `preview_fix` | `read_only` | retorna diff unificado sem alterar o arquivo |
 
 Contrato de seguranca:
@@ -275,6 +276,7 @@ Contrato de seguranca:
 - `preview_recommendation` exige `recommendation_id` e preserva o arquivo original;
 - `apply_recommendation` exige `approval_token` gerado no preview e `apply_root` configurado;
 - `verify_recommendation_apply` compara hash esperado contra hash atual;
+- `compare_job_telemetry` le apenas telemetria ja coletada;
 - `preview_fix` usa `build_fix_preview` e preserva o arquivo original.
 
 Rodar:
@@ -287,7 +289,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-20 passed
+21 passed
 ```
 
 Limite consciente deste gate:
@@ -319,6 +321,7 @@ Tools continuam as mesmas do Gate 5:
 - `preview_recommendation`
 - `apply_recommendation`
 - `verify_recommendation_apply`
+- `compare_job_telemetry`
 - `preview_fix`
 
 Rodar:
@@ -331,7 +334,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-27 passed
+29 passed
 ```
 
 Limite consciente deste gate:
@@ -512,7 +515,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-29 passed
+31 passed
 ```
 
 Fluxo atual:
@@ -587,7 +590,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-34 passed
+36 passed
 ```
 
 Limite consciente deste gate:
@@ -637,12 +640,65 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-36 passed
+38 passed
 ```
 
 Limite consciente deste gate:
 
 - nao executa Spark re-run automaticamente;
-- nao compara telemetria antes/depois ainda;
+- comparacao de telemetria antes/depois entra a partir do Gate 12;
 - nao publica branch remota;
 - nao substitui revisao humana.
+
+## Gate 12: Re-run/compare telemetry
+
+O Gate 12 fecha o loop de evidencia: depois de uma mudanca guardada, o usuario pode informar o `job_id` anterior e o `job_id` da reexecucao para comparar telemetria.
+
+Fluxo:
+
+```text
+before_job_id
+  -> telemetry store / ClickHouse
+  -> diagnose_findings
+after_job_id
+  -> telemetry store / ClickHouse
+  -> diagnose_findings
+compare_job_telemetry
+  -> improved | regressed | unchanged | mixed | not_comparable
+```
+
+Nova tool:
+
+| Tool | Seguranca | O que faz |
+| --- | --- | --- |
+| `compare_job_telemetry` | `read_only` | compara findings e metricas principais entre dois `job_id` |
+
+Metricas comparadas:
+
+- quantidade de findings;
+- tipos de findings resolvidos ou novos;
+- `max_skew_ratio`;
+- `total_spilled_bytes`;
+- `max_gc_ratio`;
+- `oom_failure_count`;
+- `adaptive_execution_updates`.
+
+Rodar suite padrao do gate:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_telemetry_compare.py tests/test_commander_tool_contract.py tests/test_commander_mcp_stdio_server.py tests/test_commander_clickhouse_adapter.py -q --basetemp .pytest-commander-gate12
+```
+
+Esperado:
+
+```text
+35 passed
+```
+
+Limite consciente deste gate:
+
+- nao dispara Spark automaticamente;
+- espera que a telemetria do job reexecutado ja tenha sido coletada;
+- nao aplica nova correcao automaticamente;
+- nao altera branches remotas.

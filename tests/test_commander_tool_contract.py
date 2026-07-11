@@ -25,6 +25,7 @@ def test_list_tools_exposes_only_read_only_commander_tools():
         "preview_recommendation",
         "apply_recommendation",
         "verify_recommendation_apply",
+        "compare_job_telemetry",
         "preview_fix",
     ]
     assert [tool["safety"] for tool in tools].count("guarded_mutation") == 1
@@ -79,6 +80,21 @@ def telemetry_envelope(job_id="job-42"):
             }
         ],
     }
+
+
+def healthy_telemetry_envelope(job_id="job-healthy"):
+    envelope = telemetry_envelope(job_id)
+    envelope["stages"][0].update(
+        {
+            "records": [1000, 1000, 1000, 1000],
+            "total_records": 4000,
+            "max_records": 1000,
+            "median_cold_records": 1000,
+            "ratio": 1.0,
+        }
+    )
+    envelope["skew_candidates"] = []
+    return envelope
 
 
 def persisted_skew_record():
@@ -264,6 +280,22 @@ def test_call_tool_verify_recommendation_apply_returns_hash_status(tmp_path):
     )
 
     assert result["status"] == "mismatch"
+
+
+def test_call_tool_compare_job_telemetry_returns_improved(tmp_path):
+    store = tmp_path / "store.ndjson"
+    append_envelope(store, telemetry_envelope("before-job"))
+    append_envelope(store, healthy_telemetry_envelope("after-job"))
+    contract = CommanderToolContract(store)
+
+    result = contract.call_tool(
+        "compare_job_telemetry",
+        {"before_job_id": "before-job", "after_job_id": "after-job"},
+    )
+
+    assert result["status"] == "improved"
+    assert result["before"]["finding_count"] == 1
+    assert result["after"]["finding_count"] == 0
 
 
 def test_call_tool_query_persisted_findings_without_store_is_not_configured(tmp_path):

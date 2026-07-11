@@ -58,7 +58,7 @@ It is not a secret. It is a proof that the caller is applying exactly the previe
 
 ## Next Gate
 
-Gate 12 should compare execution evidence:
+Gate 12 compares execution evidence:
 
 ```text
 before finding -> guarded apply -> re-run job -> collect telemetry -> compare finding status
