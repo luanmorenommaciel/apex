@@ -1,0 +1,34 @@
+{
+  "manifest_version": "1.0",
+  "generated": "2026-07-10",
+  "project": "apex-v1",
+  "spec": "docs/specs/apex-v1-spec-reproducivel.md",
+  "master_doc": "docs/specs/apex-v1-pacote-completo.md",
+  "files": [
+    {"path": "docs/specs/apex-v1-spec-reproducivel.md", "role": "spec", "mutable": false, "consumer": ["engine", "judge"]},
+    {"path": "docs/specs/telemetry-schema-contract-v1.md", "role": "contract", "mutable": false, "consumer": ["engine", "judge"]},
+    {"path": "docs/specs/apex_telemetry_v1.sql", "role": "contract-ddl", "mutable": false, "consumer": ["engine", "harness"]},
+    {"path": "scenarios/skew_on_join_30x.yaml", "role": "test-case", "mutable": false, "class": "data_skew_on_join_key"},
+    {"path": "scenarios/no_skew_baseline.yaml", "role": "test-case", "mutable": false, "class": "none"},
+    {"path": "scenarios/gc_pressure_25pct.yaml", "role": "test-case", "mutable": false, "class": "gc_pressure"},
+    {"path": "scenarios/shuffle_spill_disk.yaml", "role": "test-case", "mutable": false, "class": "shuffle_spill"},
+    {"path": "scenarios/oom_on_aggregation.yaml", "role": "test-case", "mutable": false, "class": "oom_task_failure"},
+    {"path": "scenarios/cartesian_product.yaml", "role": "test-case", "mutable": false, "class": "cartesian_product"},
+    {"path": "docs/playbooks/protocolo-rodada2-llms.md", "role": "process", "mutable": false, "consumer": ["engine"]},
+    {"path": "docs/architecture/llm-solution-validation-framework-2026-07-09.md", "role": "criteria", "mutable": false, "consumer": ["judge"]},
+    {"path": "docs/playbooks/orquestrador-juiz-llm.md", "role": "judge-playbook", "mutable": false, "consumer": ["judge"]},
+    {"path": "docs/adr/ADR-006-composicao-v1.md", "role": "decision-proposed", "mutable": true, "consumer": ["judge", "commander"]},
+    {"path": "docs/architecture/roadmap-v01-v1-visao.md", "role": "roadmap", "mutable": true, "consumer": ["judge", "commander"]}
+  ],
+  "deliverables_per_engine": ["PLANO.md", "ISSUES.md", "evidence/g0-testes.log", "evidence/g1-baseline.log", "evidence/g2-cenarios.log", "evidence/g3-real.log", "evidence/g4-t1.log", "evidence/g5-ciclo.log", "docs/adr/", "docs/meetings/", "docs/autoavaliacao.md"],
+  "gates": [
+    {"id": "G0", "cmd": "python -m pytest tests/ -q", "expect": "exit 0"},
+    {"id": "G1", "cmd": "python generators/plan_generator.py scenarios/no_skew_baseline.yaml log.ndjson && python watchers/skew_watcher.py scenarios/no_skew_baseline.yaml log.ndjson && python watchers/pattern_watcher.py scenarios/no_skew_baseline.yaml log.ndjson", "expect": "exit 0 + 'Baseline limpo'"},
+    {"id": "G2", "cmd": "loop scenarios world-A: code_generator + plan_generator + watcher por classe", "expect": "GATE VERDE nas 5 classes + baseline"},
+    {"id": "G3", "cmd": "python scripts/g3_multicore_gate.py --from-minio", "expect": "exit 0, ratio real dentro de 40% do sintetico, >=8 tasks"},
+    {"id": "G4", "cmd": "python v1-skeleton/analysis/t1_triage.py --app-id <app>", "expect": "finding correto <1s sem chamada LLM"},
+    {"id": "G5", "cmd": "python scripts/apply_fix_cli.py --app-id <app> --file <job.py> + resubmit + re-diagnose", "expect": "job corrigido re-executado com 0 findings"}
+  ],
+  "reference_numbers": {"skew_synthetic": "27.9x", "skew_real": "29.4x", "t1_latency_ms": 333, "t1_tokens": 0, "fix_shuffle_delta": "1.16MB->0"},
+  "environment": {"spark": "4.1.2", "minio": "localhost:29000", "clickhouse": "localhost:28123", "clickhouse_user": "spv0", "warning": "ClickHouse precisa de named volume (NTFS quebra MergeTree); Windows: PYTHONUTF8=1"}
+}
