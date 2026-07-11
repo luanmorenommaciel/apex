@@ -27,10 +27,10 @@ import clickhouse_connect
 # ── Config ─────────────────────────────────────────────────────────────────────
 
 CH_HOST      = os.getenv("APEX_CH_HOST",     "localhost")
-CH_PORT      = int(os.getenv("APEX_CH_PORT", "8123"))
+CH_PORT      = int(os.getenv("APEX_CH_PORT", "28123"))
 CH_USER      = os.getenv("APEX_CH_USER",     "spv0")
 CH_PASSWORD  = os.getenv("APEX_CH_PASSWORD", "spv0clickhouse123")
-SPARK_LOGS   = os.getenv("SPARK_LOGS_DIR",   "/spark-logs")
+SPARK_LOGS   = os.getenv("SPARK_LOGS_DIR",   "spark-logs-local")
 
 
 # ── Event log reader ────────────────────────────────────────────────────────────

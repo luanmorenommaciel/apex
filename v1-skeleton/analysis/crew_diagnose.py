@@ -36,9 +36,9 @@ logger = logging.getLogger("apex.crew")
 # ── Config ───────────────────────────────────────────────────────────────────
 
 CH_HOST     = os.getenv("APEX_CH_HOST", "localhost")
-CH_PORT     = int(os.getenv("APEX_CH_PORT", "8123"))
-CH_USER     = os.getenv("APEX_CH_USER", "apex")
-CH_PASSWORD = os.getenv("APEX_CH_PASSWORD", "apex123")
+CH_PORT     = int(os.getenv("APEX_CH_PORT", "28123"))
+CH_USER     = os.getenv("APEX_CH_USER", "spv0")
+CH_PASSWORD = os.getenv("APEX_CH_PASSWORD", "spv0clickhouse123")
 
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
 DEFAULT_MODEL = os.getenv("APEX_LLM_MODEL", "claude-sonnet-4-6")

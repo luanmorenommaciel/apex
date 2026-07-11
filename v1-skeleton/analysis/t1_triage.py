@@ -29,9 +29,9 @@ sys.path.insert(0, str(ROOT))
 DIAGNOSTICS = ROOT / "apex" / "diagnostics.yaml"
 
 CH_HOST = os.getenv("APEX_CH_HOST", "localhost")
-CH_PORT = int(os.getenv("APEX_CH_PORT", "8123"))
-CH_USER = os.getenv("APEX_CH_USER", "apex")
-CH_PASSWORD = os.getenv("APEX_CH_PASSWORD", "apex123")
+CH_PORT = int(os.getenv("APEX_CH_PORT", "28123"))
+CH_USER = os.getenv("APEX_CH_USER", "spv0")
+CH_PASSWORD = os.getenv("APEX_CH_PASSWORD", "spv0clickhouse123")
 
 # confianca deterministica por severidade — >= 0.6 dispensa o LLM
 CONFIDENCE = {"critical": 0.9, "high": 0.8, "warning": 0.7}

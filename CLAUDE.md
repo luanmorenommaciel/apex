@@ -56,7 +56,7 @@ Tier 1 implementado (v3). V1 (Mundo B) em construção.
 ### O que ainda não foi validado
 - ~~Distribuição real de 8 tasks~~ ✅ 09/07 — run `app-20260710021939-0000` (8 cores): ratio real 29.4x vs sintético 27.9x, G3 verde
 - ~~Cenário único~~ ✅ 09/07 — 6 cenários world A no gate (skew + baseline + gc/spill/oom/cartesian)
-- Demo MCP end-to-end executada com plat-v0 (G5) e oráculo semanal com secrets (G6)
+- ~~Demo MCP end-to-end (G5)~~ ✅ 10/07 — ciclo detectar(29.2x)→apply_fix→job corrigido limpo (0 findings), com dado real. Falta: oráculo semanal com secrets (G6) e registro do MCP no IDE
 
 ---
 
