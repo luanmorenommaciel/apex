@@ -4,6 +4,14 @@ from apex.commander.clickstack_mvp import append_envelope
 from apex.commander.tool_contract import CommanderToolContract, list_tools
 
 
+class FakeFindingStore:
+    def __init__(self, records):
+        self.records = records
+
+    def query_by_job_id(self, job_id):
+        return self.records.get(job_id, [])
+
+
 def test_list_tools_exposes_only_read_only_commander_tools():
     tools = list_tools()
     tool_names = [tool["name"] for tool in tools]
@@ -12,6 +20,7 @@ def test_list_tools_exposes_only_read_only_commander_tools():
         "debug_job",
         "explain_evidence",
         "evaluate_negative_baseline",
+        "query_persisted_findings",
         "preview_fix",
     ]
     assert all(tool["safety"] == "read_only" for tool in tools)
@@ -94,6 +103,45 @@ def test_call_tool_evaluate_negative_baseline_returns_failed_for_skew(tmp_path):
 
     assert result["status"] == "failed"
     assert result["unexpected_findings"][0]["kind"] == "shuffle_skew_candidate"
+
+
+def test_call_tool_query_persisted_findings_returns_records(tmp_path):
+    finding_store = FakeFindingStore(
+        {
+            "job-42": [
+                {
+                    "finding": {
+                        "job_id": "job-42",
+                        "kind": "shuffle_skew_candidate",
+                    },
+                    "validation": {"status": "valid", "accepted": True},
+                }
+            ]
+        }
+    )
+    contract = CommanderToolContract(
+        tmp_path / "store.ndjson",
+        finding_store=finding_store,
+    )
+
+    result = contract.call_tool("query_persisted_findings", {"job_id": "job-42"})
+
+    assert result["status"] == "found"
+    assert result["count"] == 1
+    assert result["records"][0]["finding"]["kind"] == "shuffle_skew_candidate"
+
+
+def test_call_tool_query_persisted_findings_without_store_is_not_configured(tmp_path):
+    contract = CommanderToolContract(tmp_path / "store.ndjson")
+
+    result = contract.call_tool("query_persisted_findings", {"job_id": "job-42"})
+
+    assert result == {
+        "job_id": "job-42",
+        "status": "not_configured",
+        "count": 0,
+        "records": [],
+    }
 
 
 def test_call_tool_preview_fix_returns_diff_without_modifying_file(tmp_path):

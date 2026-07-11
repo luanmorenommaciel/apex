@@ -225,6 +225,14 @@ Gate 8 is complete locally for persisted validated findings:
 - persisted records include the original finding JSON and validation JSON;
 - opt-in real ClickHouse validation stores telemetry, computes findings, persists validated findings, queries by `job_id`, and drops temporary tables.
 
+Gate 9 is complete locally for read-only MCP access to persisted findings:
+
+- `query_persisted_findings(job_id)` returns validated findings already stored for one job;
+- `CommanderToolContract` accepts an optional `finding_store`;
+- `tools/list` exposes `query_persisted_findings` as read-only;
+- `tools/call` returns persisted records as MCP text JSON content;
+- contracts without a finding store return `not_configured` explicitly.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -421,10 +429,32 @@ real local ClickHouse findings integration: 1 passed
 Remaining gap:
 
 ```text
-Persisted findings are not yet exposed as a dedicated MCP tool.
+MCP exposure for persisted findings is covered by Gate 9.
 ```
 
-### Gate 9: Closed Loop
+### Gate 9: MCP Read-Only Persisted Findings
+
+Required:
+
+- `query_persisted_findings(job_id)` tool;
+- read-only MCP metadata;
+- response includes `job_id`, `status`, `count`, and persisted records;
+- no mutation when finding store is absent;
+- fake-client tests.
+
+Current Codex evidence:
+
+```text
+tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 20 passed
+```
+
+Remaining gap:
+
+```text
+No external MCP SDK/client interoperability test yet.
+```
+
+### Gate 10: Closed Loop
 
 Required:
 
@@ -481,10 +511,11 @@ No remote publication happens without explicit user approval.
 | P1 | Done locally: add MCP stdio local read-only server | Codex |
 | P1 | Done locally: validate ClickHouse HTTP roundtrip against real local service | Codex |
 | P1 | Done locally: persist validated findings in ClickHouse | Codex |
+| P1 | Done locally: expose persisted findings as a read-only MCP tool | Codex |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
 | P1 | Validate MCP stdio against an external MCP client/SDK | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork `apply_fix` to preview-first | Cowork |
-| P2 | Expose persisted findings as a read-only MCP tool | Codex |
+| P2 | Add recommendation tool over persisted findings without applying changes | Codex + Cowork concept |
 | P2 | Add DataFlint parity table to every review | DataFlint official docs |
 
 ## Decision Template For Commander

@@ -4,7 +4,11 @@ from copy import deepcopy
 
 from apex.commander.baselines import evaluate_negative_baseline
 from apex.commander.fix_preview import build_fix_preview
-from apex.commander.mcp_contract import debug_job, explain_evidence
+from apex.commander.mcp_contract import (
+    debug_job,
+    explain_evidence,
+    query_persisted_findings,
+)
 
 TOOL_SPECS = [
     {
@@ -38,6 +42,16 @@ TOOL_SPECS = [
         },
     },
     {
+        "name": "query_persisted_findings",
+        "description": "Return validated findings already persisted for one job_id.",
+        "safety": "read_only",
+        "input_schema": {
+            "type": "object",
+            "required": ["job_id"],
+            "properties": {"job_id": {"type": "string"}},
+        },
+    },
+    {
         "name": "preview_fix",
         "description": "Return a unified diff preview without modifying the target file.",
         "safety": "read_only",
@@ -59,8 +73,9 @@ def list_tools():
 
 
 class CommanderToolContract:
-    def __init__(self, store):
+    def __init__(self, store, *, finding_store=None):
         self.store = store
+        self.finding_store = finding_store
 
     def call_tool(self, name, arguments):
         args = arguments or {}
@@ -70,6 +85,11 @@ class CommanderToolContract:
             return explain_evidence(self.store, _required(args, "job_id"))
         if name == "evaluate_negative_baseline":
             return evaluate_negative_baseline(self.store, _required(args, "job_id"))
+        if name == "query_persisted_findings":
+            return query_persisted_findings(
+                self.finding_store,
+                _required(args, "job_id"),
+            )
         if name == "preview_fix":
             return build_fix_preview(
                 _required(args, "path"),

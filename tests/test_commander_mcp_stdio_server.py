@@ -6,6 +6,14 @@ from apex.commander.mcp_stdio_server import handle_jsonrpc_message, serve_stdio
 from apex.commander.tool_contract import CommanderToolContract
 
 
+class FakeFindingStore:
+    def __init__(self, records):
+        self.records = records
+
+    def query_by_job_id(self, job_id):
+        return self.records.get(job_id, [])
+
+
 def contract(tmp_path):
     return CommanderToolContract(tmp_path / "store.ndjson")
 
@@ -43,6 +51,7 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
         "debug_job",
         "explain_evidence",
         "evaluate_negative_baseline",
+        "query_persisted_findings",
         "preview_fix",
     ]
     assert tools[0]["inputSchema"]["required"] == ["job_id"]
@@ -105,6 +114,38 @@ def test_tools_call_returns_text_json_content(tmp_path):
     payload = json.loads(response["result"]["content"][0]["text"])
     assert payload["job_id"] == "job-42"
     assert payload["findings"][0]["kind"] == "shuffle_skew_candidate"
+
+
+def test_tools_call_can_query_persisted_findings(tmp_path):
+    finding_store = FakeFindingStore(
+        {
+            "job-42": [
+                {
+                    "finding": {
+                        "job_id": "job-42",
+                        "kind": "shuffle_skew_candidate",
+                    },
+                    "validation": {"status": "valid", "accepted": True},
+                }
+            ]
+        }
+    )
+    response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+                "name": "query_persisted_findings",
+                "arguments": {"job_id": "job-42"},
+            },
+        },
+        CommanderToolContract(tmp_path / "store.ndjson", finding_store=finding_store),
+    )
+
+    payload = json.loads(response["result"]["content"][0]["text"])
+    assert payload["status"] == "found"
+    assert payload["records"][0]["validation"]["accepted"] is True
 
 
 def test_initialized_notification_returns_no_response(tmp_path):

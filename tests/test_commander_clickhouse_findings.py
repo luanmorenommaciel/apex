@@ -3,6 +3,7 @@ from apex.commander.clickhouse_findings import (
     persist_validated_findings,
 )
 from apex.commander.findings import build_finding
+from apex.commander.tool_contract import CommanderToolContract
 
 
 class FakeQueryResult:
@@ -80,6 +81,19 @@ def test_persist_validated_findings_inserts_and_queries_by_job_id():
 
     assert persisted[0]["finding"]["kind"] == "shuffle_skew_candidate"
     assert persisted[0]["validation"]["status"] == "valid"
+
+
+def test_commander_tool_queries_clickhouse_finding_store():
+    client = FakeClickHouseClient()
+    finding_store = ClickHouseFindingStore(client)
+    persist_validated_findings(finding_store, [valid_finding()])
+    contract = CommanderToolContract("unused-telemetry-store", finding_store=finding_store)
+
+    result = contract.call_tool("query_persisted_findings", {"job_id": "job-42"})
+
+    assert result["status"] == "found"
+    assert result["count"] == 1
+    assert result["records"][0]["finding"]["kind"] == "shuffle_skew_candidate"
 
 
 def test_finding_store_rejects_unsafe_table_name():

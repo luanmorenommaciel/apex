@@ -50,3 +50,24 @@ def explain_evidence(store_path, job_id):
         "stages": latest.get("stages", []),
         "skew_candidates": latest.get("skew_candidates", []),
     }
+
+
+def query_persisted_findings(finding_store, job_id):
+    """Return findings that were already validated and persisted."""
+    if finding_store is None:
+        return {
+            "job_id": job_id,
+            "status": "not_configured",
+            "count": 0,
+            "records": [],
+        }
+    if not hasattr(finding_store, "query_by_job_id"):
+        raise ValueError("finding_store_not_queryable")
+
+    records = finding_store.query_by_job_id(job_id)
+    return {
+        "job_id": job_id,
+        "status": "found" if records else "not_found",
+        "count": len(records),
+        "records": records,
+    }

@@ -260,6 +260,7 @@ Tools expostas:
 | `debug_job` | `read_only` | retorna findings e validacoes para um `job_id` |
 | `explain_evidence` | `read_only` | retorna a evidencia de telemetria mais recente |
 | `evaluate_negative_baseline` | `read_only` | executa o gate de falso positivo para um `job_id` |
+| `query_persisted_findings` | `read_only` | retorna findings validados ja persistidos para um `job_id` |
 | `preview_fix` | `read_only` | retorna diff unificado sem alterar o arquivo |
 
 Contrato de seguranca:
@@ -278,7 +279,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-13 passed
+15 passed
 ```
 
 Limite consciente deste gate:
@@ -306,6 +307,7 @@ Tools continuam as mesmas do Gate 5:
 - `debug_job`
 - `explain_evidence`
 - `evaluate_negative_baseline`
+- `query_persisted_findings`
 - `preview_fix`
 
 Rodar:
@@ -318,7 +320,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-16 passed
+20 passed
 ```
 
 Limite consciente deste gate:
@@ -445,7 +447,77 @@ O teste real:
 
 Limite consciente deste gate:
 
-- findings ainda nao sao expostos como nova tool MCP dedicada;
+- findings passam a ser expostos no MCP dedicado a partir do Gate 9;
 - ainda nao ha `recommend_fix`;
 - ainda nao ha `apply_fix`;
+- nao altera branches remotas.
+
+## Gate 9: Findings persistidos expostos no MCP read-only
+
+O Gate 9 conecta a trilha auditavel do ClickHouse ao contrato MCP local.
+
+Nova tool:
+
+| Tool | Seguranca | O que faz |
+| --- | --- | --- |
+| `query_persisted_findings` | `read_only` | consulta findings ja validados e persistidos para um `job_id` |
+
+Contrato:
+
+```json
+{
+  "job_id": "job-42",
+  "status": "found",
+  "count": 1,
+  "records": [
+    {
+      "finding": {},
+      "validation": {}
+    }
+  ]
+}
+```
+
+Se o contrato MCP for iniciado sem um `finding_store`, a tool responde de forma explicita:
+
+```json
+{
+  "job_id": "job-42",
+  "status": "not_configured",
+  "count": 0,
+  "records": []
+}
+```
+
+Isso permite manter o servidor MCP local seguro em ambientes sem ClickHouse configurado, sem esconder a ausencia da camada persistida.
+
+Rodar suite padrao do gate:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_tool_contract.py tests/test_commander_mcp_stdio_server.py tests/test_commander_clickhouse_findings.py -q --basetemp .pytest-commander-gate9-mcp-findings
+```
+
+Esperado:
+
+```text
+19 passed
+```
+
+Fluxo atual:
+
+```text
+ClickHouseFindingStore
+  -> query_by_job_id
+  -> query_persisted_findings
+  -> CommanderToolContract
+  -> MCP tools/call
+```
+
+Limite consciente deste gate:
+
+- a tool le apenas findings ja persistidos;
+- nao dispara diagnostico novo;
+- nao recomenda correcao automaticamente;
+- nao aplica patch;
 - nao altera branches remotas.
