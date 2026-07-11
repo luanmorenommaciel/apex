@@ -4,6 +4,44 @@
 > engine pedir (docker/pytest/git) e cobra os entregáveis. Igual às sessões com
 > a cowork. Uma engine por vez.
 
+## Passo 0 — Governança: onde cada coisa vive (não poluir o Apex)
+
+| Material | Onde | Regra |
+|---|---|---|
+| Kit do campeonato (pacote-comum, playbooks, julgamentos, relatórios) | **repo pessoal** `gustocezar/apex-workspace`, branch `campeonato/round2` | NUNCA vai ao repo do time |
+| Trabalho round 2 das engines | branch `<llm>-round2` no **repo pessoal** (base: clone da branch existente delas) | push só para `origin` pessoal |
+| Repo do time (`luanmorenommaciel/apex`) | intocado durante o campeonato | só recebe algo com aprovação do Commander (resultado final → ADR-006 rev. + merge decidido) |
+
+Criação da branch do campeonato (1x — pasta própria, história limpa):
+```powershell
+mkdir C:\Users\Guest\projetos\apex-campeonato
+cd C:\Users\Guest\projetos\apex-campeonato
+git init -b campeonato/round2
+git remote add origin https://github.com/gustocezar/apex-workspace.git
+# copiar o kit a partir do Data Ship:
+$src = "C:\Users\Guest\Claude\Projects\Data Ship"
+mkdir pacote-comum\scenarios, playbooks, julgamento -Force
+copy "$src\docs\specs\apex-v1-spec-reproducivel.md"    pacote-comum\
+copy "$src\docs\specs\telemetry-schema-contract-v1.md" pacote-comum\
+copy "$src\docs\specs\apex_telemetry_v1.sql"           pacote-comum\
+copy "$src\docs\specs\criterios-e-gates.md"            pacote-comum\
+copy "$src\docs\specs\manifest-rodada2.json"           pacote-comum\
+copy "$src\docs\specs\apex-v1-pacote-completo.md"      pacote-comum\
+copy "$src\docs\playbooks\protocolo-rodada2-llms.md"   pacote-comum\
+copy "$src\docs\playbooks\g3-multicore-runbook.md"     pacote-comum\
+copy "$src\docs\CREW_A_OPERATING_STANDARD.md"           pacote-comum\
+copy "$src\scenarios\*.yaml"                            pacote-comum\scenarios\
+copy "$src\scripts\g3_multicore_gate.py"                pacote-comum\
+copy "$src\scripts\fetch_real_log.py"                   pacote-comum\
+copy "$src\docs\playbooks\operador-passo-a-passo.md"   playbooks\
+copy "$src\docs\playbooks\orquestrador-juiz-llm.md"    playbooks\
+"placeholder" | Out-File julgamento\.gitkeep
+git add -A
+git commit -m "campeonato round2: kit de orquestracao, pacote comum congelado e area de julgamento"
+git tag round2-freeze
+git push -u origin campeonato/round2 --tags
+```
+
 ## Passo 1 — Preparar a pasta da engine (1x por LLM)
 
 **Kimi** (exemplo — para Codex, use a pasta `apex-official` que já existe):
@@ -12,6 +50,10 @@ cd C:\Users\Guest\projetos
 git clone https://github.com/luanmorenommaciel/apex.git apex-kimi-round2
 cd apex-kimi-round2
 git checkout gustocezar/feature/kimi-desacoplamento-geradores
+git checkout -b kimi-round2
+# round 2 NAO polui o repo do time: push vai para o seu workspace pessoal
+git remote set-url origin https://github.com/gustocezar/apex-workspace.git
+git push -u origin kimi-round2
 ```
 
 ## Passo 2 — Copiar o pacote comum para dentro da pasta da engine
@@ -71,9 +113,11 @@ faça o push final e repita os passos 1–4 com a próxima engine.
 
 ## Passo 6 — Julgamento (depois de TODAS)
 
-Abra uma LLM que não competiu, dê acesso ao repo (todas as branches) + tag
-`round2-freeze`, e cole o prompt de ativação de
-`docs/playbooks/orquestrador-juiz-llm.md` §5. Você executa as re-execuções que
+Abra uma LLM que não competiu APONTADA PARA A PASTA `apex-campeonato`
+(branch `campeonato/round2`) — os relatórios dela nascem em `julgamento/` dessa
+branch, nunca no repo do time. Dê a ela acesso de leitura às branches das
+engines (clones locais) + tag `round2-freeze`, e cole o prompt de ativação de
+`playbooks/orquestrador-juiz-llm.md` §5. Você executa as re-execuções que
 ela pedir. Saída: `julgamento/relatorio-*.md` + scorecard consolidado → sync
 com o Luan → revisão do ADR-006.
 
