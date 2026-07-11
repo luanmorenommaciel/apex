@@ -48,7 +48,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Expected:
 
 ```text
-38 passed
+41 passed
 ```
 
 ## Acceptance

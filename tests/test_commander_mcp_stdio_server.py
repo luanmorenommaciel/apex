@@ -14,6 +14,30 @@ class FakeFindingStore:
         return self.records.get(job_id, [])
 
 
+class FakeRerunRunner:
+    def __init__(self, on_run=None):
+        self.calls = []
+        self.on_run = on_run
+
+    def run(self, command, cwd, timeout_seconds):
+        self.calls.append(
+            {
+                "command": command,
+                "cwd": str(cwd),
+                "timeout_seconds": timeout_seconds,
+            }
+        )
+        if self.on_run:
+            self.on_run()
+        return {
+            "status": "succeeded",
+            "exit_code": 0,
+            "timed_out": False,
+            "stdout": "ok",
+            "stderr": "",
+        }
+
+
 def contract(tmp_path):
     return CommanderToolContract(tmp_path / "store.ndjson")
 
@@ -57,6 +81,8 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
         "apply_recommendation",
         "verify_recommendation_apply",
         "compare_job_telemetry",
+        "plan_rerun",
+        "execute_rerun_and_compare",
         "preview_fix",
     ]
     assert tools[0]["inputSchema"]["required"] == ["job_id"]
@@ -64,6 +90,9 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
     apply_tool = next(tool for tool in tools if tool["name"] == "apply_recommendation")
     assert apply_tool["annotations"]["readOnlyHint"] is False
     assert apply_tool["annotations"]["destructiveHint"] is True
+    rerun_tool = next(tool for tool in tools if tool["name"] == "execute_rerun_and_compare")
+    assert rerun_tool["annotations"]["readOnlyHint"] is False
+    assert rerun_tool["annotations"]["destructiveHint"] is True
 
 
 def telemetry_envelope(job_id="job-42"):
@@ -311,6 +340,62 @@ def test_tools_call_can_compare_job_telemetry(tmp_path):
     payload = json.loads(response["result"]["content"][0]["text"])
     assert payload["status"] == "improved"
     assert payload["summary"]["resolved_findings"] == ["shuffle_skew_candidate"]
+
+
+def test_tools_call_can_plan_and_execute_rerun_with_fake_runner(tmp_path):
+    store = tmp_path / "store.ndjson"
+    append_envelope(store, telemetry_envelope("before-job"))
+
+    def collect_after_telemetry():
+        append_envelope(store, healthy_telemetry_envelope("after-job"))
+
+    runner = FakeRerunRunner(on_run=collect_after_telemetry)
+    contract = CommanderToolContract(
+        store,
+        rerun_root=tmp_path,
+        rerun_allowed_command_prefixes=[["spark-submit"]],
+        rerun_runner=runner,
+    )
+    plan_response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "tools/call",
+            "params": {
+                "name": "plan_rerun",
+                "arguments": {
+                    "before_job_id": "before-job",
+                    "after_job_id": "after-job",
+                    "command": ["spark-submit", "job.py"],
+                },
+            },
+        },
+        contract,
+    )
+    plan = json.loads(plan_response["result"]["content"][0]["text"])
+
+    execute_response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "tools/call",
+            "params": {
+                "name": "execute_rerun_and_compare",
+                "arguments": {
+                    "before_job_id": "before-job",
+                    "after_job_id": "after-job",
+                    "command": ["spark-submit", "job.py"],
+                    "approval_token": plan["approval"]["token"],
+                },
+            },
+        },
+        contract,
+    )
+
+    payload = json.loads(execute_response["result"]["content"][0]["text"])
+    assert payload["status"] == "rerun_completed"
+    assert payload["comparison"]["status"] == "improved"
+    assert runner.calls[0]["command"] == ["spark-submit", "job.py"]
 
 
 def test_initialized_notification_returns_no_response(tmp_path):

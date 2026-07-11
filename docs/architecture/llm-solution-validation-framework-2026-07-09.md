@@ -257,6 +257,14 @@ Gate 12 is complete locally for before/after telemetry comparison:
 - MCP exposes the tool as read-only;
 - real ClickHouse integration validates before/after comparison when a local service is configured.
 
+Gate 13 is complete locally for controlled re-run orchestration:
+
+- `plan_rerun(before_job_id, after_job_id, command)` validates `rerun_root`, command allowlist, `cwd`, and timeout;
+- `execute_rerun_and_compare(...)` requires the plan approval token before execution;
+- commands run as argument lists with `shell=False`;
+- the rerun runner is injectable for tests and can use `SubprocessRerunRunner` in configured local environments;
+- after a successful runner result, Commander calls `compare_job_telemetry`.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -383,13 +391,15 @@ Required tools:
 | `apply_recommendation(job_id, recommendation_id, path, replacement, approval_token)` | guarded mutation |
 | `verify_recommendation_apply(path, expected_sha256)` | read-only |
 | `compare_job_telemetry(before_job_id, after_job_id)` | read-only |
+| `plan_rerun(before_job_id, after_job_id, command)` | read-only |
+| `execute_rerun_and_compare(before_job_id, after_job_id, command, approval_token)` | guarded mutation |
 | `preview_fix(path, recommendation, replacement)` | read-only diff |
 
 Current Codex evidence:
 
 ```text
-tests/test_commander_tool_contract.py: 15 passed
-focused tool contract validation: 21 passed
+tests/test_commander_tool_contract.py: 17 passed
+focused tool contract validation: 23 passed
 ```
 
 Remaining gap:
@@ -412,8 +422,8 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_mcp_stdio_server.py: 11 passed
-focused MCP stdio validation: 29 passed
+tests/test_commander_mcp_stdio_server.py: 12 passed
+focused MCP stdio validation: 32 passed
 ```
 
 Remaining gap:
@@ -475,7 +485,7 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 31 passed
+tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 34 passed
 ```
 
 Remaining gap:
@@ -498,7 +508,7 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 36 passed
+tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 39 passed
 ```
 
 Remaining gap:
@@ -521,13 +531,13 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_apply_verify.py + tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_fix_preview.py: 38 passed
+tests/test_commander_apply_verify.py + tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_fix_preview.py: 41 passed
 ```
 
 Remaining gap:
 
 ```text
-No automatic Spark re-run yet; telemetry comparison is covered by Gate 12.
+Telemetry comparison is covered by Gate 12 and controlled rerun orchestration by Gate 13.
 ```
 
 ### Gate 12: Re-Run/Compare Closed Loop
@@ -543,31 +553,50 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_telemetry_compare.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_adapter.py: 35 passed
+tests/test_commander_telemetry_compare.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_adapter.py: 38 passed
 real local ClickHouse integration: comparison covered when opt-in env is set
 ```
 
 Remaining gap:
 
 ```text
-No automatic Spark job orchestration yet; after_job_id must already have telemetry collected.
+Controlled rerun orchestration is covered by Gate 13; no project-standard Spark job command exists yet.
 ```
 
 ### Gate 13: Automatic Re-Run Orchestration
 
 Required:
 
+- `plan_rerun` creates an approval-token-bound rerun plan;
+- no execution without configured `rerun_root`;
+- no execution outside `rerun_root`;
+- no execution outside the command allowlist;
+- no execution with mismatched approval token;
+- runner uses argument list and no shell;
+- successful rerun invokes `compare_job_telemetry`.
+
+Current Codex evidence:
+
 ```text
-Spark run
-  -> event log / listener
-  -> ClickHouse
-  -> deterministic detector
-  -> EvidenceValidator
-  -> optional agent reasoning
-  -> MCP
-  -> fix preview
-  -> explicit apply
-  -> re-run / compare
+tests/test_commander_rerun_orchestrator.py + tests/test_commander_telemetry_compare.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py: 40 passed
+```
+
+Remaining gap:
+
+```text
+No canonical Spark job command, telemetry polling loop, or production scheduler yet.
+```
+
+### Gate 14: Spark Job Template And Telemetry Polling
+
+Required:
+
+```text
+apply verified
+  -> plan_rerun
+  -> execute approved Spark command
+  -> poll ClickHouse for after_job_id telemetry
+  -> compare_job_telemetry
 ```
 
 ## Refinement Loop
@@ -614,10 +643,11 @@ No remote publication happens without explicit user approval.
 | P1 | Done locally: add recommendation and preview loop over persisted findings | Codex + Cowork concept |
 | P1 | Done locally: add guarded apply/verify after approval token | Codex + Cowork concept |
 | P1 | Done locally: compare before/after telemetry after re-run | Codex |
+| P1 | Done locally: add controlled re-run orchestration with command allowlist | Codex |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
 | P1 | Validate MCP stdio against an external MCP client/SDK | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork raw `apply_fix` ideas to guarded apply token flow | Cowork |
-| P2 | Add automatic Spark re-run orchestration | Codex + Spike platform |
+| P2 | Add canonical Spark job template and telemetry polling | Codex + Spike platform |
 | P2 | Add DataFlint parity table to every review | DataFlint official docs |
 
 ## Decision Template For Commander

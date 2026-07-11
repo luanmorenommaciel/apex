@@ -17,6 +17,11 @@ from apex.commander.recommendations import (
     preview_recommendation,
     recommend_fix,
 )
+from apex.commander.rerun_orchestrator import (
+    DEFAULT_TIMEOUT_SECONDS,
+    execute_rerun_and_compare,
+    plan_rerun,
+)
 from apex.commander.telemetry_compare import compare_job_telemetry
 
 TOOL_SPECS = [
@@ -134,6 +139,39 @@ TOOL_SPECS = [
         },
     },
     {
+        "name": "plan_rerun",
+        "description": "Create an approval-token-bound plan for an allowed rerun command.",
+        "safety": "read_only",
+        "input_schema": {
+            "type": "object",
+            "required": ["before_job_id", "after_job_id", "command"],
+            "properties": {
+                "before_job_id": {"type": "string"},
+                "after_job_id": {"type": "string"},
+                "command": {"type": "array", "items": {"type": "string"}},
+                "cwd": {"type": "string"},
+                "timeout_seconds": {"type": "integer"},
+            },
+        },
+    },
+    {
+        "name": "execute_rerun_and_compare",
+        "description": "Run an approved rerun command and compare before/after telemetry.",
+        "safety": "guarded_mutation",
+        "input_schema": {
+            "type": "object",
+            "required": ["before_job_id", "after_job_id", "command", "approval_token"],
+            "properties": {
+                "before_job_id": {"type": "string"},
+                "after_job_id": {"type": "string"},
+                "command": {"type": "array", "items": {"type": "string"}},
+                "approval_token": {"type": "string"},
+                "cwd": {"type": "string"},
+                "timeout_seconds": {"type": "integer"},
+            },
+        },
+    },
+    {
         "name": "preview_fix",
         "description": "Return a unified diff preview without modifying the target file.",
         "safety": "read_only",
@@ -155,10 +193,22 @@ def list_tools():
 
 
 class CommanderToolContract:
-    def __init__(self, store, *, finding_store=None, apply_root=None):
+    def __init__(
+        self,
+        store,
+        *,
+        finding_store=None,
+        apply_root=None,
+        rerun_root=None,
+        rerun_allowed_command_prefixes=None,
+        rerun_runner=None,
+    ):
         self.store = store
         self.finding_store = finding_store
         self.apply_root = apply_root
+        self.rerun_root = rerun_root
+        self.rerun_allowed_command_prefixes = rerun_allowed_command_prefixes
+        self.rerun_runner = rerun_runner
 
     def call_tool(self, name, arguments):
         args = arguments or {}
@@ -204,6 +254,29 @@ class CommanderToolContract:
                 self.store,
                 _required(args, "before_job_id"),
                 _required(args, "after_job_id"),
+            )
+        if name == "plan_rerun":
+            return plan_rerun(
+                _required(args, "before_job_id"),
+                _required(args, "after_job_id"),
+                _required(args, "command"),
+                cwd=args.get("cwd", "."),
+                timeout_seconds=args.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS),
+                rerun_root=self.rerun_root,
+                allowed_command_prefixes=self.rerun_allowed_command_prefixes,
+            )
+        if name == "execute_rerun_and_compare":
+            return execute_rerun_and_compare(
+                self.store,
+                _required(args, "before_job_id"),
+                _required(args, "after_job_id"),
+                _required(args, "command"),
+                _required(args, "approval_token"),
+                cwd=args.get("cwd", "."),
+                timeout_seconds=args.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS),
+                rerun_root=self.rerun_root,
+                allowed_command_prefixes=self.rerun_allowed_command_prefixes,
+                runner=self.rerun_runner,
             )
         if name == "preview_fix":
             return build_fix_preview(

@@ -266,6 +266,8 @@ Tools expostas:
 | `apply_recommendation` | `guarded_mutation` | aplica a recomendacao somente com token de aprovacao e `apply_root` |
 | `verify_recommendation_apply` | `read_only` | verifica o hash final apos apply guardado |
 | `compare_job_telemetry` | `read_only` | compara telemetria antes/depois por `job_id` |
+| `plan_rerun` | `read_only` | cria plano de reexecucao com token para comando permitido |
+| `execute_rerun_and_compare` | `guarded_mutation` | executa comando aprovado e chama `compare_job_telemetry` |
 | `preview_fix` | `read_only` | retorna diff unificado sem alterar o arquivo |
 
 Contrato de seguranca:
@@ -277,6 +279,8 @@ Contrato de seguranca:
 - `apply_recommendation` exige `approval_token` gerado no preview e `apply_root` configurado;
 - `verify_recommendation_apply` compara hash esperado contra hash atual;
 - `compare_job_telemetry` le apenas telemetria ja coletada;
+- `plan_rerun` exige `rerun_root` e allowlist de comando;
+- `execute_rerun_and_compare` exige token do plano e roda sem shell;
 - `preview_fix` usa `build_fix_preview` e preserva o arquivo original.
 
 Rodar:
@@ -289,7 +293,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-21 passed
+23 passed
 ```
 
 Limite consciente deste gate:
@@ -322,6 +326,8 @@ Tools continuam as mesmas do Gate 5:
 - `apply_recommendation`
 - `verify_recommendation_apply`
 - `compare_job_telemetry`
+- `plan_rerun`
+- `execute_rerun_and_compare`
 - `preview_fix`
 
 Rodar:
@@ -334,7 +340,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-29 passed
+32 passed
 ```
 
 Limite consciente deste gate:
@@ -515,7 +521,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-31 passed
+34 passed
 ```
 
 Fluxo atual:
@@ -590,7 +596,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-36 passed
+39 passed
 ```
 
 Limite consciente deste gate:
@@ -640,7 +646,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-38 passed
+41 passed
 ```
 
 Limite consciente deste gate:
@@ -693,7 +699,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-35 passed
+38 passed
 ```
 
 Limite consciente deste gate:
@@ -701,4 +707,55 @@ Limite consciente deste gate:
 - nao dispara Spark automaticamente;
 - espera que a telemetria do job reexecutado ja tenha sido coletada;
 - nao aplica nova correcao automaticamente;
+- nao altera branches remotas.
+
+## Gate 13: Automatic re-run orchestration
+
+O Gate 13 adiciona uma reexecucao controlada: o Commander cria um plano, exige token e allowlist, executa o comando sem shell e compara a telemetria antes/depois.
+
+Fluxo:
+
+```text
+plan_rerun(before_job_id, after_job_id, command)
+  -> approval.token
+execute_rerun_and_compare(..., approval_token)
+  -> runner.run(command)
+  -> compare_job_telemetry(before_job_id, after_job_id)
+```
+
+Novas tools:
+
+| Tool | Seguranca | O que faz |
+| --- | --- | --- |
+| `plan_rerun` | `read_only` | valida `rerun_root`, allowlist, `cwd`, timeout e gera token |
+| `execute_rerun_and_compare` | `guarded_mutation` | executa comando aprovado e compara telemetria |
+
+Guardrails:
+
+- sem `rerun_root`, nao executa;
+- comando fora da allowlist retorna `command_not_allowed`;
+- `cwd` fora de `rerun_root` retorna `outside_rerun_root`;
+- token errado retorna `invalid_approval_token`;
+- execucao usa lista de argumentos com `shell=False`;
+- saida do processo e truncada para evitar payload gigante;
+- se a telemetria do `after_job_id` nao existir, a comparacao retorna `not_comparable`.
+
+Rodar suite padrao do gate:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_rerun_orchestrator.py tests/test_commander_telemetry_compare.py tests/test_commander_tool_contract.py tests/test_commander_mcp_stdio_server.py -q --basetemp .pytest-commander-gate13
+```
+
+Esperado:
+
+```text
+40 passed
+```
+
+Limite consciente deste gate:
+
+- nao define ainda um job Spark real padrao do projeto;
+- nao faz polling de ClickHouse esperando telemetria chegar;
+- nao faz rollback automatico;
 - nao altera branches remotas.

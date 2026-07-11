@@ -12,6 +12,30 @@ class FakeFindingStore:
         return self.records.get(job_id, [])
 
 
+class FakeRerunRunner:
+    def __init__(self, on_run=None):
+        self.calls = []
+        self.on_run = on_run
+
+    def run(self, command, cwd, timeout_seconds):
+        self.calls.append(
+            {
+                "command": command,
+                "cwd": str(cwd),
+                "timeout_seconds": timeout_seconds,
+            }
+        )
+        if self.on_run:
+            self.on_run()
+        return {
+            "status": "succeeded",
+            "exit_code": 0,
+            "timed_out": False,
+            "stdout": "ok",
+            "stderr": "",
+        }
+
+
 def test_list_tools_exposes_only_read_only_commander_tools():
     tools = list_tools()
     tool_names = [tool["name"] for tool in tools]
@@ -26,13 +50,15 @@ def test_list_tools_exposes_only_read_only_commander_tools():
         "apply_recommendation",
         "verify_recommendation_apply",
         "compare_job_telemetry",
+        "plan_rerun",
+        "execute_rerun_and_compare",
         "preview_fix",
     ]
-    assert [tool["safety"] for tool in tools].count("guarded_mutation") == 1
+    assert [tool["safety"] for tool in tools].count("guarded_mutation") == 2
     assert all(
         tool["safety"] == "read_only"
         for tool in tools
-        if tool["name"] != "apply_recommendation"
+        if tool["name"] not in ("apply_recommendation", "execute_rerun_and_compare")
     )
     assert "apply_fix" not in tool_names
     assert tools[0]["input_schema"]["required"] == ["job_id"]
@@ -296,6 +322,64 @@ def test_call_tool_compare_job_telemetry_returns_improved(tmp_path):
     assert result["status"] == "improved"
     assert result["before"]["finding_count"] == 1
     assert result["after"]["finding_count"] == 0
+
+
+def test_call_tool_plan_rerun_returns_approval_token(tmp_path):
+    contract = CommanderToolContract(
+        tmp_path / "store.ndjson",
+        rerun_root=tmp_path,
+        rerun_allowed_command_prefixes=[["spark-submit"]],
+    )
+
+    result = contract.call_tool(
+        "plan_rerun",
+        {
+            "before_job_id": "before-job",
+            "after_job_id": "after-job",
+            "command": ["spark-submit", "job.py"],
+        },
+    )
+
+    assert result["status"] == "planned"
+    assert len(result["approval"]["token"]) == 64
+
+
+def test_call_tool_execute_rerun_and_compare_runs_fake_runner(tmp_path):
+    store = tmp_path / "store.ndjson"
+    append_envelope(store, telemetry_envelope("before-job"))
+
+    def collect_after_telemetry():
+        append_envelope(store, healthy_telemetry_envelope("after-job"))
+
+    runner = FakeRerunRunner(on_run=collect_after_telemetry)
+    contract = CommanderToolContract(
+        store,
+        rerun_root=tmp_path,
+        rerun_allowed_command_prefixes=[["spark-submit"]],
+        rerun_runner=runner,
+    )
+    plan = contract.call_tool(
+        "plan_rerun",
+        {
+            "before_job_id": "before-job",
+            "after_job_id": "after-job",
+            "command": ["spark-submit", "job.py"],
+        },
+    )
+
+    result = contract.call_tool(
+        "execute_rerun_and_compare",
+        {
+            "before_job_id": "before-job",
+            "after_job_id": "after-job",
+            "command": ["spark-submit", "job.py"],
+            "approval_token": plan["approval"]["token"],
+        },
+    )
+
+    assert result["status"] == "rerun_completed"
+    assert result["comparison"]["status"] == "improved"
+    assert runner.calls[0]["command"] == ["spark-submit", "job.py"]
 
 
 def test_call_tool_query_persisted_findings_without_store_is_not_configured(tmp_path):

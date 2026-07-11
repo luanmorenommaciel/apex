@@ -66,7 +66,7 @@ snapshots     -> metric deltas + resolved/new findings -> status
 
 ## Next Gate
 
-Gate 13 should add controlled re-run orchestration:
+Gate 13 adds controlled re-run orchestration:
 
 ```text
 apply verified -> run job command -> collect telemetry -> compare_job_telemetry
