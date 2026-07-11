@@ -74,6 +74,9 @@ Qualquer solução final que não satisfaça L1–L7 não é o V1 do Luan, por m
 | C6 Custo/latência (10%) | 4 — detectores determinísticos | 2 — LLM obrigatório | **5** — T1 heurístico ~136ms | 2 — teórico | 5 — 100% determinístico |
 | **Total ponderado** | **3.90** | **3.20** | **3.25** | **0.95** | **2.75** |
 
+> **Adendo 10/07 — estado da cowork mudou após a pontuação** (deltas factuais, sem re-score — re-pontuar a própria branch violaria o conflito de interesse declarado; a re-avaliação é da rodada 2 / do Commander):
+> C2: 1 → **5 detectores** com gate verde (G2). C3: ganhou **EvidenceValidator + baseline negativo** (G1 + composição). C6: LLM deixou de ser obrigatório — **T1 em 333ms/0 tokens** com dado real (G4). C4: apply_fix validado em ciclo completo real (G5). Evidência: gates §7 + 52 testes. Insumo para a rodada 2: `docs/specs/apex-v1-spec-reproducivel.md`.
+
 **Leitura:** o spike vence como **base**, mas nenhuma candidata satisfaz L1–L7 sozinha — o campeão real é a composição (§6). Nota: minha própria branch (cowork) fica em 3º; o viés declarado no topo não salvou a nota. A codex confirma o diagnóstico da tabela do time: segura e disciplinada, mas "ainda não é plataforma real" — sua melhor parte é o **contrato de telemetria `job_id`**, que deve virar a interface padrão entre listener → ClickHouse na composição.
 
 ---

@@ -6,6 +6,8 @@
 
 ---
 
+> **⚠️ Adendo 10/07:** esta matrix retrata o snapshot de **07/07**. Desde então a branch `cowork` mudou substancialmente (5 detectores determinísticos, T1 antes do LLM, EvidenceValidator, baseline negativo, ciclo apply_fix validado com dado real — gates G0–G5 verdes). O estado atualizado e a evidência estão em `docs/architecture/llm-solution-validation-framework-2026-07-09.md` (§7). As colunas das demais soluções NÃO foram reavaliadas desde 07-08/07. Para nova comparação justa entre LLMs, usar a spec reproduzível: `docs/specs/apex-v1-spec-reproducivel.md`.
+
 ## As 4 Soluções
 
 | # | Solução | Branch / Origem | Responsável |
