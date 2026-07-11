@@ -52,6 +52,8 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
         "explain_evidence",
         "evaluate_negative_baseline",
         "query_persisted_findings",
+        "recommend_fix",
+        "preview_recommendation",
         "preview_fix",
     ]
     assert tools[0]["inputSchema"]["required"] == ["job_id"]
@@ -95,6 +97,25 @@ def telemetry_envelope(job_id="job-42"):
     }
 
 
+def persisted_skew_record():
+    return {
+        "finding": {
+            "job_id": "job-42",
+            "kind": "shuffle_skew_candidate",
+            "severity": "warning",
+            "confidence": "medium",
+            "evidence": {
+                "app_id": "app-mcp-stdio",
+                "stage_id": 2,
+                "ratio": 29.5,
+                "hot_records": 165297,
+                "median_cold_records": 5596,
+            },
+        },
+        "validation": {"status": "valid", "accepted": True},
+    }
+
+
 def test_tools_call_returns_text_json_content(tmp_path):
     store = tmp_path / "store.ndjson"
     append_envelope(store, telemetry_envelope())
@@ -119,15 +140,7 @@ def test_tools_call_returns_text_json_content(tmp_path):
 def test_tools_call_can_query_persisted_findings(tmp_path):
     finding_store = FakeFindingStore(
         {
-            "job-42": [
-                {
-                    "finding": {
-                        "job_id": "job-42",
-                        "kind": "shuffle_skew_candidate",
-                    },
-                    "validation": {"status": "valid", "accepted": True},
-                }
-            ]
+            "job-42": [persisted_skew_record()]
         }
     )
     response = handle_jsonrpc_message(
@@ -146,6 +159,57 @@ def test_tools_call_can_query_persisted_findings(tmp_path):
     payload = json.loads(response["result"]["content"][0]["text"])
     assert payload["status"] == "found"
     assert payload["records"][0]["validation"]["accepted"] is True
+
+
+def test_tools_call_can_recommend_fix_from_persisted_findings(tmp_path):
+    finding_store = FakeFindingStore({"job-42": [persisted_skew_record()]})
+    response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/call",
+            "params": {
+                "name": "recommend_fix",
+                "arguments": {"job_id": "job-42"},
+            },
+        },
+        CommanderToolContract(tmp_path / "store.ndjson", finding_store=finding_store),
+    )
+
+    payload = json.loads(response["result"]["content"][0]["text"])
+    assert payload["status"] == "found"
+    assert payload["recommendations"][0]["preview"]["tool"] == "preview_recommendation"
+
+
+def test_tools_call_can_preview_recommendation_without_modifying_file(tmp_path):
+    source = tmp_path / "job.py"
+    source.write_text("df.join(dim, 'id').count()\n", encoding="utf-8")
+    finding_store = FakeFindingStore({"job-42": [persisted_skew_record()]})
+    response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "tools/call",
+            "params": {
+                "name": "preview_recommendation",
+                "arguments": {
+                    "job_id": "job-42",
+                    "recommendation_id": "job-42:shuffle_skew_candidate:stage-2:0",
+                    "path": str(source),
+                    "replacement": (
+                        "# REVIEW: validate skew before this join\n"
+                        "df.join(dim, 'id').count()\n"
+                    ),
+                },
+            },
+        },
+        CommanderToolContract(tmp_path / "store.ndjson", finding_store=finding_store),
+    )
+
+    payload = json.loads(response["result"]["content"][0]["text"])
+    assert payload["status"] == "preview_ready"
+    assert "+# REVIEW: validate skew before this join" in payload["diff"]
+    assert source.read_text(encoding="utf-8") == "df.join(dim, 'id').count()\n"
 
 
 def test_initialized_notification_returns_no_response(tmp_path):

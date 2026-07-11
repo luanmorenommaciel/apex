@@ -96,6 +96,21 @@ def test_commander_tool_queries_clickhouse_finding_store():
     assert result["records"][0]["finding"]["kind"] == "shuffle_skew_candidate"
 
 
+def test_commander_tool_recommends_from_clickhouse_finding_store():
+    client = FakeClickHouseClient()
+    finding_store = ClickHouseFindingStore(client)
+    persist_validated_findings(finding_store, [valid_finding()])
+    contract = CommanderToolContract("unused-telemetry-store", finding_store=finding_store)
+
+    result = contract.call_tool("recommend_fix", {"job_id": "job-42"})
+
+    assert result["status"] == "found"
+    assert result["recommendations"][0]["id"] == (
+        "job-42:shuffle_skew_candidate:stage-2:0"
+    )
+    assert result["recommendations"][0]["preview"]["tool"] == "preview_recommendation"
+
+
 def test_finding_store_rejects_unsafe_table_name():
     try:
         ClickHouseFindingStore(FakeClickHouseClient(), table="bad;drop")

@@ -233,6 +233,14 @@ Gate 9 is complete locally for read-only MCP access to persisted findings:
 - `tools/call` returns persisted records as MCP text JSON content;
 - contracts without a finding store return `not_configured` explicitly.
 
+Gate 10 is complete locally for recommend/preview:
+
+- `recommend_fix(job_id)` builds deterministic recommendations from accepted persisted findings;
+- `preview_recommendation(job_id, recommendation_id, path, replacement)` validates the selected recommendation and returns a diff;
+- recommendation rules are versioned as `apex.commander.recommendations.v1`;
+- MCP exposes both tools as read-only;
+- `apply_fix` remains absent.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -353,19 +361,22 @@ Required tools:
 | `debug_job(job_id)` | read-only |
 | `explain_evidence(job_id)` | read-only |
 | `evaluate_negative_baseline(job_id)` | read-only |
+| `query_persisted_findings(job_id)` | read-only |
+| `recommend_fix(job_id)` | read-only |
+| `preview_recommendation(job_id, recommendation_id, path, replacement)` | read-only diff |
 | `preview_fix(path, recommendation, replacement)` | read-only diff |
 
 Current Codex evidence:
 
 ```text
-tests/test_commander_tool_contract.py: 7 passed
-focused tool contract validation: 13 passed
+tests/test_commander_tool_contract.py: 11 passed
+focused tool contract validation: 17 passed
 ```
 
 Remaining gap:
 
 ```text
-No external MCP SDK/client interoperability test yet; recommend_fix and apply_fix are intentionally absent.
+No external MCP SDK/client interoperability test yet; apply_fix is intentionally absent.
 ```
 
 ### Gate 6: MCP Stdio Local
@@ -382,8 +393,8 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_mcp_stdio_server.py: 6 passed
-focused MCP stdio validation: 16 passed
+tests/test_commander_mcp_stdio_server.py: 9 passed
+focused MCP stdio validation: 23 passed
 ```
 
 Remaining gap:
@@ -445,7 +456,7 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 20 passed
+tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 25 passed
 ```
 
 Remaining gap:
@@ -454,7 +465,30 @@ Remaining gap:
 No external MCP SDK/client interoperability test yet.
 ```
 
-### Gate 10: Closed Loop
+### Gate 10: Recommend/Preview Loop
+
+Required:
+
+- `recommend_fix(job_id)` from persisted findings;
+- only accepted validations produce recommendations;
+- deterministic recommendations for skew, spill, GC, OOM, and AQE findings;
+- `preview_recommendation(job_id, recommendation_id, path, replacement)`;
+- preview returns a diff and preserves the target file;
+- MCP exposes both tools as read-only.
+
+Current Codex evidence:
+
+```text
+tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 30 passed
+```
+
+Remaining gap:
+
+```text
+No apply/verify step yet; replacement body is still human-provided.
+```
+
+### Gate 11: Apply/Verify Closed Loop
 
 Required:
 
@@ -512,10 +546,11 @@ No remote publication happens without explicit user approval.
 | P1 | Done locally: validate ClickHouse HTTP roundtrip against real local service | Codex |
 | P1 | Done locally: persist validated findings in ClickHouse | Codex |
 | P1 | Done locally: expose persisted findings as a read-only MCP tool | Codex |
+| P1 | Done locally: add recommendation and preview loop over persisted findings | Codex + Cowork concept |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
 | P1 | Validate MCP stdio against an external MCP client/SDK | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork `apply_fix` to preview-first | Cowork |
-| P2 | Add recommendation tool over persisted findings without applying changes | Codex + Cowork concept |
+| P2 | Add guarded apply/verify after explicit approval | Codex + Cowork concept |
 | P2 | Add DataFlint parity table to every review | DataFlint official docs |
 
 ## Decision Template For Commander

@@ -261,12 +261,16 @@ Tools expostas:
 | `explain_evidence` | `read_only` | retorna a evidencia de telemetria mais recente |
 | `evaluate_negative_baseline` | `read_only` | executa o gate de falso positivo para um `job_id` |
 | `query_persisted_findings` | `read_only` | retorna findings validados ja persistidos para um `job_id` |
+| `recommend_fix` | `read_only` | gera recomendacoes deterministicas a partir dos findings persistidos |
+| `preview_recommendation` | `read_only` | gera diff para uma recomendacao selecionada sem alterar arquivo |
 | `preview_fix` | `read_only` | retorna diff unificado sem alterar o arquivo |
 
 Contrato de seguranca:
 
 - `list_tools()` nao expõe `apply_fix`;
 - `call_tool("apply_fix", ...)` falha com `unknown_tool`;
+- `recommend_fix` nao chama LLM e nao altera arquivo;
+- `preview_recommendation` exige `recommendation_id` e preserva o arquivo original;
 - `preview_fix` usa `build_fix_preview` e preserva o arquivo original.
 
 Rodar:
@@ -279,13 +283,12 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-15 passed
+17 passed
 ```
 
 Limite consciente deste gate:
 
 - ainda nao ha servidor MCP stdio real;
-- ainda nao ha `recommend_fix`;
 - ainda nao ha `apply_fix`;
 - nao ha escrita automatica em arquivo alvo.
 
@@ -308,6 +311,8 @@ Tools continuam as mesmas do Gate 5:
 - `explain_evidence`
 - `evaluate_negative_baseline`
 - `query_persisted_findings`
+- `recommend_fix`
+- `preview_recommendation`
 - `preview_fix`
 
 Rodar:
@@ -320,7 +325,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-20 passed
+23 passed
 ```
 
 Limite consciente deste gate:
@@ -448,7 +453,7 @@ O teste real:
 Limite consciente deste gate:
 
 - findings passam a ser expostos no MCP dedicado a partir do Gate 9;
-- ainda nao ha `recommend_fix`;
+- recomendacoes estruturadas passam a existir a partir do Gate 10;
 - ainda nao ha `apply_fix`;
 - nao altera branches remotas.
 
@@ -501,7 +506,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-19 passed
+25 passed
 ```
 
 Fluxo atual:
@@ -518,6 +523,71 @@ Limite consciente deste gate:
 
 - a tool le apenas findings ja persistidos;
 - nao dispara diagnostico novo;
-- nao recomenda correcao automaticamente;
+- recomendacao estruturada entra a partir do Gate 10;
 - nao aplica patch;
+- nao altera branches remotas.
+
+## Gate 10: Recommend/Preview loop
+
+O Gate 10 cria o primeiro loop fechado ate preview, ainda sem aplicar mudanca.
+
+Fluxo:
+
+```text
+ClickHouseFindingStore
+  -> query_persisted_findings(job_id)
+  -> recommend_fix(job_id)
+  -> recommendation_id
+  -> preview_recommendation(job_id, recommendation_id, path, replacement)
+  -> diff read-only
+```
+
+Novos componentes:
+
+- `recommend_fix`: gera recomendacoes deterministicas por tipo de finding;
+- `preview_recommendation`: valida o `recommendation_id` e gera diff sem alterar arquivo;
+- `apex.commander.recommendations.v1`: regra versionada para skew, spill, GC, OOM e AQE;
+- testes diretos do recomendador, do contrato local e do MCP stdio.
+
+Contrato de recomendacao:
+
+```json
+{
+  "job_id": "job-42",
+  "status": "found",
+  "count": 1,
+  "recommendations": [
+    {
+      "id": "job-42:shuffle_skew_candidate:stage-2:0",
+      "finding_kind": "shuffle_skew_candidate",
+      "action": "validate_aqe_then_consider_salting_or_repartition",
+      "preview": {
+        "mode": "manual_replacement",
+        "tool": "preview_recommendation",
+        "requires_approval_before_apply": true
+      }
+    }
+  ]
+}
+```
+
+Rodar suite padrao do gate:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_recommendations.py tests/test_commander_tool_contract.py tests/test_commander_mcp_stdio_server.py tests/test_commander_clickhouse_findings.py -q --basetemp .pytest-commander-gate10
+```
+
+Esperado:
+
+```text
+30 passed
+```
+
+Limite consciente deste gate:
+
+- nao aplica patch;
+- nao executa re-run automaticamente;
+- nao usa LLM para recomendacao basica;
+- nao substitui revisao humana;
 - nao altera branches remotas.

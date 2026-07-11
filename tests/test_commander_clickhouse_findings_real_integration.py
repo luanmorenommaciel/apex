@@ -10,6 +10,7 @@ from apex.commander.clickhouse_findings import (
 )
 from apex.commander.clickhouse_http_client import ClickHouseHttpClient
 from apex.commander.diagnostic_mvp import diagnose_findings
+from apex.commander.recommendations import recommend_fix
 
 
 def real_clickhouse_config():
@@ -83,10 +84,14 @@ def test_real_clickhouse_persists_validated_findings():
         findings = diagnose_findings(telemetry_store, job_id)
         persisted_records = persist_validated_findings(finding_store, findings)
         queried_records = finding_store.query_by_job_id(job_id)
+        recommendations = recommend_fix(finding_store, job_id)
 
         assert persisted_records[0]["validation"]["accepted"] is True
         assert queried_records[0]["finding"]["kind"] == "shuffle_skew_candidate"
         assert queried_records[0]["validation"]["status"] == "valid"
+        assert recommendations["recommendations"][0]["preview"]["tool"] == (
+            "preview_recommendation"
+        )
     finally:
         client.command(f"DROP TABLE IF EXISTS {finding_table}")
         client.command(f"DROP TABLE IF EXISTS {telemetry_table}")

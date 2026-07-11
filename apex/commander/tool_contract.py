@@ -9,6 +9,10 @@ from apex.commander.mcp_contract import (
     explain_evidence,
     query_persisted_findings,
 )
+from apex.commander.recommendations import (
+    preview_recommendation,
+    recommend_fix,
+)
 
 TOOL_SPECS = [
     {
@@ -52,6 +56,31 @@ TOOL_SPECS = [
         },
     },
     {
+        "name": "recommend_fix",
+        "description": "Return deterministic recommendations from persisted findings.",
+        "safety": "read_only",
+        "input_schema": {
+            "type": "object",
+            "required": ["job_id"],
+            "properties": {"job_id": {"type": "string"}},
+        },
+    },
+    {
+        "name": "preview_recommendation",
+        "description": "Return a diff preview for a selected recommendation without modifying files.",
+        "safety": "read_only",
+        "input_schema": {
+            "type": "object",
+            "required": ["job_id", "recommendation_id", "path", "replacement"],
+            "properties": {
+                "job_id": {"type": "string"},
+                "recommendation_id": {"type": "string"},
+                "path": {"type": "string"},
+                "replacement": {"type": "string"},
+            },
+        },
+    },
+    {
         "name": "preview_fix",
         "description": "Return a unified diff preview without modifying the target file.",
         "safety": "read_only",
@@ -89,6 +118,16 @@ class CommanderToolContract:
             return query_persisted_findings(
                 self.finding_store,
                 _required(args, "job_id"),
+            )
+        if name == "recommend_fix":
+            return recommend_fix(self.finding_store, _required(args, "job_id"))
+        if name == "preview_recommendation":
+            return preview_recommendation(
+                self.finding_store,
+                _required(args, "job_id"),
+                _required(args, "recommendation_id"),
+                _required(args, "path"),
+                _required(args, "replacement"),
             )
         if name == "preview_fix":
             return build_fix_preview(

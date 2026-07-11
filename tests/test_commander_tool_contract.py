@@ -21,6 +21,8 @@ def test_list_tools_exposes_only_read_only_commander_tools():
         "explain_evidence",
         "evaluate_negative_baseline",
         "query_persisted_findings",
+        "recommend_fix",
+        "preview_recommendation",
         "preview_fix",
     ]
     assert all(tool["safety"] == "read_only" for tool in tools)
@@ -72,6 +74,25 @@ def telemetry_envelope(job_id="job-42"):
     }
 
 
+def persisted_skew_record():
+    return {
+        "finding": {
+            "job_id": "job-42",
+            "kind": "shuffle_skew_candidate",
+            "severity": "warning",
+            "confidence": "medium",
+            "evidence": {
+                "app_id": "app-tool-contract",
+                "stage_id": 2,
+                "ratio": 29.5,
+                "hot_records": 165297,
+                "median_cold_records": 5596,
+            },
+        },
+        "validation": {"status": "valid", "accepted": True},
+    }
+
+
 def test_call_tool_debug_job_returns_findings(tmp_path):
     store = tmp_path / "store.ndjson"
     append_envelope(store, telemetry_envelope())
@@ -108,15 +129,7 @@ def test_call_tool_evaluate_negative_baseline_returns_failed_for_skew(tmp_path):
 def test_call_tool_query_persisted_findings_returns_records(tmp_path):
     finding_store = FakeFindingStore(
         {
-            "job-42": [
-                {
-                    "finding": {
-                        "job_id": "job-42",
-                        "kind": "shuffle_skew_candidate",
-                    },
-                    "validation": {"status": "valid", "accepted": True},
-                }
-            ]
+            "job-42": [persisted_skew_record()]
         }
     )
     contract = CommanderToolContract(
@@ -129,6 +142,47 @@ def test_call_tool_query_persisted_findings_returns_records(tmp_path):
     assert result["status"] == "found"
     assert result["count"] == 1
     assert result["records"][0]["finding"]["kind"] == "shuffle_skew_candidate"
+
+
+def test_call_tool_recommend_fix_returns_structured_recommendation(tmp_path):
+    finding_store = FakeFindingStore({"job-42": [persisted_skew_record()]})
+    contract = CommanderToolContract(
+        tmp_path / "store.ndjson",
+        finding_store=finding_store,
+    )
+
+    result = contract.call_tool("recommend_fix", {"job_id": "job-42"})
+
+    assert result["status"] == "found"
+    assert result["recommendations"][0]["id"] == (
+        "job-42:shuffle_skew_candidate:stage-2:0"
+    )
+    assert result["recommendations"][0]["preview"]["tool"] == "preview_recommendation"
+
+
+def test_call_tool_preview_recommendation_returns_diff_without_modifying_file(tmp_path):
+    source = tmp_path / "job.py"
+    source.write_text("df.join(dim, 'id').count()\n", encoding="utf-8")
+    finding_store = FakeFindingStore({"job-42": [persisted_skew_record()]})
+    contract = CommanderToolContract(
+        tmp_path / "store.ndjson",
+        finding_store=finding_store,
+    )
+
+    result = contract.call_tool(
+        "preview_recommendation",
+        {
+            "job_id": "job-42",
+            "recommendation_id": "job-42:shuffle_skew_candidate:stage-2:0",
+            "path": str(source),
+            "replacement": "# REVIEW: validate skew before this join\ndf.join(dim, 'id').count()\n",
+        },
+    )
+
+    assert result["status"] == "preview_ready"
+    assert result["requires_approval"] is True
+    assert "+# REVIEW: validate skew before this join" in result["diff"]
+    assert source.read_text(encoding="utf-8") == "df.join(dim, 'id').count()\n"
 
 
 def test_call_tool_query_persisted_findings_without_store_is_not_configured(tmp_path):
