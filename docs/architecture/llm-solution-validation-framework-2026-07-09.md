@@ -265,6 +265,14 @@ Gate 13 is complete locally for controlled re-run orchestration:
 - the rerun runner is injectable for tests and can use `SubprocessRerunRunner` in configured local environments;
 - after a successful runner result, Commander calls `compare_job_telemetry`.
 
+Gate 14 is complete locally for Spark command templating and telemetry polling:
+
+- `build_spark_submit_rerun_command(...)` builds a canonical `spark-submit` argument list with `spark.extraListeners` and `spark.apex.jobId`;
+- `poll_telemetry(job_id)` waits for telemetry visibility with bounded attempts and interval;
+- `execute_rerun_poll_and_compare(...)` runs only after approval, waits for `after_job_id` telemetry, and then calls `compare_job_telemetry`;
+- if telemetry never arrives, the result is explicit: `telemetry_not_available`, with no fabricated comparison;
+- MCP exposes the Spark template and polling tools, and marks the polling rerun path as guarded mutation.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -599,6 +607,25 @@ apply verified
   -> compare_job_telemetry
 ```
 
+Current Codex evidence:
+
+```text
+tests/test_commander_rerun_orchestrator.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py: 46 passed
+```
+
+Implemented locally:
+
+- canonical `spark-submit` command builder;
+- bounded telemetry polling helper;
+- guarded `execute_rerun_poll_and_compare`;
+- MCP/tool contract exposure for template, polling, and guarded polling rerun.
+
+Remaining gap:
+
+```text
+No JVM SparkListener packaging, real Spark CI job, or production scheduler yet.
+```
+
 ## Refinement Loop
 
 Use this loop for every imported component:
@@ -644,10 +671,11 @@ No remote publication happens without explicit user approval.
 | P1 | Done locally: add guarded apply/verify after approval token | Codex + Cowork concept |
 | P1 | Done locally: compare before/after telemetry after re-run | Codex |
 | P1 | Done locally: add controlled re-run orchestration with command allowlist | Codex |
+| P1 | Done locally: add canonical Spark job template and telemetry polling | Codex + Spike platform |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
 | P1 | Validate MCP stdio against an external MCP client/SDK | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork raw `apply_fix` ideas to guarded apply token flow | Cowork |
-| P2 | Add canonical Spark job template and telemetry polling | Codex + Spike platform |
+| P2 | Package a real SparkListener and run a local Spark job through the Gate 14 path | Codex + Spike platform |
 | P2 | Add DataFlint parity table to every review | DataFlint official docs |
 
 ## Decision Template For Commander

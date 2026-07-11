@@ -81,8 +81,11 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
         "apply_recommendation",
         "verify_recommendation_apply",
         "compare_job_telemetry",
+        "build_spark_submit_rerun_command",
+        "poll_telemetry",
         "plan_rerun",
         "execute_rerun_and_compare",
+        "execute_rerun_poll_and_compare",
         "preview_fix",
     ]
     assert tools[0]["inputSchema"]["required"] == ["job_id"]
@@ -93,6 +96,11 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
     rerun_tool = next(tool for tool in tools if tool["name"] == "execute_rerun_and_compare")
     assert rerun_tool["annotations"]["readOnlyHint"] is False
     assert rerun_tool["annotations"]["destructiveHint"] is True
+    poll_rerun_tool = next(
+        tool for tool in tools if tool["name"] == "execute_rerun_poll_and_compare"
+    )
+    assert poll_rerun_tool["annotations"]["readOnlyHint"] is False
+    assert poll_rerun_tool["annotations"]["destructiveHint"] is True
 
 
 def telemetry_envelope(job_id="job-42"):
@@ -342,6 +350,32 @@ def test_tools_call_can_compare_job_telemetry(tmp_path):
     assert payload["summary"]["resolved_findings"] == ["shuffle_skew_candidate"]
 
 
+def test_tools_call_can_build_spark_submit_rerun_command(tmp_path):
+    source = tmp_path / "job.py"
+    source.write_text("print('spark job')\n", encoding="utf-8")
+    response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "tools/call",
+            "params": {
+                "name": "build_spark_submit_rerun_command",
+                "arguments": {
+                    "app_path": "job.py",
+                    "after_job_id": "after-job",
+                },
+            },
+        },
+        CommanderToolContract(tmp_path / "store.ndjson", rerun_root=tmp_path),
+    )
+
+    payload = json.loads(response["result"]["content"][0]["text"])
+    assert payload["status"] == "planned"
+    assert payload["command"][0] == "spark-submit"
+    assert "spark.apex.jobId=after-job" in payload["command"]
+    assert payload["command"][-1] == str(source.resolve())
+
+
 def test_tools_call_can_plan_and_execute_rerun_with_fake_runner(tmp_path):
     store = tmp_path / "store.ndjson"
     append_envelope(store, telemetry_envelope("before-job"))
@@ -359,7 +393,7 @@ def test_tools_call_can_plan_and_execute_rerun_with_fake_runner(tmp_path):
     plan_response = handle_jsonrpc_message(
         {
             "jsonrpc": "2.0",
-            "id": 10,
+            "id": 11,
             "method": "tools/call",
             "params": {
                 "name": "plan_rerun",
@@ -377,7 +411,7 @@ def test_tools_call_can_plan_and_execute_rerun_with_fake_runner(tmp_path):
     execute_response = handle_jsonrpc_message(
         {
             "jsonrpc": "2.0",
-            "id": 11,
+            "id": 12,
             "method": "tools/call",
             "params": {
                 "name": "execute_rerun_and_compare",
@@ -394,6 +428,67 @@ def test_tools_call_can_plan_and_execute_rerun_with_fake_runner(tmp_path):
 
     payload = json.loads(execute_response["result"]["content"][0]["text"])
     assert payload["status"] == "rerun_completed"
+    assert payload["comparison"]["status"] == "improved"
+    assert runner.calls[0]["command"] == ["spark-submit", "job.py"]
+
+
+def test_tools_call_can_execute_rerun_poll_and_compare(tmp_path):
+    store = tmp_path / "store.ndjson"
+    append_envelope(store, telemetry_envelope("before-job"))
+
+    def collect_after_telemetry(interval_seconds):
+        assert interval_seconds == 0.1
+        append_envelope(store, healthy_telemetry_envelope("after-job"))
+
+    runner = FakeRerunRunner()
+    contract = CommanderToolContract(
+        store,
+        rerun_root=tmp_path,
+        rerun_allowed_command_prefixes=[["spark-submit"]],
+        rerun_runner=runner,
+        telemetry_poll_sleeper=collect_after_telemetry,
+    )
+    plan_response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 13,
+            "method": "tools/call",
+            "params": {
+                "name": "plan_rerun",
+                "arguments": {
+                    "before_job_id": "before-job",
+                    "after_job_id": "after-job",
+                    "command": ["spark-submit", "job.py"],
+                },
+            },
+        },
+        contract,
+    )
+    plan = json.loads(plan_response["result"]["content"][0]["text"])
+
+    execute_response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 14,
+            "method": "tools/call",
+            "params": {
+                "name": "execute_rerun_poll_and_compare",
+                "arguments": {
+                    "before_job_id": "before-job",
+                    "after_job_id": "after-job",
+                    "command": ["spark-submit", "job.py"],
+                    "approval_token": plan["approval"]["token"],
+                    "poll_attempts": 3,
+                    "poll_interval_seconds": 0.1,
+                },
+            },
+        },
+        contract,
+    )
+
+    payload = json.loads(execute_response["result"]["content"][0]["text"])
+    assert payload["status"] == "rerun_completed"
+    assert payload["telemetry"]["status"] == "found"
     assert payload["comparison"]["status"] == "improved"
     assert runner.calls[0]["command"] == ["spark-submit", "job.py"]
 

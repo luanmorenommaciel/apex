@@ -6,6 +6,12 @@ from hashlib import sha256
 from pathlib import Path
 
 from apex.commander.telemetry_compare import compare_job_telemetry
+from apex.commander.telemetry_polling import (
+    DEFAULT_POLL_ATTEMPTS,
+    DEFAULT_POLL_INTERVAL_SECONDS,
+    poll_for_telemetry,
+    validate_poll_settings,
+)
 
 RULE_SET = "apex.commander.rerun_orchestrator.v1"
 DEFAULT_TIMEOUT_SECONDS = 300
@@ -145,6 +151,98 @@ def execute_rerun_and_compare(
     )
 
 
+def execute_rerun_poll_and_compare(
+    store,
+    before_job_id,
+    after_job_id,
+    command,
+    approval_token,
+    *,
+    cwd=".",
+    timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
+    rerun_root=None,
+    allowed_command_prefixes=None,
+    runner=None,
+    poll_attempts=DEFAULT_POLL_ATTEMPTS,
+    poll_interval_seconds=DEFAULT_POLL_INTERVAL_SECONDS,
+    poll_sleeper=None,
+):
+    """Run an approved command, wait for after telemetry, then compare."""
+    plan = plan_rerun(
+        before_job_id,
+        after_job_id,
+        command,
+        cwd=cwd,
+        timeout_seconds=timeout_seconds,
+        rerun_root=rerun_root,
+        allowed_command_prefixes=allowed_command_prefixes,
+    )
+    if plan["status"] != "planned":
+        return _blocked_execution(plan, plan["status"], telemetry={"status": "not_run"})
+
+    poll_validation = validate_poll_settings(poll_attempts, poll_interval_seconds)
+    if poll_validation["status"] != "ok":
+        return _blocked_execution(
+            plan,
+            poll_validation["status"],
+            telemetry=poll_validation,
+        )
+
+    expected_token = plan["approval"]["token"]
+    if approval_token != expected_token:
+        return _blocked_execution(
+            plan,
+            "invalid_approval_token",
+            telemetry={"status": "not_run"},
+        )
+
+    selected_runner = runner or SubprocessRerunRunner()
+    runner_result = selected_runner.run(
+        plan["command"],
+        Path(plan["cwd"]),
+        plan["timeout_seconds"],
+    )
+    if runner_result["status"] == "timed_out":
+        return _execution_result(
+            plan,
+            "rerun_timed_out",
+            runner_result,
+            telemetry={"status": "not_run"},
+        )
+    if runner_result["exit_code"] != 0:
+        return _execution_result(
+            plan,
+            "rerun_failed",
+            runner_result,
+            telemetry={"status": "not_run"},
+        )
+
+    telemetry = poll_for_telemetry(
+        store,
+        after_job_id,
+        attempts=poll_validation["attempts"],
+        interval_seconds=poll_validation["interval_seconds"],
+        sleeper=poll_sleeper,
+    )
+    if telemetry["status"] != "found":
+        return _execution_result(
+            plan,
+            "telemetry_not_available",
+            runner_result,
+            comparison={"status": "not_run"},
+            telemetry=telemetry,
+        )
+
+    comparison = compare_job_telemetry(store, before_job_id, after_job_id)
+    return _execution_result(
+        plan,
+        "rerun_completed",
+        runner_result,
+        comparison=comparison,
+        telemetry=telemetry,
+    )
+
+
 def approval_token_from_plan(plan):
     payload = {
         "before_job_id": plan["before_job_id"],
@@ -222,24 +320,30 @@ def _is_relative_to(path, root):
     return True
 
 
-def _blocked_execution(plan, status):
-    return {
+def _blocked_execution(plan, status, *, telemetry=None):
+    result = {
         "rule_set": RULE_SET,
         "status": status,
         "plan": plan,
         "runner": {"status": "not_run"},
         "comparison": {"status": "not_run"},
     }
+    if telemetry is not None:
+        result["telemetry"] = telemetry
+    return result
 
 
-def _execution_result(plan, status, runner_result, *, comparison=None):
-    return {
+def _execution_result(plan, status, runner_result, *, comparison=None, telemetry=None):
+    result = {
         "rule_set": RULE_SET,
         "status": status,
         "plan": plan,
         "runner": runner_result,
         "comparison": comparison or {"status": "not_run"},
     }
+    if telemetry is not None:
+        result["telemetry"] = telemetry
+    return result
 
 
 def _limit_output(value):

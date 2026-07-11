@@ -1,8 +1,11 @@
 from apex.commander.clickstack_mvp import append_envelope
 from apex.commander.rerun_orchestrator import (
     execute_rerun_and_compare,
+    execute_rerun_poll_and_compare,
     plan_rerun,
 )
+from apex.commander.spark_rerun_template import build_spark_submit_rerun_command
+from apex.commander.telemetry_polling import poll_for_telemetry
 
 
 class FakeRunner:
@@ -178,6 +181,136 @@ def test_execute_rerun_runs_fake_runner_and_compares_telemetry(tmp_path):
     assert result["runner"]["status"] == "succeeded"
     assert result["comparison"]["status"] == "improved"
     assert len(runner.calls) == 1
+
+
+def test_build_spark_submit_rerun_command_includes_listener_and_job_id(tmp_path):
+    source = tmp_path / "jobs" / "skew_job.py"
+    source.parent.mkdir()
+    source.write_text("print('spark job')\n", encoding="utf-8")
+
+    result = build_spark_submit_rerun_command(
+        app_path="jobs/skew_job.py",
+        after_job_id="after-job",
+        app_args=["--tenant", "apex"],
+        conf={"spark.sql.shuffle.partitions": "32"},
+        rerun_root=tmp_path,
+    )
+
+    assert result["status"] == "planned"
+    assert result["command"][0] == "spark-submit"
+    assert "--conf" in result["command"]
+    assert "spark.apex.jobId=after-job" in result["command"]
+    assert (
+        "spark.extraListeners=apex.commander.spark.ApexSparkListener"
+        in result["command"]
+    )
+    assert "spark.sql.shuffle.partitions=32" in result["command"]
+    assert result["command"][-3:] == [str(source.resolve()), "--tenant", "apex"]
+
+
+def test_build_spark_submit_rerun_command_blocks_path_outside_root(tmp_path):
+    root = tmp_path / "root"
+    outside = tmp_path / "outside"
+    root.mkdir()
+    outside.mkdir()
+    source = outside / "job.py"
+    source.write_text("print('outside')\n", encoding="utf-8")
+
+    result = build_spark_submit_rerun_command(
+        app_path=str(source),
+        after_job_id="after-job",
+        rerun_root=root,
+    )
+
+    assert result["status"] == "app_path_outside_rerun_root"
+
+
+def test_poll_for_telemetry_waits_until_after_job_is_visible(tmp_path):
+    store = tmp_path / "store.ndjson"
+    sleeps = []
+
+    def collect_after_telemetry(interval_seconds):
+        sleeps.append(interval_seconds)
+        append_envelope(store, telemetry_envelope("after-job", ratio=1.0))
+
+    result = poll_for_telemetry(
+        store,
+        "after-job",
+        attempts=3,
+        interval_seconds=0.25,
+        sleeper=collect_after_telemetry,
+    )
+
+    assert result["status"] == "found"
+    assert result["attempt"] == 2
+    assert sleeps == [0.25]
+
+
+def test_execute_rerun_poll_and_compare_waits_for_after_telemetry(tmp_path):
+    store = tmp_path / "store.ndjson"
+    append_envelope(store, telemetry_envelope("before-job", ratio=29.5))
+
+    def collect_after_telemetry(interval_seconds):
+        assert interval_seconds == 0.1
+        append_envelope(store, telemetry_envelope("after-job", ratio=1.0))
+
+    plan = plan_rerun(
+        "before-job",
+        "after-job",
+        ["spark-submit", "job.py"],
+        rerun_root=tmp_path,
+        allowed_command_prefixes=[["spark-submit"]],
+    )
+    runner = FakeRunner()
+
+    result = execute_rerun_poll_and_compare(
+        store,
+        "before-job",
+        "after-job",
+        ["spark-submit", "job.py"],
+        plan["approval"]["token"],
+        rerun_root=tmp_path,
+        allowed_command_prefixes=[["spark-submit"]],
+        runner=runner,
+        poll_attempts=3,
+        poll_interval_seconds=0.1,
+        poll_sleeper=collect_after_telemetry,
+    )
+
+    assert result["status"] == "rerun_completed"
+    assert result["telemetry"]["status"] == "found"
+    assert result["telemetry"]["attempt"] == 2
+    assert result["comparison"]["status"] == "improved"
+    assert len(runner.calls) == 1
+
+
+def test_execute_rerun_poll_and_compare_reports_missing_after_telemetry(tmp_path):
+    store = tmp_path / "store.ndjson"
+    append_envelope(store, telemetry_envelope("before-job", ratio=29.5))
+    plan = plan_rerun(
+        "before-job",
+        "after-job",
+        ["spark-submit", "job.py"],
+        rerun_root=tmp_path,
+        allowed_command_prefixes=[["spark-submit"]],
+    )
+
+    result = execute_rerun_poll_and_compare(
+        store,
+        "before-job",
+        "after-job",
+        ["spark-submit", "job.py"],
+        plan["approval"]["token"],
+        rerun_root=tmp_path,
+        allowed_command_prefixes=[["spark-submit"]],
+        runner=FakeRunner(),
+        poll_attempts=2,
+        poll_interval_seconds=0,
+    )
+
+    assert result["status"] == "telemetry_not_available"
+    assert result["telemetry"]["status"] == "not_found"
+    assert result["comparison"]["status"] == "not_run"
 
 
 def test_execute_rerun_returns_failed_without_comparison(tmp_path):

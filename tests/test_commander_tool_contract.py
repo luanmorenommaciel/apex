@@ -50,15 +50,23 @@ def test_list_tools_exposes_only_read_only_commander_tools():
         "apply_recommendation",
         "verify_recommendation_apply",
         "compare_job_telemetry",
+        "build_spark_submit_rerun_command",
+        "poll_telemetry",
         "plan_rerun",
         "execute_rerun_and_compare",
+        "execute_rerun_poll_and_compare",
         "preview_fix",
     ]
-    assert [tool["safety"] for tool in tools].count("guarded_mutation") == 2
+    assert [tool["safety"] for tool in tools].count("guarded_mutation") == 3
     assert all(
         tool["safety"] == "read_only"
         for tool in tools
-        if tool["name"] not in ("apply_recommendation", "execute_rerun_and_compare")
+        if tool["name"]
+        not in (
+            "apply_recommendation",
+            "execute_rerun_and_compare",
+            "execute_rerun_poll_and_compare",
+        )
     )
     assert "apply_fix" not in tool_names
     assert tools[0]["input_schema"]["required"] == ["job_id"]
@@ -324,6 +332,44 @@ def test_call_tool_compare_job_telemetry_returns_improved(tmp_path):
     assert result["after"]["finding_count"] == 0
 
 
+def test_call_tool_build_spark_submit_rerun_command_returns_command(tmp_path):
+    source = tmp_path / "job.py"
+    source.write_text("print('spark job')\n", encoding="utf-8")
+    contract = CommanderToolContract(
+        tmp_path / "store.ndjson",
+        rerun_root=tmp_path,
+    )
+
+    result = contract.call_tool(
+        "build_spark_submit_rerun_command",
+        {
+            "app_path": "job.py",
+            "after_job_id": "after-job",
+            "conf": {"spark.sql.adaptive.enabled": "true"},
+        },
+    )
+
+    assert result["status"] == "planned"
+    assert result["command"][0] == "spark-submit"
+    assert "spark.apex.jobId=after-job" in result["command"]
+    assert "spark.sql.adaptive.enabled=true" in result["command"]
+    assert result["command"][-1] == str(source.resolve())
+
+
+def test_call_tool_poll_telemetry_returns_found(tmp_path):
+    store = tmp_path / "store.ndjson"
+    append_envelope(store, healthy_telemetry_envelope("after-job"))
+    contract = CommanderToolContract(store)
+
+    result = contract.call_tool(
+        "poll_telemetry",
+        {"job_id": "after-job", "attempts": 1, "interval_seconds": 0},
+    )
+
+    assert result["status"] == "found"
+    assert result["envelope_count"] == 1
+
+
 def test_call_tool_plan_rerun_returns_approval_token(tmp_path):
     contract = CommanderToolContract(
         tmp_path / "store.ndjson",
@@ -378,6 +424,49 @@ def test_call_tool_execute_rerun_and_compare_runs_fake_runner(tmp_path):
     )
 
     assert result["status"] == "rerun_completed"
+    assert result["comparison"]["status"] == "improved"
+    assert runner.calls[0]["command"] == ["spark-submit", "job.py"]
+
+
+def test_call_tool_execute_rerun_poll_and_compare_waits_for_telemetry(tmp_path):
+    store = tmp_path / "store.ndjson"
+    append_envelope(store, telemetry_envelope("before-job"))
+
+    def collect_after_telemetry(interval_seconds):
+        assert interval_seconds == 0.1
+        append_envelope(store, healthy_telemetry_envelope("after-job"))
+
+    runner = FakeRerunRunner()
+    contract = CommanderToolContract(
+        store,
+        rerun_root=tmp_path,
+        rerun_allowed_command_prefixes=[["spark-submit"]],
+        rerun_runner=runner,
+        telemetry_poll_sleeper=collect_after_telemetry,
+    )
+    plan = contract.call_tool(
+        "plan_rerun",
+        {
+            "before_job_id": "before-job",
+            "after_job_id": "after-job",
+            "command": ["spark-submit", "job.py"],
+        },
+    )
+
+    result = contract.call_tool(
+        "execute_rerun_poll_and_compare",
+        {
+            "before_job_id": "before-job",
+            "after_job_id": "after-job",
+            "command": ["spark-submit", "job.py"],
+            "approval_token": plan["approval"]["token"],
+            "poll_attempts": 3,
+            "poll_interval_seconds": 0.1,
+        },
+    )
+
+    assert result["status"] == "rerun_completed"
+    assert result["telemetry"]["status"] == "found"
     assert result["comparison"]["status"] == "improved"
     assert runner.calls[0]["command"] == ["spark-submit", "job.py"]
 

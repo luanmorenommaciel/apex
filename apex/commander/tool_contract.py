@@ -20,9 +20,21 @@ from apex.commander.recommendations import (
 from apex.commander.rerun_orchestrator import (
     DEFAULT_TIMEOUT_SECONDS,
     execute_rerun_and_compare,
+    execute_rerun_poll_and_compare,
     plan_rerun,
 )
+from apex.commander.spark_rerun_template import (
+    DEFAULT_LISTENER_CLASS,
+    DEFAULT_MASTER,
+    DEFAULT_SPARK_SUBMIT,
+    build_spark_submit_rerun_command,
+)
 from apex.commander.telemetry_compare import compare_job_telemetry
+from apex.commander.telemetry_polling import (
+    DEFAULT_POLL_ATTEMPTS,
+    DEFAULT_POLL_INTERVAL_SECONDS,
+    poll_for_telemetry,
+)
 
 TOOL_SPECS = [
     {
@@ -139,6 +151,41 @@ TOOL_SPECS = [
         },
     },
     {
+        "name": "build_spark_submit_rerun_command",
+        "description": "Build a canonical spark-submit command for a telemetry rerun.",
+        "safety": "read_only",
+        "input_schema": {
+            "type": "object",
+            "required": ["app_path", "after_job_id"],
+            "properties": {
+                "app_path": {"type": "string"},
+                "after_job_id": {"type": "string"},
+                "spark_submit": {"type": "string"},
+                "master": {"type": "string"},
+                "app_args": {"type": "array", "items": {"type": "string"}},
+                "conf": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                },
+                "listener_class": {"type": "string"},
+            },
+        },
+    },
+    {
+        "name": "poll_telemetry",
+        "description": "Wait until telemetry for one job_id is visible in the store.",
+        "safety": "read_only",
+        "input_schema": {
+            "type": "object",
+            "required": ["job_id"],
+            "properties": {
+                "job_id": {"type": "string"},
+                "attempts": {"type": "integer"},
+                "interval_seconds": {"type": "number"},
+            },
+        },
+    },
+    {
         "name": "plan_rerun",
         "description": "Create an approval-token-bound plan for an allowed rerun command.",
         "safety": "read_only",
@@ -168,6 +215,27 @@ TOOL_SPECS = [
                 "approval_token": {"type": "string"},
                 "cwd": {"type": "string"},
                 "timeout_seconds": {"type": "integer"},
+            },
+        },
+    },
+    {
+        "name": "execute_rerun_poll_and_compare",
+        "description": (
+            "Run an approved rerun command, wait for after telemetry, and compare."
+        ),
+        "safety": "guarded_mutation",
+        "input_schema": {
+            "type": "object",
+            "required": ["before_job_id", "after_job_id", "command", "approval_token"],
+            "properties": {
+                "before_job_id": {"type": "string"},
+                "after_job_id": {"type": "string"},
+                "command": {"type": "array", "items": {"type": "string"}},
+                "approval_token": {"type": "string"},
+                "cwd": {"type": "string"},
+                "timeout_seconds": {"type": "integer"},
+                "poll_attempts": {"type": "integer"},
+                "poll_interval_seconds": {"type": "number"},
             },
         },
     },
@@ -202,6 +270,7 @@ class CommanderToolContract:
         rerun_root=None,
         rerun_allowed_command_prefixes=None,
         rerun_runner=None,
+        telemetry_poll_sleeper=None,
     ):
         self.store = store
         self.finding_store = finding_store
@@ -209,6 +278,7 @@ class CommanderToolContract:
         self.rerun_root = rerun_root
         self.rerun_allowed_command_prefixes = rerun_allowed_command_prefixes
         self.rerun_runner = rerun_runner
+        self.telemetry_poll_sleeper = telemetry_poll_sleeper
 
     def call_tool(self, name, arguments):
         args = arguments or {}
@@ -255,6 +325,28 @@ class CommanderToolContract:
                 _required(args, "before_job_id"),
                 _required(args, "after_job_id"),
             )
+        if name == "build_spark_submit_rerun_command":
+            return build_spark_submit_rerun_command(
+                app_path=_required(args, "app_path"),
+                after_job_id=_required(args, "after_job_id"),
+                spark_submit=args.get("spark_submit", DEFAULT_SPARK_SUBMIT),
+                master=args.get("master", DEFAULT_MASTER),
+                app_args=args.get("app_args"),
+                conf=args.get("conf"),
+                listener_class=args.get("listener_class", DEFAULT_LISTENER_CLASS),
+                rerun_root=self.rerun_root,
+            )
+        if name == "poll_telemetry":
+            return poll_for_telemetry(
+                self.store,
+                _required(args, "job_id"),
+                attempts=args.get("attempts", DEFAULT_POLL_ATTEMPTS),
+                interval_seconds=args.get(
+                    "interval_seconds",
+                    DEFAULT_POLL_INTERVAL_SECONDS,
+                ),
+                sleeper=self.telemetry_poll_sleeper,
+            )
         if name == "plan_rerun":
             return plan_rerun(
                 _required(args, "before_job_id"),
@@ -277,6 +369,25 @@ class CommanderToolContract:
                 rerun_root=self.rerun_root,
                 allowed_command_prefixes=self.rerun_allowed_command_prefixes,
                 runner=self.rerun_runner,
+            )
+        if name == "execute_rerun_poll_and_compare":
+            return execute_rerun_poll_and_compare(
+                self.store,
+                _required(args, "before_job_id"),
+                _required(args, "after_job_id"),
+                _required(args, "command"),
+                _required(args, "approval_token"),
+                cwd=args.get("cwd", "."),
+                timeout_seconds=args.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS),
+                rerun_root=self.rerun_root,
+                allowed_command_prefixes=self.rerun_allowed_command_prefixes,
+                runner=self.rerun_runner,
+                poll_attempts=args.get("poll_attempts", DEFAULT_POLL_ATTEMPTS),
+                poll_interval_seconds=args.get(
+                    "poll_interval_seconds",
+                    DEFAULT_POLL_INTERVAL_SECONDS,
+                ),
+                poll_sleeper=self.telemetry_poll_sleeper,
             )
         if name == "preview_fix":
             return build_fix_preview(

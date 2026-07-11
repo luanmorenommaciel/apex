@@ -759,3 +759,58 @@ Limite consciente deste gate:
 - nao faz polling de ClickHouse esperando telemetria chegar;
 - nao faz rollback automatico;
 - nao altera branches remotas.
+
+## Gate 14: Spark job template + telemetry polling
+
+O Gate 14 torna a reexecucao mais operacional: o Commander passa a montar um comando Spark canonico e pode esperar a telemetria do `after_job_id` aparecer antes de comparar.
+
+Fluxo:
+
+```text
+build_spark_submit_rerun_command(app_path, after_job_id)
+  -> plan_rerun(before_job_id, after_job_id, command)
+  -> approval.token
+execute_rerun_poll_and_compare(..., approval_token)
+  -> runner.run(command)
+  -> poll_telemetry(after_job_id)
+  -> compare_job_telemetry(before_job_id, after_job_id)
+```
+
+Novas tools:
+
+| Tool | Seguranca | O que faz |
+| --- | --- | --- |
+| `build_spark_submit_rerun_command` | `read_only` | monta `spark-submit` com `spark.extraListeners` e `spark.apex.jobId` |
+| `poll_telemetry` | `read_only` | espera envelopes do `job_id` ficarem visiveis no store |
+| `execute_rerun_poll_and_compare` | `guarded_mutation` | executa comando aprovado, aguarda telemetria e compara |
+
+Guardrails:
+
+- o comando Spark e uma lista de argumentos, nao uma string de shell;
+- `app_path` fica restrito a `rerun_root` quando configurado;
+- `spark.apex.jobId` e `spark.extraListeners` sao definidos pelo template canonico;
+- polling tem limite de tentativas e intervalo;
+- configuracao invalida de polling bloqueia antes de executar o comando;
+- a comparacao so roda quando a telemetria do `after_job_id` aparece;
+- se a telemetria nao chegar, retorna `telemetry_not_available` sem inventar resultado;
+- MCP marca `execute_rerun_poll_and_compare` como mutacao guardada.
+
+Rodar suite padrao do gate:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_rerun_orchestrator.py tests/test_commander_tool_contract.py tests/test_commander_mcp_stdio_server.py -q --basetemp .pytest-commander-gate14-focused
+```
+
+Esperado:
+
+```text
+46 passed
+```
+
+Limite consciente deste gate:
+
+- ainda nao empacota um `SparkListener` JVM real;
+- ainda nao executa um job Spark real em CI;
+- ainda nao cria scheduler de reexecucao em producao;
+- nao altera branches remotas.
