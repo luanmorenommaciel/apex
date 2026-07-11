@@ -25,3 +25,4 @@
 | CODEX-005 | L6/G5 | tarefa | converter Cowork `apply_fix` para fix guardado preview-first | `docs/architecture/codex-branch-solution-comparison-2026-07-09.md` | aberta |
 | CODEX-006 | F0 | tarefa | definir targets de paridade DataFlint: alertas, UI, MCP, comportamento agêntico e segurança | `docs/architecture/codex-branch-solution-comparison-2026-07-09.md` | aberta |
 | CODEX-007 | F0 | risco confirmado | fix guardado (Gate 11) é adoção do conceito apply_fix da Cowork, lido no comparativo 08/07 antes do Gate 11 ser definido — não é invenção paralela independente | evidência: commits 52b181b, 64478f6, 086e3a0, 8f4b802 | fechada (fato estabelecido) |
+| CODEX-008 | F1/G0 | evidência | fundação G0 publica DDL canônico, compose Spark/ClickHouse com volumes nomeados e teste limpo | `docs/specs/apex_telemetry_v1.sql`; `docker-compose.yml`; `tests/test_foundation_contracts.py`; `evidence/g0-testes.log` | fechada |

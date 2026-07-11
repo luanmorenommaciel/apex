@@ -1,0 +1,50 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: apex-clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - apex_clickhouse_data:/var/lib/clickhouse
+      - ./docs/specs/apex_telemetry_v1.sql:/docker-entrypoint-initdb.d/001-apex-telemetry-v1.sql:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  spark-master:
+    image: bitnami/spark:3.5.1
+    container_name: apex-spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_NO_DAEMONIZE=yes
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    volumes:
+      - apex_spark_event_logs:/tmp/spark-events
+
+  spark-worker:
+    image: bitnami/spark:3.5.1
+    container_name: apex-spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_NO_DAEMONIZE=yes
+    volumes:
+      - apex_spark_event_logs:/tmp/spark-events
+
+volumes:
+  apex_clickhouse_data:
+  apex_spark_event_logs:
