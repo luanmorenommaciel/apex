@@ -67,10 +67,19 @@ def _mcp_tools():
                 "title": spec["name"],
                 "description": spec["description"],
                 "inputSchema": deepcopy(spec["input_schema"]),
-                "annotations": {"readOnlyHint": spec["safety"] == "read_only"},
+                "annotations": _tool_annotations(spec),
             }
         )
     return tools
+
+
+def _tool_annotations(spec):
+    read_only = spec["safety"] == "read_only"
+    annotations = {"readOnlyHint": read_only}
+    if not read_only:
+        annotations["destructiveHint"] = True
+        annotations["idempotentHint"] = False
+    return annotations
 
 
 def _tool_result(payload):

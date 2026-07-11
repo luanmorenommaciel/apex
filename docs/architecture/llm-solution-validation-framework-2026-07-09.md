@@ -241,6 +241,14 @@ Gate 10 is complete locally for recommend/preview:
 - MCP exposes both tools as read-only;
 - `apply_fix` remains absent.
 
+Gate 11 is complete locally for guarded apply/verify:
+
+- `preview_recommendation` returns `before_sha256`, `after_sha256`, `diff_sha256`, and an approval token;
+- `apply_recommendation` writes only when `apply_root` is configured and the approval token still matches the current preview;
+- `verify_recommendation_apply` confirms the final file hash;
+- MCP marks `apply_recommendation` as non-read-only guarded mutation;
+- `apply_fix` remains absent and rejected.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -364,19 +372,21 @@ Required tools:
 | `query_persisted_findings(job_id)` | read-only |
 | `recommend_fix(job_id)` | read-only |
 | `preview_recommendation(job_id, recommendation_id, path, replacement)` | read-only diff |
+| `apply_recommendation(job_id, recommendation_id, path, replacement, approval_token)` | guarded mutation |
+| `verify_recommendation_apply(path, expected_sha256)` | read-only |
 | `preview_fix(path, recommendation, replacement)` | read-only diff |
 
 Current Codex evidence:
 
 ```text
-tests/test_commander_tool_contract.py: 11 passed
-focused tool contract validation: 17 passed
+tests/test_commander_tool_contract.py: 14 passed
+focused tool contract validation: 20 passed
 ```
 
 Remaining gap:
 
 ```text
-No external MCP SDK/client interoperability test yet; apply_fix is intentionally absent.
+No external MCP SDK/client interoperability test yet; apply_fix remains intentionally absent.
 ```
 
 ### Gate 6: MCP Stdio Local
@@ -393,8 +403,8 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_mcp_stdio_server.py: 9 passed
-focused MCP stdio validation: 23 passed
+tests/test_commander_mcp_stdio_server.py: 10 passed
+focused MCP stdio validation: 27 passed
 ```
 
 Remaining gap:
@@ -456,7 +466,7 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 25 passed
+tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 29 passed
 ```
 
 Remaining gap:
@@ -479,7 +489,7 @@ Required:
 Current Codex evidence:
 
 ```text
-tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 30 passed
+tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_clickhouse_findings.py: 34 passed
 ```
 
 Remaining gap:
@@ -488,7 +498,30 @@ Remaining gap:
 No apply/verify step yet; replacement body is still human-provided.
 ```
 
-### Gate 11: Apply/Verify Closed Loop
+### Gate 11: Guarded Apply/Verify
+
+Required:
+
+- preview includes `before_sha256`, `after_sha256`, `diff_sha256`, and an approval token;
+- apply requires matching `approval_token`;
+- apply requires configured `apply_root`;
+- apply rejects paths outside `apply_root`;
+- apply verifies the final file hash after writing;
+- `apply_fix` remains absent.
+
+Current Codex evidence:
+
+```text
+tests/test_commander_apply_verify.py + tests/test_commander_recommendations.py + tests/test_commander_tool_contract.py + tests/test_commander_mcp_stdio_server.py + tests/test_commander_fix_preview.py: 36 passed
+```
+
+Remaining gap:
+
+```text
+No automatic Spark re-run or before/after telemetry comparison yet.
+```
+
+### Gate 12: Re-Run/Compare Closed Loop
 
 Required:
 
@@ -547,10 +580,11 @@ No remote publication happens without explicit user approval.
 | P1 | Done locally: persist validated findings in ClickHouse | Codex |
 | P1 | Done locally: expose persisted findings as a read-only MCP tool | Codex |
 | P1 | Done locally: add recommendation and preview loop over persisted findings | Codex + Cowork concept |
+| P1 | Done locally: add guarded apply/verify after approval token | Codex + Cowork concept |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
 | P1 | Validate MCP stdio against an external MCP client/SDK | Codex + Spike/Cowork patterns |
-| P1 | Convert Cowork `apply_fix` to preview-first | Cowork |
-| P2 | Add guarded apply/verify after explicit approval | Codex + Cowork concept |
+| P1 | Convert Cowork raw `apply_fix` ideas to guarded apply token flow | Cowork |
+| P2 | Add re-run/compare telemetry after guarded apply | Codex |
 | P2 | Add DataFlint parity table to every review | DataFlint official docs |
 
 ## Decision Template For Commander

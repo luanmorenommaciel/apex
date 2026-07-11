@@ -263,6 +263,8 @@ Tools expostas:
 | `query_persisted_findings` | `read_only` | retorna findings validados ja persistidos para um `job_id` |
 | `recommend_fix` | `read_only` | gera recomendacoes deterministicas a partir dos findings persistidos |
 | `preview_recommendation` | `read_only` | gera diff para uma recomendacao selecionada sem alterar arquivo |
+| `apply_recommendation` | `guarded_mutation` | aplica a recomendacao somente com token de aprovacao e `apply_root` |
+| `verify_recommendation_apply` | `read_only` | verifica o hash final apos apply guardado |
 | `preview_fix` | `read_only` | retorna diff unificado sem alterar o arquivo |
 
 Contrato de seguranca:
@@ -271,6 +273,8 @@ Contrato de seguranca:
 - `call_tool("apply_fix", ...)` falha com `unknown_tool`;
 - `recommend_fix` nao chama LLM e nao altera arquivo;
 - `preview_recommendation` exige `recommendation_id` e preserva o arquivo original;
+- `apply_recommendation` exige `approval_token` gerado no preview e `apply_root` configurado;
+- `verify_recommendation_apply` compara hash esperado contra hash atual;
 - `preview_fix` usa `build_fix_preview` e preserva o arquivo original.
 
 Rodar:
@@ -283,14 +287,14 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-17 passed
+20 passed
 ```
 
 Limite consciente deste gate:
 
 - ainda nao ha servidor MCP stdio real;
-- ainda nao ha `apply_fix`;
-- nao ha escrita automatica em arquivo alvo.
+- `apply_fix` bruto continua ausente;
+- escrita so acontece via `apply_recommendation` guardado a partir do Gate 11.
 
 ## Gate 6: MCP stdio local read-only
 
@@ -313,6 +317,8 @@ Tools continuam as mesmas do Gate 5:
 - `query_persisted_findings`
 - `recommend_fix`
 - `preview_recommendation`
+- `apply_recommendation`
+- `verify_recommendation_apply`
 - `preview_fix`
 
 Rodar:
@@ -325,7 +331,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-23 passed
+27 passed
 ```
 
 Limite consciente deste gate:
@@ -333,7 +339,7 @@ Limite consciente deste gate:
 - nao usa SDK MCP externo;
 - nao valida contra cliente MCP real;
 - nao abre socket de rede;
-- nao expoe `apply_fix`;
+- nao expoe `apply_fix` bruto;
 - nao altera arquivo alvo.
 
 ## Gate 7: ClickHouse real local
@@ -454,7 +460,7 @@ Limite consciente deste gate:
 
 - findings passam a ser expostos no MCP dedicado a partir do Gate 9;
 - recomendacoes estruturadas passam a existir a partir do Gate 10;
-- ainda nao ha `apply_fix`;
+- apply guardado passa a existir a partir do Gate 11;
 - nao altera branches remotas.
 
 ## Gate 9: Findings persistidos expostos no MCP read-only
@@ -506,7 +512,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-25 passed
+29 passed
 ```
 
 Fluxo atual:
@@ -581,7 +587,7 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Esperado:
 
 ```text
-30 passed
+34 passed
 ```
 
 Limite consciente deste gate:
@@ -591,3 +597,52 @@ Limite consciente deste gate:
 - nao usa LLM para recomendacao basica;
 - nao substitui revisao humana;
 - nao altera branches remotas.
+
+## Gate 11: Guarded apply/verify
+
+O Gate 11 fecha o loop local ate apply verificado, sem abrir um `apply_fix` bruto.
+
+Fluxo:
+
+```text
+preview_recommendation
+  -> approval.token
+  -> apply_recommendation(..., approval_token)
+  -> verify_recommendation_apply
+  -> status verified
+```
+
+Novos componentes:
+
+- `apply_recommendation`: aplica somente se o token do preview ainda bater;
+- `verify_recommendation_apply`: compara o hash atual com o hash esperado;
+- `apply_root`: raiz permitida para escrita; sem ela, o apply retorna `apply_root_not_configured`;
+- hashes no preview: `before_sha256`, `after_sha256` e `diff_sha256`.
+
+Guardrails:
+
+- se o arquivo mudar depois do preview, o token deixa de bater;
+- se o caminho estiver fora de `apply_root`, o apply retorna `outside_apply_root`;
+- se o token estiver errado, o apply retorna `invalid_approval_token`;
+- o arquivo so e escrito depois dessas verificacoes;
+- a verificacao roda depois da escrita.
+
+Rodar suite padrao do gate:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_apply_verify.py tests/test_commander_recommendations.py tests/test_commander_tool_contract.py tests/test_commander_mcp_stdio_server.py tests/test_commander_fix_preview.py -q --basetemp .pytest-commander-gate11
+```
+
+Esperado:
+
+```text
+36 passed
+```
+
+Limite consciente deste gate:
+
+- nao executa Spark re-run automaticamente;
+- nao compara telemetria antes/depois ainda;
+- nao publica branch remota;
+- nao substitui revisao humana.

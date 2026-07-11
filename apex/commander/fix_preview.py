@@ -1,6 +1,7 @@
 """Preview-only fix support for Commander recommendations."""
 
 from difflib import unified_diff
+from hashlib import sha256
 from pathlib import Path
 
 
@@ -21,4 +22,11 @@ def build_fix_preview(path, recommendation, *, replacement):
         "target": str(target),
         "recommendation": recommendation,
         "diff": diff,
+        "before_sha256": _sha256_text(original),
+        "after_sha256": _sha256_text(replacement),
+        "diff_sha256": _sha256_text(diff),
     }
+
+
+def _sha256_text(value):
+    return sha256(value.encode("utf-8")).hexdigest()

@@ -54,10 +54,15 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
         "query_persisted_findings",
         "recommend_fix",
         "preview_recommendation",
+        "apply_recommendation",
+        "verify_recommendation_apply",
         "preview_fix",
     ]
     assert tools[0]["inputSchema"]["required"] == ["job_id"]
     assert tools[0]["annotations"] == {"readOnlyHint": True}
+    apply_tool = next(tool for tool in tools if tool["name"] == "apply_recommendation")
+    assert apply_tool["annotations"]["readOnlyHint"] is False
+    assert apply_tool["annotations"]["destructiveHint"] is True
 
 
 def telemetry_envelope(job_id="job-42"):
@@ -208,8 +213,63 @@ def test_tools_call_can_preview_recommendation_without_modifying_file(tmp_path):
 
     payload = json.loads(response["result"]["content"][0]["text"])
     assert payload["status"] == "preview_ready"
+    assert len(payload["approval"]["token"]) == 64
     assert "+# REVIEW: validate skew before this join" in payload["diff"]
     assert source.read_text(encoding="utf-8") == "df.join(dim, 'id').count()\n"
+
+
+def test_tools_call_can_apply_recommendation_with_matching_token(tmp_path):
+    source = tmp_path / "job.py"
+    replacement = "# REVIEW: validate skew before this join\ndf.join(dim, 'id').count()\n"
+    source.write_text("df.join(dim, 'id').count()\n", encoding="utf-8")
+    finding_store = FakeFindingStore({"job-42": [persisted_skew_record()]})
+    contract = CommanderToolContract(
+        tmp_path / "store.ndjson",
+        finding_store=finding_store,
+        apply_root=tmp_path,
+    )
+    preview_response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "tools/call",
+            "params": {
+                "name": "preview_recommendation",
+                "arguments": {
+                    "job_id": "job-42",
+                    "recommendation_id": "job-42:shuffle_skew_candidate:stage-2:0",
+                    "path": str(source),
+                    "replacement": replacement,
+                },
+            },
+        },
+        contract,
+    )
+    preview = json.loads(preview_response["result"]["content"][0]["text"])
+
+    apply_response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "tools/call",
+            "params": {
+                "name": "apply_recommendation",
+                "arguments": {
+                    "job_id": "job-42",
+                    "recommendation_id": "job-42:shuffle_skew_candidate:stage-2:0",
+                    "path": str(source),
+                    "replacement": replacement,
+                    "approval_token": preview["approval"]["token"],
+                },
+            },
+        },
+        contract,
+    )
+
+    payload = json.loads(apply_response["result"]["content"][0]["text"])
+    assert payload["status"] == "applied"
+    assert payload["verification"]["status"] == "verified"
+    assert source.read_text(encoding="utf-8") == replacement
 
 
 def test_initialized_notification_returns_no_response(tmp_path):

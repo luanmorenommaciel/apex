@@ -2,6 +2,10 @@
 
 from copy import deepcopy
 
+from apex.commander.apply_verify import (
+    apply_recommendation,
+    verify_recommendation_apply,
+)
 from apex.commander.baselines import evaluate_negative_baseline
 from apex.commander.fix_preview import build_fix_preview
 from apex.commander.mcp_contract import (
@@ -81,6 +85,41 @@ TOOL_SPECS = [
         },
     },
     {
+        "name": "apply_recommendation",
+        "description": "Apply a selected recommendation only with a matching approval token.",
+        "safety": "guarded_mutation",
+        "input_schema": {
+            "type": "object",
+            "required": [
+                "job_id",
+                "recommendation_id",
+                "path",
+                "replacement",
+                "approval_token",
+            ],
+            "properties": {
+                "job_id": {"type": "string"},
+                "recommendation_id": {"type": "string"},
+                "path": {"type": "string"},
+                "replacement": {"type": "string"},
+                "approval_token": {"type": "string"},
+            },
+        },
+    },
+    {
+        "name": "verify_recommendation_apply",
+        "description": "Verify a target file hash after a guarded recommendation apply.",
+        "safety": "read_only",
+        "input_schema": {
+            "type": "object",
+            "required": ["path", "expected_sha256"],
+            "properties": {
+                "path": {"type": "string"},
+                "expected_sha256": {"type": "string"},
+            },
+        },
+    },
+    {
         "name": "preview_fix",
         "description": "Return a unified diff preview without modifying the target file.",
         "safety": "read_only",
@@ -102,9 +141,10 @@ def list_tools():
 
 
 class CommanderToolContract:
-    def __init__(self, store, *, finding_store=None):
+    def __init__(self, store, *, finding_store=None, apply_root=None):
         self.store = store
         self.finding_store = finding_store
+        self.apply_root = apply_root
 
     def call_tool(self, name, arguments):
         args = arguments or {}
@@ -128,6 +168,22 @@ class CommanderToolContract:
                 _required(args, "recommendation_id"),
                 _required(args, "path"),
                 _required(args, "replacement"),
+            )
+        if name == "apply_recommendation":
+            return apply_recommendation(
+                self.finding_store,
+                _required(args, "job_id"),
+                _required(args, "recommendation_id"),
+                _required(args, "path"),
+                _required(args, "replacement"),
+                _required(args, "approval_token"),
+                apply_root=self.apply_root,
+            )
+        if name == "verify_recommendation_apply":
+            return verify_recommendation_apply(
+                _required(args, "path"),
+                _required(args, "expected_sha256"),
+                apply_root=self.apply_root,
             )
         if name == "preview_fix":
             return build_fix_preview(

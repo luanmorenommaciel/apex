@@ -53,12 +53,12 @@ uv run --offline --with-requirements requirements.txt python -m pytest tests/tes
 Expected:
 
 ```text
-25 passed
+29 passed
 ```
 
 ## Next Decision
 
-Gate 10 should start the closed loop carefully:
+Gate 10 starts the closed loop carefully:
 
 ```text
 persisted finding -> recommendation -> preview diff -> explicit approval -> apply -> verify

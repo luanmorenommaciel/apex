@@ -58,7 +58,7 @@ That keeps this gate real without pretending the system can safely patch arbitra
 
 ## Next Gate
 
-Gate 11 should add guarded apply/verify:
+Gate 11 adds guarded apply/verify:
 
 ```text
 preview_ready -> explicit approval token -> apply -> re-run -> compare before/after evidence

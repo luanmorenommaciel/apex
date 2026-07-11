@@ -17,3 +17,6 @@ def test_build_fix_preview_returns_diff_without_modifying_file(tmp_path):
     assert "Add salting before the skewed join." in preview["recommendation"]
     assert "+# REVIEW: Add salting before this join" in preview["diff"]
     assert " df.join(dim, 'id').count()" in preview["diff"]
+    assert len(preview["before_sha256"]) == 64
+    assert len(preview["after_sha256"]) == 64
+    assert len(preview["diff_sha256"]) == 64

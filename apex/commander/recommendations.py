@@ -1,5 +1,8 @@
 """Deterministic Commander recommendations and preview loop."""
 
+import json
+from hashlib import sha256
+
 from apex.commander.fix_preview import build_fix_preview
 
 RULE_SET = "apex.commander.recommendations.v1"
@@ -129,7 +132,27 @@ def preview_recommendation(finding_store, job_id, recommendation_id, path, repla
             "requires_approval": True,
         }
     )
+    preview["approval"] = {
+        "required": True,
+        "token": approval_token_from_preview(preview),
+        "token_scope": (
+            "job_id+recommendation_id+target+before_sha256+after_sha256+diff_sha256"
+        ),
+    }
     return preview
+
+
+def approval_token_from_preview(preview):
+    payload = {
+        "job_id": preview["job_id"],
+        "recommendation_id": preview["recommendation_id"],
+        "target": preview["target"],
+        "before_sha256": preview["before_sha256"],
+        "after_sha256": preview["after_sha256"],
+        "diff_sha256": preview["diff_sha256"],
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def _recommendations_from_records(records, job_id):
