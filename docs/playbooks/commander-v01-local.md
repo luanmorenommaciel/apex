@@ -382,3 +382,70 @@ Limite consciente deste gate:
 - nao valida schema separado de findings;
 - nao troca o store padrao NDJSON da CLI;
 - nao altera branches remotas.
+
+## Gate 8: Findings persistidos no ClickHouse
+
+O Gate 8 adiciona uma trilha auditavel para decisoes do Commander.
+
+Fluxo validado:
+
+```text
+telemetry envelope
+  -> diagnose_findings
+  -> EvidenceValidator
+  -> commander_findings
+  -> query por job_id
+```
+
+Novos componentes:
+
+- `ClickHouseFindingStore`: schema, insert e query de findings;
+- `persist_validated_findings`: valida cada finding antes de persistir;
+- `tests/test_commander_clickhouse_findings.py`: fake-client tests sem rede;
+- `tests/test_commander_clickhouse_findings_real_integration.py`: validacao real opt-in.
+
+Rodar suite padrao do gate:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_clickhouse_findings.py tests/test_commander_clickhouse_findings_real_integration.py tests/test_commander_clickhouse_real_integration.py -q --basetemp .pytest-commander-gate8
+```
+
+Esperado sem ClickHouse real configurado:
+
+```text
+3 passed, 2 skipped
+```
+
+Rodar contra ClickHouse real local:
+
+```powershell
+$env:APEX_CLICKHOUSE_REAL_URL='http://localhost:28123'
+$env:APEX_CLICKHOUSE_REAL_USER='<usuario local>'
+$env:APEX_CLICKHOUSE_REAL_PASSWORD='<senha local>'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_clickhouse_findings_real_integration.py -q
+```
+
+Esperado:
+
+```text
+1 passed
+```
+
+O teste real:
+
+- cria uma tabela temporaria de telemetria;
+- cria uma tabela temporaria de findings;
+- persiste o envelope;
+- calcula findings deterministico;
+- valida findings;
+- persiste findings validados;
+- consulta findings por `job_id`;
+- remove as tabelas ao final.
+
+Limite consciente deste gate:
+
+- findings ainda nao sao expostos como nova tool MCP dedicada;
+- ainda nao ha `recommend_fix`;
+- ainda nao ha `apply_fix`;
+- nao altera branches remotas.

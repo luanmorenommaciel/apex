@@ -218,6 +218,13 @@ Gate 7 is complete locally against a real ClickHouse HTTP endpoint:
 - opt-in integration creates a unique table, writes telemetry, queries by `job_id`, runs `diagnose_findings`, runs `explain_evidence`, and drops the table;
 - local validation passed against the running ClickHouse container on `localhost:28123`.
 
+Gate 8 is complete locally for persisted validated findings:
+
+- `ClickHouseFindingStore` creates a dedicated findings table;
+- `persist_validated_findings` runs `EvidenceValidator` before insert;
+- persisted records include the original finding JSON and validation JSON;
+- opt-in real ClickHouse validation stores telemetry, computes findings, persists validated findings, queries by `job_id`, and drops temporary tables.
+
 ## DataFlint Benchmark Targets
 
 Official DataFlint capabilities to compare against:
@@ -383,7 +390,6 @@ Required:
 
 - telemetry persisted by `job_id` or `app_id`;
 - stage/task evidence queryable;
-- findings queryable;
 - local Docker/ClickHouse validation when platform is available.
 
 Current Codex evidence:
@@ -394,13 +400,31 @@ default Gate 7 focus: 8 passed, 1 skipped
 real local ClickHouse integration: 1 passed
 ```
 
+### Gate 8: Persisted Findings In ClickHouse
+
+Required:
+
+- dedicated findings table;
+- validated finding insert;
+- query by `job_id`;
+- fake-client tests;
+- opt-in real ClickHouse roundtrip.
+
+Current Codex evidence:
+
+```text
+tests/test_commander_clickhouse_findings.py: 3 passed
+default Gate 8 focus: 3 passed, 2 skipped
+real local ClickHouse findings integration: 1 passed
+```
+
 Remaining gap:
 
 ```text
-Findings are still computed from stored envelopes, not persisted in a dedicated ClickHouse findings table.
+Persisted findings are not yet exposed as a dedicated MCP tool.
 ```
 
-### Gate 8: Closed Loop
+### Gate 9: Closed Loop
 
 Required:
 
@@ -456,10 +480,11 @@ No remote publication happens without explicit user approval.
 | P1 | Done locally: add read-only local tool contract | Codex + Cowork concept |
 | P1 | Done locally: add MCP stdio local read-only server | Codex |
 | P1 | Done locally: validate ClickHouse HTTP roundtrip against real local service | Codex |
+| P1 | Done locally: persist validated findings in ClickHouse | Codex |
 | P1 | Port Spike detector contracts one by one after local tests exist | Spike |
 | P1 | Validate MCP stdio against an external MCP client/SDK | Codex + Spike/Cowork patterns |
 | P1 | Convert Cowork `apply_fix` to preview-first | Cowork |
-| P2 | Persist findings in ClickHouse with schema and query tests | Codex + Spike/Cowork |
+| P2 | Expose persisted findings as a read-only MCP tool | Codex |
 | P2 | Add DataFlint parity table to every review | DataFlint official docs |
 
 ## Decision Template For Commander
