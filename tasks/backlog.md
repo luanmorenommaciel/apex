@@ -33,7 +33,7 @@ _Atualizar a cada fix fechado. Ver `CHANGELOG.md` para histórico._
 | P2-9 | Sem teste de manifesto `job.meta.json` | `tests/test_slice.py` | #21 | ✅ resolvido na v4 — `compute_scenario_hash` + provenance validation adicionados |
 | P2-10 | Só 1 cenário — loop multi-cenário nunca exercitado | `scenarios/` | #21 | ✅ resolvido 09/07 — `no_skew_baseline.yaml` (G1) + loop CI exercitado com 2 cenários world A |
 | P2-11 | `status: prototype` sem critério de progressão | `scenarios/skew_on_join_30x.yaml:4` | — | 🟡 aberto |
-| P2-12 | Sem CI agendado para oráculo — drift silencioso | `.github/workflows/` | #21 | 🟠 quase — `oracle-weekly.yml` corrigido em 08/07 (`fetch_real_log.py` criado, filtro world B). Falta: secrets `MINIO_*` + 1 run manual |
+| P2-12 | Sem CI agendado para oráculo — drift silencioso | `.github/workflows/` | #21 | 🟠 workflow corrigido (08/07) e oráculo validado com dado real (G3, 09/07). **Bloqueio descoberto 10/07**: runner do GitHub não alcança o MinIO local do plat-v0 — precisa de decisão do Commander: (a) self-hosted runner, (b) MinIO acessível do time, ou (c) oráculo agendado local (Task Scheduler). Secrets sozinhos não resolvem |
 
 ---
 

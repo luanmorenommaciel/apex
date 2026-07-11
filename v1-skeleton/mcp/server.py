@@ -14,9 +14,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("apex.mcp")
 
 CH_HOST     = os.getenv("APEX_CH_HOST", "localhost")
-CH_PORT     = int(os.getenv("APEX_CH_PORT", "8123"))
-CH_USER     = os.getenv("APEX_CH_USER", "apex")
-CH_PASSWORD = os.getenv("APEX_CH_PASSWORD", "apex123")
+CH_PORT     = int(os.getenv("APEX_CH_PORT", "28123"))       # default plat-v0
+CH_USER     = os.getenv("APEX_CH_USER", "spv0")
+CH_PASSWORD = os.getenv("APEX_CH_PASSWORD", "spv0clickhouse123")
 
 app = Server("apex-v1")
 
