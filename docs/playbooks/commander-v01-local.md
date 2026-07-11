@@ -328,3 +328,57 @@ Limite consciente deste gate:
 - nao abre socket de rede;
 - nao expoe `apply_fix`;
 - nao altera arquivo alvo.
+
+## Gate 7: ClickHouse real local
+
+O Gate 7 valida persistencia real de telemetria em ClickHouse via HTTP, sem driver externo.
+
+Novos componentes:
+
+- `ClickHouseHttpClient`: client HTTP com `command`, `insert` e `query`;
+- `tests/test_commander_clickhouse_http_client.py`: valida SQL, Basic Auth, JSONEachRow e parsing sem rede;
+- `tests/test_commander_clickhouse_real_integration.py`: valida roundtrip real quando as variaveis de ambiente estao configuradas.
+
+Rodar suite padrao do gate:
+
+```powershell
+$env:PYTHONUTF8='1'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_clickhouse_http_client.py tests/test_commander_clickhouse_adapter.py tests/test_commander_clickhouse_real_integration.py -q --basetemp .pytest-commander-gate7
+```
+
+Esperado sem ClickHouse real configurado:
+
+```text
+8 passed, 1 skipped
+```
+
+Rodar contra ClickHouse real local:
+
+```powershell
+$env:APEX_CLICKHOUSE_REAL_URL='http://localhost:28123'
+$env:APEX_CLICKHOUSE_REAL_USER='<usuario local>'
+$env:APEX_CLICKHOUSE_REAL_PASSWORD='<senha local>'
+uv run --offline --with-requirements requirements.txt python -m pytest tests/test_commander_clickhouse_real_integration.py -q
+```
+
+Esperado:
+
+```text
+1 passed
+```
+
+O teste real:
+
+- cria uma tabela temporaria unica;
+- executa `ensure_schema`;
+- insere envelope de telemetria;
+- consulta por `job_id`;
+- roda `diagnose_findings` e `explain_evidence` sobre o store real;
+- remove a tabela ao final.
+
+Limite consciente deste gate:
+
+- nao grava credenciais em arquivo;
+- nao valida schema separado de findings;
+- nao troca o store padrao NDJSON da CLI;
+- nao altera branches remotas.
