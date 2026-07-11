@@ -47,9 +47,14 @@ def write_ndjson(tmp_path, name, events):
     return str(p)
 
 
+SUBPROC_ENV = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+
+
 def run(script, *args):
+    # UTF-8 forcado: console Windows cp1252 quebra nos prints unicode (✅/❌)
     return subprocess.run([sys.executable, str(ROOT / script), *args],
-                          capture_output=True, text=True)
+                          capture_output=True, text=True,
+                          encoding="utf-8", errors="replace", env=SUBPROC_ENV)
 
 
 # ---------- P0 #1: streaming zstd ----------

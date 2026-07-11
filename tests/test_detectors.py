@@ -9,18 +9,25 @@ sys.path.insert(0, str(ROOT))
 from apex import apexlib, detectors  # noqa: E402
 
 
+import os
+
+SUBPROC_ENV = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+SUBPROC_KW = dict(capture_output=True, text=True, encoding="utf-8",
+                  errors="replace", env=SUBPROC_ENV)
+
+
 def synth(scenario_name, tmp_path):
     scen = str(ROOT / "scenarios" / scenario_name)
     log = str(tmp_path / "log.ndjson")
     r = subprocess.run([sys.executable, str(ROOT / "generators/plan_generator.py"), scen, log],
-                       capture_output=True, text=True)
+                       **SUBPROC_KW)
     assert r.returncode == 0, r.stderr
     return apexlib.read_events(log), scen, log
 
 
 def run_watcher(scen, log):
     return subprocess.run([sys.executable, str(ROOT / "watchers/pattern_watcher.py"), scen, log],
-                          capture_output=True, text=True)
+                          **SUBPROC_KW)
 
 
 def test_gc_detector_critical(tmp_path):

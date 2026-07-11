@@ -90,6 +90,8 @@ BASE:        spike/apex-v0.1 (plataforma + 5 detectores + diagnostics.yaml + Go 
 + FUTURO:    kimi-Go entra pelo mesmo funil de gates, sem exceção
 ```
 
+> **10/07 — composição MATERIALIZADA na branch:** `apex/evidence_validator.py` (7 regras kimi-Py, puro sobre o contrato, integrado ao T1 — evidência inválida bloqueia diagnóstico), `apex/telemetry.py` (envelope `job_id` do codex), detectores do spike já portados no G2, `apply_fix` validado no G5. Formalização: `docs/adr/ADR-006-composicao-v1.md` (aguarda martelo do Commander).
+
 DataFlint permanece como **régua**: ~14 detectores, UI madura, alertas. Nossa vantagem defensável: on-premise, extensível, e L6 (aplicar o fix no IDE) — que o SaaS não faz.
 
 **Matriz DataFlint completa** (capability por capability): `docs/competitive/dataflint-vs-apex-matrix.md` + `docs/avaliacao/MATRIX_COMPARATIVA.md`. Estudo de arquitetura e pain points da comunidade: `docs/competitive/dataflint-apex-study.html`. (Snapshot de 07/07 — reverificar o produto antes de decisões de roadmap.)

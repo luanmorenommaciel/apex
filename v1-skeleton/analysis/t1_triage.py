@@ -181,12 +181,27 @@ def fetch_rows(app_id):
 
 
 def triage(app_id):
-    """T1 completo: ClickHouse -> findings deterministicos. Retorna (findings, elapsed_ms)."""
+    """T1 completo: ClickHouse -> EvidenceValidator -> findings. Retorna (findings, elapsed_ms).
+
+    [Composicao V1 / A03] O validator roda ANTES dos detectores: evidencia
+    INVALID bloqueia o diagnostico (nem T1 nem LLM opinam sobre lixo)."""
+    from apex import evidence_validator
     t0 = time.perf_counter()
     stage_rows, tasks = fetch_rows(app_id)
+    report = evidence_validator.validate_rows(stage_rows, tasks, app_ids=[app_id])
+    if report["status"] == "invalid":
+        bad = [r["message"] for r in report["rules"] if r["status"] == "invalid"]
+        print(f"[validator] evidencia INVALIDA — diagnostico bloqueado: {bad}", file=sys.stderr)
+        return [], (time.perf_counter() - t0) * 1000
+    if report["status"] == "indeterminate":
+        print(f"[validator] evidencia indeterminada ({report['passed']}/7 regras) — "
+              f"findings terao confianca reduzida", file=sys.stderr)
     findings = triage_rows(stage_rows, tasks)
     for f in findings:
         f["app_id"] = app_id
+        f["evidence_validation"] = report["status"]
+        if report["status"] == "indeterminate":
+            f["confidence"] = round(min(f["confidence"], 0.59), 2)  # forca revisao (Judge/LLM)
     return findings, (time.perf_counter() - t0) * 1000
 
 
