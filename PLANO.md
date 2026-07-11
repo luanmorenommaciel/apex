@@ -71,32 +71,32 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 
 ## Ordem De Trabalho Recomendada
 
-1. **F1 — Docker/Spark Envy minimo**
+1. **Etapa 1 — Docker/Spark Envy minimo**
    - `docker compose up` sobe Spark local e ClickHouse com named volume.
    - Produz event log ou artefato de telemetria reproduzivel.
 
-2. **F2 — Schema ClickHouse canonico**
+2. **Etapa 2 — Schema ClickHouse canonico**
    - Criar `docs/specs/apex_telemetry_v1.sql`.
    - Alinhar adapters atuais ao contrato `apex.*`, `job_id`, `app_id`, `shuffle_records`.
 
-3. **F3 — Listener/bridge real fail-safe**
+3. **Etapa 3 — Listener/bridge real fail-safe**
    - Ligar `spark.extraListeners` ou bridge aceito pela ADR.
    - Garantir fail-safe.
 
-4. **F4 — Cenarios comuns e gates G1-G3**
+4. **Etapa 4 — Cenarios comuns e gates G1-G3**
    - Portar cenarios v1 do pacote comum.
    - Rodar baseline `none` e detectores sinteticos.
    - Validar skew sintetico vs real.
 
-5. **F5 — T1 latencia**
+5. **Etapa 5 — T1 latencia**
    - Medir T1 < 1s sem LLM.
    - Registrar log cru em `evidence/`.
 
-6. **F6 — MCP IDE/apply_fix**
+6. **Etapa 6 — MCP IDE/apply_fix**
    - Converter apply guardado atual para contrato `apply_fix`.
    - Preservar backup, diff revisavel, token/confirmacao e verificacao.
 
-7. **F7 — Crew.ai**
+7. **Etapa 7 — Crew.ai**
    - Entrar apenas quando T1 + EvidenceValidator + schema canonico estiverem estaveis.
 
 ## Reaproveitar Versus Refazer
@@ -122,8 +122,8 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 
 ## Observacoes F0
 
-- `ISSUES.md` foi citado como existente com `CODEX-001`, mas nao foi encontrado neste checkout durante a formalizacao. Por isso, nao foi criado nem alterado neste F0.
-- Proveniencia do fix guardado: `apex/commander/fix_preview.py` aparece primeiro em `4983b10` (2026-07-09) e `apex/commander/apply_verify.py` aparece primeiro em `8f4b802` (2026-07-11). Como a branch ja continha `docs/architecture/codex-branch-solution-comparison-2026-07-09.md`, a origem conceitual do fix guardado deve ser tratada como risco de proveniencia e foi registrada em `ISSUES.md` como `CODEX-007`.
+- `ISSUES.md` existe hoje na raiz como catalogo formal do F0, com `CODEX-001` a `CODEX-007`; `CODEX-007` esta fechado como fato estabelecido, com evidencia nos commits `52b181b`, `64478f6`, `086e3a0` e `8f4b802`.
+- Proveniencia do fix guardado: `apex/commander/fix_preview.py` aparece primeiro em `4983b10` (2026-07-09) e `apex/commander/apply_verify.py` aparece primeiro em `8f4b802` (2026-07-11). O `CODEX-007` confirma que o Gate 11 adotou o conceito `apply_fix` da Cowork, lido no comparativo de 08/07 antes do Gate 11 ser definido, e nao foi invencao paralela independente.
 - `docs/autoavaliacao.md` e `MELHORIAS.md` foram criados como arquivos vazios, conforme pedido de `touch`.
 - `evidence/`, `docs/adr/` e `docs/meetings/` foram criados como diretorios locais. Se precisarem ser versionados vazios, sera necessario adicionar arquivos sentinela em etapa posterior.
-- Nada foi enviado para remote.
+- O F0 foi sincronizado com a branch remota `campeonato/codex-round2` apos a confirmacao de proveniencia.
