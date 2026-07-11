@@ -24,3 +24,4 @@
 | CODEX-004 | G1/G4 | tarefa | portar Kimi EvidenceValidator e baseline negativo quando necessário ao contrato comum | `docs/architecture/codex-branch-solution-comparison-2026-07-09.md` | aberta |
 | CODEX-005 | L6/G5 | tarefa | converter Cowork `apply_fix` para fix guardado preview-first | `docs/architecture/codex-branch-solution-comparison-2026-07-09.md` | aberta |
 | CODEX-006 | F0 | tarefa | definir targets de paridade DataFlint: alertas, UI, MCP, comportamento agêntico e segurança | `docs/architecture/codex-branch-solution-comparison-2026-07-09.md` | aberta |
+| CODEX-007 | F0 | risco | branch continha `docs/architecture/codex-branch-solution-comparison-2026-07-09.md` com detalhes técnicos de Kimi/Cowork/spike, usados como evidência de CODEX-003/004/005/006 — proveniência do fix guardado precisa ser verificada por data de commit | evidência: git log dos arquivos citados | aberta |

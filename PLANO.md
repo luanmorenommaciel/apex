@@ -123,6 +123,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 ## Observacoes F0
 
 - `ISSUES.md` foi citado como existente com `CODEX-001`, mas nao foi encontrado neste checkout durante a formalizacao. Por isso, nao foi criado nem alterado neste F0.
+- Proveniencia do fix guardado: `apex/commander/fix_preview.py` aparece primeiro em `4983b10` (2026-07-09) e `apex/commander/apply_verify.py` aparece primeiro em `8f4b802` (2026-07-11). Como a branch ja continha `docs/architecture/codex-branch-solution-comparison-2026-07-09.md`, a origem conceitual do fix guardado deve ser tratada como risco de proveniencia e foi registrada em `ISSUES.md` como `CODEX-007`.
 - `docs/autoavaliacao.md` e `MELHORIAS.md` foram criados como arquivos vazios, conforme pedido de `touch`.
 - `evidence/`, `docs/adr/` e `docs/meetings/` foram criados como diretorios locais. Se precisarem ser versionados vazios, sera necessario adicionar arquivos sentinela em etapa posterior.
 - Nada foi enviado para remote.
