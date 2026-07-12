@@ -26,7 +26,7 @@ def apply_recommendation(
         finding_store,
         job_id,
         recommendation_id,
-        target,
+        path,
         replacement,
     )
     if preview.get("status") != "preview_ready":

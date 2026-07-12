@@ -142,6 +142,36 @@ def test_apply_recommendation_writes_and_verifies_with_matching_token(tmp_path):
     assert source.read_text(encoding="utf-8") == replacement
 
 
+def test_apply_recommendation_preserves_preview_token_for_relative_target(tmp_path, monkeypatch):
+    source = tmp_path / "job.py"
+    original = "df.join(dim, 'id').count()\n"
+    replacement = "# REVIEW: validate skew before this join\ndf.join(dim, 'id').count()\n"
+    source.write_text(original, encoding="utf-8")
+    store = FakeFindingStore({"job-42": [accepted_skew_record()]})
+    monkeypatch.chdir(tmp_path)
+
+    preview = preview_recommendation(
+        store,
+        "job-42",
+        "job-42:shuffle_skew_candidate:stage-2:0",
+        "job.py",
+        replacement,
+    )
+    result = apply_recommendation(
+        store,
+        "job-42",
+        "job-42:shuffle_skew_candidate:stage-2:0",
+        "job.py",
+        replacement,
+        preview["approval"]["token"],
+        apply_root=tmp_path,
+    )
+
+    assert result["status"] == "applied"
+    assert result["verification"]["status"] == "verified"
+    assert source.read_text(encoding="utf-8") == replacement
+
+
 def test_verify_recommendation_apply_detects_mismatch(tmp_path):
     source = tmp_path / "job.py"
     source.write_text("df.join(dim, 'id').count()\n", encoding="utf-8")

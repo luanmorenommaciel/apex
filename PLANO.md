@@ -35,7 +35,7 @@ atual cobre uma parte do requisito, o status fica como `parcial`.
 | G2 cada detector pega seu cenario sintetico | Parcial | `tests/test_commander_detectors.py` cobre skew, spill/shuffle, GC, OOM e AQE localmente. | Nao ha ainda pacote completo de cenarios v1 comuns (`data_skew_on_join_key`, `gc_pressure`, `shuffle_spill`, `oom_task_failure`, `cartesian_product`, `none`). |
 | G3 sintetico ~= real no cluster + >=8 tasks reais | Parcial | `real_log.ndjson`, `oracle/compare.py`, docs v4 registram comparacao sintetico vs real para skew. | Cobre o slice de skew; nao cobre todos os detectores nem uma execucao cluster atual pelo pacote comum. |
 | G4 T1 < 1s sem LLM; LLM so confidence < 0.6 | Parcial | `evidence/g4-t1.log` mede o caminho T1 deterministico contra `app-20260712053414-0001`: 226.991 ms, com `EvidenceValidator` aceitando o finding e grep sem referencias a LLM/API no caminho medido. | A latencia T1 esta abaixo de 1s; a parte de escalonamento para Crew.ai/Judge quando confidence < 0.6 ainda e decisao de design sem implementacao real. |
-| G5 IDE: finding -> apply_fix -> rerun limpo | Parcial | `preview_recommendation`, `apply_recommendation`, `verify_recommendation_apply`, `execute_rerun_poll_and_compare`. | O loop existe localmente e guardado, mas nao e a tool `apply_fix`, nao roda no IDE real e nao prova ainda o rerun limpo com Spark real. |
+| G5 IDE: finding -> apply_fix -> rerun limpo | Parcial | `evidence/g5-ciclo.log` valida o ciclo funcional real com `preview_recommendation` -> `apply_recommendation` -> rerun Spark no `spv0-spark-master`: finding skew caiu de 1/high para 0 e shuffle read caiu de 1.157.481 bytes para 0. | Funcionalmente verde no ciclo local/plat-v0; ainda nao e a tool `apply_fix` do contrato comum e nao foi validado dentro de IDE real. |
 | G6 oraculo agendado sintetico vs real drift | Nao cumpre | Existe `oracle/compare.py` manual. | Falta agendamento/infra de drift. |
 
 ## Mapeamento Do Gate 14 Interno
@@ -93,6 +93,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
    - Manter regressao automatizada de latencia antes de evoluir Crew.ai/Judge.
 
 6. **Etapa 6 — MCP IDE/apply_fix**
+   - Ciclo funcional real concluido em `evidence/g5-ciclo.log` usando `apply_recommendation`.
    - Converter apply guardado atual para contrato `apply_fix`.
    - Preservar backup, diff revisavel, token/confirmacao e verificacao.
 
