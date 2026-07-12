@@ -63,7 +63,7 @@ def _skew_findings(envelope, job_id):
         build_finding(
             "shuffle_skew_candidate",
             job_id,
-            "warning",
+            "high",
             "medium",
             {
                 "schema_version": envelope.get("schema_version"),

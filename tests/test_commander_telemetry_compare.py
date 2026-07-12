@@ -36,7 +36,10 @@ def telemetry_envelope(
     run_time=10000,
     aqe_updates=0,
     failure_reasons=None,
+    shuffle_read_bytes=0,
 ):
+    if not shuffle_read_bytes and (disk_spill or memory_spill):
+        shuffle_read_bytes = 300 * 1024 * 1024
     stage = {
         "stage_id": 2,
         "task_count": 8,
@@ -49,6 +52,8 @@ def telemetry_envelope(
         "quality_issues": [],
         "disk_bytes_spilled": disk_spill,
         "memory_bytes_spilled": memory_spill,
+        "shuffle_read_bytes": shuffle_read_bytes,
+        "shuffle_read_records": 4000,
         "jvm_gc_time_ms": gc_time,
         "executor_run_time_ms": run_time,
         "failure_reasons": failure_reasons or [],

@@ -3,9 +3,12 @@
 from collections import Counter
 
 from apex import apexlib
+from apex.commander.diagnostics_config import load_diagnostics_config
 
 SCHEMA_VERSION = "apex.commander.telemetry.v1"
-SKEW_RATIO_MIN = 10
+DIAGNOSTICS = load_diagnostics_config()
+SKEW_RATIO_MIN = DIAGNOSTICS["skew"]["ratio_min"]
+SKEW_MIN_TASKS = DIAGNOSTICS["skew"]["min_tasks"]
 
 
 def infer_job_id(events):
@@ -30,11 +33,14 @@ def build_telemetry(events, job_id=None):
         "job_id": selected_job_id,
         "app_id": _infer_app_id(event_list),
         "event_counts": dict(Counter(event.get("Event", "unknown") for event in event_list)),
+        "physical_plans": _physical_plans(event_list),
         "stages": stages,
         "skew_candidates": [
             _candidate_from_stage(stage)
             for stage in stages
-            if stage["evidence_status"] == "valid" and stage["ratio"] >= SKEW_RATIO_MIN
+            if stage["evidence_status"] == "valid"
+            and stage["task_count"] >= SKEW_MIN_TASKS
+            and stage["ratio"] >= SKEW_RATIO_MIN
         ],
     }
 
@@ -62,6 +68,8 @@ def stage_summaries(events):
                 {
                     "disk_bytes_spilled": 0,
                     "memory_bytes_spilled": 0,
+                    "shuffle_read_bytes": 0,
+                    "shuffle_read_records": 0,
                     "jvm_gc_time_ms": 0,
                     "executor_run_time_ms": 0,
                     "failure_reasons": [],
@@ -86,6 +94,8 @@ def _task_metric_by_stage(events):
             {
                 "disk_bytes_spilled": 0,
                 "memory_bytes_spilled": 0,
+                "shuffle_read_bytes": 0,
+                "shuffle_read_records": 0,
                 "jvm_gc_time_ms": 0,
                 "executor_run_time_ms": 0,
                 "failure_reasons": [],
@@ -93,12 +103,54 @@ def _task_metric_by_stage(events):
         )
         stage["disk_bytes_spilled"] += int(metrics.get("Disk Bytes Spilled") or 0)
         stage["memory_bytes_spilled"] += int(metrics.get("Memory Bytes Spilled") or 0)
+        shuffle = metrics.get("Shuffle Read Metrics") or {}
+        stage["shuffle_read_bytes"] += _shuffle_read_bytes(shuffle)
+        stage["shuffle_read_records"] += int(shuffle.get("Total Records Read") or 0)
         stage["jvm_gc_time_ms"] += int(metrics.get("JVM GC Time") or 0)
         stage["executor_run_time_ms"] += int(metrics.get("Executor Run Time") or 0)
-        reason = (event.get("Task End Reason") or {}).get("Reason")
+        reason = _failure_reason(event.get("Task End Reason") or {})
         if reason and reason != "Success":
             stage["failure_reasons"].append(reason)
     return by_stage
+
+
+def _shuffle_read_bytes(shuffle):
+    total = int(shuffle.get("Total Bytes Read") or 0)
+    if total:
+        return total
+    return int(shuffle.get("Remote Bytes Read") or 0) + int(
+        shuffle.get("Local Bytes Read") or 0
+    )
+
+
+def _failure_reason(task_end_reason):
+    parts = [
+        task_end_reason.get("Reason"),
+        task_end_reason.get("Class Name"),
+        task_end_reason.get("Description"),
+        task_end_reason.get("Full Stack Trace"),
+    ]
+    return " | ".join(str(part) for part in parts if part)
+
+
+def _physical_plans(events):
+    plans = []
+    for event in events:
+        plan = event.get("physicalPlanDescription") or event.get(
+            "Physical Plan Description"
+        )
+        if not plan:
+            continue
+        plans.append(
+            {
+                "event": event.get("Event"),
+                "execution_id": event.get("executionId")
+                or event.get("SQL Execution ID")
+                or event.get("sqlExecutionId"),
+                "plan": plan,
+            }
+        )
+    return plans
 
 
 def _candidate_from_stage(stage):

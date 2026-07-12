@@ -21,6 +21,8 @@ def telemetry_envelope():
                 "quality_issues": [],
                 "disk_bytes_spilled": 2 * 1024 * 1024,
                 "memory_bytes_spilled": 0,
+                "shuffle_read_bytes": 300 * 1024 * 1024,
+                "shuffle_read_records": 182193,
                 "jvm_gc_time_ms": 0,
                 "executor_run_time_ms": 10000,
                 "failure_reasons": [],

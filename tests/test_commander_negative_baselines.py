@@ -22,6 +22,7 @@ def task_end(
     gc_time=0,
     duration=1000,
     reason="Success",
+    shuffle_read_bytes=0,
 ):
     return {
         "Event": "SparkListenerTaskEnd",
@@ -40,6 +41,7 @@ def task_end(
             "Memory Bytes Spilled": memory_spill,
             "Shuffle Read Metrics": {
                 "Total Records Read": records,
+                "Remote Bytes Read": shuffle_read_bytes,
             },
         },
     }
@@ -86,8 +88,15 @@ def test_negative_baseline_passes_for_healthy_job(tmp_path):
 def spill_events():
     return [
         app_start("app-spill"),
-        task_end(3, 0, 10000, app_id="app-spill", disk_spill=1024 * 1024),
-        task_end(3, 1, 10200, app_id="app-spill"),
+        task_end(
+            3,
+            0,
+            10000,
+            app_id="app-spill",
+            disk_spill=1024 * 1024,
+            shuffle_read_bytes=300 * 1024 * 1024,
+        ),
+        task_end(3, 1, 10200, app_id="app-spill", shuffle_read_bytes=1024 * 1024),
     ]
 
 
