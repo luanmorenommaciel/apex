@@ -1,0 +1,14 @@
+G3 environment bootstrap attempt
+
+Command:
+docker compose up -d
+
+Result:
+exit_code=1
+
+Raw output:
+unable to get image 'clickhouse/clickhouse-server:24.8': failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: O sistema não pode encontrar o arquivo especificado.
+
+Assessment:
+Docker Desktop/Linux engine is not available, so the plat-v0-aligned stack could not be started.
+No Spark job was submitted and no G3 measurement was produced.
