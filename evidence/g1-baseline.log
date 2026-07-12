@@ -6,7 +6,7 @@ generated_dir=C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence
 ### scenario no_skew_baseline.yaml
 scenario_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\no_skew_baseline.yaml
 output_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\no_skew_baseline.ndjson
-plan_generator_command=C:\Users\Guest\AppData\Local\uv\cache\builds-v0\.tmpirnqOp\Scripts\python.exe C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\plan_generator.py C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\no_skew_baseline.yaml C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\no_skew_baseline.ndjson
+plan_generator_command=C:\Users\Guest\AppData\Local\uv\cache\builds-v0\.tmpMjNSb3\Scripts\python.exe C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\plan_generator.py C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\no_skew_baseline.yaml C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\no_skew_baseline.ndjson
 plan_generator_exit_code=0
 plan_generator_stdout_begin
 ✅ C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\no_skew_baseline.ndjson gerado: 14 eventos, scenario_hash sha256:20c4fe012a1385db embutido.
@@ -16,7 +16,7 @@ plan_generator_stderr_begin
 plan_generator_stderr_end
 telemetry_envelope_begin
 {
-  "app_id": "app-1783816194-0001",
+  "app_id": "app-1783821536-0001",
   "event_counts": {
     "ApexSyntheticProvenance": 1,
     "SparkListenerApplicationEnd": 1,
@@ -26,7 +26,14 @@ telemetry_envelope_begin
     "SparkListenerTaskEnd": 8,
     "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart": 1
   },
-  "job_id": "app-1783816194-0001",
+  "job_id": "app-1783821536-0001",
+  "physical_plans": [
+    {
+      "event": "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart",
+      "execution_id": 1,
+      "plan": "== Physical Plan ==\n*(5) SortMergeJoin [customer_id], [customer_id], Inner\n:- Exchange hashpartitioning(customer_id, 8)\n+- Exchange hashpartitioning(customer_id, 8)"
+    }
+  ],
   "schema_version": "apex.commander.telemetry.v1",
   "skew_candidates": [],
   "stages": [
@@ -51,6 +58,8 @@ telemetry_envelope_begin
         25018,
         25021
       ],
+      "shuffle_read_bytes": 12805376,
+      "shuffle_read_records": 200084,
       "stage_id": 4,
       "task_count": 8,
       "total_records": 200084
