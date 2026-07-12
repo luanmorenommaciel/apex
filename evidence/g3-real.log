@@ -1,0 +1,8 @@
+
+=== G3 — multi-core gate | log: evidence\generated\g3\g3_real_eventlog.zstd ===
+
+✅ distribuicao: 8 tasks no stage 2 (hot 164956, ratio 29.4x)
+✅ oraculo: [OK] ORACULO: sintetico fiel ao Spark real nos sinais agregados dentro da tolerancia.
+✅ watcher no log real: GATE VERDE
+
+✅ G3 VERDE — run multi-core validado. Atualizar framework §7 e backlog.
