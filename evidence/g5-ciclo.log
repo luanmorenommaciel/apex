@@ -1,0 +1,1956 @@
+# G5 guarded cycle - preview only
+source_job: evidence\generated\g3\g3_skew_on_join_30x.py
+source_finding: evidence\g4-t1.log / app-20260712053414-0001 / shuffle_skew_candidate / high / ratio 29.4
+{
+  "mode": "preview",
+  "preview": {
+    "after_sha256": "3d1a644502edb4ac4b93461a52526eadda174aa1afe6d251b127db27e8d1e1d8",
+    "approval": {
+      "required": true,
+      "token": "484063916e671058da681f35605c175dad710b0184652f8a1171b738a6e247ba",
+      "token_scope": "job_id+recommendation_id+target+before_sha256+after_sha256+diff_sha256"
+    },
+    "before_sha256": "7fee45b1982650284ab2ba3d6a05da1af1d577129dd25053f8f2ddb3c69acdb9",
+    "diff": "--- evidence\\generated\\g3\\g3_skew_on_join_30x.py\n+++ evidence\\generated\\g3\\g3_skew_on_join_30x.py (apex preview)\n@@ -1,13 +1,13 @@\n # Auto-gerado por code_generator v4 \u2014 scenario: skew_on_join_30x\n from pyspark.sql import SparkSession\n-from pyspark.sql.functions import col, rand, when, collect_list\n+from pyspark.sql.functions import broadcast, col, rand, when, collect_list\n \n spark = (SparkSession.builder.appName(\"skew_on_join_30x\")\n-    .config(\"spark.sql.adaptive.enabled\", \"false\")\n-    .config(\"spark.sql.adaptive.skewJoin.enabled\", \"false\")\n+    .config(\"spark.sql.adaptive.enabled\", \"true\")\n+    .config(\"spark.sql.adaptive.skewJoin.enabled\", \"true\")\n     .config(\"spark.sql.shuffle.partitions\", \"8\")\n     .config(\"spark.sql.adaptive.coalescePartitions.enabled\", \"false\")\n-    .config(\"spark.sql.adaptive.autoBroadcastJoinThreshold\", \"-1\")\n+    .config(\"spark.sql.adaptive.autoBroadcastJoinThreshold\", \"10485760\")\n     .getOrCreate())\n \n orders = spark.range(200000).select(\n@@ -17,6 +17,6 @@\n     when(rand(13) < 0.8, 7).otherwise(col('customer_id')))\n customers = spark.range(100).select(\n     col('id').alias('customer_id'), col('id').alias('customer_name'))\n-result = orders.join(customers.hint(\"shuffle_merge\"), \"customer_id\", \"inner\")  # APEX::ANTIPATTERN\n+result = orders.join(broadcast(customers), \"customer_id\", \"inner\")  # APEX::FIXED_BY_G5\n result.write.mode(\"overwrite\").parquet(\"/tmp/apex_output\")\n spark.stop()\n",
+    "diff_sha256": "e02e56d42c75d69332339e1e0117938e9245590f8267ac47d3917c4c5f944302",
+    "job_id": "app-20260712053414-0001",
+    "mode": "preview",
+    "recommendation": "Validate AQE skew join settings and the join key distribution before previewing salting or repartition changes.",
+    "recommendation_id": "app-20260712053414-0001:shuffle_skew_candidate:stage-2:0",
+    "recommendation_record": {
+      "action": "validate_aqe_then_consider_salting_or_repartition",
+      "confidence": "medium",
+      "evidence": {
+        "app_id": "app-20260712053414-0001",
+        "hot_records": 164956,
+        "median_cold_records": 5617,
+        "ratio": 29.4,
+        "stage_id": 2
+      },
+      "finding_kind": "shuffle_skew_candidate",
+      "guardrails": [
+        "Confirm the hot key and join side before changing code.",
+        "Prefer previewing a minimal code diff before any apply step.",
+        "Re-run the job and compare skew ratio before accepting the fix."
+      ],
+      "id": "app-20260712053414-0001:shuffle_skew_candidate:stage-2:0",
+      "job_id": "app-20260712053414-0001",
+      "preview": {
+        "mode": "manual_replacement",
+        "requires_approval_before_apply": true,
+        "tool": "preview_recommendation"
+      },
+      "rule_set": "apex.commander.recommendations.v1",
+      "severity": "high",
+      "summary": "Validate AQE skew join settings and the join key distribution before previewing salting or repartition changes.",
+      "title": "Review skew-safe join mitigation"
+    },
+    "requires_approval": true,
+    "status": "preview_ready",
+    "target": "evidence\\generated\\g3\\g3_skew_on_join_30x.py"
+  },
+  "recommendations": {
+    "count": 1,
+    "job_id": "app-20260712053414-0001",
+    "recommendations": [
+      {
+        "action": "validate_aqe_then_consider_salting_or_repartition",
+        "confidence": "medium",
+        "evidence": {
+          "app_id": "app-20260712053414-0001",
+          "hot_records": 164956,
+          "median_cold_records": 5617,
+          "ratio": 29.4,
+          "stage_id": 2
+        },
+        "finding_kind": "shuffle_skew_candidate",
+        "guardrails": [
+          "Confirm the hot key and join side before changing code.",
+          "Prefer previewing a minimal code diff before any apply step.",
+          "Re-run the job and compare skew ratio before accepting the fix."
+        ],
+        "id": "app-20260712053414-0001:shuffle_skew_candidate:stage-2:0",
+        "job_id": "app-20260712053414-0001",
+        "preview": {
+          "mode": "manual_replacement",
+          "requires_approval_before_apply": true,
+          "tool": "preview_recommendation"
+        },
+        "rule_set": "apex.commander.recommendations.v1",
+        "severity": "high",
+        "summary": "Validate AQE skew join settings and the join key distribution before previewing salting or repartition changes.",
+        "title": "Review skew-safe join mitigation"
+      }
+    ],
+    "rule_set": "apex.commander.recommendations.v1",
+    "skipped_count": 0,
+    "status": "found"
+  },
+  "source_finding_log": "evidence\\g4-t1.log",
+  "target_job": "evidence\\generated\\g3\\g3_skew_on_join_30x.py"
+}
+
+# G5 guarded apply
+command: python tools\g5_guarded_cycle.py apply --g4-log evidence\g4-t1.log --job evidence\generated\g3\g3_skew_on_join_30x.py --approval-token 484063916e671058da681f35605c175dad710b0184652f8a1171b738a6e247ba --apply-root C:\Users\Guest\Documents\project\codex\apex\apex-official
+{
+  "after_sha256": "3d1a644502edb4ac4b93461a52526eadda174aa1afe6d251b127db27e8d1e1d8",
+  "before_sha256": "7fee45b1982650284ab2ba3d6a05da1af1d577129dd25053f8f2ddb3c69acdb9",
+  "diff": "--- C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\g3\\g3_skew_on_join_30x.py\n+++ C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\g3\\g3_skew_on_join_30x.py (apex preview)\n@@ -1,13 +1,13 @@\n # Auto-gerado por code_generator v4 \u2014 scenario: skew_on_join_30x\n from pyspark.sql import SparkSession\n-from pyspark.sql.functions import col, rand, when, collect_list\n+from pyspark.sql.functions import broadcast, col, rand, when, collect_list\n \n spark = (SparkSession.builder.appName(\"skew_on_join_30x\")\n-    .config(\"spark.sql.adaptive.enabled\", \"false\")\n-    .config(\"spark.sql.adaptive.skewJoin.enabled\", \"false\")\n+    .config(\"spark.sql.adaptive.enabled\", \"true\")\n+    .config(\"spark.sql.adaptive.skewJoin.enabled\", \"true\")\n     .config(\"spark.sql.shuffle.partitions\", \"8\")\n     .config(\"spark.sql.adaptive.coalescePartitions.enabled\", \"false\")\n-    .config(\"spark.sql.adaptive.autoBroadcastJoinThreshold\", \"-1\")\n+    .config(\"spark.sql.adaptive.autoBroadcastJoinThreshold\", \"10485760\")\n     .getOrCreate())\n \n orders = spark.range(200000).select(\n@@ -17,6 +17,6 @@\n     when(rand(13) < 0.8, 7).otherwise(col('customer_id')))\n customers = spark.range(100).select(\n     col('id').alias('customer_id'), col('id').alias('customer_name'))\n-result = orders.join(customers.hint(\"shuffle_merge\"), \"customer_id\", \"inner\")  # APEX::ANTIPATTERN\n+result = orders.join(broadcast(customers), \"customer_id\", \"inner\")  # APEX::FIXED_BY_G5\n result.write.mode(\"overwrite\").parquet(\"/tmp/apex_output\")\n spark.stop()\n",
+  "expected_token": "5d10b19bbd0080925baadaade10cdc18769ef3df0acd092198e81a82bee5bfa0",
+  "job_id": "app-20260712053414-0001",
+  "mode": "guarded_apply",
+  "recommendation_id": "app-20260712053414-0001:shuffle_skew_candidate:stage-2:0",
+  "status": "invalid_approval_token",
+  "target": "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\g3\\g3_skew_on_join_30x.py",
+  "verification": {
+    "status": "not_run"
+  }
+}
+
+# G5 guarded apply - retry after target canonicalization fix
+{
+  "after_sha256": "3d1a644502edb4ac4b93461a52526eadda174aa1afe6d251b127db27e8d1e1d8",
+  "before_sha256": "7fee45b1982650284ab2ba3d6a05da1af1d577129dd25053f8f2ddb3c69acdb9",
+  "diff": "--- evidence\\generated\\g3\\g3_skew_on_join_30x.py\n+++ evidence\\generated\\g3\\g3_skew_on_join_30x.py (apex preview)\n@@ -1,13 +1,13 @@\n # Auto-gerado por code_generator v4 \u2014 scenario: skew_on_join_30x\n from pyspark.sql import SparkSession\n-from pyspark.sql.functions import col, rand, when, collect_list\n+from pyspark.sql.functions import broadcast, col, rand, when, collect_list\n \n spark = (SparkSession.builder.appName(\"skew_on_join_30x\")\n-    .config(\"spark.sql.adaptive.enabled\", \"false\")\n-    .config(\"spark.sql.adaptive.skewJoin.enabled\", \"false\")\n+    .config(\"spark.sql.adaptive.enabled\", \"true\")\n+    .config(\"spark.sql.adaptive.skewJoin.enabled\", \"true\")\n     .config(\"spark.sql.shuffle.partitions\", \"8\")\n     .config(\"spark.sql.adaptive.coalescePartitions.enabled\", \"false\")\n-    .config(\"spark.sql.adaptive.autoBroadcastJoinThreshold\", \"-1\")\n+    .config(\"spark.sql.adaptive.autoBroadcastJoinThreshold\", \"10485760\")\n     .getOrCreate())\n \n orders = spark.range(200000).select(\n@@ -17,6 +17,6 @@\n     when(rand(13) < 0.8, 7).otherwise(col('customer_id')))\n customers = spark.range(100).select(\n     col('id').alias('customer_id'), col('id').alias('customer_name'))\n-result = orders.join(customers.hint(\"shuffle_merge\"), \"customer_id\", \"inner\")  # APEX::ANTIPATTERN\n+result = orders.join(broadcast(customers), \"customer_id\", \"inner\")  # APEX::FIXED_BY_G5\n result.write.mode(\"overwrite\").parquet(\"/tmp/apex_output\")\n spark.stop()\n",
+  "job_id": "app-20260712053414-0001",
+  "mode": "guarded_apply",
+  "recommendation_id": "app-20260712053414-0001:shuffle_skew_candidate:stage-2:0",
+  "status": "applied",
+  "target": "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\g3\\g3_skew_on_join_30x.py",
+  "verification": {
+    "actual_sha256": "3d1a644502edb4ac4b93461a52526eadda174aa1afe6d251b127db27e8d1e1d8",
+    "expected_sha256": "3d1a644502edb4ac4b93461a52526eadda174aa1afe6d251b127db27e8d1e1d8",
+    "status": "verified",
+    "target": "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\g3\\g3_skew_on_join_30x.py"
+  }
+}
+
+# G5 fixed job submit raw log
+WARNING: Using incubator modules: jdk.incubator.vector
+26/07/12 13:17:21 INFO SparkContext: Running Spark version 4.1.2
+26/07/12 13:17:21 INFO SparkContext: OS info Linux, 6.18.33.2-microsoft-standard-WSL2, amd64
+26/07/12 13:17:21 INFO SparkContext: Java version 17.0.19+10
+26/07/12 13:17:22 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+26/07/12 13:17:23 INFO ResourceUtils: ==============================================================
+26/07/12 13:17:23 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/07/12 13:17:23 INFO ResourceUtils: ==============================================================
+26/07/12 13:17:23 INFO SparkContext: Submitted application: skew_on_join_30x
+26/07/12 13:17:23 INFO SecurityManager: Changing view acls to: spark
+26/07/12 13:17:23 INFO SecurityManager: Changing modify acls to: spark
+26/07/12 13:17:23 INFO SecurityManager: Changing view acls groups to: spark
+26/07/12 13:17:23 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/12 13:17:23 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/12 13:17:26 INFO Utils: Successfully started service 'sparkDriver' on port 41973.
+26/07/12 13:17:26 INFO SparkEnv: Registering MapOutputTracker
+26/07/12 13:17:27 INFO SparkEnv: Registering BlockManagerMaster
+26/07/12 13:17:27 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/07/12 13:17:27 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/07/12 13:17:27 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/07/12 13:17:27 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-87687810-340f-44e2-ae69-9a002554de4d
+26/07/12 13:17:27 INFO SparkEnv: Registering OutputCommitCoordinator
+26/07/12 13:17:29 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+26/07/12 13:17:29 INFO Server: jetty-11.0.26; built: 2025-08-14T18:03:14.457Z; git: 7559873b6e46eea7c2c6da2b58327ea2ecf941f4; jvm 17.0.19+10
+26/07/12 13:17:29 INFO Server: Started Server@3a36e1e4{STARTING}[11.0.26,sto=30000] @32315ms
+26/07/12 13:17:30 INFO AbstractConnector: Started ServerConnector@7ceb43fd{HTTP/1.1, (http/1.1)}{0.0.0.0:4040}
+26/07/12 13:17:30 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/07/12 13:17:30 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@31a2df39{/,null,AVAILABLE,@Spark}
+26/07/12 13:17:31 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/07/12 13:17:31 INFO ResourceProfile: Limiting resource is cpu
+26/07/12 13:17:31 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/07/12 13:17:31 INFO SecurityManager: Changing view acls to: spark
+26/07/12 13:17:31 INFO SecurityManager: Changing modify acls to: spark
+26/07/12 13:17:31 INFO SecurityManager: Changing view acls groups to: spark
+26/07/12 13:17:31 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/12 13:17:31 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/12 13:17:32 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+26/07/12 13:17:33 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.4:7077 after 309 ms (0 ms spent in bootstraps)
+26/07/12 13:17:34 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20260712131734-0004
+26/07/12 13:17:34 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20260712131734-0004/0 on worker-20260712045009-172.18.0.5-39199 (172.18.0.5:39199) with 8 core(s)
+26/07/12 13:17:34 INFO StandaloneSchedulerBackend: Granted executor ID app-20260712131734-0004/0 on hostPort 172.18.0.5:39199 with 8 core(s), 1024.0 MiB RAM
+26/07/12 13:17:34 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 41629.
+26/07/12 13:17:34 INFO NettyBlockTransferService: Server created on fb58b5d21f32:41629
+26/07/12 13:17:35 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20260712131734-0004/0 is now RUNNING
+26/07/12 13:17:35 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/07/12 13:17:35 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, fb58b5d21f32, 41629, None)
+26/07/12 13:17:35 INFO BlockManagerMasterEndpoint: Registering block manager fb58b5d21f32:41629 with 434.4 MiB RAM, BlockManagerId(driver, fb58b5d21f32, 41629, None)
+26/07/12 13:17:35 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, fb58b5d21f32, 41629, None)
+26/07/12 13:17:35 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, fb58b5d21f32, 41629, None)
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+26/07/12 13:18:04 INFO StandaloneSchedulerBackend$StandaloneDriverEndpoint: Registered executor NettyRpcEndpointRef(spark-client://Executor) (172.18.0.5:50366) with ID 0, ResourceProfileId 0
+26/07/12 13:18:06 INFO BlockManagerMasterEndpoint: Registering block manager 172.18.0.5:37647 with 434.4 MiB RAM, BlockManagerId(0, 172.18.0.5, 37647, None)
+26/07/12 13:18:07 INFO RollingEventLogFilesWriter: Logging events to s3a://spark-logs/events/eventlog_v2_app-20260712131734-0004/events_1_app-20260712131734-0004.zstd
+26/07/12 13:18:09 INFO ContextHandler: Stopped o.s.j.s.ServletContextHandler@31a2df39{/,null,STOPPED,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@1145b67e{/jobs,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@6768036f{/jobs/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@797c2086{/jobs/job,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@10d413fe{/jobs/job/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@179951d1{/stages,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@75a5b2bb{/stages/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@884981c{/stages/stage,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@127b49f0{/stages/stage/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@4bb925aa{/stages/pool,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@6f72541b{/stages/pool/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@273e527{/stages/taskThreadDump,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@2deee410{/stages/taskThreadDump/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@18c380b7{/storage,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@1fcf2cb7{/storage/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@3e130289{/storage/rdd,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@41ee49aa{/storage/rdd/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@52718209{/environment,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@556c9c5d{/environment/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@797bb2ca{/executors,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@4f6ed785{/executors/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@6c8b66ac{/executors/threadDump,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@22550554{/executors/threadDump/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@4e417081{/executors/heapHistogram,null,AVAILABLE,@Spark}
+26/07/12 13:18:09 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@2e3a301b{/executors/heapHistogram/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:10 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@54f5ad4e{/static,null,AVAILABLE,@Spark}
+26/07/12 13:18:10 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@499395bb{/,null,AVAILABLE,@Spark}
+26/07/12 13:18:10 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@39a8d2b7{/api,null,AVAILABLE,@Spark}
+26/07/12 13:18:10 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@49017bd9{/metrics,null,AVAILABLE,@Spark}
+26/07/12 13:18:10 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@1356356{/jobs/job/kill,null,AVAILABLE,@Spark}
+26/07/12 13:18:10 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@3580a26d{/stages/stage/kill,null,AVAILABLE,@Spark}
+26/07/12 13:18:10 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@5309a5bd{/metrics/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:10 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+26/07/12 13:18:32 INFO SharedState: Setting hive.metastore.warehouse.dir ('null') to the value of spark.sql.warehouse.dir.
+26/07/12 13:18:32 INFO SharedState: Warehouse path is 'file:/opt/spark/work-dir/spark-warehouse'.
+26/07/12 13:18:32 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@795b2b38{/SQL,null,AVAILABLE,@Spark}
+26/07/12 13:18:32 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@88444fb{/SQL/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:32 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@4960381a{/SQL/execution,null,AVAILABLE,@Spark}
+26/07/12 13:18:32 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@73e78f53{/SQL/execution/json,null,AVAILABLE,@Spark}
+26/07/12 13:18:32 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@44343ed2{/static/sql,null,AVAILABLE,@Spark}
+26/07/12 13:18:51 INFO AsyncEventQueue: Process of event SparkListenerSQLExecutionStart(0,Some(0),parquet at NativeMethodAccessorImpl.java:0,org.apache.spark.sql.DataFrameWriter.parquet(DataFrameWriter.scala:369)
+java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+java.base/java.lang.reflect.Method.invoke(Method.java:569)
+py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)
+py4j.Gateway.invoke(Gateway.java:282)
+py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+py4j.commands.CallCommand.execute(CallCommand.java:79)
+py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)
+py4j.ClientServerConnection.run(ClientServerConnection.java:108)
+java.base/java.lang.Thread.run(Thread.java:840),== Physical Plan ==
+AdaptiveSparkPlan (12)
++- Execute InsertIntoHadoopFsRelationCommand (11)
+   +- WriteFiles (10)
+      +- Project (9)
+         +- BroadcastHashJoin Inner BuildRight (8)
+            :- Filter (4)
+            :  +- Project (3)
+            :     +- Project (2)
+            :        +- Range (1)
+            +- BroadcastExchange (7)
+               +- Project (6)
+                  +- Range (5)
+
+
+(1) Range
+Output [1]: [id#0L]
+Arguments: Range (0, 200000, step=1, splits=Some(8))
+
+(2) Project
+Output [2]: [cast((rand(42) * 100.0) as int) AS customer_id#1, id#0L AS order_id#2L]
+Input [1]: [id#0L]
+
+(3) Project
+Output [2]: [CASE WHEN (rand(13) < 0.8) THEN 7 ELSE customer_id#1 END AS customer_id#3, order_id#2L]
+Input [2]: [customer_id#1, order_id#2L]
+
+(4) Filter
+Input [2]: [customer_id#3, order_id#2L]
+Condition : isnotnull(customer_id#3)
+
+(5) Range
+Output [1]: [id#4L]
+Arguments: Range (0, 100, step=1, splits=Some(8))
+
+(6) Project
+Output [2]: [id#4L AS customer_id#5L, id#4L AS customer_name#6L]
+Input [1]: [id#4L]
+
+(7) BroadcastExchange
+Input [2]: [customer_id#5L, customer_name#6L]
+Arguments: HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [plan_id=40]
+
+(8) BroadcastHashJoin
+Left keys [1]: [cast(customer_id#3 as bigint)]
+Right keys [1]: [customer_id#5L]
+Join type: Inner
+Join condition: None
+
+(9) Project
+Output [3]: [customer_id#3, order_id#2L, customer_name#6L]
+Input [4]: [customer_id#3, order_id#2L, customer_id#5L, customer_name#6L]
+
+(10) WriteFiles
+Input [3]: [customer_id#3, order_id#2L, customer_name#6L]
+
+(11) Execute InsertIntoHadoopFsRelationCommand
+Input: []
+Arguments: file:/tmp/apex_output, false, Parquet, [path=/tmp/apex_output], Overwrite, [customer_id, order_id, customer_name]
+
+(12) AdaptiveSparkPlan
+Output: []
+Arguments: isFinalPlan=false
+
+,org.apache.spark.sql.execution.SparkPlanInfo@1546948b,1783862324219,Map(),Set(spark-session-2bf046f9-8589-48bb-9604-bfc139a1f0eb-execution-root-id-0, spark-session-2bf046f9-8589-48bb-9604-bfc139a1f0eb),None) bylistener EventLoggingListener took 1256.517157ms.
+26/07/12 13:18:55 INFO CodeGenerator: Code generated in 2744.156874 ms
+26/07/12 13:18:56 INFO SparkContext: Starting job: $anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768
+26/07/12 13:18:56 INFO DAGScheduler: Got job 0 ($anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768) with 8 output partitions
+26/07/12 13:18:56 INFO DAGScheduler: Final stage: ResultStage 0 ($anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768)
+26/07/12 13:18:56 INFO DAGScheduler: Parents of final stage: List()
+26/07/12 13:18:56 INFO DAGScheduler: Missing parents: List()
+26/07/12 13:18:56 INFO DAGScheduler: Missing parents found for ResultStage 0: List()
+26/07/12 13:18:56 INFO DAGScheduler: Submitting ResultStage 0 (MapPartitionsRDD[3] at $anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768), which has no missing parents
+26/07/12 13:18:57 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+26/07/12 13:18:57 INFO MemoryStore: Block broadcast_0 stored as values in memory (estimated size 11.4 KiB, free 434.4 MiB)
+26/07/12 13:18:57 INFO MemoryStore: Block broadcast_0_piece0 stored as bytes in memory (estimated size 5.3 KiB, free 434.4 MiB)
+26/07/12 13:18:57 INFO SparkContext: Created broadcast 0 from broadcast at DAGScheduler.scala:1686
+26/07/12 13:18:58 INFO DAGScheduler: Submitting 8 missing tasks from ResultStage 0 (MapPartitionsRDD[3] at $anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768) (first 15 tasks are for partitions Vector(0, 1, 2, 3, 4, 5, 6, 7))
+26/07/12 13:18:58 INFO TaskSchedulerImpl: Adding task set 0.0 with 8 tasks resource profile 0
+26/07/12 13:18:58 INFO TaskSetManager: Starting task 0.0 in stage 0.0 (TID 0) (172.18.0.5,executor 0, partition 0, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:18:58 INFO TaskSetManager: Starting task 1.0 in stage 0.0 (TID 1) (172.18.0.5,executor 0, partition 1, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:18:58 INFO TaskSetManager: Starting task 2.0 in stage 0.0 (TID 2) (172.18.0.5,executor 0, partition 2, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:18:58 INFO TaskSetManager: Starting task 3.0 in stage 0.0 (TID 3) (172.18.0.5,executor 0, partition 3, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:18:58 INFO TaskSetManager: Starting task 4.0 in stage 0.0 (TID 4) (172.18.0.5,executor 0, partition 4, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:18:58 INFO TaskSetManager: Starting task 5.0 in stage 0.0 (TID 5) (172.18.0.5,executor 0, partition 5, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:18:58 INFO TaskSetManager: Starting task 6.0 in stage 0.0 (TID 6) (172.18.0.5,executor 0, partition 6, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:18:58 INFO TaskSetManager: Starting task 7.0 in stage 0.0 (TID 7) (172.18.0.5,executor 0, partition 7, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:19:08 INFO TaskSetManager: Finished task 0.0 in stage 0.0 (TID 0) in 10509 ms on 172.18.0.5 (executor 0) (1/8)
+26/07/12 13:19:08 INFO TaskSetManager: Finished task 2.0 in stage 0.0 (TID 2) in 10251 ms on 172.18.0.5 (executor 0) (2/8)
+26/07/12 13:19:08 INFO TaskSetManager: Finished task 6.0 in stage 0.0 (TID 6) in 10140 ms on 172.18.0.5 (executor 0) (3/8)
+26/07/12 13:19:08 INFO TaskSetManager: Finished task 3.0 in stage 0.0 (TID 3) in 10265 ms on 172.18.0.5 (executor 0) (4/8)
+26/07/12 13:19:08 INFO TaskSetManager: Finished task 4.0 in stage 0.0 (TID 4) in 10235 ms on 172.18.0.5 (executor 0) (5/8)
+26/07/12 13:19:08 INFO TaskSetManager: Finished task 5.0 in stage 0.0 (TID 5) in 10223 ms on 172.18.0.5 (executor 0) (6/8)
+26/07/12 13:19:08 INFO TaskSetManager: Finished task 1.0 in stage 0.0 (TID 1) in 10315 ms on 172.18.0.5 (executor 0) (7/8)
+26/07/12 13:19:09 INFO TaskSetManager: Finished task 7.0 in stage 0.0 (TID 7) in 10192 ms on 172.18.0.5 (executor 0) (8/8)
+26/07/12 13:19:09 INFO TaskSchedulerImpl: Removed TaskSet 0.0 whose tasks have all completed, from pool 
+26/07/12 13:19:09 INFO DAGScheduler: ResultStage 0 ($anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768) finished in 12060 ms
+26/07/12 13:19:09 INFO DAGScheduler: Job 0 is finished. Cancelling potential speculative or zombie tasks for this job
+26/07/12 13:19:09 INFO TaskSchedulerImpl: Canceling stage 0
+26/07/12 13:19:09 INFO TaskSchedulerImpl: Killing all running tasks in stage 0: Stage finished
+26/07/12 13:19:09 INFO DAGScheduler: Job 0 finished: $anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768, took 12367.846451 ms
+26/07/12 13:19:09 INFO CodeGenerator: Code generated in 193.896412 ms
+26/07/12 13:19:09 INFO MemoryStore: Block broadcast_1_piece0 stored as bytes in memory (estimated size 1691.0 B, free 434.4 MiB)
+26/07/12 13:19:09 INFO SparkContext: Created broadcast 1 from $anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768
+26/07/12 13:19:11 INFO ParquetUtils: Using default output committer for Parquet: org.apache.parquet.hadoop.ParquetOutputCommitter
+26/07/12 13:19:11 INFO FileOutputCommitter: File Output Committer Algorithm version is 1
+26/07/12 13:19:11 INFO FileOutputCommitter: FileOutputCommitter skip cleanup _temporary folders under output directory:false, ignore cleanup failures: false
+26/07/12 13:19:11 INFO SQLHadoopMapReduceCommitProtocol: Using user defined output committer class org.apache.parquet.hadoop.ParquetOutputCommitter
+26/07/12 13:19:11 INFO FileOutputCommitter: File Output Committer Algorithm version is 1
+26/07/12 13:19:11 INFO FileOutputCommitter: FileOutputCommitter skip cleanup _temporary folders under output directory:false, ignore cleanup failures: false
+26/07/12 13:19:11 INFO SQLHadoopMapReduceCommitProtocol: Using output committer class org.apache.parquet.hadoop.ParquetOutputCommitter
+26/07/12 13:19:12 INFO CodeGenerator: Code generated in 361.482115 ms
+26/07/12 13:19:12 INFO SparkContext: Starting job: $anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768
+26/07/12 13:19:12 INFO DAGScheduler: Got job 1 ($anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768) with 8 output partitions
+26/07/12 13:19:12 INFO DAGScheduler: Final stage: ResultStage 1 ($anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768)
+26/07/12 13:19:12 INFO DAGScheduler: Parents of final stage: List()
+26/07/12 13:19:12 INFO DAGScheduler: Missing parents: List()
+26/07/12 13:19:12 INFO DAGScheduler: Missing parents found for ResultStage 1: List()
+26/07/12 13:19:12 INFO DAGScheduler: Submitting ResultStage 1 (MapPartitionsRDD[7] at $anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768), which has no missing parents
+26/07/12 13:19:13 INFO MemoryStore: Block broadcast_2 stored as values in memory (estimated size 244.8 KiB, free 434.1 MiB)
+26/07/12 13:19:13 INFO MemoryStore: Block broadcast_2_piece0 stored as bytes in memory (estimated size 88.9 KiB, free 434.1 MiB)
+26/07/12 13:19:13 INFO SparkContext: Created broadcast 2 from broadcast at DAGScheduler.scala:1686
+26/07/12 13:19:13 INFO DAGScheduler: Submitting 8 missing tasks from ResultStage 1 (MapPartitionsRDD[7] at $anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768) (first 15 tasks are for partitions Vector(0, 1, 2, 3, 4, 5, 6, 7))
+26/07/12 13:19:13 INFO TaskSchedulerImpl: Adding task set 1.0 with 8 tasks resource profile 0
+26/07/12 13:19:13 INFO TaskSetManager: Starting task 0.0 in stage 1.0 (TID 8) (172.18.0.5,executor 0, partition 0, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:19:13 INFO TaskSetManager: Starting task 1.0 in stage 1.0 (TID 9) (172.18.0.5,executor 0, partition 1, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:19:13 INFO TaskSetManager: Starting task 2.0 in stage 1.0 (TID 10) (172.18.0.5,executor 0, partition 2, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:19:13 INFO TaskSetManager: Starting task 3.0 in stage 1.0 (TID 11) (172.18.0.5,executor 0, partition 3, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:19:13 INFO TaskSetManager: Starting task 4.0 in stage 1.0 (TID 12) (172.18.0.5,executor 0, partition 4, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:19:13 INFO TaskSetManager: Starting task 5.0 in stage 1.0 (TID 13) (172.18.0.5,executor 0, partition 5, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:19:13 INFO TaskSetManager: Starting task 6.0 in stage 1.0 (TID 14) (172.18.0.5,executor 0, partition 6, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:19:13 INFO TaskSetManager: Starting task 7.0 in stage 1.0 (TID 15) (172.18.0.5,executor 0, partition 7, PROCESS_LOCAL, 9770 bytes) 
+26/07/12 13:19:31 INFO TaskSetManager: Finished task 0.0 in stage 1.0 (TID 8) in 18219 ms on 172.18.0.5 (executor 0) (1/8)
+26/07/12 13:19:31 INFO TaskSetManager: Finished task 6.0 in stage 1.0 (TID 14) in 18031 ms on 172.18.0.5 (executor 0) (2/8)
+26/07/12 13:19:31 INFO TaskSetManager: Finished task 3.0 in stage 1.0 (TID 11) in 18222 ms on 172.18.0.5 (executor 0) (3/8)
+26/07/12 13:19:31 INFO TaskSetManager: Finished task 7.0 in stage 1.0 (TID 15) in 18080 ms on 172.18.0.5 (executor 0) (4/8)
+26/07/12 13:19:31 INFO TaskSetManager: Finished task 4.0 in stage 1.0 (TID 12) in 18198 ms on 172.18.0.5 (executor 0) (5/8)
+26/07/12 13:19:31 INFO TaskSetManager: Finished task 2.0 in stage 1.0 (TID 10) in 18303 ms on 172.18.0.5 (executor 0) (6/8)
+26/07/12 13:19:31 INFO TaskSetManager: Finished task 1.0 in stage 1.0 (TID 9) in 18526 ms on 172.18.0.5 (executor 0) (7/8)
+26/07/12 13:19:31 INFO TaskSetManager: Finished task 5.0 in stage 1.0 (TID 13) in 18421 ms on 172.18.0.5 (executor 0) (8/8)
+26/07/12 13:19:31 INFO TaskSchedulerImpl: Removed TaskSet 1.0 whose tasks have all completed, from pool 
+26/07/12 13:19:31 INFO DAGScheduler: ResultStage 1 ($anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768) finished in 19701 ms
+26/07/12 13:19:31 INFO DAGScheduler: Job 1 is finished. Cancelling potential speculative or zombie tasks for this job
+26/07/12 13:19:31 INFO TaskSchedulerImpl: Canceling stage 1
+26/07/12 13:19:31 INFO TaskSchedulerImpl: Killing all running tasks in stage 1: Stage finished
+26/07/12 13:19:32 INFO DAGScheduler: Job 1 finished: $anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768, took 19762.995177 ms
+26/07/12 13:19:32 INFO FileFormatWriter: Start to commit write Job 00791d15-adf5-4a87-83ff-beaaf1915bc5.
+26/07/12 13:19:32 INFO FileFormatWriter: Write Job 00791d15-adf5-4a87-83ff-beaaf1915bc5 committed. Elapsed time: 735 ms.
+26/07/12 13:19:33 INFO FileFormatWriter: Finished processing stats for write job 00791d15-adf5-4a87-83ff-beaaf1915bc5.
+26/07/12 13:19:33 INFO SparkContext: SparkContext is stopping with exitCode 0 from stop at NativeMethodAccessorImpl.java:0.
+26/07/12 13:19:33 INFO Server: Stopped Server@3a36e1e4{STOPPING}[11.0.26,sto=30000]
+26/07/12 13:19:33 INFO Server: Shutdown Server@3a36e1e4{STOPPING}[11.0.26,sto=30000]
+26/07/12 13:19:33 INFO AbstractConnector: Stopped Spark@7ceb43fd{HTTP/1.1, (http/1.1)}{0.0.0.0:4040}
+26/07/12 13:19:33 INFO SparkUI: Stopped Spark web UI at http://fb58b5d21f32:4040
+26/07/12 13:19:33 INFO StandaloneSchedulerBackend: Shutting down all executors
+26/07/12 13:19:33 INFO StandaloneSchedulerBackend$StandaloneDriverEndpoint: Asking each executor to shut down
+26/07/12 13:19:39 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+26/07/12 13:19:39 INFO MemoryStore: MemoryStore cleared
+26/07/12 13:19:39 INFO BlockManager: BlockManager stopped
+26/07/12 13:19:39 INFO BlockManagerMaster: BlockManagerMaster stopped
+26/07/12 13:19:39 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+26/07/12 13:19:39 INFO SparkContext: Successfully stopped SparkContext (Uptime: 138329 ms)
+
+# G5 before diagnosis - original G3/G4 event log
+{
+  "app_id": "app-20260712053414-0001",
+  "event_log": "evidence\\generated\\g3\\g3_real_eventlog.zstd",
+  "finding_count": 1,
+  "findings": [
+    {
+      "confidence": "medium",
+      "evidence": {
+        "app_id": "app-20260712053414-0001",
+        "hot_records": 164956,
+        "median_cold_records": 5617,
+        "ratio": 29.4,
+        "schema_version": "apex.commander.telemetry.v1",
+        "stage_id": 2,
+        "task_count": 8
+      },
+      "job_id": "app-20260712053414-0001",
+      "kind": "shuffle_skew_candidate",
+      "recommendations": [
+        "Validar habilitacao de spark.sql.adaptive.skewJoin.enabled para este job.",
+        "Confirmar chave de join e avaliar salting/repartition antes de aplicar mudanca."
+      ],
+      "severity": "high",
+      "status": "finding",
+      "title": "shuffle_skew_candidate"
+    }
+  ],
+  "job_id": "app-20260712053414-0001",
+  "max_skew_ratio": Infinity,
+  "shuffle_read_bytes_total": 1157481,
+  "shuffle_read_records_total": 200100,
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 55304,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 1896,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": Infinity,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 0,
+      "task_count": 8,
+      "total_records": 0
+    },
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 11796,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 0,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": Infinity,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 1,
+      "task_count": 8,
+      "total_records": 0
+    },
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "valid",
+      "executor_run_time_ms": 160592,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 5472,
+      "max_records": 164956,
+      "median_cold_records": 5617,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [],
+      "ratio": 29.4,
+      "records": [
+        5652,
+        6690,
+        3997,
+        164956,
+        5617,
+        2852,
+        5864,
+        4472
+      ],
+      "shuffle_read_bytes": 1157481,
+      "shuffle_read_records": 200100,
+      "stage_id": 2,
+      "task_count": 8,
+      "total_records": 200100
+    }
+  ],
+  "validations": [
+    {
+      "accepted": true,
+      "issues": [],
+      "rule_set": "apex.commander.evidence_validator.v1",
+      "status": "valid"
+    }
+  ]
+}
+
+# G5 after diagnosis - fixed event log
+{
+  "app_id": "app-20260712131734-0004",
+  "event_log": "evidence\\generated\\g5\\g5_fixed_eventlog.zstd",
+  "finding_count": 0,
+  "findings": [],
+  "job_id": "app-20260712131734-0004",
+  "max_skew_ratio": Infinity,
+  "shuffle_read_bytes_total": 0,
+  "shuffle_read_records_total": 0,
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 37801,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 968,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": Infinity,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 0,
+      "task_count": 8,
+      "total_records": 0
+    },
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 105826,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 3088,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": Infinity,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 1,
+      "task_count": 8,
+      "total_records": 0
+    }
+  ],
+  "validations": []
+}
+
+# G5 before diagnosis - sanitized valid-skew metrics
+{
+  "app_id": "app-20260712053414-0001",
+  "event_log": "evidence\\generated\\g3\\g3_real_eventlog.zstd",
+  "finding_count": 1,
+  "findings": [
+    {
+      "confidence": "medium",
+      "evidence": {
+        "app_id": "app-20260712053414-0001",
+        "hot_records": 164956,
+        "median_cold_records": 5617,
+        "ratio": 29.4,
+        "schema_version": "apex.commander.telemetry.v1",
+        "stage_id": 2,
+        "task_count": 8
+      },
+      "job_id": "app-20260712053414-0001",
+      "kind": "shuffle_skew_candidate",
+      "recommendations": [
+        "Validar habilitacao de spark.sql.adaptive.skewJoin.enabled para este job.",
+        "Confirmar chave de join e avaliar salting/repartition antes de aplicar mudanca."
+      ],
+      "severity": "high",
+      "status": "finding",
+      "title": "shuffle_skew_candidate"
+    }
+  ],
+  "job_id": "app-20260712053414-0001",
+  "max_valid_skew_ratio": 29.4,
+  "shuffle_read_bytes_total": 1157481,
+  "shuffle_read_records_total": 200100,
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 55304,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 1896,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": Infinity,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 0,
+      "task_count": 8,
+      "total_records": 0
+    },
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 11796,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 0,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": Infinity,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 1,
+      "task_count": 8,
+      "total_records": 0
+    },
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "valid",
+      "executor_run_time_ms": 160592,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 5472,
+      "max_records": 164956,
+      "median_cold_records": 5617,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [],
+      "ratio": 29.4,
+      "records": [
+        5652,
+        6690,
+        3997,
+        164956,
+        5617,
+        2852,
+        5864,
+        4472
+      ],
+      "shuffle_read_bytes": 1157481,
+      "shuffle_read_records": 200100,
+      "stage_id": 2,
+      "task_count": 8,
+      "total_records": 200100
+    }
+  ],
+  "valid_shuffle_stage_count": 1,
+  "validations": [
+    {
+      "accepted": true,
+      "issues": [],
+      "rule_set": "apex.commander.evidence_validator.v1",
+      "status": "valid"
+    }
+  ]
+}
+
+# G5 after diagnosis - sanitized valid-skew metrics
+{
+  "app_id": "app-20260712131734-0004",
+  "event_log": "evidence\\generated\\g5\\g5_fixed_eventlog.zstd",
+  "finding_count": 0,
+  "findings": [],
+  "job_id": "app-20260712131734-0004",
+  "max_valid_skew_ratio": 0,
+  "shuffle_read_bytes_total": 0,
+  "shuffle_read_records_total": 0,
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 37801,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 968,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": Infinity,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 0,
+      "task_count": 8,
+      "total_records": 0
+    },
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 105826,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 3088,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": Infinity,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 1,
+      "task_count": 8,
+      "total_records": 0
+    }
+  ],
+  "valid_shuffle_stage_count": 0,
+  "validations": []
+}
+
+# G5 final comparison
+{
+  "before": {
+    "app_id": "app-20260712053414-0001",
+    "finding_count": 1,
+    "severity": "high",
+    "shuffle_read_bytes_total": 1157481,
+    "shuffle_read_records_total": 200100,
+    "max_valid_skew_ratio": 29.4
+  },
+  "after": {
+    "app_id": "app-20260712131734-0004",
+    "finding_count": 0,
+    "severity": null,
+    "shuffle_read_bytes_total": 0,
+    "shuffle_read_records_total": 0,
+    "max_valid_skew_ratio": 0
+  },
+  "gate_status": "green"
+}
+
+# G5 focused tests
+EEEEEEE...EE                                                             [100%]
+=================================== ERRORS ====================================
+____ ERROR at setup of test_preview_recommendation_returns_approval_token _____
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000002BA3C369E40>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\logging.py:858: in pytest_runtest_setup
+    yield
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:536: in setup
+    col.setup()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\python.py:1710: in setup
+    self._request._fillfixtures()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:213: in getbasetemp
+    basetemp = make_numbered_dir_with_cleanup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:420: in make_numbered_dir_with_cleanup
+    raise e
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:401: in make_numbered_dir_with_cleanup
+    p = make_numbered_dir(root, prefix, mode)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:228: in make_numbered_dir
+    max_existing = max(map(parse_num, find_suffixes(root, prefix)), default=-1)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:187: in extract_suffixes
+    for entry in iter:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = WindowsPath('C:/Users/Guest/AppData/Local/Temp/pytest-of-Guest')
+prefix = 'pytest-'
+
+    def find_prefixed(root: Path, prefix: str) -> Iterator[os.DirEntry[str]]:
+        """Find all elements in root that begin with the prefix, case-insensitive."""
+        l_prefix = prefix.lower()
+>       for x in os.scandir(root):
+                 ^^^^^^^^^^^^^^^^
+E       PermissionError: [WinError 5] Acesso negado: 'C:\\Users\\Guest\\AppData\\Local\\Temp\\pytest-of-Guest'
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:175: PermissionError
+_ ERROR at setup of test_apply_recommendation_requires_configured_apply_root __
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000002BA3C36A480>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\logging.py:858: in pytest_runtest_setup
+    yield
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:536: in setup
+    col.setup()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\python.py:1710: in setup
+    self._request._fillfixtures()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:213: in getbasetemp
+    basetemp = make_numbered_dir_with_cleanup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:420: in make_numbered_dir_with_cleanup
+    raise e
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:401: in make_numbered_dir_with_cleanup
+    p = make_numbered_dir(root, prefix, mode)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:228: in make_numbered_dir
+    max_existing = max(map(parse_num, find_suffixes(root, prefix)), default=-1)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:187: in extract_suffixes
+    for entry in iter:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = WindowsPath('C:/Users/Guest/AppData/Local/Temp/pytest-of-Guest')
+prefix = 'pytest-'
+
+    def find_prefixed(root: Path, prefix: str) -> Iterator[os.DirEntry[str]]:
+        """Find all elements in root that begin with the prefix, case-insensitive."""
+        l_prefix = prefix.lower()
+>       for x in os.scandir(root):
+                 ^^^^^^^^^^^^^^^^
+E       PermissionError: [WinError 5] Acesso negado: 'C:\\Users\\Guest\\AppData\\Local\\Temp\\pytest-of-Guest'
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:175: PermissionError
+_ ERROR at setup of test_apply_recommendation_rejects_invalid_approval_token __
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000002BA3CC26F20>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\logging.py:858: in pytest_runtest_setup
+    yield
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:536: in setup
+    col.setup()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\python.py:1710: in setup
+    self._request._fillfixtures()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:213: in getbasetemp
+    basetemp = make_numbered_dir_with_cleanup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:420: in make_numbered_dir_with_cleanup
+    raise e
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:401: in make_numbered_dir_with_cleanup
+    p = make_numbered_dir(root, prefix, mode)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:228: in make_numbered_dir
+    max_existing = max(map(parse_num, find_suffixes(root, prefix)), default=-1)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:187: in extract_suffixes
+    for entry in iter:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = WindowsPath('C:/Users/Guest/AppData/Local/Temp/pytest-of-Guest')
+prefix = 'pytest-'
+
+    def find_prefixed(root: Path, prefix: str) -> Iterator[os.DirEntry[str]]:
+        """Find all elements in root that begin with the prefix, case-insensitive."""
+        l_prefix = prefix.lower()
+>       for x in os.scandir(root):
+                 ^^^^^^^^^^^^^^^^
+E       PermissionError: [WinError 5] Acesso negado: 'C:\\Users\\Guest\\AppData\\Local\\Temp\\pytest-of-Guest'
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:175: PermissionError
+_ ERROR at setup of test_apply_recommendation_rejects_path_outside_apply_root _
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000002BA3CC27600>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\logging.py:858: in pytest_runtest_setup
+    yield
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:536: in setup
+    col.setup()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\python.py:1710: in setup
+    self._request._fillfixtures()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:213: in getbasetemp
+    basetemp = make_numbered_dir_with_cleanup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:420: in make_numbered_dir_with_cleanup
+    raise e
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:401: in make_numbered_dir_with_cleanup
+    p = make_numbered_dir(root, prefix, mode)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:228: in make_numbered_dir
+    max_existing = max(map(parse_num, find_suffixes(root, prefix)), default=-1)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:187: in extract_suffixes
+    for entry in iter:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = WindowsPath('C:/Users/Guest/AppData/Local/Temp/pytest-of-Guest')
+prefix = 'pytest-'
+
+    def find_prefixed(root: Path, prefix: str) -> Iterator[os.DirEntry[str]]:
+        """Find all elements in root that begin with the prefix, case-insensitive."""
+        l_prefix = prefix.lower()
+>       for x in os.scandir(root):
+                 ^^^^^^^^^^^^^^^^
+E       PermissionError: [WinError 5] Acesso negado: 'C:\\Users\\Guest\\AppData\\Local\\Temp\\pytest-of-Guest'
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:175: PermissionError
+_ ERROR at setup of test_apply_recommendation_writes_and_verifies_with_matching_token _
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000002BA3CC277E0>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\logging.py:858: in pytest_runtest_setup
+    yield
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:536: in setup
+    col.setup()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\python.py:1710: in setup
+    self._request._fillfixtures()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:213: in getbasetemp
+    basetemp = make_numbered_dir_with_cleanup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:420: in make_numbered_dir_with_cleanup
+    raise e
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:401: in make_numbered_dir_with_cleanup
+    p = make_numbered_dir(root, prefix, mode)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:228: in make_numbered_dir
+    max_existing = max(map(parse_num, find_suffixes(root, prefix)), default=-1)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:187: in extract_suffixes
+    for entry in iter:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = WindowsPath('C:/Users/Guest/AppData/Local/Temp/pytest-of-Guest')
+prefix = 'pytest-'
+
+    def find_prefixed(root: Path, prefix: str) -> Iterator[os.DirEntry[str]]:
+        """Find all elements in root that begin with the prefix, case-insensitive."""
+        l_prefix = prefix.lower()
+>       for x in os.scandir(root):
+                 ^^^^^^^^^^^^^^^^
+E       PermissionError: [WinError 5] Acesso negado: 'C:\\Users\\Guest\\AppData\\Local\\Temp\\pytest-of-Guest'
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:175: PermissionError
+_ ERROR at setup of test_apply_recommendation_preserves_preview_token_for_relative_target _
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000002BA3CC26F20>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\logging.py:858: in pytest_runtest_setup
+    yield
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:536: in setup
+    col.setup()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\python.py:1710: in setup
+    self._request._fillfixtures()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:213: in getbasetemp
+    basetemp = make_numbered_dir_with_cleanup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:420: in make_numbered_dir_with_cleanup
+    raise e
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:401: in make_numbered_dir_with_cleanup
+    p = make_numbered_dir(root, prefix, mode)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:228: in make_numbered_dir
+    max_existing = max(map(parse_num, find_suffixes(root, prefix)), default=-1)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:187: in extract_suffixes
+    for entry in iter:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = WindowsPath('C:/Users/Guest/AppData/Local/Temp/pytest-of-Guest')
+prefix = 'pytest-'
+
+    def find_prefixed(root: Path, prefix: str) -> Iterator[os.DirEntry[str]]:
+        """Find all elements in root that begin with the prefix, case-insensitive."""
+        l_prefix = prefix.lower()
+>       for x in os.scandir(root):
+                 ^^^^^^^^^^^^^^^^
+E       PermissionError: [WinError 5] Acesso negado: 'C:\\Users\\Guest\\AppData\\Local\\Temp\\pytest-of-Guest'
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:175: PermissionError
+_____ ERROR at setup of test_verify_recommendation_apply_detects_mismatch _____
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000002BA3D346B60>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\logging.py:858: in pytest_runtest_setup
+    yield
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:536: in setup
+    col.setup()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\python.py:1710: in setup
+    self._request._fillfixtures()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:213: in getbasetemp
+    basetemp = make_numbered_dir_with_cleanup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:420: in make_numbered_dir_with_cleanup
+    raise e
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:401: in make_numbered_dir_with_cleanup
+    p = make_numbered_dir(root, prefix, mode)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:228: in make_numbered_dir
+    max_existing = max(map(parse_num, find_suffixes(root, prefix)), default=-1)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:187: in extract_suffixes
+    for entry in iter:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = WindowsPath('C:/Users/Guest/AppData/Local/Temp/pytest-of-Guest')
+prefix = 'pytest-'
+
+    def find_prefixed(root: Path, prefix: str) -> Iterator[os.DirEntry[str]]:
+        """Find all elements in root that begin with the prefix, case-insensitive."""
+        l_prefix = prefix.lower()
+>       for x in os.scandir(root):
+                 ^^^^^^^^^^^^^^^^
+E       PermissionError: [WinError 5] Acesso negado: 'C:\\Users\\Guest\\AppData\\Local\\Temp\\pytest-of-Guest'
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:175: PermissionError
+_ ERROR at setup of test_preview_recommendation_returns_diff_without_modifying_file _
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000002BA3D346A20>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\logging.py:858: in pytest_runtest_setup
+    yield
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:536: in setup
+    col.setup()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\python.py:1710: in setup
+    self._request._fillfixtures()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:213: in getbasetemp
+    basetemp = make_numbered_dir_with_cleanup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:420: in make_numbered_dir_with_cleanup
+    raise e
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:401: in make_numbered_dir_with_cleanup
+    p = make_numbered_dir(root, prefix, mode)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:228: in make_numbered_dir
+    max_existing = max(map(parse_num, find_suffixes(root, prefix)), default=-1)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:187: in extract_suffixes
+    for entry in iter:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = WindowsPath('C:/Users/Guest/AppData/Local/Temp/pytest-of-Guest')
+prefix = 'pytest-'
+
+    def find_prefixed(root: Path, prefix: str) -> Iterator[os.DirEntry[str]]:
+        """Find all elements in root that begin with the prefix, case-insensitive."""
+        l_prefix = prefix.lower()
+>       for x in os.scandir(root):
+                 ^^^^^^^^^^^^^^^^
+E       PermissionError: [WinError 5] Acesso negado: 'C:\\Users\\Guest\\AppData\\Local\\Temp\\pytest-of-Guest'
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:175: PermissionError
+_ ERROR at setup of test_preview_recommendation_rejects_unknown_recommendation_without_file_read _
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000002BA3D3477E0>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\logging.py:858: in pytest_runtest_setup
+    yield
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\runner.py:536: in setup
+    col.setup()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\python.py:1710: in setup
+    self._request._fillfixtures()
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\tmpdir.py:213: in getbasetemp
+    basetemp = make_numbered_dir_with_cleanup(
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:420: in make_numbered_dir_with_cleanup
+    raise e
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:401: in make_numbered_dir_with_cleanup
+    p = make_numbered_dir(root, prefix, mode)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:228: in make_numbered_dir
+    max_existing = max(map(parse_num, find_suffixes(root, prefix)), default=-1)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:187: in extract_suffixes
+    for entry in iter:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = WindowsPath('C:/Users/Guest/AppData/Local/Temp/pytest-of-Guest')
+prefix = 'pytest-'
+
+    def find_prefixed(root: Path, prefix: str) -> Iterator[os.DirEntry[str]]:
+        """Find all elements in root that begin with the prefix, case-insensitive."""
+        l_prefix = prefix.lower()
+>       for x in os.scandir(root):
+                 ^^^^^^^^^^^^^^^^
+E       PermissionError: [WinError 5] Acesso negado: 'C:\\Users\\Guest\\AppData\\Local\\Temp\\pytest-of-Guest'
+
+C:\Users\Guest\AppData\Roaming\Python\Python311\site-packages\_pytest\pathlib.py:175: PermissionError
+=========================== short test summary info ===========================
+ERROR tests/test_commander_apply_verify.py::test_preview_recommendation_returns_approval_token
+ERROR tests/test_commander_apply_verify.py::test_apply_recommendation_requires_configured_apply_root
+ERROR tests/test_commander_apply_verify.py::test_apply_recommendation_rejects_invalid_approval_token
+ERROR tests/test_commander_apply_verify.py::test_apply_recommendation_rejects_path_outside_apply_root
+ERROR tests/test_commander_apply_verify.py::test_apply_recommendation_writes_and_verifies_with_matching_token
+ERROR tests/test_commander_apply_verify.py::test_apply_recommendation_preserves_preview_token_for_relative_target
+ERROR tests/test_commander_apply_verify.py::test_verify_recommendation_apply_detects_mismatch
+ERROR tests/test_commander_recommendations.py::test_preview_recommendation_returns_diff_without_modifying_file
+ERROR tests/test_commander_recommendations.py::test_preview_recommendation_rejects_unknown_recommendation_without_file_read
+3 passed, 9 errors in 17.56s
+
+# G5 focused tests retry with workspace basetemp
+............                                                             [100%]
+12 passed in 0.55s
+
+# G5 final sanitized diagnosis artifacts
+wrote evidence/g5-before-diagnosis.json and evidence/g5-after-diagnosis.json with strict JSON-safe non-finite ratios
+
+# G5 final comparison sanitized
+{
+  "before": {
+    "app_id": "app-20260712053414-0001",
+    "finding_count": 1,
+    "severity": "high",
+    "shuffle_read_bytes_total": 1157481,
+    "shuffle_read_records_total": 200100,
+    "max_valid_skew_ratio": 29.4
+  },
+  "after": {
+    "app_id": "app-20260712131734-0004",
+    "finding_count": 0,
+    "severity": null,
+    "shuffle_read_bytes_total": 0,
+    "shuffle_read_records_total": 0,
+    "max_valid_skew_ratio": 0
+  },
+  "gate_status": "green"
+}

@@ -1,0 +1,72 @@
+{
+  "app_id": "app-20260712131734-0004",
+  "event_log": "evidence\\generated\\g5\\g5_fixed_eventlog.zstd",
+  "finding_count": 0,
+  "findings": [],
+  "job_id": "app-20260712131734-0004",
+  "max_valid_skew_ratio": 0,
+  "shuffle_read_bytes_total": 0,
+  "shuffle_read_records_total": 0,
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 37801,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 968,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": null,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 0,
+      "task_count": 8,
+      "total_records": 0
+    },
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 105826,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 3088,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": null,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 1,
+      "task_count": 8,
+      "total_records": 0
+    }
+  ],
+  "valid_shuffle_stage_count": 0,
+  "validations": []
+}

@@ -1,0 +1,128 @@
+{
+  "app_id": "app-20260712053414-0001",
+  "event_log": "evidence\\generated\\g3\\g3_real_eventlog.zstd",
+  "finding_count": 1,
+  "findings": [
+    {
+      "confidence": "medium",
+      "evidence": {
+        "app_id": "app-20260712053414-0001",
+        "hot_records": 164956,
+        "median_cold_records": 5617,
+        "ratio": 29.4,
+        "schema_version": "apex.commander.telemetry.v1",
+        "stage_id": 2,
+        "task_count": 8
+      },
+      "job_id": "app-20260712053414-0001",
+      "kind": "shuffle_skew_candidate",
+      "recommendations": [
+        "Validar habilitacao de spark.sql.adaptive.skewJoin.enabled para este job.",
+        "Confirmar chave de join e avaliar salting/repartition antes de aplicar mudanca."
+      ],
+      "severity": "high",
+      "status": "finding",
+      "title": "shuffle_skew_candidate"
+    }
+  ],
+  "job_id": "app-20260712053414-0001",
+  "max_valid_skew_ratio": 29.4,
+  "shuffle_read_bytes_total": 1157481,
+  "shuffle_read_records_total": 200100,
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 55304,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 1896,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": null,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 0,
+      "task_count": 8,
+      "total_records": 0
+    },
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "invalid",
+      "executor_run_time_ms": 11796,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 0,
+      "max_records": 0,
+      "median_cold_records": 0,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [
+        "zero_cold_median"
+      ],
+      "ratio": null,
+      "records": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "shuffle_read_bytes": 0,
+      "shuffle_read_records": 0,
+      "stage_id": 1,
+      "task_count": 8,
+      "total_records": 0
+    },
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "valid",
+      "executor_run_time_ms": 160592,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 5472,
+      "max_records": 164956,
+      "median_cold_records": 5617,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [],
+      "ratio": 29.4,
+      "records": [
+        5652,
+        6690,
+        3997,
+        164956,
+        5617,
+        2852,
+        5864,
+        4472
+      ],
+      "shuffle_read_bytes": 1157481,
+      "shuffle_read_records": 200100,
+      "stage_id": 2,
+      "task_count": 8,
+      "total_records": 200100
+    }
+  ],
+  "valid_shuffle_stage_count": 1,
+  "validations": [
+    {
+      "accepted": true,
+      "issues": [],
+      "rule_set": "apex.commander.evidence_validator.v1",
+      "status": "valid"
+    }
+  ]
+}
