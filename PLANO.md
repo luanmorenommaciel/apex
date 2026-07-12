@@ -34,7 +34,7 @@ atual cobre uma parte do requisito, o status fica como `parcial`.
 | G1 baseline `none`: zero finding em job saudavel | Parcial | `tests/test_commander_negative_baselines.py` e `tests/test_commander_v01.py` cobrem job saudavel/balanceado. | Cobre o comportamento, mas nao pelo contrato `scenario.yaml` classe `none` da spec comum. |
 | G2 cada detector pega seu cenario sintetico | Parcial | `tests/test_commander_detectors.py` cobre skew, spill/shuffle, GC, OOM e AQE localmente. | Nao ha ainda pacote completo de cenarios v1 comuns (`data_skew_on_join_key`, `gc_pressure`, `shuffle_spill`, `oom_task_failure`, `cartesian_product`, `none`). |
 | G3 sintetico ~= real no cluster + >=8 tasks reais | Parcial | `real_log.ndjson`, `oracle/compare.py`, docs v4 registram comparacao sintetico vs real para skew. | Cobre o slice de skew; nao cobre todos os detectores nem uma execucao cluster atual pelo pacote comum. |
-| G4 T1 < 1s sem LLM; LLM so confidence < 0.6 | Parcial | Caminho atual e deterministico e nao chama LLM. | Falta benchmark automatizado de latencia e politica formal de escalonamento para Crew.ai/Judge. |
+| G4 T1 < 1s sem LLM; LLM so confidence < 0.6 | Parcial | `evidence/g4-t1.log` mede o caminho T1 deterministico contra `app-20260712053414-0001`: 226.991 ms, com `EvidenceValidator` aceitando o finding e grep sem referencias a LLM/API no caminho medido. | A latencia T1 esta abaixo de 1s; a parte de escalonamento para Crew.ai/Judge quando confidence < 0.6 ainda e decisao de design sem implementacao real. |
 | G5 IDE: finding -> apply_fix -> rerun limpo | Parcial | `preview_recommendation`, `apply_recommendation`, `verify_recommendation_apply`, `execute_rerun_poll_and_compare`. | O loop existe localmente e guardado, mas nao e a tool `apply_fix`, nao roda no IDE real e nao prova ainda o rerun limpo com Spark real. |
 | G6 oraculo agendado sintetico vs real drift | Nao cumpre | Existe `oracle/compare.py` manual. | Falta agendamento/infra de drift. |
 
@@ -89,8 +89,8 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
    - Validar skew sintetico vs real.
 
 5. **Etapa 5 — T1 latencia**
-   - Medir T1 < 1s sem LLM.
-   - Registrar log cru em `evidence/`.
+   - Medicao inicial concluida em `evidence/g4-t1.log`: 226.991 ms contra o event log real `app-20260712053414-0001`.
+   - Manter regressao automatizada de latencia antes de evoluir Crew.ai/Judge.
 
 6. **Etapa 6 — MCP IDE/apply_fix**
    - Converter apply guardado atual para contrato `apply_fix`.

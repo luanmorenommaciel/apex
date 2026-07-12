@@ -1,0 +1,43 @@
+# G4 T1 deterministic latency
+command: python tools\g4_t1_latency.py evidence\generated\g3\g3_real_eventlog.zstd --job-id app-20260712053414-0001
+{
+  "elapsed_ms": 226.991,
+  "event_log": "evidence\\generated\\g3\\g3_real_eventlog.zstd",
+  "finding_count": 1,
+  "findings": [
+    {
+      "confidence": "medium",
+      "evidence": {
+        "app_id": "app-20260712053414-0001",
+        "hot_records": 164956,
+        "median_cold_records": 5617,
+        "ratio": 29.4,
+        "schema_version": "apex.commander.telemetry.v1",
+        "stage_id": 2,
+        "task_count": 8
+      },
+      "job_id": "app-20260712053414-0001",
+      "kind": "shuffle_skew_candidate",
+      "recommendations": [
+        "Validar habilitacao de spark.sql.adaptive.skewJoin.enabled para este job.",
+        "Confirmar chave de join e avaliar salting/repartition antes de aplicar mudanca."
+      ],
+      "severity": "high",
+      "status": "finding",
+      "title": "shuffle_skew_candidate"
+    }
+  ],
+  "job_id": "app-20260712053414-0001",
+  "validations": [
+    {
+      "accepted": true,
+      "issues": [],
+      "rule_set": "apex.commander.evidence_validator.v1",
+      "status": "valid"
+    }
+  ]
+}
+
+# no-LLM static grep over measured path
+files: tools/g4_t1_latency.py apex/apexlib.py apex/commander/telemetry.py apex/commander/clickstack_mvp.py apex/commander/diagnostic_mvp.py apex/commander/detectors.py apex/commander/evidence_validator.py apex/commander/findings.py apex/commander/diagnostics_config.py
+NO_MATCHES: measured T1 path contains no LLM/API client references matching grep pattern
