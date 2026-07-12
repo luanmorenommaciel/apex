@@ -1,0 +1,74 @@
+official_gate_runner_version=1
+gate=g1
+plan_generator=C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\plan_generator.py
+generated_dir=C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios
+
+### scenario no_skew_baseline.yaml
+scenario_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\no_skew_baseline.yaml
+output_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\no_skew_baseline.ndjson
+plan_generator_command=C:\Users\Guest\AppData\Local\uv\cache\builds-v0\.tmpirnqOp\Scripts\python.exe C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\plan_generator.py C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\no_skew_baseline.yaml C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\no_skew_baseline.ndjson
+plan_generator_exit_code=0
+plan_generator_stdout_begin
+✅ C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\no_skew_baseline.ndjson gerado: 14 eventos, scenario_hash sha256:20c4fe012a1385db embutido.
+plan_generator_stdout_end
+plan_generator_stderr_begin
+
+plan_generator_stderr_end
+telemetry_envelope_begin
+{
+  "app_id": "app-1783816194-0001",
+  "event_counts": {
+    "ApexSyntheticProvenance": 1,
+    "SparkListenerApplicationEnd": 1,
+    "SparkListenerApplicationStart": 1,
+    "SparkListenerStageCompleted": 1,
+    "SparkListenerStageSubmitted": 1,
+    "SparkListenerTaskEnd": 8,
+    "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart": 1
+  },
+  "job_id": "app-1783816194-0001",
+  "schema_version": "apex.commander.telemetry.v1",
+  "skew_candidates": [],
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "valid",
+      "executor_run_time_ms": 2000,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 0,
+      "max_records": 25021,
+      "median_cold_records": 25009,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [],
+      "ratio": 1.0,
+      "records": [
+        25000,
+        25003,
+        25006,
+        25009,
+        25012,
+        25015,
+        25018,
+        25021
+      ],
+      "stage_id": 4,
+      "task_count": 8,
+      "total_records": 200084
+    }
+  ]
+}
+telemetry_envelope_end
+findings_begin
+[]
+findings_end
+assessment={"passed": true, "reason": "baseline_clean", "scenario_id": "no_skew_baseline", "unexpected_findings": []}
+
+### summary
+[
+  {
+    "passed": true,
+    "reason": "baseline_clean",
+    "scenario": "no_skew_baseline.yaml"
+  }
+]
+OVERALL_STATUS=PASS

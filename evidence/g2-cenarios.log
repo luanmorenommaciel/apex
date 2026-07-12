@@ -1,0 +1,404 @@
+official_gate_runner_version=1
+gate=g2
+plan_generator=C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\plan_generator.py
+generated_dir=C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios
+
+### scenario skew_on_join_30x.yaml
+scenario_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\skew_on_join_30x.yaml
+output_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\skew_on_join_30x.ndjson
+plan_generator_command=C:\Users\Guest\AppData\Local\uv\cache\builds-v0\.tmpknREQa\Scripts\python.exe C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\plan_generator.py C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\skew_on_join_30x.yaml C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\skew_on_join_30x.ndjson
+plan_generator_exit_code=0
+plan_generator_stdout_begin
+✅ C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\skew_on_join_30x.ndjson gerado: 14 eventos, scenario_hash sha256:ec5372694030305d embutido.
+plan_generator_stdout_end
+plan_generator_stderr_begin
+
+plan_generator_stderr_end
+telemetry_envelope_begin
+{
+  "app_id": "app-1783816216-0001",
+  "event_counts": {
+    "ApexSyntheticProvenance": 1,
+    "SparkListenerApplicationEnd": 1,
+    "SparkListenerApplicationStart": 1,
+    "SparkListenerStageCompleted": 1,
+    "SparkListenerStageSubmitted": 1,
+    "SparkListenerTaskEnd": 8,
+    "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart": 1
+  },
+  "job_id": "app-1783816216-0001",
+  "schema_version": "apex.commander.telemetry.v1",
+  "skew_candidates": [
+    {
+      "hot_records": 160000,
+      "kind": "shuffle_skew_candidate",
+      "median_cold_records": 5726,
+      "ratio": 27.9,
+      "stage_id": 4,
+      "task_count": 8
+    }
+  ],
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "valid",
+      "executor_run_time_ms": 1999,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 0,
+      "max_records": 160000,
+      "median_cold_records": 5726,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [],
+      "ratio": 27.9,
+      "records": [
+        160000,
+        5717,
+        5720,
+        5723,
+        5726,
+        5729,
+        5732,
+        5735
+      ],
+      "stage_id": 4,
+      "task_count": 8,
+      "total_records": 200082
+    }
+  ]
+}
+telemetry_envelope_end
+findings_begin
+[
+  {
+    "confidence": "medium",
+    "evidence": {
+      "app_id": "app-1783816216-0001",
+      "hot_records": 160000,
+      "median_cold_records": 5726,
+      "ratio": 27.9,
+      "schema_version": "apex.commander.telemetry.v1",
+      "stage_id": 4,
+      "task_count": 8
+    },
+    "job_id": "app-1783816216-0001",
+    "kind": "shuffle_skew_candidate",
+    "recommendations": [
+      "Validar habilitacao de spark.sql.adaptive.skewJoin.enabled para este job.",
+      "Confirmar chave de join e avaliar salting/repartition antes de aplicar mudanca."
+    ],
+    "severity": "warning",
+    "status": "finding",
+    "title": "shuffle_skew_candidate"
+  }
+]
+findings_end
+assessment={"actual_severity": "warning", "expected_kind": "shuffle_skew_candidate", "finding": {"confidence": "medium", "evidence": {"app_id": "app-1783816216-0001", "hot_records": 160000, "median_cold_records": 5726, "ratio": 27.9, "schema_version": "apex.commander.telemetry.v1", "stage_id": 4, "task_count": 8}, "job_id": "app-1783816216-0001", "kind": "shuffle_skew_candidate", "recommendations": ["Validar habilitacao de spark.sql.adaptive.skewJoin.enabled para este job.", "Confirmar chave de join e avaliar salting/repartition antes de aplicar mudanca."], "severity": "warning", "status": "finding", "title": "shuffle_skew_candidate"}, "min_severity": "high", "passed": false, "reason": "severity_below_expected", "scenario_id": "skew_on_join_30x"}
+
+### scenario gc_pressure_25pct.yaml
+scenario_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\gc_pressure_25pct.yaml
+output_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\gc_pressure_25pct.ndjson
+plan_generator_command=C:\Users\Guest\AppData\Local\uv\cache\builds-v0\.tmpknREQa\Scripts\python.exe C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\plan_generator.py C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\gc_pressure_25pct.yaml C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\gc_pressure_25pct.ndjson
+plan_generator_exit_code=0
+plan_generator_stdout_begin
+✅ C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\gc_pressure_25pct.ndjson gerado: 14 eventos, scenario_hash sha256:8c97571fa3eec2a2 embutido.
+plan_generator_stdout_end
+plan_generator_stderr_begin
+
+plan_generator_stderr_end
+telemetry_envelope_begin
+{
+  "app_id": "app-1783816218-0001",
+  "event_counts": {
+    "ApexSyntheticProvenance": 1,
+    "SparkListenerApplicationEnd": 1,
+    "SparkListenerApplicationStart": 1,
+    "SparkListenerStageCompleted": 1,
+    "SparkListenerStageSubmitted": 1,
+    "SparkListenerTaskEnd": 8,
+    "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart": 1
+  },
+  "job_id": "app-1783816218-0001",
+  "schema_version": "apex.commander.telemetry.v1",
+  "skew_candidates": [],
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "valid",
+      "executor_run_time_ms": 16000,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 4000,
+      "max_records": 25021,
+      "median_cold_records": 25009,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [],
+      "ratio": 1.0,
+      "records": [
+        25000,
+        25003,
+        25006,
+        25009,
+        25012,
+        25015,
+        25018,
+        25021
+      ],
+      "stage_id": 4,
+      "task_count": 8,
+      "total_records": 200084
+    }
+  ]
+}
+telemetry_envelope_end
+findings_begin
+[
+  {
+    "confidence": "medium",
+    "evidence": {
+      "app_id": "app-1783816218-0001",
+      "executor_run_time_ms": 16000,
+      "gc_ratio": 0.25,
+      "jvm_gc_time_ms": 4000,
+      "stage_id": 4
+    },
+    "job_id": "app-1783816218-0001",
+    "kind": "gc_pressure_candidate",
+    "recommendations": [
+      "Avaliar tamanho de particoes, cache e memoria antes de aumentar executores."
+    ],
+    "severity": "warning",
+    "status": "finding",
+    "title": "gc_pressure_candidate"
+  }
+]
+findings_end
+assessment={"actual_severity": "warning", "expected_kind": "gc_pressure_candidate", "finding": {"confidence": "medium", "evidence": {"app_id": "app-1783816218-0001", "executor_run_time_ms": 16000, "gc_ratio": 0.25, "jvm_gc_time_ms": 4000, "stage_id": 4}, "job_id": "app-1783816218-0001", "kind": "gc_pressure_candidate", "recommendations": ["Avaliar tamanho de particoes, cache e memoria antes de aumentar executores."], "severity": "warning", "status": "finding", "title": "gc_pressure_candidate"}, "min_severity": "critical", "passed": false, "reason": "severity_below_expected", "scenario_id": "gc_pressure_25pct"}
+
+### scenario shuffle_spill_disk.yaml
+scenario_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\shuffle_spill_disk.yaml
+output_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\shuffle_spill_disk.ndjson
+plan_generator_command=C:\Users\Guest\AppData\Local\uv\cache\builds-v0\.tmpknREQa\Scripts\python.exe C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\plan_generator.py C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\shuffle_spill_disk.yaml C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\shuffle_spill_disk.ndjson
+plan_generator_exit_code=0
+plan_generator_stdout_begin
+✅ C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\shuffle_spill_disk.ndjson gerado: 14 eventos, scenario_hash sha256:8fd1e9c56d325dce embutido.
+plan_generator_stdout_end
+plan_generator_stderr_begin
+
+plan_generator_stderr_end
+telemetry_envelope_begin
+{
+  "app_id": "app-1783816220-0001",
+  "event_counts": {
+    "ApexSyntheticProvenance": 1,
+    "SparkListenerApplicationEnd": 1,
+    "SparkListenerApplicationStart": 1,
+    "SparkListenerStageCompleted": 1,
+    "SparkListenerStageSubmitted": 1,
+    "SparkListenerTaskEnd": 8,
+    "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart": 1
+  },
+  "job_id": "app-1783816220-0001",
+  "schema_version": "apex.commander.telemetry.v1",
+  "skew_candidates": [],
+  "stages": [
+    {
+      "disk_bytes_spilled": 67108864,
+      "evidence_status": "valid",
+      "executor_run_time_ms": 2000,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 0,
+      "max_records": 25021,
+      "median_cold_records": 25009,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [],
+      "ratio": 1.0,
+      "records": [
+        25000,
+        25003,
+        25006,
+        25009,
+        25012,
+        25015,
+        25018,
+        25021
+      ],
+      "stage_id": 4,
+      "task_count": 8,
+      "total_records": 200084
+    }
+  ]
+}
+telemetry_envelope_end
+findings_begin
+[
+  {
+    "confidence": "medium",
+    "evidence": {
+      "app_id": "app-1783816220-0001",
+      "spilled_bytes": 67108864,
+      "stage_id": 4
+    },
+    "job_id": "app-1783816220-0001",
+    "kind": "shuffle_spill_candidate",
+    "recommendations": [
+      "Validar particionamento e reduzir spill de shuffle antes de escalar recursos."
+    ],
+    "severity": "warning",
+    "status": "finding",
+    "title": "shuffle_spill_candidate"
+  }
+]
+findings_end
+assessment={"actual_severity": "warning", "expected_kind": "shuffle_spill_candidate", "finding": {"confidence": "medium", "evidence": {"app_id": "app-1783816220-0001", "spilled_bytes": 67108864, "stage_id": 4}, "job_id": "app-1783816220-0001", "kind": "shuffle_spill_candidate", "recommendations": ["Validar particionamento e reduzir spill de shuffle antes de escalar recursos."], "severity": "warning", "status": "finding", "title": "shuffle_spill_candidate"}, "min_severity": "critical", "passed": false, "reason": "severity_below_expected", "scenario_id": "shuffle_spill_disk"}
+
+### scenario oom_on_aggregation.yaml
+scenario_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\oom_on_aggregation.yaml
+output_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\oom_on_aggregation.ndjson
+plan_generator_command=C:\Users\Guest\AppData\Local\uv\cache\builds-v0\.tmpknREQa\Scripts\python.exe C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\plan_generator.py C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\oom_on_aggregation.yaml C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\oom_on_aggregation.ndjson
+plan_generator_exit_code=0
+plan_generator_stdout_begin
+✅ C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\oom_on_aggregation.ndjson gerado: 16 eventos, scenario_hash sha256:2ce38b87c0a3afd4 embutido.
+plan_generator_stdout_end
+plan_generator_stderr_begin
+
+plan_generator_stderr_end
+telemetry_envelope_begin
+{
+  "app_id": "app-1783816221-0001",
+  "event_counts": {
+    "ApexSyntheticProvenance": 1,
+    "SparkListenerApplicationEnd": 1,
+    "SparkListenerApplicationStart": 1,
+    "SparkListenerStageCompleted": 1,
+    "SparkListenerStageSubmitted": 1,
+    "SparkListenerTaskEnd": 10,
+    "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart": 1
+  },
+  "job_id": "app-1783816221-0001",
+  "schema_version": "apex.commander.telemetry.v1",
+  "skew_candidates": [],
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "valid",
+      "executor_run_time_ms": 2000,
+      "failure_reasons": [
+        "ExceptionFailure",
+        "ExceptionFailure"
+      ],
+      "jvm_gc_time_ms": 0,
+      "max_records": 25021,
+      "median_cold_records": 25009,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [],
+      "ratio": 1.0,
+      "records": [
+        25000,
+        25003,
+        25006,
+        25009,
+        25012,
+        25015,
+        25018,
+        25021
+      ],
+      "stage_id": 4,
+      "task_count": 8,
+      "total_records": 200084
+    }
+  ]
+}
+telemetry_envelope_end
+findings_begin
+[]
+findings_end
+assessment={"actual_kinds": [], "expected_kind": "oom_candidate", "min_severity": "critical", "passed": false, "reason": "expected_detector_not_triggered", "scenario_id": "oom_on_aggregation"}
+
+### scenario cartesian_product.yaml
+scenario_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\cartesian_product.yaml
+output_path=C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\cartesian_product.ndjson
+plan_generator_command=C:\Users\Guest\AppData\Local\uv\cache\builds-v0\.tmpknREQa\Scripts\python.exe C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\plan_generator.py C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\cartesian_product.yaml C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\cartesian_product.ndjson
+plan_generator_exit_code=0
+plan_generator_stdout_begin
+✅ C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\official-scenarios\cartesian_product.ndjson gerado: 14 eventos, scenario_hash sha256:9407534ba033de33 embutido.
+plan_generator_stdout_end
+plan_generator_stderr_begin
+
+plan_generator_stderr_end
+telemetry_envelope_begin
+{
+  "app_id": "app-1783816223-0001",
+  "event_counts": {
+    "ApexSyntheticProvenance": 1,
+    "SparkListenerApplicationEnd": 1,
+    "SparkListenerApplicationStart": 1,
+    "SparkListenerStageCompleted": 1,
+    "SparkListenerStageSubmitted": 1,
+    "SparkListenerTaskEnd": 8,
+    "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart": 1
+  },
+  "job_id": "app-1783816223-0001",
+  "schema_version": "apex.commander.telemetry.v1",
+  "skew_candidates": [],
+  "stages": [
+    {
+      "disk_bytes_spilled": 0,
+      "evidence_status": "valid",
+      "executor_run_time_ms": 2000,
+      "failure_reasons": [],
+      "jvm_gc_time_ms": 0,
+      "max_records": 25021,
+      "median_cold_records": 25009,
+      "memory_bytes_spilled": 0,
+      "quality_issues": [],
+      "ratio": 1.0,
+      "records": [
+        25000,
+        25003,
+        25006,
+        25009,
+        25012,
+        25015,
+        25018,
+        25021
+      ],
+      "stage_id": 4,
+      "task_count": 8,
+      "total_records": 200084
+    }
+  ]
+}
+telemetry_envelope_end
+findings_begin
+[]
+findings_end
+assessment={"actual_kinds": [], "expected_kind": "cartesian_product_candidate", "min_severity": "critical", "passed": false, "reason": "expected_detector_not_triggered", "scenario_id": "cartesian_product"}
+
+### summary
+[
+  {
+    "passed": false,
+    "reason": "severity_below_expected",
+    "scenario": "skew_on_join_30x.yaml"
+  },
+  {
+    "passed": false,
+    "reason": "severity_below_expected",
+    "scenario": "gc_pressure_25pct.yaml"
+  },
+  {
+    "passed": false,
+    "reason": "severity_below_expected",
+    "scenario": "shuffle_spill_disk.yaml"
+  },
+  {
+    "passed": false,
+    "reason": "expected_detector_not_triggered",
+    "scenario": "oom_on_aggregation.yaml"
+  },
+  {
+    "passed": false,
+    "reason": "expected_detector_not_triggered",
+    "scenario": "cartesian_product.yaml"
+  }
+]
+OVERALL_STATUS=FAIL
