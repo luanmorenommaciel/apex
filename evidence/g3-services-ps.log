@@ -1,0 +1,9 @@
+apex-minio-init spark-plat-v0-minio-mc:2025-08-13 Up 4 minutes 
+apex-clickhouse spark-plat-v0-clickhouse:26.5.1 Up 4 minutes (healthy) 8123/tcp, 9000/tcp
+apex-minio spark-plat-v0-minio:2025-09-07 Up 4 minutes (healthy) 9000-9001/tcp
+spv0-clickhouse spark-plat-v0-clickhouse:26.5.1 Up 28 minutes (healthy) 0.0.0.0:28123->8123/tcp, [::]:28123->8123/tcp, 0.0.0.0:29002->9000/tcp, [::]:29002->9000/tcp
+spv0-spark-history spark-plat-v0-spark-history:4.1.2 Up 27 minutes 0.0.0.0:28080->18080/tcp, [::]:28080->18080/tcp
+spv0-spark-worker-1 spark-plat-v0-spark:4.1.2 Up 27 minutes 
+spv0-spark-master spark-plat-v0-spark:4.1.2 Up 27 minutes 0.0.0.0:28081->8080/tcp, [::]:28081->8080/tcp
+spv0-minio-init spark-plat-v0-minio-mc:2025-08-13 Up 1 second 
+spv0-minio spark-plat-v0-minio:2025-09-07 Up 28 minutes 0.0.0.0:29000->9000/tcp, [::]:29000->9000/tcp, 0.0.0.0:29001->9001/tcp, [::]:29001->9001/tcp

@@ -78,6 +78,11 @@ def test_compose_aligns_g3_environment_with_plat_v0_contract():
     services = compose["services"]
 
     assert {"minio", "minio-init"}.issubset(services)
+    assert services["spark-master"]["image"] == "spark-plat-v0-spark:4.1.2"
+    assert services["spark-worker"]["image"] == "spark-plat-v0-spark:4.1.2"
+    assert services["clickhouse"]["image"] == "spark-plat-v0-clickhouse:26.5.1"
+    assert services["minio"]["image"] == "spark-plat-v0-minio:2025-09-07"
+    assert services["minio-init"]["image"] == "spark-plat-v0-minio-mc:2025-08-13"
     assert "28123:8123" in services["clickhouse"]["ports"]
     assert "CLICKHOUSE_USER=spv0" in services["clickhouse"]["environment"]
     assert "CLICKHOUSE_PASSWORD=spv0" in services["clickhouse"]["environment"]
@@ -86,9 +91,9 @@ def test_compose_aligns_g3_environment_with_plat_v0_contract():
     assert "MINIO_ROOT_PASSWORD=spv0spv0" in services["minio"]["environment"]
     assert "apex_minio_data" in compose["volumes"]
 
-    minio_init_command = services["minio-init"]["entrypoint"]
-    assert "mc mb --ignore-existing local/spark-logs" in minio_init_command
-    assert "local/spark-logs/events/.keep" in minio_init_command
+    minio_init_env = services["minio-init"]["environment"]
+    assert "MINIO_LAKEHOUSE_BUCKET=lakehouse" in minio_init_env
+    assert "MINIO_LOG_BUCKET=spark-logs" in minio_init_env
 
     worker_env = services["spark-worker"]["environment"]
     assert "SPARK_WORKER_CORES=8" in worker_env

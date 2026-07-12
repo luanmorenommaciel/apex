@@ -1,0 +1,342 @@
+WARNING: Using incubator modules: jdk.incubator.vector
+26/07/12 05:11:06 INFO SparkContext: Running Spark version 4.1.2
+26/07/12 05:11:06 INFO SparkContext: OS info Linux, 6.18.33.2-microsoft-standard-WSL2, amd64
+26/07/12 05:11:06 INFO SparkContext: Java version 17.0.19+10
+26/07/12 05:11:07 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+26/07/12 05:11:08 INFO ResourceUtils: ==============================================================
+26/07/12 05:11:08 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/07/12 05:11:08 INFO ResourceUtils: ==============================================================
+26/07/12 05:11:08 INFO SparkContext: Submitted application: apex-g3-s3a-list-events
+26/07/12 05:11:08 INFO SecurityManager: Changing view acls to: spark
+26/07/12 05:11:08 INFO SecurityManager: Changing modify acls to: spark
+26/07/12 05:11:08 INFO SecurityManager: Changing view acls groups to: spark
+26/07/12 05:11:08 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/12 05:11:08 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/12 05:11:11 INFO Utils: Successfully started service 'sparkDriver' on port 39795.
+26/07/12 05:11:12 INFO SparkEnv: Registering MapOutputTracker
+26/07/12 05:11:12 INFO SparkEnv: Registering BlockManagerMaster
+26/07/12 05:11:12 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/07/12 05:11:12 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/07/12 05:11:12 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/07/12 05:11:12 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-b8c84dc1-74b7-43d8-bea0-5b79725ced58
+26/07/12 05:11:12 INFO SparkEnv: Registering OutputCommitCoordinator
+26/07/12 05:11:14 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+26/07/12 05:11:14 INFO Server: jetty-11.0.26; built: 2025-08-14T18:03:14.457Z; git: 7559873b6e46eea7c2c6da2b58327ea2ecf941f4; jvm 17.0.19+10
+26/07/12 05:11:14 INFO Server: Started Server@64bf4471{STARTING}[11.0.26,sto=30000] @35995ms
+26/07/12 05:11:14 INFO AbstractConnector: Started ServerConnector@69cf7822{HTTP/1.1, (http/1.1)}{0.0.0.0:4040}
+26/07/12 05:11:14 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/07/12 05:11:15 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@237c9f49{/,null,AVAILABLE,@Spark}
+26/07/12 05:11:15 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/07/12 05:11:15 INFO ResourceProfile: Limiting resource is cpu
+26/07/12 05:11:15 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/07/12 05:11:15 INFO SecurityManager: Changing view acls to: spark
+26/07/12 05:11:15 INFO SecurityManager: Changing modify acls to: spark
+26/07/12 05:11:15 INFO SecurityManager: Changing view acls groups to: spark
+26/07/12 05:11:15 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/12 05:11:15 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/12 05:11:16 INFO Executor: Starting executor ID driver on host fb58b5d21f32
+26/07/12 05:11:16 INFO Executor: OS info Linux, 6.18.33.2-microsoft-standard-WSL2, amd64
+26/07/12 05:11:16 INFO Executor: Java version 17.0.19+10
+26/07/12 05:11:17 INFO Executor: Starting executor with user classpath (userClassPathFirst = false): ''
+26/07/12 05:11:17 INFO Executor: Created or updated repl class loader org.apache.spark.util.MutableURLClassLoader@1607228 for default.
+26/07/12 05:11:17 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 35515.
+26/07/12 05:11:17 INFO NettyBlockTransferService: Server created on fb58b5d21f32:35515
+26/07/12 05:11:17 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/07/12 05:11:17 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, fb58b5d21f32, 35515, None)
+26/07/12 05:11:17 INFO BlockManagerMasterEndpoint: Registering block manager fb58b5d21f32:35515 with 434.4 MiB RAM, BlockManagerId(driver, fb58b5d21f32, 35515, None)
+26/07/12 05:11:17 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, fb58b5d21f32, 35515, None)
+26/07/12 05:11:17 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, fb58b5d21f32, 35515, None)
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+26/07/12 05:11:33 INFO Executor: Told to re-register on heartbeat
+26/07/12 05:11:33 INFO BlockManager: BlockManager BlockManagerId(driver, fb58b5d21f32, 35515, None) re-registering with master
+26/07/12 05:11:33 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, fb58b5d21f32, 35515, None)
+26/07/12 05:11:33 WARN Executor: Issue communicating with driver in heartbeater
+org.apache.spark.SparkException: Exception thrown in awaitResult: 
+	at org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:53)
+	at org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:359)
+	at org.apache.spark.rpc.RpcTimeout.awaitResult(RpcTimeout.scala:75)
+	at org.apache.spark.rpc.RpcEndpointRef.askSync(RpcEndpointRef.scala:101)
+	at org.apache.spark.rpc.RpcEndpointRef.askSync(RpcEndpointRef.scala:85)
+	at org.apache.spark.storage.BlockManagerMaster.registerBlockManager(BlockManagerMaster.scala:81)
+	at org.apache.spark.storage.BlockManager.reregister(BlockManager.scala:674)
+	at org.apache.spark.executor.Executor.reportHeartBeat(Executor.scala:1530)
+	at org.apache.spark.executor.Executor.$anonfun$heartbeater$1(Executor.scala:483)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1941)
+	at org.apache.spark.Heartbeater$$anon$1.run(Heartbeater.scala:46)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+	at java.base/java.util.concurrent.FutureTask.runAndReset(FutureTask.java:305)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:305)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: org.apache.spark.SparkException: Exception thrown in awaitResult: 
+	at org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:53)
+	at org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:359)
+	at org.apache.spark.rpc.RpcTimeout.awaitResult(RpcTimeout.scala:75)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRefByURI(RpcEnv.scala:102)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRef(RpcEnv.scala:110)
+	at org.apache.spark.util.RpcUtils$.makeDriverRef(RpcUtils.scala:36)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.driverEndpoint$lzycompute(BlockManagerMasterEndpoint.scala:132)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.org$apache$spark$storage$BlockManagerMasterEndpoint$$driverEndpoint(BlockManagerMasterEndpoint.scala:131)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.isExecutorAlive$lzycompute$1(BlockManagerMasterEndpoint.scala:707)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.isExecutorAlive$1(BlockManagerMasterEndpoint.scala:706)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.org$apache$spark$storage$BlockManagerMasterEndpoint$$register(BlockManagerMasterEndpoint.scala:746)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint$$anonfun$receiveAndReply$1.applyOrElse(BlockManagerMasterEndpoint.scala:141)
+	at org.apache.spark.rpc.netty.Inbox.$anonfun$process$1(Inbox.scala:104)
+	at org.apache.spark.rpc.netty.Inbox.safelyCall(Inbox.scala:216)
+	at org.apache.spark.rpc.netty.Inbox.process(Inbox.scala:101)
+	at org.apache.spark.rpc.netty.MessageLoop.org$apache$spark$rpc$netty$MessageLoop$$receiveLoop(MessageLoop.scala:76)
+	at org.apache.spark.rpc.netty.MessageLoop$$anon$1.run(MessageLoop.scala:42)
+	... 3 more
+Caused by: org.apache.spark.rpc.RpcEndpointNotFoundException: Cannot find endpoint: spark://CoarseGrainedScheduler@fb58b5d21f32:39795
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$asyncSetupEndpointRefByURI$1(NettyRpcEnv.scala:151)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$asyncSetupEndpointRefByURI$1$adapted(NettyRpcEnv.scala:147)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:503)
+	at org.apache.spark.util.ThreadUtils$$anon$1.execute(ThreadUtils.scala:99)
+	at scala.concurrent.impl.ExecutionContextImpl.execute(ExecutionContextImpl.scala:21)
+	at scala.concurrent.impl.Promise$Transformation.submitWithValue(Promise.scala:462)
+	at scala.concurrent.impl.Promise$DefaultPromise.submitWithValue(Promise.scala:371)
+	at scala.concurrent.impl.Promise$DefaultPromise.dispatchOrAddCallbacks(Promise.scala:322)
+	at scala.concurrent.impl.Promise$DefaultPromise.flatMap(Promise.scala:176)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.asyncSetupEndpointRefByURI(NettyRpcEnv.scala:153)
+	... 17 more
+26/07/12 05:11:33 ERROR Inbox: Ignoring error
+org.apache.spark.SparkException: Exception thrown in awaitResult: 
+	at org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:53)
+	at org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:359)
+	at org.apache.spark.rpc.RpcTimeout.awaitResult(RpcTimeout.scala:75)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRefByURI(RpcEnv.scala:102)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRef(RpcEnv.scala:110)
+	at org.apache.spark.util.RpcUtils$.makeDriverRef(RpcUtils.scala:36)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.driverEndpoint$lzycompute(BlockManagerMasterEndpoint.scala:132)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.org$apache$spark$storage$BlockManagerMasterEndpoint$$driverEndpoint(BlockManagerMasterEndpoint.scala:131)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.isExecutorAlive$lzycompute$1(BlockManagerMasterEndpoint.scala:707)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.isExecutorAlive$1(BlockManagerMasterEndpoint.scala:706)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.org$apache$spark$storage$BlockManagerMasterEndpoint$$register(BlockManagerMasterEndpoint.scala:746)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint$$anonfun$receiveAndReply$1.applyOrElse(BlockManagerMasterEndpoint.scala:141)
+	at org.apache.spark.rpc.netty.Inbox.$anonfun$process$1(Inbox.scala:104)
+	at org.apache.spark.rpc.netty.Inbox.safelyCall(Inbox.scala:216)
+	at org.apache.spark.rpc.netty.Inbox.process(Inbox.scala:101)
+	at org.apache.spark.rpc.netty.MessageLoop.org$apache$spark$rpc$netty$MessageLoop$$receiveLoop(MessageLoop.scala:76)
+	at org.apache.spark.rpc.netty.MessageLoop$$anon$1.run(MessageLoop.scala:42)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: org.apache.spark.rpc.RpcEndpointNotFoundException: Cannot find endpoint: spark://CoarseGrainedScheduler@fb58b5d21f32:39795
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$asyncSetupEndpointRefByURI$1(NettyRpcEnv.scala:151)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$asyncSetupEndpointRefByURI$1$adapted(NettyRpcEnv.scala:147)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:503)
+	at org.apache.spark.util.ThreadUtils$$anon$1.execute(ThreadUtils.scala:99)
+	at scala.concurrent.impl.ExecutionContextImpl.execute(ExecutionContextImpl.scala:21)
+	at scala.concurrent.impl.Promise$Transformation.submitWithValue(Promise.scala:462)
+	at scala.concurrent.impl.Promise$DefaultPromise.submitWithValue(Promise.scala:371)
+	at scala.concurrent.impl.Promise$DefaultPromise.dispatchOrAddCallbacks(Promise.scala:322)
+	at scala.concurrent.impl.Promise$DefaultPromise.flatMap(Promise.scala:176)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.asyncSetupEndpointRefByURI(NettyRpcEnv.scala:153)
+	... 17 more
+26/07/12 05:11:42 INFO RollingEventLogFilesWriter: Logging events to s3a://spark-logs/events/eventlog_v2_local-1783833075942/events_1_local-1783833075942.zstd
+26/07/12 05:11:43 INFO Executor: Told to re-register on heartbeat
+26/07/12 05:11:43 INFO BlockManager: BlockManager BlockManagerId(driver, fb58b5d21f32, 35515, None) re-registering with master
+26/07/12 05:11:43 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, fb58b5d21f32, 35515, None)
+26/07/12 05:11:43 WARN Executor: Issue communicating with driver in heartbeater
+org.apache.spark.SparkException: Exception thrown in awaitResult: 
+	at org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:53)
+	at org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:359)
+	at org.apache.spark.rpc.RpcTimeout.awaitResult(RpcTimeout.scala:75)
+	at org.apache.spark.rpc.RpcEndpointRef.askSync(RpcEndpointRef.scala:101)
+	at org.apache.spark.rpc.RpcEndpointRef.askSync(RpcEndpointRef.scala:85)
+	at org.apache.spark.storage.BlockManagerMaster.registerBlockManager(BlockManagerMaster.scala:81)
+	at org.apache.spark.storage.BlockManager.reregister(BlockManager.scala:674)
+	at org.apache.spark.executor.Executor.reportHeartBeat(Executor.scala:1530)
+	at org.apache.spark.executor.Executor.$anonfun$heartbeater$1(Executor.scala:483)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1941)
+	at org.apache.spark.Heartbeater$$anon$1.run(Heartbeater.scala:46)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+	at java.base/java.util.concurrent.FutureTask.runAndReset(FutureTask.java:305)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:305)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: org.apache.spark.SparkException: Exception thrown in awaitResult: 
+	at org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:53)
+	at org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:359)
+	at org.apache.spark.rpc.RpcTimeout.awaitResult(RpcTimeout.scala:75)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRefByURI(RpcEnv.scala:102)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRef(RpcEnv.scala:110)
+	at org.apache.spark.util.RpcUtils$.makeDriverRef(RpcUtils.scala:36)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.driverEndpoint$lzycompute(BlockManagerMasterEndpoint.scala:132)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.org$apache$spark$storage$BlockManagerMasterEndpoint$$driverEndpoint(BlockManagerMasterEndpoint.scala:131)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.isExecutorAlive$lzycompute$1(BlockManagerMasterEndpoint.scala:707)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.isExecutorAlive$1(BlockManagerMasterEndpoint.scala:706)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.org$apache$spark$storage$BlockManagerMasterEndpoint$$register(BlockManagerMasterEndpoint.scala:746)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint$$anonfun$receiveAndReply$1.applyOrElse(BlockManagerMasterEndpoint.scala:141)
+	at org.apache.spark.rpc.netty.Inbox.$anonfun$process$1(Inbox.scala:104)
+	at org.apache.spark.rpc.netty.Inbox.safelyCall(Inbox.scala:216)
+	at org.apache.spark.rpc.netty.Inbox.process(Inbox.scala:101)
+	at org.apache.spark.rpc.netty.MessageLoop.org$apache$spark$rpc$netty$MessageLoop$$receiveLoop(MessageLoop.scala:76)
+	at org.apache.spark.rpc.netty.MessageLoop$$anon$1.run(MessageLoop.scala:42)
+	... 3 more
+Caused by: org.apache.spark.rpc.RpcEndpointNotFoundException: Cannot find endpoint: spark://CoarseGrainedScheduler@fb58b5d21f32:39795
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$asyncSetupEndpointRefByURI$1(NettyRpcEnv.scala:151)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$asyncSetupEndpointRefByURI$1$adapted(NettyRpcEnv.scala:147)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:503)
+	at org.apache.spark.util.ThreadUtils$$anon$1.execute(ThreadUtils.scala:99)
+	at scala.concurrent.impl.ExecutionContextImpl.execute(ExecutionContextImpl.scala:21)
+	at scala.concurrent.impl.Promise$Transformation.submitWithValue(Promise.scala:462)
+	at scala.concurrent.impl.Promise$DefaultPromise.submitWithValue(Promise.scala:371)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete0(Promise.scala:295)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:537)
+	at org.apache.spark.util.ThreadUtils$$anon$1.execute(ThreadUtils.scala:99)
+	at scala.concurrent.impl.ExecutionContextImpl.execute(ExecutionContextImpl.scala:21)
+	at scala.concurrent.impl.Promise$Transformation.submitWithValue(Promise.scala:462)
+	at scala.concurrent.impl.Promise$DefaultPromise.submitWithValue(Promise.scala:371)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete0(Promise.scala:295)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:537)
+	at scala.concurrent.ExecutionContext$parasitic$.execute(ExecutionContext.scala:222)
+	at scala.concurrent.impl.Promise$Transformation.submitWithValue(Promise.scala:462)
+	at scala.concurrent.impl.Promise$DefaultPromise.submitWithValue(Promise.scala:368)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete0(Promise.scala:295)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:288)
+	at scala.concurrent.Promise.trySuccess(Promise.scala:99)
+	at scala.concurrent.Promise.trySuccess$(Promise.scala:99)
+	at scala.concurrent.impl.Promise$DefaultPromise.trySuccess(Promise.scala:104)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.onSuccess$1(NettyRpcEnv.scala:228)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$askAbortable$5(NettyRpcEnv.scala:242)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$askAbortable$5$adapted(NettyRpcEnv.scala:241)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:517)
+	at org.apache.spark.util.ThreadUtils$$anon$1.execute(ThreadUtils.scala:99)
+	at scala.concurrent.impl.ExecutionContextImpl.execute(ExecutionContextImpl.scala:21)
+	at scala.concurrent.impl.Promise$Transformation.submitWithValue(Promise.scala:462)
+	at scala.concurrent.impl.Promise$DefaultPromise.submitWithValue(Promise.scala:371)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete0(Promise.scala:295)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:288)
+	at scala.concurrent.Promise.complete(Promise.scala:57)
+	at scala.concurrent.Promise.complete$(Promise.scala:56)
+	at scala.concurrent.impl.Promise$DefaultPromise.complete(Promise.scala:104)
+	at scala.concurrent.Promise.success(Promise.scala:91)
+	at scala.concurrent.Promise.success$(Promise.scala:91)
+	at scala.concurrent.impl.Promise$DefaultPromise.success(Promise.scala:104)
+	at org.apache.spark.rpc.netty.LocalNettyRpcCallContext.send(NettyRpcCallContext.scala:50)
+	at org.apache.spark.rpc.netty.NettyRpcCallContext.reply(NettyRpcCallContext.scala:32)
+	at org.apache.spark.rpc.netty.RpcEndpointVerifier$$anonfun$receiveAndReply$1.applyOrElse(RpcEndpointVerifier.scala:31)
+	... 8 more
+26/07/12 05:11:43 ERROR Inbox: Ignoring error
+org.apache.spark.SparkException: Exception thrown in awaitResult: 
+	at org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:53)
+	at org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:359)
+	at org.apache.spark.rpc.RpcTimeout.awaitResult(RpcTimeout.scala:75)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRefByURI(RpcEnv.scala:102)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRef(RpcEnv.scala:110)
+	at org.apache.spark.util.RpcUtils$.makeDriverRef(RpcUtils.scala:36)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.driverEndpoint$lzycompute(BlockManagerMasterEndpoint.scala:132)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.org$apache$spark$storage$BlockManagerMasterEndpoint$$driverEndpoint(BlockManagerMasterEndpoint.scala:131)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.isExecutorAlive$lzycompute$1(BlockManagerMasterEndpoint.scala:707)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.isExecutorAlive$1(BlockManagerMasterEndpoint.scala:706)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint.org$apache$spark$storage$BlockManagerMasterEndpoint$$register(BlockManagerMasterEndpoint.scala:746)
+	at org.apache.spark.storage.BlockManagerMasterEndpoint$$anonfun$receiveAndReply$1.applyOrElse(BlockManagerMasterEndpoint.scala:141)
+	at org.apache.spark.rpc.netty.Inbox.$anonfun$process$1(Inbox.scala:104)
+	at org.apache.spark.rpc.netty.Inbox.safelyCall(Inbox.scala:216)
+	at org.apache.spark.rpc.netty.Inbox.process(Inbox.scala:101)
+	at org.apache.spark.rpc.netty.MessageLoop.org$apache$spark$rpc$netty$MessageLoop$$receiveLoop(MessageLoop.scala:76)
+	at org.apache.spark.rpc.netty.MessageLoop$$anon$1.run(MessageLoop.scala:42)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: org.apache.spark.rpc.RpcEndpointNotFoundException: Cannot find endpoint: spark://CoarseGrainedScheduler@fb58b5d21f32:39795
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$asyncSetupEndpointRefByURI$1(NettyRpcEnv.scala:151)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$asyncSetupEndpointRefByURI$1$adapted(NettyRpcEnv.scala:147)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:503)
+	at org.apache.spark.util.ThreadUtils$$anon$1.execute(ThreadUtils.scala:99)
+	at scala.concurrent.impl.ExecutionContextImpl.execute(ExecutionContextImpl.scala:21)
+	at scala.concurrent.impl.Promise$Transformation.submitWithValue(Promise.scala:462)
+	at scala.concurrent.impl.Promise$DefaultPromise.submitWithValue(Promise.scala:371)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete0(Promise.scala:295)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:537)
+	at org.apache.spark.util.ThreadUtils$$anon$1.execute(ThreadUtils.scala:99)
+	at scala.concurrent.impl.ExecutionContextImpl.execute(ExecutionContextImpl.scala:21)
+	at scala.concurrent.impl.Promise$Transformation.submitWithValue(Promise.scala:462)
+	at scala.concurrent.impl.Promise$DefaultPromise.submitWithValue(Promise.scala:371)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete0(Promise.scala:295)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:537)
+	at scala.concurrent.ExecutionContext$parasitic$.execute(ExecutionContext.scala:222)
+	at scala.concurrent.impl.Promise$Transformation.submitWithValue(Promise.scala:462)
+	at scala.concurrent.impl.Promise$DefaultPromise.submitWithValue(Promise.scala:368)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete0(Promise.scala:295)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:288)
+	at scala.concurrent.Promise.trySuccess(Promise.scala:99)
+	at scala.concurrent.Promise.trySuccess$(Promise.scala:99)
+	at scala.concurrent.impl.Promise$DefaultPromise.trySuccess(Promise.scala:104)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.onSuccess$1(NettyRpcEnv.scala:228)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$askAbortable$5(NettyRpcEnv.scala:242)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.$anonfun$askAbortable$5$adapted(NettyRpcEnv.scala:241)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:517)
+	at org.apache.spark.util.ThreadUtils$$anon$1.execute(ThreadUtils.scala:99)
+	at scala.concurrent.impl.ExecutionContextImpl.execute(ExecutionContextImpl.scala:21)
+	at scala.concurrent.impl.Promise$Transformation.submitWithValue(Promise.scala:462)
+	at scala.concurrent.impl.Promise$DefaultPromise.submitWithValue(Promise.scala:371)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete0(Promise.scala:295)
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:288)
+	at scala.concurrent.Promise.complete(Promise.scala:57)
+	at scala.concurrent.Promise.complete$(Promise.scala:56)
+	at scala.concurrent.impl.Promise$DefaultPromise.complete(Promise.scala:104)
+	at scala.concurrent.Promise.success(Promise.scala:91)
+	at scala.concurrent.Promise.success$(Promise.scala:91)
+	at scala.concurrent.impl.Promise$DefaultPromise.success(Promise.scala:104)
+	at org.apache.spark.rpc.netty.LocalNettyRpcCallContext.send(NettyRpcCallContext.scala:50)
+	at org.apache.spark.rpc.netty.NettyRpcCallContext.reply(NettyRpcCallContext.scala:32)
+	at org.apache.spark.rpc.netty.RpcEndpointVerifier$$anonfun$receiveAndReply$1.applyOrElse(RpcEndpointVerifier.scala:31)
+	... 8 more
+26/07/12 05:11:44 INFO ContextHandler: Stopped o.s.j.s.ServletContextHandler@237c9f49{/,null,STOPPED,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@1f486582{/jobs,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@7c9e4084{/jobs/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@3812d67f{/jobs/job,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@24449657{/jobs/job/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@d183f55{/stages,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@2c963446{/stages/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@77b0f8d1{/stages/stage,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@231aa206{/stages/stage/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@1d3acbbe{/stages/pool,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@22c3bc1d{/stages/pool/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@62ddc8d6{/stages/taskThreadDump,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@70233b63{/stages/taskThreadDump/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@596bcff2{/storage,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@5debef6{/storage/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@36329619{/storage/rdd,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@5172ad3d{/storage/rdd/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@4c90d0c9{/environment,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@756e53fb{/environment/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@51e63b69{/executors,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@6f4599b5{/executors/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@415e88e6{/executors/threadDump,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@75271cb1{/executors/threadDump/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@7fa18d74{/executors/heapHistogram,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@610e413e{/executors/heapHistogram/json,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@31b27981{/static,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@65fef77a{/,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@57a7c187{/api,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@164ac0b2{/metrics,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@ce8e8f1{/jobs/job/kill,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@780a9b78{/stages/stage/kill,null,AVAILABLE,@Spark}
+26/07/12 05:11:44 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@18f0a284{/metrics/json,null,AVAILABLE,@Spark}
+s3a://spark-logs/events/.keep
+26/07/12 05:12:07 INFO SparkContext: SparkContext is stopping with exitCode 0 from stop at NativeMethodAccessorImpl.java:0.
+26/07/12 05:12:07 INFO Server: Stopped Server@64bf4471{STOPPING}[11.0.26,sto=30000]
+26/07/12 05:12:07 INFO Server: Shutdown Server@64bf4471{STOPPING}[11.0.26,sto=30000]
+s3a://spark-logs/events/eventlog_v2_app-20260710021939-0000
+s3a://spark-logs/events/eventlog_v2_app-20260711014011-0000
+s3a://spark-logs/events/eventlog_v2_app-20260711014615-0001
+s3a://spark-logs/events/eventlog_v2_app-20260712050755-0000
+s3a://spark-logs/events/eventlog_v2_local-1783833075942
+26/07/12 05:12:07 INFO AbstractConnector: Stopped Spark@69cf7822{HTTP/1.1, (http/1.1)}{0.0.0.0:4040}
+26/07/12 05:12:07 INFO SparkUI: Stopped Spark web UI at http://fb58b5d21f32:4040
+26/07/12 05:12:14 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+26/07/12 05:12:15 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+26/07/12 05:12:15 INFO MemoryStore: MemoryStore cleared
+26/07/12 05:12:15 INFO BlockManager: BlockManager stopped
+26/07/12 05:12:15 INFO BlockManagerMaster: BlockManagerMaster stopped
+26/07/12 05:12:15 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+26/07/12 05:12:15 INFO SparkContext: Successfully stopped SparkContext (Uptime: 69059 ms)
