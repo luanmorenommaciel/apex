@@ -1,0 +1,25 @@
+Command:
+claude mcp list
+
+Output:
+Checking MCP server health...
+
+apex-commander: python -m apex.commander.mcp_stdio_cli --store evidence\generated\mcp-ide-subprocess-smoke\store.ndjson --finding-store evidence\generated\mcp-ide-subprocess-smoke\findings.ndjson --apply-root evidence\generated\mcp-ide-subprocess-smoke - Pending approval (run `claude` to approve)
+
+Command:
+claude mcp get apex-commander
+
+Output:
+apex-commander:
+  Scope: Project config (shared via .mcp.json)
+  Status: Pending approval (run `claude` to approve)
+  Type: stdio
+  Command: python
+  Args: -m apex.commander.mcp_stdio_cli --store evidence\generated\mcp-ide-subprocess-smoke\store.ndjson --finding-store evidence\generated\mcp-ide-subprocess-smoke\findings.ndjson --apply-root evidence\generated\mcp-ide-subprocess-smoke
+  Environment:
+
+Command:
+claude --mcp-config .mcp.json --strict-mcp-config --print "Use the apex-commander MCP server if available and list its tools. Return only the tool names." --output-format json
+
+Output:
+Timed out after 120 seconds. This does not prove GUI/interactive approval. It proves the project-scoped MCP config is present and discoverable by Claude Code CLI, but still pending approval.

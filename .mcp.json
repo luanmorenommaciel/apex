@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "apex-commander": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "-m",
+        "apex.commander.mcp_stdio_cli",
+        "--store",
+        "evidence\\generated\\mcp-ide-subprocess-smoke\\store.ndjson",
+        "--finding-store",
+        "evidence\\generated\\mcp-ide-subprocess-smoke\\findings.ndjson",
+        "--apply-root",
+        "evidence\\generated\\mcp-ide-subprocess-smoke"
+      ],
+      "env": {}
+    }
+  }
+}

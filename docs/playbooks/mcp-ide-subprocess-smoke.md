@@ -12,9 +12,26 @@ Code fariam ao iniciar um servidor MCP local.
 
 ## Convencao local
 
-Nao ha `.vscode/` versionado nem arquivo local de configuracao MCP do editor no
-repositorio. Por isso, a configuracao abaixo fica documentada aqui em vez de
-criar uma pasta de IDE nova.
+Agora ha `.mcp.json` versionado na raiz do repositorio, com o servidor
+`apex-commander` em escopo de projeto para Claude Code. Cursor/VS Code podem
+usar a mesma forma conceitual de comando stdio.
+
+Validacao feita em 2026-07-14:
+
+```powershell
+claude mcp list
+claude mcp get apex-commander
+```
+
+Evidencia:
+
+```text
+evidence/g6-claude-code-project-mcp-smoke.log
+```
+
+Resultado: Claude Code reconhece o servidor `apex-commander` em `.mcp.json`,
+mas marca como `Pending approval`. Isso ainda nao prova GUI/interacao completa;
+o proximo passo e abrir `claude` interativo e aprovar o servidor do projeto.
 
 O smoke executavel e:
 
@@ -47,25 +64,25 @@ harness_result
 
 ## Exemplo de configuracao MCP
 
-Use caminhos absolutos ao configurar o editor. O exemplo abaixo assume que o
-repositorio esta em `C:\Users\Guest\Documents\project\codex\apex\apex-official`.
+Configuracao versionada atual em `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "apex-commander": {
+      "type": "stdio",
       "command": "python",
       "args": [
         "-m",
         "apex.commander.mcp_stdio_cli",
         "--store",
-        "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\mcp-ide-subprocess-smoke\\store.ndjson",
+        "evidence\\generated\\mcp-ide-subprocess-smoke\\store.ndjson",
         "--finding-store",
-        "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\mcp-ide-subprocess-smoke\\findings.ndjson",
+        "evidence\\generated\\mcp-ide-subprocess-smoke\\findings.ndjson",
         "--apply-root",
-        "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\mcp-ide-subprocess-smoke"
+        "evidence\\generated\\mcp-ide-subprocess-smoke"
       ],
-      "cwd": "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official"
+      "env": {}
     }
   }
 }

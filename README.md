@@ -30,6 +30,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | SparkListener JVM real | Fechado localmente/runtime smoke | `listener-jvm/`; `evidence/g9-listener-jvm-spark-submit.log`; `evidence/g9-listener-jvm-failsafe-spark-submit.log` |
 | Crew/Judge policy local | Fechado localmente | `apex/commander/judge_policy.py`; `evidence/g8-agentic-loop-python.log` |
 | MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
+| Claude Code project MCP | Parcial, pendente de aprovacao interativa | `.mcp.json`; `evidence/g6-claude-code-project-mcp-smoke.log` |
 | Comparacao campeonato 14/07 | Atualizada | `docs/architecture/llm-solution-validation-framework-2026-07-14.md`; `docs/presentations/llm-solution-validation-2026-07-14.html` |
 | Autoavaliacao | Fechada | `docs/autoavaliacao.md` |
 | Catalogo de issues | Fechado/aberto conforme item | `ISSUES.md` |
@@ -207,7 +208,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 | SparkListener JVM real fail-safe | Fechado no smoke runtime: JAR carregado via `spark-submit --jars`, NDJSON emitido e falha interna nao derruba job |
 | `docker compose up` autonomo da branch | Fechado localmente: compose autonomo sobe, grava event log em S3A/MinIO e repetiu G3/G5 sem plat-v0 |
 | Crew.ai/Judge | Politica local de escalonamento existe; Crew.ai/LLM real segue futuro e opcional |
-| IDE real | MCP stdio subprocess estilo cliente externo passa com transcript; ainda precisa smoke GUI em Cursor/VS Code/Claude Code |
+| IDE real | MCP stdio subprocess estilo cliente externo passa com transcript; `.mcp.json` project-scoped e reconhecido pelo Claude Code; ainda precisa aprovacao interativa/GUI em Cursor/VS Code/Claude Code |
 | G6 oraculo/drift | Falta agendamento/validacao continua sintetico vs real |
 
 ## Aderencia Ao Pedido Do Luan
