@@ -1,30 +1,35 @@
 # Apex Docs
 
-Este diretorio organiza o material do slice `skew_on_join_30x` v4 corrigido e o
-estudo empirico da fronteira de observabilidade do Spark event log.
+Este diretorio organiza o material do slice `skew_on_join_30x` v4 corrigido, a
+rodada Codex Round2 e a comparacao do campeonato entre engines LLM.
 
 ## Leitura recomendada
 
-1. [Guia de validacao](team-validation-guide.md) orienta a revisao com a Crew A.
-2. [Rascunhos de ADR](adr-review-drafts.md) organiza a leitura antes de comentar oficialmente.
-3. [Rascunhos de issues](github-issue-comment-drafts.md) guarda comentarios para validacao.
-4. [Linhagem da v4](apex-v4-lineage.md) explica baseline, falhas, correcao e evidencia.
-5. [Spec do slice de skew](specs/skew-slice-v4.md) define o contrato tecnico.
-6. [Playbook do slice](playbooks/skew-slice-v4.md) mostra como rodar e interpretar.
-7. [Alinhamento com AgentSpec](agentspec-alignment.md) registra o modelo de organizacao.
-8. [Apresentacao AQE](presentations/apex-v2-aqe-learnings.html) preserva os achados apresentados.
-9. [Spec do inventario](specs/event-log-coverage-inventory-v1.md) define o contrato de cobertura.
-10. [Proposta de validation criteria](specs/scenario-validation-criteria-v1.md) define o gate de qualidade da evidencia.
-11. [Fluxo de validacao e cadeia de evidencia](architecture/validation-evidence-flow.md) mantem arquitetura, sequencia, valor e rupturas sincronizados.
-12. [Fronteira de observabilidade](architecture/event-log-observability-boundary.md) explica limites e fontes.
-13. [Drill-down completo](architecture/apex-solution-drilldown.md) vai do contexto do produto ate task metrics e sequencias.
-14. [Guia do inventario](coverage/README.md) ensina a executar e interpretar.
-15. [Relatorio v1](coverage/apex-coverage-report-v1.md) registra o corpus atual.
+1. [README da branch](../README.md) resume o que existe, evidencias e gaps.
+2. [PLANO F0-F6](../PLANO.md) mapeia L1-L9 e gates contra artefatos.
+3. [Issues formais](../ISSUES.md) guarda bugs, riscos, decisoes e evidencias.
+4. [Autoavaliacao](autoavaliacao.md) traz o scorecard C1-C6 atual.
+5. [Comparacao campeonato 14/07](architecture/llm-solution-validation-framework-2026-07-14.md) compara Codex, Cowork, Kimi, Spike, Codex antiga e DataFlint.
+6. [Apresentacao da solucao Codex](presentations/apex-codex-solucao-end-to-end-2026-07-14.html) mostra fluxo end-to-end para o Commander.
+7. [Apresentacao comparativa 14/07](presentations/llm-solution-validation-2026-07-14.html) mostra campeonato, scorecard e recomendacao.
+8. [Guia de validacao](team-validation-guide.md) orienta a revisao com a Crew A.
+9. [Rascunhos de ADR](adr-review-drafts.md) organiza a leitura antes de comentar oficialmente.
+10. [Rascunhos de issues](github-issue-comment-drafts.md) guarda comentarios para validacao.
+11. [Linhagem da v4](apex-v4-lineage.md) explica baseline, falhas, correcao e evidencia.
+12. [Spec do slice de skew](specs/skew-slice-v4.md) define o contrato tecnico.
+13. [Playbook do slice](playbooks/skew-slice-v4.md) mostra como rodar e interpretar.
+14. [Fluxo de validacao e cadeia de evidencia](architecture/validation-evidence-flow.md) mantem arquitetura, sequencia, valor e rupturas sincronizados.
+15. [Drill-down completo](architecture/apex-solution-drilldown.md) vai do contexto do produto ate task metrics e sequencias.
 
 ## Papel de cada documento
 
 | Documento | Uso |
 |---|---|
+| `../README.md` | Resumo executivo da branch, mapa de evidencias e gaps |
+| `../PLANO.md` | Estado L1-L9, gates comuns, gaps e reaproveitamento |
+| `../ISSUES.md` | Catalogo formal de riscos, bugs, decisoes e evidencias |
+| `autoavaliacao.md` | Scorecard C1-C6 atualizado da engine Codex |
+| `architecture/llm-solution-validation-framework-2026-07-14.md` | Comparacao atualizada do campeonato e DataFlint |
 | `team-validation-guide.md` | Material didatico para apresentar o slice ao time e conduzir decisao |
 | `adr-review-drafts.md` | Leitura das ADRs, limites do estudo e comentarios sugeridos para revisao |
 | `github-issue-comment-drafts.md` | Rascunhos de issue e comentarios para revisao da Crew A antes de publicar |
@@ -80,7 +85,10 @@ issues e desenhos descrevam arquiteturas diferentes.
 ## Evidencia principal
 
 ```text
-synthetic ratio: 27.9x
-real ratio:      29.5x
-oracle: sintetico fiel ao Spark real dentro da tolerancia
+G3 real spv0:          app-20260712053414-0001, ratio 29.4x
+G5 real spv0:          finding_count 1 -> 0, shuffle 1.157.481 -> 0
+G3 autonomo 14/07:     app-20260714112858-0003, ratio 29.4x
+G5 autonomo 14/07:     app-20260714113809-0004, finding_count 0
+G4 T1 sem LLM:         226.991 ms
+MCP/IDE subprocess:    tools/list, recommend_fix, preview, apply_fix
 ```

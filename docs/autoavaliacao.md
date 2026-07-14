@@ -2,7 +2,7 @@
 
 Branch: `codex-round2`
 
-Data: 2026-07-12
+Data: 2026-07-14
 
 Base de avaliação: `pacote-comum/apex-v1-spec-reproducivel.md`, `PLANO.md`,
 `ISSUES.md` e evidências locais `evidence/`.
@@ -22,10 +22,10 @@ Escala: 0 a 5.
 
 Nota total: 26/30.
 
-Leitura curta: a engine está forte em prova empírica local, detecção e ciclo
-fechado funcional. Ainda não deve ser vendida como V1 completa porque falta
-plataforma própria reproduzível, listener real, Crew.ai e validação IDE/MCP
-real.
+Leitura curta: a engine está forte em prova empírica local, detecção, stack
+autônoma, listener real fail-safe e ciclo fechado funcional. Ainda não deve ser
+vendida como V1 completa porque faltam Crew.ai/Judge real e validação dentro de
+IDE GUI real.
 
 ## Honestidade De Proveniência
 
@@ -85,11 +85,11 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
 
 ### Precisa Do Commander
 
-- Decidir se F6 deve priorizar V1 plataforma (`docker compose` próprio +
-  SparkListener real + ClickHouse schema de produção) ou paridade de produto
-  (`apply_fix` MCP/IDE primeiro).
-- Decidir o papel oficial do `plat-v0`: evidência compartilhada temporária,
-  submódulo/fork de referência, ou base a ser incorporada.
+- Decidir se o próximo fechamento deve priorizar IDE GUI real ou Crew.ai/Judge
+  real. A stack autônoma e o SparkListener JVM já têm evidência local.
+- Decidir a versão Spark alvo da V1: manter a stack autônoma atual em Spark
+  4.0.0, alinhar com o Spike em Spark 4.1.2, ou manter `plat-v0` apenas como
+  referência histórica.
 - Validar se broadcast do lado `customers` é a correção canônica aceitável para
   o cenário `skew_on_join_30x`, ou se a próxima versão deve exigir salting para
   casos em que o lado pequeno não caiba em broadcast.

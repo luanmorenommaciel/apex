@@ -435,12 +435,12 @@
     <table>
       <tr><th>Item</th><th>Status</th><th>Evidencia/observacao</th></tr>
       <tr><td>Pipeline T1/T2/acao</td><td class="warn">parcial forte</td><td>T1, recommend, preview, apply e rerun existem; Crew.ai ainda nao.</td></tr>
-      <tr><td>ClickHouse/job_id/app_id</td><td class="warn">parcial</td><td>Adapters e schema local existem; plataforma propria ainda precisa amadurecer.</td></tr>
+      <tr><td>ClickHouse/job_id/app_id</td><td class="good">cumpre localmente</td><td>DDL canonico, adapters e diagnostico por app_id/job_id existem; stack autonoma validou o caminho local.</td></tr>
       <tr><td>Baseline negativo</td><td class="good">cumpre</td><td>G1 limpo.</td></tr>
       <tr><td>Detectores oficiais</td><td class="good">cumpre</td><td>G2 nos 5 cenarios problematicos + baseline.</td></tr>
       <tr><td>Dado real</td><td class="good">cumpre</td><td>G3 com app novo e 8 tasks reais.</td></tr>
       <tr><td>Latencia sem LLM</td><td class="good">cumpre</td><td>G4: 226.991 ms.</td></tr>
-      <tr><td>apply_fix no IDE</td><td class="warn">parcial</td><td>Funcionalmente existe apply guardado, mas nome/IDE real ainda faltam.</td></tr>
+      <tr><td>apply_fix no IDE</td><td class="warn">parcial</td><td>Funcionalmente existe apply guardado e smoke subprocesso MCP; IDE GUI real ainda falta.</td></tr>
       <tr><td>Loop limpo apos fix</td><td class="good">cumpre</td><td>G5: finding 1 -> 0 e shuffle 1.16MB -> 0.</td></tr>
     </table>
   </section>
@@ -474,11 +474,9 @@
     <h2>O que ainda falta</h2>
     <table>
       <tr><th>Gap</th><th>Impacto</th><th>Acao</th></tr>
-      <tr><td>SparkListener JVM real fail-safe</td><td>Completar L3/L1</td><td>Implementar listener/bridge real e teste de falha.</td></tr>
-      <tr><td>Docker/Compose autonomo</td><td>Completar fundacao V1</td><td>Integrar plataforma propria ou Spike/plat-v0 de forma controlada.</td></tr>
-      <tr><td><code>apply_fix</code> MCP real</td><td>Alinhar contrato do Luan</td><td>Renomear/compatibilizar tool e validar com cliente MCP.</td></tr>
-      <tr><td>IDE real</td><td>Provar UX</td><td>Smoke test em Cursor/VS Code/Claude Code.</td></tr>
+      <tr><td>IDE GUI real</td><td>Provar UX no ambiente do dev</td><td>Smoke test em Cursor/VS Code/Claude Code, alem do subprocesso MCP ja validado.</td></tr>
       <tr><td>Crew.ai/Judge opcional</td><td>Completar camada agentica</td><td>Entrar so depois do T1/validator/schema ficarem estaveis.</td></tr>
+      <tr><td>Versao Spark alvo</td><td>Padronizar V1</td><td>Decidir entre Spark 4.0.0 da stack autonoma Codex e Spark 4.1.2 da plataforma Spike.</td></tr>
       <tr><td>G6 oraculo/drift</td><td>Controle continuo</td><td>Agendar comparacao sintetico vs real.</td></tr>
     </table>
   </section>
@@ -486,15 +484,15 @@
   <section>
     <h2>Proximos passos recomendados</h2>
     <div class="flow">
-      <div class="node"><b>1</b>Formalizar README da branch</div>
+      <div class="node"><b>1</b>Publicar docs 14/07</div>
       <div class="arrow">→</div>
-      <div class="node"><b>2</b>Alinhar apply_fix MCP</div>
+      <div class="node"><b>2</b>Smoke IDE GUI</div>
       <div class="arrow">→</div>
-      <div class="node"><b>3</b>Smoke test IDE</div>
+      <div class="node"><b>3</b>Regressao G3/G5 autonoma</div>
       <div class="arrow">→</div>
-      <div class="node"><b>4</b>Docker/Compose V1</div>
+      <div class="node"><b>4</b>Escolher Spark alvo</div>
       <div class="arrow">→</div>
-      <div class="node"><b>5</b>SparkListener real</div>
+      <div class="node"><b>5</b>Portar Spike por modulo</div>
       <div class="arrow">→</div>
       <div class="node"><b>6</b>G6 drift/oraculo</div>
     </div>
@@ -505,16 +503,16 @@
     <h2>Decisao pedida ao Commander</h2>
     <div class="grid2">
       <div class="card">
-        <strong>Opcao A - Fundacao V1 primeiro</strong>
-        <p>Docker/Compose autonomo, SparkListener real, ClickHouse canonico, depois UX.</p>
+        <strong>Opcao A - Produto/IDE agora</strong>
+        <p>Validar Cursor/VS Code/Claude Code com o MCP e manter G0-G5 verdes.</p>
       </div>
       <div class="card">
-        <strong>Opcao B - Produto/IDE primeiro</strong>
-        <p>Alinhar <code>apply_fix</code>, validar MCP em IDE real e melhorar experiencia de uso.</p>
+        <strong>Opcao B - Plataforma Spike controlada</strong>
+        <p>Portar ClickStack/loader/dashboards do Spike por modulo, com gate a cada passo.</p>
       </div>
     </div>
     <div class="callout">
-      <p>Recomendacao Codex: Opcao A. A UX fica mais forte quando a base de telemetria, listener e schema estao estabilizados.</p>
+      <p>Recomendacao Codex: Opcao A primeiro. A base local ja tem stack autonoma e listener; agora falta provar a experiencia em IDE GUI real.</p>
     </div>
   </section>
 </main>

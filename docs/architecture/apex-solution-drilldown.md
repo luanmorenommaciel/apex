@@ -1,8 +1,24 @@
 # Apex - Drill-down Completo da Solucao
 
 Este documento apresenta o Apex do contexto de negocio ate a evidencia emitida
-por uma task Spark. Cada nivel informa o que ja foi validado, o que foi apenas
-observado e o que ainda pertence a arquitetura alvo.
+por uma task Spark. Ele nasceu no slice `skew_on_join_30x` v4 e continua util
+como explicacao de fronteira de observabilidade. Para a fotografia atual da
+branch Codex Round2, use tambem `README.md`, `PLANO.md`,
+`docs/autoavaliacao.md` e
+`docs/architecture/llm-solution-validation-framework-2026-07-14.md`.
+
+## Atualizacao Round2 - 2026-07-14
+
+O slice inicial foi expandido para uma esteira local com:
+
+- G0-G5 fechados com evidencia crua;
+- 5 detectores oficiais em G2: skew, GC, shuffle spill, OOM e cartesian product;
+- G3 real em Spark multicore: `app-20260712053414-0001`, ratio 29.4x;
+- G5 real: finding 1 -> 0 e shuffle 1.157.481 -> 0;
+- G3/G5 repetidos na stack autonoma da branch: `app-20260714112858-0003` -> `app-20260714113809-0004`;
+- SparkListener JVM real com NDJSON e fail-safe;
+- MCP stdio e smoke subprocesso estilo cliente IDE;
+- gaps restantes: IDE GUI real, Crew.ai/Judge real e G6 drift/oraculo agendado.
 
 ## Legenda de maturidade
 
@@ -16,9 +32,9 @@ observado e o que ainda pertence a arquitetura alvo.
 ## Estado atual em uma frase
 
 ```text
-O Apex calibrou um slice controlado de skew em join.
-O inventario encontrou outros sinais no event log.
-A descoberta cega, o gate de evidencia e as integracoes ainda precisam de implementacao.
+O Apex saiu do slice isolado e hoje prova o loop detectar -> corrigir -> rerodar -> limpar.
+O caminho deterministico T1 continua sem LLM obrigatorio.
+Ainda falta transformar isso em produto V1 completo com IDE GUI real, Crew/Judge real e drift continuo.
 ```
 
 ## Visao visual geral

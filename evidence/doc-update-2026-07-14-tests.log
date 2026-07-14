@@ -1,0 +1,7 @@
+Command:
+uv run --with-requirements requirements.txt python -m pytest tests/test_commander_mcp_ide_subprocess_smoke.py tests/test_commander_judge_policy.py tests/test_commander_apply_verify.py tests/test_commander_mcp_stdio_server.py -q
+
+Output:
+................................                                         [100%]
+32 passed in 10.09s
+Installed 8 packages in 705ms

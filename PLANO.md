@@ -19,12 +19,12 @@ atual cobre uma parte do requisito, o status fica como `parcial`.
 | L1 Pipeline: Spark Envy Docker -> SparkListener -> ClickHouse -> Crew.ai -> MCP | Parcial | Existe ClickHouse/store, MCP stdio/subprocess, compose autonomo paralelo que sobe e grava event log em S3A/MinIO, listener JVM carregado via `spark-submit --jars` com NDJSON/fail-safe, e G3/G5 completos na stack autonoma. Crew.ai real ainda nao existe e IDE GUI real ainda nao foi validada. |
 | L2 `docker compose up` sobe tudo sem configuracao manual | Cumpre localmente | `docker-compose.autonomous.yml` renderiza, builda a imagem Spark, sobe ClickHouse/MinIO/Spark sem `spark-plat-v0-*`, executa smoke S3A e repetiu G3/G5 completos na stack autonoma. Ressalva: usa imagem publica Spark 4.0.0, nao a stack `plat-v0` historica. |
 | L3 Listener via `spark.extraListeners`, fail-safe | Cumpre | `listener-jvm/` implementa classe real fail-safe; `gradle selfTest jar` passa em container; `spark-submit --jars` registrou `apex.commander.spark.ApexSparkListener`, emitiu NDJSON e validou `spark.apex.listener.failMode=true` sem derrubar o job. Evidencias: `evidence/g9-listener-jvm-spark-submit.log`, `evidence/g9-listener-jvm-output.ndjson`, `evidence/g9-listener-jvm-failsafe-spark-submit.log`. |
-| L4 ClickHouse com schema definido, query por `app_id`/`job_id` | Parcial | `apex/commander/telemetry.py` carrega `job_id` e `app_id`; adapters consultam por `job_id`; falta DDL canonico `docs/specs/apex_telemetry_v1.sql`. |
+| L4 ClickHouse com schema definido, query por `app_id`/`job_id` | Cumpre localmente | `docs/specs/apex_telemetry_v1.sql` foi copiado literalmente do pacote comum em G0; `apex/commander/telemetry.py` carrega `job_id` e `app_id`; adapters consultam por `job_id`; a stack autonoma validou leitura/diagnostico por `app_id` em `evidence/g3-autonomous-diagnosis.json`. |
 | L5 Diagnostico agentico Crew.ai explica o problema | Parcial | Diagnostico atual e deterministico em `apex/commander/diagnostic_mvp.py`; `apex/commander/judge_policy.py` define politica local de escalonamento para futuro Crew/Judge, mas nao ha Crew.ai/LLM real. |
 | L6 Fix via MCP no IDE + "aplica nossa sugestao" edita o codigo do cliente | Parcial | Existe MCP stdio e apply guardado em `apex/commander/apply_verify.py`; `apply_fix` foi exposto como contrato local guardado e validado por smoke subprocesso estilo cliente IDE com transcript JSON-RPC. Falta validação GUI real em Cursor/VS Code/Claude Code. |
 | L7 Decisoes de arquitetura registradas em ADR | Parcial | Existe `docs/adr-review-drafts.md`; falta estrutura formal `docs/adr/ADR-*.md`. |
 | L8 Nao focar Databricks/serverless agora — Spark puro primeiro | Cumpre | A branch trabalha com Spark event log, ClickHouse/local store e MCP; nao ha implementacao Databricks/serverless. |
-| L9 Minimo viavel de cada componente antes de expandir qualquer um | Parcial | Ha MVPs locais para ingest, store, detectores, validator, MCP, apply guardado e rerun; faltam MVPs centrais de Docker/Spark Envy, SparkListener real e Crew.ai. |
+| L9 Minimo viavel de cada componente antes de expandir qualquer um | Parcial | Ha MVPs locais para ingest, store, detectores, validator, MCP, apply guardado, rerun, Docker/Compose autonomo e SparkListener JVM real/fail-safe. Continua parcial porque Crew.ai/Judge real e IDE GUI real ainda nao foram implementados/validados. |
 
 ## Gates G0-G6 Da Spec Comum
 
@@ -64,25 +64,25 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 | L1 | Falta Crew.ai real e IDE GUI real | Manter T1 deterministico como nucleo; validar IDE GUI; so depois Crew.ai. |
 | L2 | Fechado localmente na stack autonoma | Manter regressao G3/G5 autonoma e declarar ressalva Spark 4.0.0 vs `plat-v0`. |
 | L3 | Fechado no smoke runtime e usado no G3/G5 autonomo | Promover o JAR para template oficial dos jobs. |
-| L4 | Falta DDL canonico `apex_telemetry_v1.sql` e schema apex.* | Criar schema antes de expandir detectores. |
+| L4 | Fechado localmente com DDL canonico e adapters por `app_id`/`job_id`; ainda falta consolidar como schema de producao na V1 composta | Manter o DDL do pacote comum como contrato imutavel e validar qualquer migracao ClickHouse contra ele. |
 | L5 | Falta Crew.ai e contrato anti-alucinacao | Integrar so depois de T1 e EvidenceValidator estarem ligados ao schema canonico. |
 | L6 | Falta validacao em IDE GUI real | `apply_fix` ja existe como contrato local guardado e tem smoke subprocesso estilo cliente IDE; proximo passo e abrir em Cursor/VS Code/Claude Code. |
 | L7 | Falta ADR formal versionada | Promover rascunhos para `docs/adr/ADR-*.md`. |
-| L9 | Componentes centrais ainda faltam MVP | Nao expandir UX/LLM antes de Docker, schema e listener estarem minimamente verdes. |
+| L9 | MVPs centrais locais existem; faltam produto IDE GUI e Crew.ai/Judge real | Nao expandir LLM antes de preservar regressao G0-G5, stack autonoma, schema e listener verdes. |
 
 ## Ordem De Trabalho Recomendada
 
 1. **Etapa 1 — Docker/Spark Envy minimo**
-   - `docker compose up` sobe Spark local e ClickHouse com named volume.
-   - Produz event log ou artefato de telemetria reproduzivel.
+   - Fechado localmente com `docker-compose.autonomous.yml`.
+   - Proximo passo: promover G3/G5 autonomo para regressao oficial e decidir versao Spark alvo.
 
 2. **Etapa 2 — Schema ClickHouse canonico**
-   - Criar `docs/specs/apex_telemetry_v1.sql`.
-   - Alinhar adapters atuais ao contrato `apex.*`, `job_id`, `app_id`, `shuffle_records`.
+   - Fechado localmente com `docs/specs/apex_telemetry_v1.sql`.
+   - Proximo passo: validar qualquer evolucao de schema contra o contrato do pacote comum.
 
 3. **Etapa 3 — Listener/bridge real fail-safe**
-   - Ligar `spark.extraListeners` ou bridge aceito pela ADR.
-   - Garantir fail-safe.
+   - Fechado localmente com `listener-jvm/` e `spark-submit --jars`.
+   - Proximo passo: integrar o JAR ao template oficial de submissao.
 
 4. **Etapa 4 — Cenarios comuns e gates G1-G3**
    - Portar cenarios v1 do pacote comum.
@@ -116,9 +116,9 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 
 ### Refazer Ou Alinhar Ao Pacote Comum
 
-- Docker/Spark Envy: criar do zero para a spec comum.
-- DDL ClickHouse canonico `apex_telemetry_v1.sql`: criar/alinha-lo ao pacote comum.
-- Listener real fail-safe: implementar, nao apenas template.
+- Docker/Spark Envy: ja existe stack autonoma local; proximo passo e transformar em regressao oficial e decidir versao Spark alvo.
+- DDL ClickHouse canonico `apex_telemetry_v1.sql`: reaproveitar como contrato imutavel, ja alinhado ao pacote comum.
+- Listener real fail-safe: ja existe runtime smoke; alinhar ao job template oficial e manter teste de fail-safe.
 - Crew.ai: implementar camada nova, sem substituir T1 deterministico.
 - Tool `apply_fix`: contrato local ja adaptado; falta validar em IDE real e, se necessario, ajustar formato ao cliente MCP escolhido.
 - ADRs formais: promover rascunhos para `docs/adr/ADR-*.md`.

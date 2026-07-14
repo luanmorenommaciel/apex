@@ -2,7 +2,7 @@
 
 Branch: `codex-round2`
 
-Estado: solucao local de diagnostico Spark com gates G0-G5 validados e evidencias em `evidence/`.
+Estado: solucao local de diagnostico Spark com gates G0-G5 validados, stack autonoma exercitada e evidencias em `evidence/`.
 
 ## O Que Tem Nesta Branch
 
@@ -13,7 +13,7 @@ event log -> detector deterministico -> EvidenceValidator -> finding
 -> recomendacao -> preview de diff -> apply guardado -> rerun -> compare
 ```
 
-Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loop funcional com evidencia: detectar um problema real, gerar uma correcao revisavel, aplicar com seguranca, reexecutar e provar que o finding sumiu.
+Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loop funcional com evidencia: detectar um problema real, gerar uma correcao revisavel, aplicar com seguranca, reexecutar e provar que o finding sumiu. A rodada de 14/07 tambem provou a mesma logica em stack autonoma da propria branch, sem depender das imagens `spark-plat-v0-*`.
 
 ## Resumo Executivo
 
@@ -26,10 +26,11 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Ciclo detectar -> fix -> rerun -> limpo | Fechado | `evidence/g5-ciclo.log` |
 | Contrato `apply_fix` + MCP stdio local | Fechado localmente | `evidence/g6-apply-fix-mcp-smoke.log` |
 | MCP subprocess, estilo cliente externo | Fechado localmente | `apex/commander/mcp_stdio_cli.py`; `evidence/g6-apply-fix-mcp-smoke.log` |
-| Docker autônomo paralelo | Fechado localmente | `docker-compose.autonomous.yml`; `evidence/g3-autonomous-diagnosis.json`; `evidence/g5-autonomous-ciclo.log` |
+| Docker autonomo paralelo | Fechado localmente | `docker-compose.autonomous.yml`; `evidence/g3-autonomous-diagnosis.json`; `evidence/g5-autonomous-ciclo.log` |
 | SparkListener JVM real | Fechado localmente/runtime smoke | `listener-jvm/`; `evidence/g9-listener-jvm-spark-submit.log`; `evidence/g9-listener-jvm-failsafe-spark-submit.log` |
 | Crew/Judge policy local | Fechado localmente | `apex/commander/judge_policy.py`; `evidence/g8-agentic-loop-python.log` |
 | MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
+| Comparacao campeonato 14/07 | Atualizada | `docs/architecture/llm-solution-validation-framework-2026-07-14.md`; `docs/presentations/llm-solution-validation-2026-07-14.html` |
 | Autoavaliacao | Fechada | `docs/autoavaliacao.md` |
 | Catalogo de issues | Fechado/aberto conforme item | `ISSUES.md` |
 | Plano F0/F5 | Fechado | `PLANO.md` |
@@ -47,6 +48,18 @@ Caso real validado: skew em join.
 | Shuffle read bytes | 1.157.481 | 0 |
 
 Leitura: o Apex detectou skew real, gerou preview de correcao, aplicou com token/hash/verify, reexecutou o job e comprovou que o finding caiu para zero.
+
+Rodada autonoma 14/07:
+
+| Metrica | Antes autonomo | Depois autonomo |
+|---|---:|---:|
+| `app_id` | `app-20260714112858-0003` | `app-20260714113809-0004` |
+| Finding count | 1 | 0 |
+| Severidade | high | n/a |
+| Skew ratio valido | 29.4 | 0 |
+| Shuffle read bytes | 1.157.481 | 0 |
+
+Leitura: o mesmo ciclo G3/G5 foi repetido na stack autonoma da branch, com event log novo e sem dependencia da stack historica `plat-v0`.
 
 ## Arquitetura Da Solucao
 
@@ -140,10 +153,10 @@ O apply nao e uma edicao livre feita por agente. Ele passa por controles:
 | `ISSUES.md` | Catalogo formal CODEX-001 em diante |
 | `docs/autoavaliacao.md` | Scorecard C1-C6 e Captain's Report |
 | `docs/specs/skew-slice-v4.md` | Especificacao tecnica atualizada da solucao Codex Round2 |
-| `docs/architecture/llm-solution-validation-framework-2026-07-13.md` | Comparacao entre Codex, Cowork, Kimi, Spike e DataFlint |
+| `docs/architecture/llm-solution-validation-framework-2026-07-14.md` | Comparacao atualizada entre Codex, Cowork, Kimi, Spike, Codex antiga e DataFlint |
 | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html` | Apresentacao end-to-end da nossa solucao |
 | `docs/presentations/apex-codex-projeto-luan-2026-07-14.html` | Apresentacao executiva para o Luan |
-| `docs/presentations/llm-solution-validation-2026-07-13.html` | Apresentacao comparativa das solucoes |
+| `docs/presentations/llm-solution-validation-2026-07-14.html` | Apresentacao comparativa atualizada das solucoes |
 
 ## Apresentacoes
 
@@ -152,14 +165,14 @@ Principais arquivos para apresentar:
 ```text
 docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html
 docs/presentations/apex-codex-projeto-luan-2026-07-14.html
-docs/presentations/llm-solution-validation-2026-07-13.html
+docs/presentations/llm-solution-validation-2026-07-14.html
 ```
 
 Sugestao:
 
 1. Para falar so da nossa solucao: use `apex-codex-solucao-end-to-end-2026-07-14.html`.
 2. Para explicar ao Luan em formato executivo: use `apex-codex-projeto-luan-2026-07-14.html`.
-3. Para comparar LLMs/DataFlint: use `llm-solution-validation-2026-07-13.html`.
+3. Para comparar LLMs/DataFlint: use `llm-solution-validation-2026-07-14.html`.
 
 ## Como Validar A Branch
 

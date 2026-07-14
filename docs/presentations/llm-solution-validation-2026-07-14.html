@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apex - Campeonato LLM Round2 - 2026-07-14</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --card:#1f2937; --text:#f8fafc; --muted:#cbd5e1; --accent:#38bdf8; --green:#22c55e; --yellow:#f59e0b; --red:#ef4444; }
+    body { margin:0; font-family:Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); }
+    section { min-height:100vh; box-sizing:border-box; padding:56px 72px; display:flex; flex-direction:column; justify-content:center; gap:24px; border-bottom:1px solid #334155; }
+    h1 { font-size:54px; margin:0; line-height:1.05; }
+    h2 { font-size:38px; margin:0; color:var(--accent); }
+    h3 { margin:0 0 8px; color:#bae6fd; }
+    p, li { font-size:22px; line-height:1.45; color:var(--muted); }
+    table { width:100%; border-collapse:collapse; background:var(--panel); border-radius:14px; overflow:hidden; }
+    th, td { border:1px solid #334155; padding:12px 14px; vertical-align:top; font-size:17px; }
+    th { background:#0b1220; color:#e0f2fe; text-align:left; }
+    .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:18px; }
+    .card { background:var(--card); border:1px solid #334155; border-radius:18px; padding:20px; }
+    .score { font-size:42px; font-weight:800; color:var(--green); }
+    .muted { color:var(--muted); }
+    .tag { display:inline-block; padding:5px 10px; border-radius:999px; background:#075985; color:#e0f2fe; font-size:14px; margin-right:6px; }
+    .flow { font-family:Consolas, monospace; white-space:pre-wrap; background:#020617; border:1px solid #334155; border-radius:16px; padding:24px; font-size:20px; line-height:1.5; color:#dbeafe; }
+    .ok { color:var(--green); font-weight:700; }
+    .warn { color:var(--yellow); font-weight:700; }
+    .bad { color:var(--red); font-weight:700; }
+    footer { position:fixed; right:24px; bottom:14px; color:#94a3b8; font-size:13px; }
+  </style>
+</head>
+<body>
+  <footer>Codex Round2 · 2026-07-14 · Apex campeonato</footer>
+
+  <section>
+    <span class="tag">Rodada 2</span><span class="tag">Comparativo LLM</span><span class="tag">DataFlint benchmark</span>
+    <h1>Apex: comparativo atualizado das solucoes</h1>
+    <p>Leitura apos as novas rodadas de execucao: Codex, Cowork, Kimi, Agmar/Spike, Codex antiga e DataFlint.</p>
+    <div class="card">
+      <h3>Decisao tecnica</h3>
+      <p>A melhor V1 nao e uma branch copiada em bloco. A solucao mais forte e uma composicao controlada: Spike platform + Codex gates/evidence + Cowork UX/apply_fix + Kimi contracts/validator + DataFlint como benchmark de produto.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Placar C1-C6</h2>
+    <table>
+      <thead><tr><th>Solucao</th><th>Total</th><th>Melhor coisa</th><th>Principal gap</th></tr></thead>
+      <tbody>
+        <tr><td>Codex Round2</td><td class="score">26/30</td><td>G0-G5, G3/G5 autonomo, listener JVM, MCP subprocess, T1 226.991 ms</td><td>IDE GUI real e Crew.ai/Judge real ainda faltam</td></tr>
+        <tr><td>DataFlint</td><td class="score">25/30</td><td>Produto maduro: Spark MCP, Copilot, Cluster Agent, Review Agent, Fleet Observability</td><td>Produto externo; menos auditavel/customizavel localmente</td></tr>
+        <tr><td>Agmar/Spike</td><td class="score">22/30</td><td>Melhor plataforma: Spark, MinIO, ClickHouse, HyperDX, loader, ground-truth tests</td><td>Merge bruto e arriscado; loop apply_fix ainda fraco</td></tr>
+        <tr><td>Cowork</td><td class="score">19/30</td><td>Melhor UX/IDE: MCP + apply_fix + narrativa de produto</td><td>Poucos detectores e dependencia mais forte de LLM</td></tr>
+        <tr><td>Kimi</td><td class="score">18/30</td><td>Disciplina Go/CLI, ClickHouse mock e contratos</td><td>Nao fecha loop de produto ponta a ponta</td></tr>
+        <tr><td>Codex antiga</td><td class="score">12/30</td><td>Slice de skew e geradores desacoplados</td><td>Nao e a branch Round2 atual</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>O que mudou em 14/07</h2>
+    <div class="grid">
+      <div class="card"><h3>Codex</h3><p><span class="ok">Subiu.</span> G3/G5 completos na stack autonoma, sem `spark-plat-v0-*`; listener JVM real; MCP subprocess smoke.</p></div>
+      <div class="card"><h3>Cowork</h3><p><span class="warn">Reforcou mapa.</span> README virou guia completo da branch, com UX/IDE e apresentacoes bem explicadas.</p></div>
+      <div class="card"><h3>Kimi</h3><p><span class="warn">Reforcou core.</span> CLI docs e testes ClickHouse mock e2e em Go melhoram contrato e engenharia.</p></div>
+      <div class="card"><h3>Spike</h3><p><span class="ok">Subiu.</span> Recomendacoes configuraveis, anti-patterns YAML e testes e2e ground-truth de detectores.</p></div>
+      <div class="card"><h3>DataFlint</h3><p><span class="ok">Benchmark.</span> Site atual enfatiza agentes production-aware, Spark MCP e IDE Copilot.</p></div>
+      <div class="card"><h3>Codex antiga</h3><p><span class="warn">Historico.</span> Continua util como estudo de slice, mas nao como Round2 completa.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Matriz resumida</h2>
+    <table>
+      <thead><tr><th>Dimensao</th><th>Codex Round2</th><th>Spike</th><th>Cowork</th><th>Kimi</th><th>DataFlint</th></tr></thead>
+      <tbody>
+        <tr><td>Plataforma</td><td class="ok">Autonoma local</td><td class="ok">Mais completa</td><td class="warn">Parcial</td><td class="warn">Parcial</td><td class="ok">Produto</td></tr>
+        <tr><td>Detectores</td><td class="ok">5 oficiais</td><td class="ok">5+ workloads</td><td class="warn">Poucos</td><td class="warn">Parcial</td><td class="ok">Alertas/produto</td></tr>
+        <tr><td>Loop fix</td><td class="ok">Guardado e provado</td><td class="warn">Fraco</td><td class="ok">Melhor UX</td><td class="bad">Nao fecha</td><td class="ok">IDE/Copilot</td></tr>
+        <tr><td>LLM/agentes</td><td class="warn">Futuro</td><td class="warn">Opcional</td><td class="ok">Forte</td><td class="warn">Parcial</td><td class="ok">Central</td></tr>
+        <tr><td>Auditabilidade</td><td class="ok">Alta</td><td class="ok">Alta</td><td class="warn">Media</td><td class="ok">Alta</td><td class="warn">Produto externo</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Fluxo alvo da V1 composta</h2>
+    <div class="flow">Spark job
+  -> event log S3A / MinIO
+  -> listener ou loader normaliza para ClickHouse
+  -> detectores T1 + EvidenceValidator
+  -> finding com confidence e runbook
+  -> MCP no IDE
+  -> preview diff
+  -> apply_fix guardado (token + hash + root)
+  -> rerun controlado
+  -> compare antes/depois</div>
+  </section>
+
+  <section>
+    <h2>Caso de uso: skew em join</h2>
+    <table>
+      <thead><tr><th>Metrica</th><th>Antes</th><th>Depois</th></tr></thead>
+      <tbody>
+        <tr><td>app_id autonomo</td><td>app-20260714112858-0003</td><td>app-20260714113809-0004</td></tr>
+        <tr><td>Finding count</td><td>1</td><td>0</td></tr>
+        <tr><td>Severidade</td><td>high</td><td>n/a</td></tr>
+        <tr><td>Skew ratio</td><td>29.4</td><td>0</td></tr>
+        <tr><td>Shuffle read bytes</td><td>1.157.481</td><td>0</td></tr>
+      </tbody>
+    </table>
+    <p>Essa e a prova mais forte da Codex Round2: o loop nao apenas detecta, ele aplica uma correcao guardada e prova a queda da metrica.</p>
+  </section>
+
+  <section>
+    <h2>DataFlint como norte</h2>
+    <div class="grid">
+      <div class="card"><h3>Spark MCP</h3><p>Contexto de producao para agentes. Apex deve manter MCP por app_id/job_id real.</p></div>
+      <div class="card"><h3>IDE Copilot</h3><p>Cursor, VS Code e IntelliJ como superficie. Apex ainda precisa de smoke GUI real.</p></div>
+      <div class="card"><h3>Fleet Observability</h3><p>O caminho natural no Apex e ClickHouse + HyperDX/ClickStack.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Proximos passos</h2>
+    <ol>
+      <li>Rodar smoke em IDE GUI real: Cursor, VS Code ou Claude Code.</li>
+      <li>Escolher versao Spark alvo: manter 4.0.0 Codex autonomo ou alinhar com 4.1.2 Spike.</li>
+      <li>Portar plataforma Spike por modulo, mantendo Codex G0-G5 como gate.</li>
+      <li>Formalizar Crew.ai/Judge real apenas depois do caminho deterministico continuar verde.</li>
+      <li>Gerar comentario de PR/Review Agent estilo DataFlint como proxima camada de produto.</li>
+    </ol>
+  </section>
+</body>
+</html>
