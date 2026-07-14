@@ -1,0 +1,4 @@
+apex/spark-logs/events/.keep
+apex/spark-logs/events/eventlog_v2_app-20260714053216-0000/
+apex/spark-logs/events/eventlog_v2_app-20260714053216-0000/appstatus_app-20260714053216-0000
+apex/spark-logs/events/eventlog_v2_app-20260714053216-0000/events_1_app-20260714053216-0000.zstd

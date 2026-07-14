@@ -1,0 +1,24 @@
+# Java/Gradle environment check
+## java -version
+The term 'java' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+## gradle -v
+The term 'gradle' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+## listener files
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\build.gradle
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\README.md
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\settings.gradle
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\main
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\test
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\main\java
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\main\java\apex
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\main\java\apex\commander
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\main\java\apex\commander\spark
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\main\java\apex\commander\spark\ApexSparkListener.java
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\test\java
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\test\java\apex
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\test\java\apex\commander
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\test\java\apex\commander\spark
+C:\Users\Guest\Documents\project\codex\apex\apex-official\listener-jvm\src\test\java\apex\commander\spark\ApexSparkListenerSelfTest.java

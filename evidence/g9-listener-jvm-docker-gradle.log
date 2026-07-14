@@ -1,0 +1,39 @@
+Unable to find image 'gradle:8.10.2-jdk17' locally
+8.10.2-jdk17: Pulling from library/gradle
+7796824d2c99: Pulling fs layer
+6414378b6477: Pulling fs layer
+99d025181637: Pulling fs layer
+bf50b48fa669: Pulling fs layer
+2023aaf73bd8: Pulling fs layer
+1c99e6e516a5: Pulling fs layer
+2dc7fb230156: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+eefeaa2b7768: Pulling fs layer
+4d9fb285e786: Pulling fs layer
+4f4fb700ef54: Already exists
+7796824d2c99: Download complete
+5848153daa9c: Download complete
+2dc7fb230156: Download complete
+2023aaf73bd8: Download complete
+1c99e6e516a5: Download complete
+aa4774179268: Download complete
+6414378b6477: Download complete
+99d025181637: Download complete
+6414378b6477: Pull complete
+99d025181637: Pull complete
+eefeaa2b7768: Download complete
+4d9fb285e786: Download complete
+bf50b48fa669: Download complete
+bf50b48fa669: Pull complete
+2023aaf73bd8: Pull complete
+1c99e6e516a5: Pull complete
+2dc7fb230156: Pull complete
+4f4fb700ef54: Pull complete
+eefeaa2b7768: Pull complete
+4d9fb285e786: Pull complete
+7796824d2c99: Pull complete
+Digest: sha256:c2900027f3f0681c2cbfb09d527813851ad67aeafbb409997297efa2df20e748
+Status: Downloaded newer image for gradle:8.10.2-jdk17
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :compileJava

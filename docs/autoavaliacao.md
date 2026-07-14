@@ -13,14 +13,14 @@ Escala: 0 a 5.
 
 | Critério | Nota | Evidência por célula |
 | --- | ---: | --- |
-| C1 Arquitetura V1 (L1-L9) | 2/5 | `PLANO.md` classifica L1, L3, L4, L6, L7 e L9 como parciais; L2 e L5 como não cumpridas; L8 como cumprida. Há componentes úteis (`apex/commander/diagnostic_mvp.py`, `apex/commander/evidence_validator.py`, `apex/commander/mcp_stdio_server.py`, `apex/commander/apply_verify.py`, adapters ClickHouse), mas ainda faltam Spark Envy Docker reproduzível da branch, SparkListener JVM real fail-safe e Crew.ai. A nota também é reduzida por proveniência: CODEX-001 e CODEX-007 mostram influência prévia de scorecard/comparativo de outras soluções. |
+| C1 Arquitetura V1 (L1-L9) | 3/5 | `PLANO.md` classifica L3 como cumprida e L1/L2/L5/L6 como parciais: há compose autônomo paralelo que sobe e grava event log em S3A/MinIO, listener JVM carregado via `spark-submit --jars` com NDJSON/fail-safe, MCP subprocess, `apply_fix` local e política Judge local. A nota fica em 3/5 porque ainda faltam G3/G5 completos nessa stack, IDE real e Crew.ai/LLM real. |
 | C2 Cobertura de detecção | 5/5 | G2 passou nos 6 cenários oficiais de `pacote-comum/scenarios/`: baseline sem finding (`no_skew_baseline.yaml`) e 5 detectores com severidade esperada: skew high, GC critical, shuffle spill critical, OOM critical, cartesian product critical. Evidências: `evidence/g1-baseline.log`, `evidence/g2-cenarios.log`, `evidence/generated/official-scenarios/*.ndjson`, CODEX-009 a CODEX-014. |
-| C3 Confiabilidade | 4/5 | Baseline negativo oficial ficou limpo em G1 (`evidence/g1-baseline.log`, CODEX-009). Findings passam por `EvidenceValidator` (`apex/commander/evidence_validator.py`) e G4/G5 validaram finding real com `accepted=true`. G5 também corrigiu bug real no token de apply guardado (CODEX-021) e adicionou regressão em `tests/test_commander_apply_verify.py`. Não é 5/5 porque ainda faltam listener real fail-safe, CI comum completo e oráculo agendado de drift (G6 não cumpre no `PLANO.md`). |
-| C4 Loop no IDE | 3/5 | O ciclo funcional detectar -> preview -> apply guardado -> verify -> rerun -> limpo foi provado em G5 contra Spark real: `evidence/g5-ciclo.log`, `evidence/g5-before-diagnosis.json`, `evidence/g5-after-diagnosis.json`, `evidence/generated/g5/g5_fixed_eventlog.zstd`; finding caiu de 1/high para 0 e shuffle read caiu de 1.157.481 bytes para 0. Porém a tool ainda se chama `apply_recommendation`, não `apply_fix` (CODEX-019), e o MCP não foi validado dentro de IDE real. |
-| C5 Qualidade de engenharia | 4/5 | Há 143+ testes acumulados pela branch: G0 registrou suíte ampla em `evidence/g0-testes.log`, G5 adicionou teste focado e `evidence/g5-tests.log` mostra `12 passed in 0.55s`. Todos os gates G0-G5 têm evidência crua em `evidence/`. O trabalho registrou issues formais CODEX-001 a CODEX-021 e não escondeu bugs encontrados no caminho. Não é 5/5 por dois achados de proveniência (CODEX-001, CODEX-007), por pendências abertas de contrato (`apply_fix`, CODEX-019) e por componentes V1 ainda parciais. |
+| C3 Confiabilidade | 4/5 | Baseline negativo oficial ficou limpo em G1 (`evidence/g1-baseline.log`, CODEX-009). Findings passam por `EvidenceValidator` (`apex/commander/evidence_validator.py`) e G4/G5 validaram finding real com `accepted=true`. G5 corrigiu bug real no token de apply guardado (CODEX-021). Em F6, o listener JVM provou fail-safe com `spark.apex.listener.failMode=true` e job Spark terminando com exit 0 (`evidence/g9-listener-jvm-failsafe-spark-submit.log`). Não é 5/5 porque ainda faltam CI comum completo e oráculo agendado de drift (G6 não cumpre no `PLANO.md`). |
+| C4 Loop no IDE | 3/5 | O ciclo funcional detectar -> preview -> apply guardado -> verify -> rerun -> limpo foi provado em G5 contra Spark real. Em F6/F7, `apply_fix` foi validado via MCP stdio e via subprocess `python -m apex.commander.mcp_stdio_cli` em `evidence/g6-apply-fix-mcp-smoke.log`, mantendo `apply_recommendation` como compatibilidade. A nota continua 3/5 porque ainda falta validação dentro de IDE real. |
+| C5 Qualidade de engenharia | 4/5 | Há 143+ testes acumulados pela branch: G0 registrou suíte ampla em `evidence/g0-testes.log`; G5 adicionou teste focado; F7 adicionou smoke MCP/Judge com `38 passed` em `evidence/g8-agentic-loop-python.log`; o listener JVM registra `ApexSparkListenerSelfTest passed` e `BUILD SUCCESSFUL` em `evidence/g9-listener-jvm-docker-gradle-final.log`. O trabalho registrou issues formais CODEX-001 a CODEX-025 e não escondeu bugs/gaps encontrados. Não é 5/5 por dois achados de proveniência (CODEX-001, CODEX-007) e por componentes V1 ainda parciais. |
 | C6 Custo/latência | 5/5 | G4 mediu o caminho T1 determinístico completo contra event log real `app-20260712053414-0001` em 226.991 ms, sem LLM. Evidência: `evidence/g4-t1.log`, `tools/g4_t1_latency.py`, CODEX-017. O grep do caminho medido não encontrou referências a LLM/API. A política de escalonamento para Crew.ai quando confiança < 0.6 segue como gap honesto, não custo oculto (CODEX-018). |
 
-Nota total: 23/30.
+Nota total: 24/30.
 
 Leitura curta: a engine está forte em prova empírica local, detecção e ciclo
 fechado funcional. Ainda não deve ser vendida como V1 completa porque falta
@@ -68,16 +68,18 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
 
 ### Bloqueado
 
-- A branch ainda não cumpre L2 como plataforma autônoma própria: G3/G5 validaram
-  contra a stack `plat-v0` existente (`spv0-*`), enquanto o `docker-compose.yml`
-  da branch permanece fundação standalone.
-- Não há SparkListener JVM real fail-safe. O que existe é template/comando e
-  parser/telemetria a partir de event log.
+- A branch ainda não cumpre L2 completo como plataforma autônoma própria:
+  `docker-compose.autonomous.yml` sobe e grava event log em S3A/MinIO, mas
+  G3/G5 ainda validaram contra a stack `plat-v0` existente (`spv0-*`).
+- SparkListener JVM real fail-safe foi carregado em Spark real via
+  `spark-submit --jars`, emitiu NDJSON e não derrubou o job quando falhou
+  internamente.
 - Não há Crew.ai/Judge implementado. O escalonamento para LLM quando confiança
   < 0.6 é decisão de design registrada, não funcionalidade entregue.
-- O contrato comum espera `apply_fix`; a branch entrega `apply_recommendation`.
-  Isso está aberto como CODEX-019.
-- MCP stdio existe, mas o ciclo não foi validado dentro de IDE real.
+- O contrato local `apply_fix` foi adicionado em F6, com `apply_recommendation`
+  preservado como compatibilidade. CODEX-019 foi fechado com evidência em
+  `evidence/g6-apply-fix-mcp-smoke.log`.
+- MCP stdio existe e tem smoke local, mas o ciclo não foi validado dentro de IDE real.
 
 ### Precisa Do Commander
 
@@ -97,8 +99,8 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
   detector, validação, latência, apply guardado e rerun real.
 - A parte mais forte é empírica: logs reais, app ids novos, evidência crua e
   comparação antes/depois.
-- A parte mais fraca é arquitetural: listener real, Crew.ai, IDE real e contrato
-  `apply_fix` ainda faltam.
+- A parte mais fraca é arquitetural: Crew.ai real, IDE real e G3/G5 na stack
+  autônoma ainda faltam.
 - A proveniência não é limpa: CODEX-001 e CODEX-007 precisam acompanhar a
   avaliação. O fix guardado foi adoção consciente de conceito visto na Cowork,
   depois implementado, testado e validado pela Codex.

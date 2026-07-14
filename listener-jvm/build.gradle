@@ -1,0 +1,41 @@
+plugins {
+    id "java"
+}
+
+group = "apex.commander"
+version = "0.1.0"
+
+def sparkVersion = providers.gradleProperty("sparkVersion").getOrElse("4.1.2")
+def scalaBinaryVersion = providers.gradleProperty("scalaBinaryVersion").getOrElse("2.13")
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencies {
+    compileOnly "org.apache.spark:spark-core_${scalaBinaryVersion}:${sparkVersion}"
+    testImplementation "org.apache.spark:spark-core_${scalaBinaryVersion}:${sparkVersion}"
+}
+
+jar {
+    archiveBaseName = "apex-spark-listener"
+    manifest {
+        attributes(
+            "Implementation-Title": "Apex Spark Listener",
+            "Implementation-Version": project.version,
+            "Main-Class": "apex.commander.spark.ApexSparkListener"
+        )
+    }
+}
+
+tasks.register("selfTest", JavaExec) {
+    group = "verification"
+    description = "Runs a no-JUnit fail-safe smoke test for ApexSparkListener."
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "apex.commander.spark.ApexSparkListenerSelfTest"
+}
+
+check.dependsOn selfTest

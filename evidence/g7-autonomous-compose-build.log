@@ -1,0 +1,80 @@
+ Image apex-autonomous-spark:4.0.0-s3a Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 651B 0.1s done
+#1 DONE 0.1s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 932B 0.3s done
+#2 DONE 1.5s
+
+#3 [internal] load metadata for docker.io/apache/spark:4.0.0-scala2.13-java17-python3-ubuntu
+#3 ...
+
+#4 [auth] apache/spark:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/apache/spark:4.0.0-scala2.13-java17-python3-ubuntu
+#3 DONE 3.0s
+
+#5 [internal] load .dockerignore
+#5 transferring context:
+#5 transferring context: 2B 0.1s done
+#5 DONE 0.7s
+
+#6 [1/3] FROM docker.io/apache/spark:4.0.0-scala2.13-java17-python3-ubuntu@sha256:a89782d90529a623fc4471cdddb0f9c32d6eed10a81b256a80207b23c3b1df00
+#6 resolve docker.io/apache/spark:4.0.0-scala2.13-java17-python3-ubuntu@sha256:a89782d90529a623fc4471cdddb0f9c32d6eed10a81b256a80207b23c3b1df00 0.7s done
+#6 sha256:d4dd7f3bc8874673bb653b3261f3c321700111821799ea4a7dba83ed9e00a7ec 2.14kB / 2.14kB 1.8s done
+#6 sha256:70d1a424f4e1e06bddbbffe020ae297a428261af3288e461429320965085fa0f 1.42kB / 1.42kB 2.0s done
+#6 sha256:62937f7c5c08ea52a3a6925c5396dcc6d50f93096e25db31930654a48ba3de36 2.28kB / 2.28kB 1.7s
+#6 sha256:69881371ec823dda384e18c0d7882d2de59df6407d353f273f1ae97df67bc176 21.97MB / 21.97MB 31.9s done
+#6 sha256:a4749f9bc6d7a96c663cac97551da8e1fe1cd9eec208f1ae28c9b3f2d79e6e51 158B / 158B 0.5s done
+#6 sha256:d9b0fe557244d0ccdf12070ab3445dea5551cfccd224b57677d31bdc3f4b6f23 20.70MB / 20.70MB 32.8s done
+#6 sha256:89dc6ea4eae2b38a3550534ece4983005a7d2e90e4fa503ed04dcfc58ee71159 29.53MB / 29.53MB 59.4s done
+#6 extracting sha256:89dc6ea4eae2b38a3550534ece4983005a7d2e90e4fa503ed04dcfc58ee71159 27.4s done
+#6 extracting sha256:d9b0fe557244d0ccdf12070ab3445dea5551cfccd224b57677d31bdc3f4b6f23 24.7s done
+#6 sha256:4e5e631955b3e0415424adcd0f1300b3e308821a9eb20494c678e5db4319eaa6 113.75MB / 113.75MB 206.9s done
+#6 sha256:2d1a2fd77bc51863277a75436242197b369979cb36a4451f5b5b0986c1dff0d4 144.65MB / 144.65MB 262.2s done
+#6 extracting sha256:2d1a2fd77bc51863277a75436242197b369979cb36a4451f5b5b0986c1dff0d4 75.8s done
+#6 extracting sha256:a4749f9bc6d7a96c663cac97551da8e1fe1cd9eec208f1ae28c9b3f2d79e6e51 0.3s done
+#6 extracting sha256:62937f7c5c08ea52a3a6925c5396dcc6d50f93096e25db31930654a48ba3de36 0.7s done
+#6 extracting sha256:70d1a424f4e1e06bddbbffe020ae297a428261af3288e461429320965085fa0f 0.5s done
+#6 extracting sha256:69881371ec823dda384e18c0d7882d2de59df6407d353f273f1ae97df67bc176 13.4s done
+#6 sha256:274688969ae068d4bab3cbc014e60d33fbbbb5be6230c78f9f1e8174ce59892e 441.60MB / 441.60MB 617.2s done
+#6 extracting sha256:274688969ae068d4bab3cbc014e60d33fbbbb5be6230c78f9f1e8174ce59892e 58.4s done
+#6 extracting sha256:d4dd7f3bc8874673bb653b3261f3c321700111821799ea4a7dba83ed9e00a7ec 0.8s done
+#6 extracting sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0.3s done
+#6 extracting sha256:4e5e631955b3e0415424adcd0f1300b3e308821a9eb20494c678e5db4319eaa6 54.8s done
+#6 ...
+
+#7 [2/3] RUN set -eux;     curl -fsSL "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.1/hadoop-aws-3.4.1.jar"       -o "/opt/spark/jars/hadoop-aws-3.4.1.jar";     curl -fsSL "https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.780/aws-java-sdk-bundle-1.12.780.jar"       -o "/opt/spark/jars/aws-java-sdk-bundle-1.12.780.jar";     chmod 0644 /opt/spark/jars/hadoop-aws-3.4.1.jar /opt/spark/jars/aws-java-sdk-bundle-1.12.780.jar
+#7 8.322 + curl -fsSL https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.1/hadoop-aws-3.4.1.jar -o /opt/spark/jars/hadoop-aws-3.4.1.jar
+#7 9.985 + curl -fsSL https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.780/aws-java-sdk-bundle-1.12.780.jar -o /opt/spark/jars/aws-java-sdk-bundle-1.12.780.jar
+#7 343.0 + chmod 0644 /opt/spark/jars/hadoop-aws-3.4.1.jar /opt/spark/jars/aws-java-sdk-bundle-1.12.780.jar
+#7 DONE 343.7s
+
+#8 [internal] load build context
+#8 transferring context: 663B 0.1s done
+#8 DONE 0.9s
+
+#9 [3/3] COPY docker/autonomous/spark/spark-defaults.conf /opt/spark/conf/spark-defaults.conf
+#9 DONE 1.1s
+
+#10 exporting to image
+#10 exporting layers
+#10 exporting layers 0.0s done
+#10 exporting manifest sha256:c309a031a0a5edcb818a9a050d3d23f6fee4c73029231ce8b2b8cfe46a5e1768 0.1s done
+#10 exporting config sha256:ee0271f96abcfd5517066e009c7bdf131ef37559b7771b8bfcbf269f9e7bf5e4 0.0s done
+#10 exporting attestation manifest sha256:8a377b5b8f8b46591e71f1cee38a03189e2f4668c38cdd4a50cbfd104874f5d7
+#10 exporting attestation manifest sha256:8a377b5b8f8b46591e71f1cee38a03189e2f4668c38cdd4a50cbfd104874f5d7 1.0s done
+#10 exporting manifest list sha256:57b70232abaf6dcdf8504e11575a0c10ec753810d554bb3d4f53d3c6c555a578
+#10 exporting manifest list sha256:57b70232abaf6dcdf8504e11575a0c10ec753810d554bb3d4f53d3c6c555a578 0.6s done
+#10 naming to docker.io/library/apex-autonomous-spark:4.0.0-s3a
+#10 naming to docker.io/library/apex-autonomous-spark:4.0.0-s3a 0.1s done
+#10 unpacking to docker.io/library/apex-autonomous-spark:4.0.0-s3a
+#10 unpacking to docker.io/library/apex-autonomous-spark:4.0.0-s3a 38.3s done
+#10 DONE 41.1s
+
+#11 resolving provenance for metadata file
+#11 DONE 0.1s
+ Image apex-autonomous-spark:4.0.0-s3a Built 

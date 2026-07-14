@@ -1,0 +1,5 @@
+NAME                           IMAGE                                              COMMAND                  SERVICE        CREATED         STATUS                   PORTS
+apex-autonomous-clickhouse     clickhouse/clickhouse-server:26.5.1                "/entrypoint.sh"         clickhouse     6 minutes ago   Up 6 minutes (healthy)   0.0.0.0:38123->8123/tcp, [::]:38123->8123/tcp, 0.0.0.0:39000->9000/tcp, [::]:39000->9000/tcp
+apex-autonomous-minio          quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z   "/usr/bin/docker-ent…"   minio          6 minutes ago   Up 6 minutes (healthy)   0.0.0.0:39001->9000/tcp, [::]:39001->9000/tcp, 0.0.0.0:39002->9001/tcp, [::]:39002->9001/tcp
+apex-autonomous-spark-master   apex-autonomous-spark:4.0.0-s3a                    "/opt/entrypoint.sh …"   spark-master   6 minutes ago   Up 5 minutes             0.0.0.0:37077->7077/tcp, [::]:37077->7077/tcp, 0.0.0.0:38080->8080/tcp, [::]:38080->8080/tcp
+apex-autonomous-spark-worker   apex-autonomous-spark:4.0.0-s3a                    "/opt/entrypoint.sh …"   spark-worker   6 minutes ago   Up 5 minutes             0.0.0.0:38081->8081/tcp, [::]:38081->8081/tcp

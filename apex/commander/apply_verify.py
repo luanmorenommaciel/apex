@@ -66,6 +66,28 @@ def apply_recommendation(
     }
 
 
+def apply_fix(
+    finding_store,
+    job_id,
+    recommendation_id,
+    path,
+    replacement,
+    approval_token,
+    *,
+    apply_root=None,
+):
+    """Contract-name alias for the guarded recommendation apply flow."""
+    return apply_recommendation(
+        finding_store,
+        job_id,
+        recommendation_id,
+        path,
+        replacement,
+        approval_token,
+        apply_root=apply_root,
+    )
+
+
 def verify_recommendation_apply(path, expected_sha256, *, apply_root=None):
     """Verify that a target file has the expected content hash."""
     root_status = _resolve_target(path, apply_root)

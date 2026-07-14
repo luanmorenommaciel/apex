@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 from io import StringIO
 
 from apex.commander.clickstack_mvp import append_envelope
@@ -79,6 +81,7 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
         "recommend_fix",
         "preview_recommendation",
         "apply_recommendation",
+        "apply_fix",
         "verify_recommendation_apply",
         "compare_job_telemetry",
         "build_spark_submit_rerun_command",
@@ -93,6 +96,9 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
     apply_tool = next(tool for tool in tools if tool["name"] == "apply_recommendation")
     assert apply_tool["annotations"]["readOnlyHint"] is False
     assert apply_tool["annotations"]["destructiveHint"] is True
+    apply_fix_tool = next(tool for tool in tools if tool["name"] == "apply_fix")
+    assert apply_fix_tool["annotations"]["readOnlyHint"] is False
+    assert apply_fix_tool["annotations"]["destructiveHint"] is True
     rerun_tool = next(tool for tool in tools if tool["name"] == "execute_rerun_and_compare")
     assert rerun_tool["annotations"]["readOnlyHint"] is False
     assert rerun_tool["annotations"]["destructiveHint"] is True
@@ -325,6 +331,61 @@ def test_tools_call_can_apply_recommendation_with_matching_token(tmp_path):
     assert source.read_text(encoding="utf-8") == replacement
 
 
+def test_tools_call_can_apply_fix_with_matching_token(tmp_path):
+    source = tmp_path / "job.py"
+    replacement = "# REVIEW: validate skew before this join\ndf.join(dim, 'id').count()\n"
+    source.write_text("df.join(dim, 'id').count()\n", encoding="utf-8")
+    finding_store = FakeFindingStore({"job-42": [persisted_skew_record()]})
+    contract = CommanderToolContract(
+        tmp_path / "store.ndjson",
+        finding_store=finding_store,
+        apply_root=tmp_path,
+    )
+    preview_response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 80,
+            "method": "tools/call",
+            "params": {
+                "name": "preview_recommendation",
+                "arguments": {
+                    "job_id": "job-42",
+                    "recommendation_id": "job-42:shuffle_skew_candidate:stage-2:0",
+                    "path": str(source),
+                    "replacement": replacement,
+                },
+            },
+        },
+        contract,
+    )
+    preview = json.loads(preview_response["result"]["content"][0]["text"])
+
+    apply_response = handle_jsonrpc_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 81,
+            "method": "tools/call",
+            "params": {
+                "name": "apply_fix",
+                "arguments": {
+                    "job_id": "job-42",
+                    "recommendation_id": "job-42:shuffle_skew_candidate:stage-2:0",
+                    "path": str(source),
+                    "replacement": replacement,
+                    "approval_token": preview["approval"]["token"],
+                },
+            },
+        },
+        contract,
+    )
+
+    payload = json.loads(apply_response["result"]["content"][0]["text"])
+    assert payload["status"] == "applied"
+    assert payload["mode"] == "guarded_apply"
+    assert payload["verification"]["status"] == "verified"
+    assert source.read_text(encoding="utf-8") == replacement
+
+
 def test_tools_call_can_compare_job_telemetry(tmp_path):
     store = tmp_path / "store.ndjson"
     append_envelope(store, telemetry_envelope("before-job"))
@@ -538,3 +599,93 @@ def test_stdio_loop_processes_line_delimited_jsonrpc(tmp_path):
     assert [response["id"] for response in responses] == [1, 2, 3]
     payload = json.loads(responses[2]["result"]["content"][0]["text"])
     assert payload["findings"][0]["kind"] == "shuffle_skew_candidate"
+
+
+def test_mcp_stdio_cli_subprocess_can_apply_fix(tmp_path):
+    source = tmp_path / "job.py"
+    replacement = "# REVIEW: validate skew before this join\ndf.join(dim, 'id').count()\n"
+    source.write_text("df.join(dim, 'id').count()\n", encoding="utf-8")
+    finding_store = tmp_path / "findings.ndjson"
+    finding_store.write_text(json.dumps(persisted_skew_record()) + "\n", encoding="utf-8")
+    store = tmp_path / "store.ndjson"
+
+    preview_request = {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+            "name": "preview_recommendation",
+            "arguments": {
+                "job_id": "job-42",
+                "recommendation_id": "job-42:shuffle_skew_candidate:stage-2:0",
+                "path": str(source),
+                "replacement": replacement,
+            },
+        },
+    }
+    process = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "apex.commander.mcp_stdio_cli",
+            "--store",
+            str(store),
+            "--finding-store",
+            str(finding_store),
+            "--apply-root",
+            str(tmp_path),
+        ],
+        input="\n".join(
+            [
+                json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize"}),
+                json.dumps({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}),
+                json.dumps(preview_request),
+            ]
+        )
+        + "\n",
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    responses = [json.loads(line) for line in process.stdout.splitlines()]
+    tools = responses[1]["result"]["tools"]
+    assert "apply_fix" in [tool["name"] for tool in tools]
+    preview = json.loads(responses[2]["result"]["content"][0]["text"])
+
+    apply_request = {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/call",
+        "params": {
+            "name": "apply_fix",
+            "arguments": {
+                "job_id": "job-42",
+                "recommendation_id": "job-42:shuffle_skew_candidate:stage-2:0",
+                "path": str(source),
+                "replacement": replacement,
+                "approval_token": preview["approval"]["token"],
+            },
+        },
+    }
+    process = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "apex.commander.mcp_stdio_cli",
+            "--store",
+            str(store),
+            "--finding-store",
+            str(finding_store),
+            "--apply-root",
+            str(tmp_path),
+        ],
+        input=json.dumps(apply_request) + "\n",
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    apply_response = json.loads(process.stdout)
+    payload = json.loads(apply_response["result"]["content"][0]["text"])
+    assert payload["status"] == "applied"
+    assert payload["verification"]["status"] == "verified"
+    assert source.read_text(encoding="utf-8") == replacement

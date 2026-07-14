@@ -1,0 +1,100 @@
+WARNING: Using incubator modules: jdk.incubator.vector
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+26/07/14 04:58:37 INFO SparkContext: Running Spark version 4.0.0
+26/07/14 04:58:38 INFO SparkContext: OS info Linux, 6.18.33.2-microsoft-standard-WSL2, amd64
+26/07/14 04:58:38 INFO SparkContext: Java version 17.0.15
+26/07/14 04:58:40 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+26/07/14 04:58:40 INFO ResourceUtils: ==============================================================
+26/07/14 04:58:40 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/07/14 04:58:40 INFO ResourceUtils: ==============================================================
+26/07/14 04:58:40 INFO SparkContext: Submitted application: PythonPi
+26/07/14 04:58:41 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/07/14 04:58:41 INFO ResourceProfile: Limiting resource is cpu
+26/07/14 04:58:41 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/07/14 04:58:43 INFO SecurityManager: Changing view acls to: spark
+26/07/14 04:58:43 INFO SecurityManager: Changing modify acls to: spark
+26/07/14 04:58:43 INFO SecurityManager: Changing view acls groups to: spark
+26/07/14 04:58:43 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/14 04:58:43 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/14 04:58:49 INFO Utils: Successfully started service 'sparkDriver' on port 36415.
+26/07/14 04:58:50 INFO SparkEnv: Registering MapOutputTracker
+26/07/14 04:58:51 INFO SparkEnv: Registering BlockManagerMaster
+26/07/14 04:58:52 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/07/14 04:58:52 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/07/14 04:58:52 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/07/14 04:58:53 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-31f51a02-44b2-4367-96f5-0ab9c443df13
+26/07/14 04:58:54 INFO SparkEnv: Registering OutputCommitCoordinator
+26/07/14 04:58:59 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+26/07/14 04:59:01 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/07/14 04:59:02 INFO SecurityManager: Changing view acls to: spark
+26/07/14 04:59:02 INFO SecurityManager: Changing modify acls to: spark
+26/07/14 04:59:02 INFO SecurityManager: Changing view acls groups to: spark
+26/07/14 04:59:02 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/14 04:59:02 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/14 04:59:06 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+26/07/14 04:59:07 INFO TransportClientFactory: Successfully created connection to spark-master/172.19.0.4:7077 after 950 ms (0 ms spent in bootstraps)
+26/07/14 04:59:11 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20260714045910-0000
+26/07/14 04:59:11 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 42731.
+26/07/14 04:59:11 INFO NettyBlockTransferService: Server created on 812d16f0b86f:42731
+26/07/14 04:59:11 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/07/14 04:59:12 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, 812d16f0b86f, 42731, None)
+26/07/14 04:59:12 INFO BlockManagerMasterEndpoint: Registering block manager 812d16f0b86f:42731 with 434.4 MiB RAM, BlockManagerId(driver, 812d16f0b86f, 42731, None)
+26/07/14 04:59:12 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, 812d16f0b86f, 42731, None)
+26/07/14 04:59:12 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, 812d16f0b86f, 42731, None)
+26/07/14 04:59:12 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20260714045910-0000/0 on worker-20260714045249-172.19.0.5-45525 (172.19.0.5:45525) with 8 core(s)
+26/07/14 04:59:12 INFO StandaloneSchedulerBackend: Granted executor ID app-20260714045910-0000/0 on hostPort 172.19.0.5:45525 with 8 core(s), 1024.0 MiB RAM
+26/07/14 04:59:18 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20260714045910-0000/0 is now RUNNING
+Traceback (most recent call last):
+  File "/opt/spark/examples/src/main/python/pi.py", line 32, in <module>
+    .getOrCreate()
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/sql/session.py", line 556, in getOrCreate
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/core/context.py", line 523, in getOrCreate
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/core/context.py", line 207, in __init__
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/core/context.py", line 300, in _do_init
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/core/context.py", line 429, in _initialize_context
+  File "/opt/spark/python/lib/py4j-0.10.9.9-src.zip/py4j/java_gateway.py", line 1627, in __call__
+  File "/opt/spark/python/lib/py4j-0.10.9.9-src.zip/py4j/protocol.py", line 327, in get_return_value
+py4j.protocol.Py4JJavaError: An error occurred while calling None.org.apache.spark.api.java.JavaSparkContext.
+: java.lang.NoClassDefFoundError: software/amazon/awssdk/auth/credentials/AwsCredentialsProvider
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:467)
+	at org.apache.hadoop.conf.Configuration.getClassByNameOrNull(Configuration.java:2674)
+	at org.apache.hadoop.conf.Configuration.getClassByName(Configuration.java:2639)
+	at org.apache.hadoop.conf.Configuration.getClass(Configuration.java:2735)
+	at org.apache.hadoop.fs.FileSystem.getFileSystemClass(FileSystem.java:3569)
+	at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3612)
+	at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:172)
+	at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3716)
+	at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3667)
+	at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:557)
+	at org.apache.spark.util.Utils$.getHadoopFileSystem(Utils.scala:1850)
+	at org.apache.spark.deploy.history.EventLogFileWriter.<init>(EventLogFileWriters.scala:63)
+	at org.apache.spark.deploy.history.RollingEventLogFilesWriter.<init>(EventLogFileWriters.scala:295)
+	at org.apache.spark.deploy.history.EventLogFileWriter$.apply(EventLogFileWriters.scala:183)
+	at org.apache.spark.scheduler.EventLoggingListener.<init>(EventLoggingListener.scala:64)
+	at org.apache.spark.SparkContext.<init>(SparkContext.scala:654)
+	at org.apache.spark.api.java.JavaSparkContext.<init>(JavaSparkContext.scala:59)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:247)
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)
+	at py4j.Gateway.invoke(Gateway.java:238)
+	at py4j.commands.ConstructorCommand.invokeConstructor(ConstructorCommand.java:80)
+	at py4j.commands.ConstructorCommand.execute(ConstructorCommand.java:69)
+	at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:108)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: java.lang.ClassNotFoundException: software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641)
+	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:525)
+	... 31 more
+
+26/07/14 04:59:24 INFO DiskBlockManager: Shutdown hook called
+26/07/14 04:59:24 INFO ShutdownHookManager: Shutdown hook called
+26/07/14 04:59:24 INFO ShutdownHookManager: Deleting directory /tmp/spark-e0e0b5fc-58f8-4263-a70e-ecd5e25f0aa4
+26/07/14 04:59:24 INFO ShutdownHookManager: Deleting directory /tmp/spark-a0712db2-1f1f-45e7-8a76-f67dee2b187d
+26/07/14 04:59:24 INFO ShutdownHookManager: Deleting directory /tmp/spark-e0e0b5fc-58f8-4263-a70e-ecd5e25f0aa4/userFiles-92fbca7e-55a8-44ba-8f23-2cba756243e8

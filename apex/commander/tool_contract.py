@@ -3,6 +3,7 @@
 from copy import deepcopy
 
 from apex.commander.apply_verify import (
+    apply_fix,
     apply_recommendation,
     verify_recommendation_apply,
 )
@@ -104,7 +105,29 @@ TOOL_SPECS = [
     },
     {
         "name": "apply_recommendation",
-        "description": "Apply a selected recommendation only with a matching approval token.",
+        "description": "Deprecated compatibility alias for apply_fix.",
+        "safety": "guarded_mutation",
+        "input_schema": {
+            "type": "object",
+            "required": [
+                "job_id",
+                "recommendation_id",
+                "path",
+                "replacement",
+                "approval_token",
+            ],
+            "properties": {
+                "job_id": {"type": "string"},
+                "recommendation_id": {"type": "string"},
+                "path": {"type": "string"},
+                "replacement": {"type": "string"},
+                "approval_token": {"type": "string"},
+            },
+        },
+    },
+    {
+        "name": "apply_fix",
+        "description": "Apply a selected fix only with a matching approval token.",
         "safety": "guarded_mutation",
         "input_schema": {
             "type": "object",
@@ -305,6 +328,16 @@ class CommanderToolContract:
             )
         if name == "apply_recommendation":
             return apply_recommendation(
+                self.finding_store,
+                _required(args, "job_id"),
+                _required(args, "recommendation_id"),
+                _required(args, "path"),
+                _required(args, "replacement"),
+                _required(args, "approval_token"),
+                apply_root=self.apply_root,
+            )
+        if name == "apply_fix":
+            return apply_fix(
                 self.finding_store,
                 _required(args, "job_id"),
                 _required(args, "recommendation_id"),

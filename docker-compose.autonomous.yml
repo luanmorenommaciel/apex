@@ -1,0 +1,115 @@
+name: apex-autonomous
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.5.1
+    container_name: apex-autonomous-clickhouse
+    environment:
+      CLICKHOUSE_DB: apex
+      CLICKHOUSE_USER: spv0
+      CLICKHOUSE_PASSWORD: spv0
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ports:
+      - "38123:8123"
+      - "39000:9000"
+    volumes:
+      - apex_autonomous_clickhouse_data:/var/lib/clickhouse
+      - ./docs/specs/apex_telemetry_v1.sql:/docker-entrypoint-initdb.d/001-apex-telemetry-v1.sql:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--user", "spv0", "--password", "spv0", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: apex-autonomous-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: spv0
+      MINIO_ROOT_PASSWORD: spv0spv0
+    ports:
+      - "39001:9000"
+      - "39002:9001"
+    volumes:
+      - apex_autonomous_minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/ready || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio-init:
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    container_name: apex-autonomous-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: spv0
+      MINIO_ROOT_PASSWORD: spv0spv0
+      MINIO_LOG_BUCKET: spark-logs
+    volumes:
+      - ./docker/autonomous/minio/init-spark-logs.sh:/init-spark-logs.sh:ro
+    entrypoint: ["/bin/sh", "/init-spark-logs.sh"]
+
+  spark-master:
+    build:
+      context: .
+      dockerfile: docker/autonomous/spark/Dockerfile
+    image: apex-autonomous-spark:4.0.0-s3a
+    container_name: apex-autonomous-spark-master
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      SPARK_MASTER_HOST: spark-master
+      SPARK_NO_DAEMONIZE: "true"
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
+    ports:
+      - "37077:7077"
+      - "38080:8080"
+    volumes:
+      - ./docker/autonomous/spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - apex_autonomous_spark_event_logs:/tmp/spark-events
+
+  spark-worker:
+    image: apex-autonomous-spark:4.0.0-s3a
+    container_name: apex-autonomous-spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_CORES: "8"
+      SPARK_WORKER_MEMORY: 4G
+      SPARK_NO_DAEMONIZE: "true"
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - --cores
+      - "8"
+      - --memory
+      - 4g
+      - spark://spark-master:7077
+    ports:
+      - "38081:8081"
+    volumes:
+      - ./docker/autonomous/spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - apex_autonomous_spark_event_logs:/tmp/spark-events
+
+volumes:
+  apex_autonomous_clickhouse_data:
+  apex_autonomous_minio_data:
+  apex_autonomous_spark_event_logs:

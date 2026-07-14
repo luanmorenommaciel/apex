@@ -1,0 +1,105 @@
+WARNING: Using incubator modules: jdk.incubator.vector
+26/07/14 05:45:11 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+26/07/14 05:45:20 INFO SparkContext: Running Spark version 4.0.0
+26/07/14 05:45:20 INFO SparkContext: OS info Linux, 6.18.33.2-microsoft-standard-WSL2, amd64
+26/07/14 05:45:20 INFO SparkContext: Java version 17.0.15
+26/07/14 05:45:21 INFO ResourceUtils: ==============================================================
+26/07/14 05:45:21 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/07/14 05:45:21 INFO ResourceUtils: ==============================================================
+26/07/14 05:45:21 INFO SparkContext: Submitted application: PythonPi
+26/07/14 05:45:22 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/07/14 05:45:22 INFO ResourceProfile: Limiting resource is cpu
+26/07/14 05:45:22 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/07/14 05:45:23 INFO SecurityManager: Changing view acls to: spark
+26/07/14 05:45:23 INFO SecurityManager: Changing modify acls to: spark
+26/07/14 05:45:23 INFO SecurityManager: Changing view acls groups to: spark
+26/07/14 05:45:23 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/14 05:45:23 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/14 05:45:26 INFO Utils: Successfully started service 'sparkDriver' on port 44617.
+26/07/14 05:45:27 INFO SparkEnv: Registering MapOutputTracker
+26/07/14 05:45:27 INFO SparkEnv: Registering BlockManagerMaster
+26/07/14 05:45:27 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/07/14 05:45:27 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/07/14 05:45:27 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/07/14 05:45:27 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-1f302d13-88de-45de-b63a-5636bdd9cab6
+26/07/14 05:45:28 INFO SparkEnv: Registering OutputCommitCoordinator
+26/07/14 05:45:29 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+26/07/14 05:45:30 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/07/14 05:45:31 INFO SparkContext: Added JAR file:///tmp/apex-spark-listener-0.1.0.jar at spark://b261f1232205:44617/jars/apex-spark-listener-0.1.0.jar with timestamp 1784007920469
+26/07/14 05:45:31 INFO SecurityManager: Changing view acls to: spark
+26/07/14 05:45:31 INFO SecurityManager: Changing modify acls to: spark
+26/07/14 05:45:31 INFO SecurityManager: Changing view acls groups to: spark
+26/07/14 05:45:31 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/14 05:45:31 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/14 05:45:33 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+26/07/14 05:45:34 INFO TransportClientFactory: Successfully created connection to spark-master/172.19.0.4:7077 after 829 ms (0 ms spent in bootstraps)
+26/07/14 05:45:37 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20260714054536-0002
+26/07/14 05:45:37 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20260714054536-0002/0 on worker-20260714053123-172.19.0.5-40167 (172.19.0.5:40167) with 8 core(s)
+26/07/14 05:45:37 INFO StandaloneSchedulerBackend: Granted executor ID app-20260714054536-0002/0 on hostPort 172.19.0.5:40167 with 8 core(s), 1024.0 MiB RAM
+26/07/14 05:45:37 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 35813.
+26/07/14 05:45:37 INFO NettyBlockTransferService: Server created on b261f1232205:35813
+26/07/14 05:45:37 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/07/14 05:45:37 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, b261f1232205, 35813, None)
+26/07/14 05:45:38 INFO BlockManagerMasterEndpoint: Registering block manager b261f1232205:35813 with 434.4 MiB RAM, BlockManagerId(driver, b261f1232205, 35813, None)
+26/07/14 05:45:38 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, b261f1232205, 35813, None)
+26/07/14 05:45:38 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, b261f1232205, 35813, None)
+26/07/14 05:45:38 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20260714054536-0002/0 is now RUNNING
+26/07/14 05:45:42 WARN MetricsConfig: Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+26/07/14 05:45:42 INFO MetricsSystemImpl: Scheduled Metric snapshot period at 10 second(s).
+26/07/14 05:45:42 INFO MetricsSystemImpl: s3a-file-system metrics system started
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+26/07/14 05:46:06 INFO UploadContentProviders: Stream recreated: ByteArrayContentProvider{buffer with length=0, offset=0} BaseContentProvider{size=0, initiated at 2026-07-14T05:46:06.212815990, streamCreationCount=2, currentStream=null}
+26/07/14 05:46:08 INFO UploadContentProviders: Stream recreated: FileWithOffsetContentProvider{file=/tmp/hadoop-spark/s3a/s3ablock-0001-4830175272298705410.tmp, offset=0} BaseContentProvider{size=0, initiated at 2026-07-14T05:46:08.221871846, streamCreationCount=2, currentStream=null}
+26/07/14 05:46:09 INFO RollingEventLogFilesWriter: Logging events to s3a://spark-logs/events/eventlog_v2_app-20260714054536-0002/events_1_app-20260714054536-0002.zstd
+26/07/14 05:46:10 WARN S3ABlockOutputStream: Application invoked the Syncable API against stream writing to events/eventlog_v2_app-20260714054536-0002/events_1_app-20260714054536-0002.zstd. This is Unsupported
+26/07/14 05:46:11 INFO SparkContext: Registered listenerapex.commander.spark.ApexSparkListener
+[apex-listener] callback=application_start failed: java.lang.IllegalStateException: spark.apex.listener.failMode=true
+26/07/14 05:46:12 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+26/07/14 05:46:23 INFO StandaloneSchedulerBackend$StandaloneDriverEndpoint: Registered executor NettyRpcEndpointRef(spark-client://Executor) (172.19.0.5:36126) with ID 0, ResourceProfileId 0
+26/07/14 05:46:28 INFO BlockManagerMasterEndpoint: Registering block manager 172.19.0.5:37773 with 434.4 MiB RAM, BlockManagerId(0, 172.19.0.5, 37773, None)
+26/07/14 05:46:52 INFO SparkContext: Starting job: reduce at /opt/spark/examples/src/main/python/pi.py:42
+26/07/14 05:46:52 INFO DAGScheduler: Got job 0 (reduce at /opt/spark/examples/src/main/python/pi.py:42) with 1 output partitions
+26/07/14 05:46:52 INFO DAGScheduler: Final stage: ResultStage 0 (reduce at /opt/spark/examples/src/main/python/pi.py:42)
+26/07/14 05:46:52 INFO DAGScheduler: Parents of final stage: List()
+26/07/14 05:46:52 INFO DAGScheduler: Missing parents: List()
+26/07/14 05:46:52 INFO DAGScheduler: Submitting ResultStage 0 (PythonRDD[1] at reduce at /opt/spark/examples/src/main/python/pi.py:42), which has no missing parents
+[apex-listener] callback=stage_submitted failed: java.lang.IllegalStateException: spark.apex.listener.failMode=true
+26/07/14 05:46:52 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+26/07/14 05:46:52 INFO MemoryStore: Block broadcast_0 stored as values in memory (estimated size 11.6 KiB, free 434.4 MiB)
+26/07/14 05:46:52 INFO MemoryStore: Block broadcast_0_piece0 stored as bytes in memory (estimated size 8.6 KiB, free 434.4 MiB)
+26/07/14 05:46:52 INFO SparkContext: Created broadcast 0 from broadcast at DAGScheduler.scala:1676
+26/07/14 05:46:53 INFO DAGScheduler: Submitting 1 missing tasks from ResultStage 0 (PythonRDD[1] at reduce at /opt/spark/examples/src/main/python/pi.py:42) (first 15 tasks are for partitions Vector(0))
+26/07/14 05:46:53 INFO TaskSchedulerImpl: Adding task set 0.0 with 1 tasks resource profile 0
+26/07/14 05:46:53 INFO TaskSetManager: Starting task 0.0 in stage 0.0 (TID 0) (172.19.0.5,executor 0, partition 0, PROCESS_LOCAL, 9867 bytes) 
+26/07/14 05:47:05 INFO TaskSetManager: Finished task 0.0 in stage 0.0 (TID 0) in 11850 ms on 172.19.0.5 (executor 0) (1/1)
+26/07/14 05:47:05 INFO TaskSchedulerImpl: Removed TaskSet 0.0 whose tasks have all completed, from pool 
+26/07/14 05:47:05 INFO PythonAccumulatorV2: Connected to AccumulatorServer at host: 127.0.0.1 port: 59493
+26/07/14 05:47:05 INFO DAGScheduler: ResultStage 0 (reduce at /opt/spark/examples/src/main/python/pi.py:42) finished in 12642 ms
+[apex-listener] callback=task_end failed: java.lang.IllegalStateException: spark.apex.listener.failMode=true
+26/07/14 05:47:05 INFO DAGScheduler: Job 0 is finished. Cancelling potential speculative or zombie tasks for this job
+26/07/14 05:47:05 INFO TaskSchedulerImpl: Canceling stage 0
+26/07/14 05:47:05 INFO TaskSchedulerImpl: Killing all running tasks in stage 0: Stage finished
+26/07/14 05:47:05 INFO DAGScheduler: Job 0 finished: reduce at /opt/spark/examples/src/main/python/pi.py:42, took 13032.313954 ms
+Pi is roughly 3.135240
+26/07/14 05:47:05 INFO SparkContext: SparkContext is stopping with exitCode 0 from stop at NativeMethodAccessorImpl.java:0.
+[apex-listener] callback=application_end failed: java.lang.IllegalStateException: spark.apex.listener.failMode=true
+26/07/14 05:47:05 INFO SparkUI: Stopped Spark web UI at http://b261f1232205:4040
+26/07/14 05:47:05 INFO StandaloneSchedulerBackend: Shutting down all executors
+26/07/14 05:47:05 INFO StandaloneSchedulerBackend$StandaloneDriverEndpoint: Asking each executor to shut down
+26/07/14 05:47:06 INFO UploadContentProviders: Stream recreated: FileWithOffsetContentProvider{file=/tmp/hadoop-spark/s3a/s3ablock-0001-17124587387827296026.tmp, offset=0} BaseContentProvider{size=27424, initiated at 2026-07-14T05:47:06.166234378, streamCreationCount=2, currentStream=null}
+26/07/14 05:47:08 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+26/07/14 05:47:08 INFO MemoryStore: MemoryStore cleared
+26/07/14 05:47:08 INFO BlockManager: BlockManager stopped
+26/07/14 05:47:08 INFO BlockManagerMaster: BlockManagerMaster stopped
+26/07/14 05:47:08 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+26/07/14 05:47:08 INFO SparkContext: Successfully stopped SparkContext
+26/07/14 05:47:09 INFO ShutdownHookManager: Shutdown hook called
+26/07/14 05:47:09 INFO ShutdownHookManager: Deleting directory /tmp/spark-29c6a888-c695-48ac-b0df-b532e07dd7b7
+26/07/14 05:47:09 INFO ShutdownHookManager: Deleting directory /tmp/spark-3ce6e487-7e04-4e64-a924-a83ce150cd11/pyspark-fd230148-26cd-4d0c-b6b6-3f1cdd75aa90
+26/07/14 05:47:09 INFO ShutdownHookManager: Deleting directory /tmp/spark-3ce6e487-7e04-4e64-a924-a83ce150cd11
+26/07/14 05:47:09 INFO MetricsSystemImpl: Stopping s3a-file-system metrics system...
+26/07/14 05:47:09 INFO MetricsSystemImpl: s3a-file-system metrics system stopped.
+26/07/14 05:47:09 INFO MetricsSystemImpl: s3a-file-system metrics system shutdown complete.

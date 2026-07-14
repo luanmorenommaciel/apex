@@ -203,8 +203,7 @@ capaz de registrar cada decisao por evidencia, diff e resultado antes/depois.
 | SparkListener JVM real fail-safe | Hoje a prova usa event logs e templates; listener real ainda precisa ser implementado |
 | `docker compose up` autonomo da branch | G3/G5 validaram contra `plat-v0`/`spv0-*`; a branch ainda nao e plataforma completa independente |
 | Crew.ai/Judge | Escalonamento LLM e decisao de baixa confianca continuam como design, nao entrega funcional |
-| Tool chamada `apply_fix` | O ciclo existe como `apply_recommendation`; falta alinhar nome/contrato MCP comum |
-| IDE real | MCP stdio existe, mas o ciclo nao foi validado dentro de Cursor/VS Code/Claude Code |
+| IDE real | MCP stdio e `apply_fix` passam em smoke local, mas o ciclo nao foi validado dentro de Cursor/VS Code/Claude Code |
 | Oraculo agendado G6 | Existe comparacao manual; falta drift/CI recorrente |
 
 ## Proximos Passos Recomendados Para O Commander
@@ -213,8 +212,7 @@ capaz de registrar cada decisao por evidencia, diff e resultado antes/depois.
    SparkListener real) ou UX IDE (`apply_fix` MCP real).
 2. Se a prioridade for V1 fundacao, integrar a plataforma Spike/plat-v0 de forma
    controlada, mantendo G0-G5 como gates obrigatorios.
-3. Se a prioridade for produto, alinhar `apply_recommendation` para `apply_fix`
-   e fazer smoke test com cliente MCP real.
+3. Se a prioridade for produto, validar `apply_fix` com cliente MCP/IDE real.
 4. Promover ADRs formais sobre:
    - origem do apply guardado;
    - papel do `plat-v0`;

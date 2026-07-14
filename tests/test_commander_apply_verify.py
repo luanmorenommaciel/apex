@@ -1,4 +1,5 @@
 from apex.commander.apply_verify import (
+    apply_fix,
     apply_recommendation,
     verify_recommendation_apply,
 )
@@ -138,6 +139,36 @@ def test_apply_recommendation_writes_and_verifies_with_matching_token(tmp_path):
     )
 
     assert result["status"] == "applied"
+    assert result["verification"]["status"] == "verified"
+    assert source.read_text(encoding="utf-8") == replacement
+
+
+def test_apply_fix_is_guarded_contract_alias(tmp_path):
+    source = tmp_path / "job.py"
+    original = "df.join(dim, 'id').count()\n"
+    replacement = "# REVIEW: validate skew before this join\ndf.join(dim, 'id').count()\n"
+    source.write_text(original, encoding="utf-8")
+    store = FakeFindingStore({"job-42": [accepted_skew_record()]})
+    preview = preview_recommendation(
+        store,
+        "job-42",
+        "job-42:shuffle_skew_candidate:stage-2:0",
+        source,
+        replacement,
+    )
+
+    result = apply_fix(
+        store,
+        "job-42",
+        "job-42:shuffle_skew_candidate:stage-2:0",
+        source,
+        replacement,
+        preview["approval"]["token"],
+        apply_root=tmp_path,
+    )
+
+    assert result["status"] == "applied"
+    assert result["mode"] == "guarded_apply"
     assert result["verification"]["status"] == "verified"
     assert source.read_text(encoding="utf-8") == replacement
 

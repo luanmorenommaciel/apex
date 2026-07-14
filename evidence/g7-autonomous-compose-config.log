@@ -1,0 +1,196 @@
+WARNING: Error loading config file: open C:\Users\Guest\.docker\config.json: Acesso negado.
+WARNING: Error loading config file: open C:\Users\Guest\.docker\config.json: Acesso negado.
+name: apex-autonomous
+services:
+  clickhouse:
+    container_name: apex-autonomous-clickhouse
+    environment:
+      CLICKHOUSE_DB: apex
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+      CLICKHOUSE_PASSWORD: spv0
+      CLICKHOUSE_USER: spv0
+    healthcheck:
+      test:
+        - CMD
+        - clickhouse-client
+        - --user
+        - spv0
+        - --password
+        - spv0
+        - --query
+        - SELECT 1
+      timeout: 3s
+      interval: 5s
+      retries: 20
+    image: clickhouse/clickhouse-server:26.5.1
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8123
+        published: "38123"
+        protocol: tcp
+      - mode: ingress
+        target: 9000
+        published: "39000"
+        protocol: tcp
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - type: volume
+        source: apex_autonomous_clickhouse_data
+        target: /var/lib/clickhouse
+        volume: {}
+      - type: bind
+        source: C:\Users\Guest\Documents\project\codex\apex\apex-official\docs\specs\apex_telemetry_v1.sql
+        target: /docker-entrypoint-initdb.d/001-apex-telemetry-v1.sql
+        read_only: true
+        bind: {}
+  minio:
+    command:
+      - server
+      - /data
+      - --console-address
+      - :9001
+    container_name: apex-autonomous-minio
+    environment:
+      MINIO_ROOT_PASSWORD: spv0spv0
+      MINIO_ROOT_USER: spv0
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -f http://localhost:9000/minio/health/ready || exit 1
+      timeout: 3s
+      interval: 5s
+      retries: 20
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 9000
+        published: "39001"
+        protocol: tcp
+      - mode: ingress
+        target: 9001
+        published: "39002"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: apex_autonomous_minio_data
+        target: /data
+        volume: {}
+  minio-init:
+    container_name: apex-autonomous-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+        required: true
+    entrypoint:
+      - /bin/sh
+      - /init-spark-logs.sh
+    environment:
+      MINIO_LOG_BUCKET: spark-logs
+      MINIO_ROOT_PASSWORD: spv0spv0
+      MINIO_ROOT_USER: spv0
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: C:\Users\Guest\Documents\project\codex\apex\apex-official\docker\autonomous\minio\init-spark-logs.sh
+        target: /init-spark-logs.sh
+        read_only: true
+        bind: {}
+  spark-master:
+    build:
+      context: C:\Users\Guest\Documents\project\codex\apex\apex-official
+      dockerfile: docker/autonomous/spark/Dockerfile
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
+    container_name: apex-autonomous-spark-master
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+        required: true
+    environment:
+      SPARK_MASTER_HOST: spark-master
+      SPARK_NO_DAEMONIZE: "true"
+    image: apex-autonomous-spark:4.0.0-s3a
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 7077
+        published: "37077"
+        protocol: tcp
+      - mode: ingress
+        target: 8080
+        published: "38080"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: C:\Users\Guest\Documents\project\codex\apex\apex-official\docker\autonomous\spark\spark-defaults.conf
+        target: /opt/spark/conf/spark-defaults.conf
+        read_only: true
+        bind: {}
+      - type: volume
+        source: apex_autonomous_spark_event_logs
+        target: /tmp/spark-events
+        volume: {}
+  spark-worker:
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - --cores
+      - "8"
+      - --memory
+      - 4g
+      - spark://spark-master:7077
+    container_name: apex-autonomous-spark-worker
+    depends_on:
+      spark-master:
+        condition: service_started
+        required: true
+    environment:
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_NO_DAEMONIZE: "true"
+      SPARK_WORKER_CORES: "8"
+      SPARK_WORKER_MEMORY: 4G
+    image: apex-autonomous-spark:4.0.0-s3a
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8081
+        published: "38081"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: C:\Users\Guest\Documents\project\codex\apex\apex-official\docker\autonomous\spark\spark-defaults.conf
+        target: /opt/spark/conf/spark-defaults.conf
+        read_only: true
+        bind: {}
+      - type: volume
+        source: apex_autonomous_spark_event_logs
+        target: /tmp/spark-events
+        volume: {}
+networks:
+  default:
+    name: apex-autonomous_default
+volumes:
+  apex_autonomous_clickhouse_data:
+    name: apex-autonomous_apex_autonomous_clickhouse_data
+  apex_autonomous_minio_data:
+    name: apex-autonomous_apex_autonomous_minio_data
+  apex_autonomous_spark_event_logs:
+    name: apex-autonomous_apex_autonomous_spark_event_logs
