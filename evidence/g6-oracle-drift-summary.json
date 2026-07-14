@@ -1,0 +1,35 @@
+{
+  "gate": "G6",
+  "name": "oracle_drift_smoke",
+  "status": "passed",
+  "generated_at": "2026-07-14T18:57:00-0300",
+  "elapsed_ms": 3183.62,
+  "scenario": "scenarios\\skew_on_join_30x.yaml",
+  "real_log": "real_log.ndjson",
+  "synthetic_log": "evidence\\generated\\g6-oracle-drift\\synthetic.ndjson",
+  "commands": {
+    "plan_generator": [
+      "C:\\Users\\Guest\\AppData\\Local\\uv\\cache\\builds-v0\\.tmp0tvoro\\Scripts\\python.exe",
+      "generators/plan_generator.py",
+      "scenarios\\skew_on_join_30x.yaml",
+      "evidence\\generated\\g6-oracle-drift\\synthetic.ndjson"
+    ],
+    "oracle_compare": [
+      "C:\\Users\\Guest\\AppData\\Local\\uv\\cache\\builds-v0\\.tmp0tvoro\\Scripts\\python.exe",
+      "oracle/compare.py",
+      "scenarios\\skew_on_join_30x.yaml",
+      "evidence\\generated\\g6-oracle-drift\\synthetic.ndjson",
+      "real_log.ndjson"
+    ]
+  },
+  "plan_generator": {
+    "returncode": 0,
+    "stdout": "[OK] evidence\\generated\\g6-oracle-drift\\synthetic.ndjson gerado: 14 eventos, scenario_hash sha256:ec5372694030305d embutido.\n",
+    "stderr": ""
+  },
+  "oracle_compare": {
+    "returncode": 0,
+    "stdout": "--- AUDIT TRAIL ---\nscenario:   skew_on_join_30x (hash sha256:ec5372694030305d)\nsynthetic:  evidence\\generated\\g6-oracle-drift\\synthetic.ndjson  provenance=sha256:ec5372694030305d\nreal:       real_log.ndjson  provenance=n/a (log real)\n---\njoin:  synthetic=SortMergeJoin  real=SortMergeJoin\nhot:   synthetic=160000  real=165297\nratio: synthetic=27.9  real=29.5\npart:  synthetic=0  real=3\ntype:  synthetic=['ShuffleMapTask']  real=['ResultTask']\ncorr:  synthetic=stage_name  real=operator_accumulator\n[WARN] hot partition divergiu: 0 vs 3\n[WARN] task type divergiu: ['ShuffleMapTask'] vs ['ResultTask']\n\n[OK] ORACULO: sintetico fiel ao Spark real nos sinais agregados dentro da tolerancia.\n",
+    "stderr": ""
+  }
+}

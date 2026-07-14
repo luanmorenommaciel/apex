@@ -1,0 +1,29 @@
+Command:
+uv run --with-requirements requirements.txt python tools/g6_oracle_drift_smoke.py --real-log real_log.ndjson --summary evidence/g6-oracle-drift-summary.json
+
+Output:
+{
+  "gate": "G6",
+  "name": "oracle_drift_smoke",
+  "status": "passed",
+  "generated_at": "2026-07-14T18:57:00-0300",
+  "elapsed_ms": 3183.62,
+  "scenario": "scenarios\\skew_on_join_30x.yaml",
+  "real_log": "real_log.ndjson",
+  "synthetic_log": "evidence\\generated\\g6-oracle-drift\\synthetic.ndjson",
+  "plan_generator": {
+    "returncode": 0,
+    "stdout": "[OK] evidence\\generated\\g6-oracle-drift\\synthetic.ndjson gerado: 14 eventos, scenario_hash sha256:ec5372694030305d embutido."
+  },
+  "oracle_compare": {
+    "returncode": 0,
+    "stdout_excerpt": "join synthetic=SortMergeJoin real=SortMergeJoin; ratio synthetic=27.9 real=29.5; ORACULO OK dentro da tolerancia"
+  }
+}
+
+Pytest:
+uv run --with-requirements requirements.txt python -m pytest tests/test_g6_oracle_drift_smoke.py -q
+
+Output:
+..                                                                       [100%]
+2 passed in 9.91s
