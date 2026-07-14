@@ -1,143 +1,220 @@
-# Apex - Geradores, Watcher e Oraculo (v4 corrigido)
+# Apex Codex Round2
 
-Slice vertical do diagnostico de performance Spark. Um contrato declarativo
-(`scenario.yaml`) dirige dois geradores desacoplados:
+Branch: `codex-round2`
 
-- `generators/code_generator.py` gera um job PySpark com sentinela e manifesto.
-- `generators/plan_generator.py` gera um event log sintetico sem executar Spark.
+Estado: solucao local de diagnostico Spark com gates G0-G5 validados e evidencias em `evidence/`.
 
-O Watcher confirma o anti-pattern no scenario controlado depois de validar a
-distribuicao e a tentativa efetiva das tasks. O Oraculo compara sinais agregados
-e informa divergencias estruturais contra um log real do Spark.
+## O Que Tem Nesta Branch
 
-## Evidencia atual
-
-Validado no Ubuntu/WSL sobre o `dataship-spark-plat-v0`:
+Esta branch evoluiu do slice `skew_on_join_30x` v4 para uma esteira de diagnostico e correcao assistida para Spark:
 
 ```text
-python -m pytest tests -q
-40 passed
-
-watcher: GATE VERDE
-synthetic ratio: 27.9x
-real ratio:      29.5x
-oracle: sinais agregados calibrados; divergencias estruturais viram warnings
+event log -> detector deterministico -> EvidenceValidator -> finding
+-> recomendacao -> preview de diff -> apply guardado -> rerun -> compare
 ```
 
-O documento de linhagem explica o caminho completo da melhoria:
+Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loop funcional com evidencia: detectar um problema real, gerar uma correcao revisavel, aplicar com seguranca, reexecutar e provar que o finding sumiu.
 
-```text
-docs/apex-v4-lineage.md
-```
+## Resumo Executivo
 
-Para apresentar ao time e conduzir a validacao:
+| Area | Status | Evidencia |
+|---|---|---|
+| Baseline negativo | Fechado | `evidence/g1-baseline.log` |
+| Deteccao sintetica oficial | Fechado | `evidence/g2-cenarios.log` |
+| Dado real Spark | Fechado | `evidence/g3-real.log` |
+| Latencia T1 sem LLM | Fechado | `evidence/g4-t1.log` - 226.991 ms |
+| Ciclo detectar -> fix -> rerun -> limpo | Fechado | `evidence/g5-ciclo.log` |
+| Autoavaliacao | Fechada | `docs/autoavaliacao.md` |
+| Catalogo de issues | Fechado/aberto conforme item | `ISSUES.md` |
+| Plano F0/F5 | Fechado | `PLANO.md` |
 
-```text
-docs/team-validation-guide.md
-```
+## Resultado Mais Importante
 
-## Estrutura do slice
+Caso real validado: skew em join.
 
-```text
-apex/apexlib.py                  # leitura de event logs, zstd, rolling logs, plano, skew, provenance
-generators/code_generator.py     # scenario -> job.py + manifesto com scenario_hash
-generators/plan_generator.py     # scenario -> event log sintetico com ratio realista
-watchers/skew_watcher.py         # detecta skew e valida acceptance do scenario
-oracle/compare.py                # compara sintetico vs log real
-tests/test_slice.py              # parser, attempts, correlacao, provenance, watcher e oracle
-scenarios/skew_on_join_30x.yaml  # contrato declarativo do anti-pattern
-.github/workflows/scenario-gate.yml
-```
+| Metrica | Antes | Depois |
+|---|---:|---:|
+| `app_id` | `app-20260712053414-0001` | `app-20260712131734-0004` |
+| Finding count | 1 | 0 |
+| Severidade | high | n/a |
+| Skew ratio valido | 29.4 | 0 |
+| Shuffle read bytes | 1.157.481 | 0 |
 
-## Fluxo didatico
+Leitura: o Apex detectou skew real, gerou preview de correcao, aplicou com token/hash/verify, reexecutou o job e comprovou que o finding caiu para zero.
+
+## Arquitetura Da Solucao
 
 ```mermaid
 flowchart TD
-    A["Scenario YAML<br/>contrato do problema"] --> B["Plan Generator<br/>event log sintetico"]
-    A --> C["Code Generator<br/>job PySpark e manifesto"]
-    B --> Q["Qualidade da evidencia<br/>attempts, zeros e correlacao"]
-    Q --> D["Watcher<br/>detecta skew"]
-    D --> E["Finding<br/>causa, evidencia e recomendacao"]
-    B --> F["Oraculo<br/>compara com log real"]
-    G["real_log.ndjson<br/>execucao Spark real"] --> F
-    F --> H["Validacao<br/>fiel ou divergente"]
+    LOG["Spark event log<br/>real ou sintetico"] --> T1["T1 deterministico<br/>diagnostic_mvp.py"]
+    T1 --> VAL["EvidenceValidator<br/>evidence_validator.py"]
+    VAL --> FIND["Finding<br/>kind, severity, evidence"]
+    FIND --> REC["Recommendation<br/>recommendations.py"]
+    REC --> PREV["Preview diff<br/>fix_preview.py"]
+    PREV --> APPLY["Apply guardado<br/>apply_verify.py"]
+    APPLY --> RERUN["Rerun Spark<br/>spark_rerun_template.py"]
+    RERUN --> CMP["Compare telemetry<br/>rerun_compare.py"]
+    CMP --> OUT["Resultado<br/>limpo ou issue aberta"]
 ```
 
-Leitura curta: o `scenario.yaml` diz qual problema queremos simular; o gerador cria um log sintetico; o Watcher encontra o skew; o Oraculo confere se o sintetico bate com um log real.
+## Componentes Principais
 
-## Como rodar
+| Componente | Caminho | Papel |
+|---|---|---|
+| Detectores deterministicos | `apex/commander/diagnostic_mvp.py` | Detecta skew, GC, shuffle/spill, OOM e cartesian product |
+| Validador de evidencia | `apex/commander/evidence_validator.py` | Confere se o finding tem evidencia suficiente |
+| Telemetria | `apex/commander/telemetry.py` | Normaliza `job_id`, `app_id`, stages, tasks e plano |
+| ClickHouse adapter | `apex/commander/clickhouse_adapter.py` | Store local/fake para testes e persistencia |
+| ClickHouse HTTP client | `apex/commander/clickhouse_http_client.py` | Cliente para ambiente ClickHouse real |
+| MCP stdio | `apex/commander/mcp_stdio_server.py` | Exposicao local de tools para agente/IDE |
+| Recomendacoes | `apex/commander/recommendations.py` | Converte finding em recomendacao |
+| Preview de fix | `apex/commander/fix_preview.py` | Gera diff antes de qualquer apply |
+| Apply guardado | `apex/commander/apply_verify.py` | Aplica com token, hash, root permitido e verificacao |
+| Rerun/compare | `apex/commander/rerun_compare.py` | Compara telemetria antes/depois |
+| Template Spark rerun | `apex/commander/spark_rerun_template.py` | Monta comando Spark para reexecucao controlada |
 
-```bash
-pip install -r requirements.txt
-python3 -m pytest tests/test_slice.py -q
+## Gates Validados
+
+| Gate | O que prova | Artefato |
+|---|---|---|
+| G0 | Fundacao/testes/contratos iniciais | `evidence/g0-testes.log` |
+| G1 | Baseline saudavel nao gera falso positivo | `evidence/g1-baseline.log` |
+| G2 | Os 5 cenarios oficiais disparam severidade esperada | `evidence/g2-cenarios.log` |
+| G3 | Job real Spark multicore bate o comportamento sintetico | `evidence/g3-real.log` |
+| G4 | T1 deterministico roda abaixo de 1s sem LLM | `evidence/g4-t1.log` |
+| G5 | Ciclo completo detectar -> aplicar -> reexecutar -> limpar | `evidence/g5-ciclo.log` |
+
+## Cenarios Oficiais Cobertos
+
+Os cenarios vieram do pacote comum:
+
+```text
+pacote-comum/scenarios/no_skew_baseline.yaml
+pacote-comum/scenarios/skew_on_join_30x.yaml
+pacote-comum/scenarios/gc_pressure_25pct.yaml
+pacote-comum/scenarios/shuffle_spill_disk.yaml
+pacote-comum/scenarios/oom_on_aggregation.yaml
+pacote-comum/scenarios/cartesian_product.yaml
 ```
 
-Fluxo operacional:
+Resultado G2:
 
-```bash
-python3 generators/plan_generator.py scenarios/skew_on_join_30x.yaml /tmp/apex-synthetic.ndjson
-python3 watchers/skew_watcher.py scenarios/skew_on_join_30x.yaml /tmp/apex-synthetic.ndjson
-python3 oracle/compare.py scenarios/skew_on_join_30x.yaml /tmp/apex-synthetic.ndjson real_log.ndjson
-```
+| Cenario | Resultado esperado | Status |
+|---|---|---|
+| no skew baseline | zero warning+ | fechado |
+| skew on join | high | fechado |
+| GC pressure | critical | fechado |
+| shuffle spill disk | critical | fechado |
+| OOM aggregation | critical | fechado |
+| cartesian product | critical | fechado |
 
-Ou:
+## Seguranca Do Apply
 
-```bash
-bash run_slice.sh
-```
+O apply nao e uma edicao livre feita por agente. Ele passa por controles:
 
-## O que a v4 corrigiu
-
-| Antes | v4 corrigido |
+| Controle | Motivo |
 |---|---|
-| Sintetico gerava ratio `15392.3x` | Sintetico gera ratio `27.9x`, perto do real `29.5x` |
-| Tasks falhas, retries e speculation podiam duplicar metricas | Uma tentativa efetiva por particao |
-| Tasks zero eram removidas | Zeros preservados; mediana fria zero invalida a evidencia |
-| `read_events` carregava arquivo inteiro | `iter_events` existe; migrar Watcher e Oracle ainda esta pendente |
-| Um arquivo de log por vez | Aceita diretorio de rolling logs |
-| Stage escolhido por maior volume | Correlacao por acumuladores; fallback fica explicito |
-| Plano podia misturar execucoes | Plano associado por `executionId` |
-| Provenance parcial | `scenario_hash` compartilhado entre manifesto e log sintetico |
-| Oraculo comparava apenas volume e ratio | Tambem informa hot partition, task type e correlacao |
-| CLIs quebravam em Windows `cp1252` | Saida de status ASCII portavel |
+| Preview obrigatorio | Mostra o diff antes de alterar arquivo |
+| Approval token | Amarra aprovacao ao `job_id`, recomendacao, alvo e hashes |
+| `apply_root` | Bloqueia escrita fora do workspace permitido |
+| Hash antes/depois | Garante que o arquivo aplicado e exatamente o previsto |
+| Verify | Confirma que o arquivo final bate com o hash esperado |
+| Rerun/compare | Prova se a correcao melhorou a execucao |
 
-## Limite honesto
+## Documentacao Importante
 
-Este slice calibra o anti-pattern `skew_on_join_30x` contra um event log real
-versionado. A correlacao por acumuladores foi provada no stage 2 do log real.
-Ele ainda nao prova descoberta cega, falso positivo sem skew, processamento
-incremental ou isolamento por aplicacao. Os proximos passos estao documentados
-em `docs/apex-v4-lineage.md` e
-`docs/architecture/validation-evidence-flow.md`.
+| Documento | Uso |
+|---|---|
+| `PLANO.md` | Plano F0/F5, premissas L1-L9, gates e gaps |
+| `ISSUES.md` | Catalogo formal CODEX-001 em diante |
+| `docs/autoavaliacao.md` | Scorecard C1-C6 e Captain's Report |
+| `docs/specs/skew-slice-v4.md` | Especificacao tecnica atualizada da solucao Codex Round2 |
+| `docs/architecture/llm-solution-validation-framework-2026-07-13.md` | Comparacao entre Codex, Cowork, Kimi, Spike e DataFlint |
+| `docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html` | Apresentacao end-to-end da nossa solucao |
+| `docs/presentations/apex-codex-projeto-luan-2026-07-14.html` | Apresentacao executiva para o Luan |
+| `docs/presentations/llm-solution-validation-2026-07-13.html` | Apresentacao comparativa das solucoes |
 
-## Relacao com o Apex
+## Apresentacoes
 
-Este fork funciona como ambiente de evidencia reproduzivel. O produto Apex vive em:
-
-```text
-https://github.com/luanmorenommaciel/apex
-```
-
-Issues relacionadas: #9, #10, #16, #17, #19, #21, #23 e #25.
-
-## Relacao com AgentSpec
-
-Este slice segue o estilo do AgentSpec, projeto do Commander Luan:
+Principais arquivos para apresentar:
 
 ```text
-https://github.com/luanmorenommaciel/agentspec
+docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html
+docs/presentations/apex-codex-projeto-luan-2026-07-14.html
+docs/presentations/llm-solution-validation-2026-07-13.html
 ```
 
-Aplicamos a mesma ideia de trabalho orientado por especificacao:
+Sugestao:
+
+1. Para falar so da nossa solucao: use `apex-codex-solucao-end-to-end-2026-07-14.html`.
+2. Para explicar ao Luan em formato executivo: use `apex-codex-projeto-luan-2026-07-14.html`.
+3. Para comparar LLMs/DataFlint: use `llm-solution-validation-2026-07-13.html`.
+
+## Como Validar A Branch
+
+Os logs crus ja estao em `evidence/`. Para nova validacao completa, use os gates do pacote comum e os scripts locais.
+
+Leitura rapida:
 
 ```text
-brainstorm -> define -> design -> build -> ship
+evidence/g1-baseline.log
+evidence/g2-cenarios.log
+evidence/g3-real.log
+evidence/g4-t1.log
+evidence/g5-ciclo.log
 ```
 
-No Apex, isso aparece como:
+Suite historica:
 
-- `scenarios/skew_on_join_30x.yaml`: contrato declarativo;
-- `docs/specs/skew-slice-v4.md`: especificacao tecnica;
-- `docs/playbooks/skew-slice-v4.md`: operacao e verificacao;
-- `docs/apex-v4-lineage.md`: evidencia e linhagem;
-- `tests/test_slice.py`: quality gate executavel.
+```powershell
+python -m pytest tests -q
+```
+
+Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local por permissao no diretorio temporario do usuario. Isso foi registrado durante G5.
+
+## O Que Ainda Nao Esta Pronto
+
+| Gap | Impacto |
+|---|---|
+| SparkListener JVM real fail-safe | Ainda falta cumprir a parte real de listener da V1 |
+| `docker compose up` autonomo da branch | G3/G5 validaram contra `plat-v0`/`spv0-*`; a branch ainda nao e plataforma propria completa |
+| Crew.ai/Judge | Escalonamento LLM existe como decisao de design, nao como entrega funcional |
+| Tool `apply_fix` | O ciclo existe como `apply_recommendation`; falta alinhar nome/contrato comum |
+| IDE real | MCP stdio existe, mas ainda precisa smoke test em Cursor/VS Code/Claude Code |
+| G6 oraculo/drift | Falta agendamento/validacao continua sintetico vs real |
+
+## Aderencia Ao Pedido Do Luan
+
+| Pedido/criterio | Status |
+|---|---|
+| Baseline negativo | Cumpre |
+| Detectores oficiais | Cumpre |
+| Dado real Spark | Cumpre |
+| Latencia sem LLM | Cumpre |
+| Ciclo apply/rerun limpo | Cumpre funcionalmente |
+| ClickHouse/job_id/app_id | Parcial |
+| MCP/IDE/apply_fix | Parcial |
+| SparkListener real | Nao cumpre ainda |
+| Crew.ai/Judge | Nao cumpre ainda |
+| Plataforma Docker standalone | Parcial/nao completa |
+
+## Proximos Passos Recomendados
+
+1. Atualizar contrato MCP de `apply_recommendation` para `apply_fix`.
+2. Fazer smoke test real com cliente MCP/IDE.
+3. Integrar plataforma propria ou Spike/plat-v0 de forma controlada.
+4. Implementar SparkListener JVM real fail-safe.
+5. Promover ADRs formais para decisoes centrais.
+6. Criar G6: oraculo agendado e controle de drift.
+7. So depois expandir camada Crew.ai/Judge.
+
+## Estado De Publicacao
+
+Esta branch tem historico publicado em `campeonato/codex-round2`. Antes de publicar novas mudancas, confirme:
+
+```powershell
+git status --short --branch
+git log --oneline --decorate -5
+```
+
+Nao faca push de alteracoes novas sem revisao quando a branch remota estiver sendo avaliada.

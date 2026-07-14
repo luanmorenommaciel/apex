@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apex Codex - Solucao End-to-End</title>
+  <style>
+    :root {
+      --bg: #06111f;
+      --panel: #0f172a;
+      --panel2: #111c31;
+      --ink: #e5e7eb;
+      --muted: #a7b0c0;
+      --accent: #38bdf8;
+      --accent2: #a78bfa;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --line: #334155;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(56,189,248,.12), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(167,139,250,.10), transparent 30%),
+        var(--bg);
+      color: var(--ink);
+      font-family: Segoe UI, Inter, Arial, sans-serif;
+      line-height: 1.45;
+    }
+    main {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+    section {
+      min-height: 700px;
+      margin: 0 0 30px;
+      padding: 48px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background:
+        linear-gradient(145deg, rgba(17,24,39,.98), rgba(8,17,31,.98));
+      box-shadow: 0 24px 70px rgba(0,0,0,.30);
+      overflow: hidden;
+    }
+    h1, h2 {
+      margin: 0 0 18px;
+      color: #f8fafc;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+    }
+    h1 { font-size: 62px; max-width: 940px; }
+    h2 { font-size: 42px; }
+    h3 { color: var(--accent); margin: 24px 0 10px; font-size: 24px; }
+    p, li { font-size: 22px; }
+    .muted { color: var(--muted); }
+    .badge {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 999px;
+      color: #bae6fd;
+      background: rgba(15,23,42,.8);
+      border: 1px solid var(--line);
+      font-size: 16px;
+      margin-bottom: 22px;
+    }
+    .grid2, .grid3, .grid4 {
+      display: grid;
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(15,23,42,.78);
+    }
+    .card strong {
+      display: block;
+      color: #fff;
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+    .metric {
+      font-size: 42px;
+      color: var(--accent);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+      font-size: 18px;
+      background: rgba(15,23,42,.78);
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 12px;
+      vertical-align: top;
+    }
+    th {
+      color: #f8fafc;
+      background: #1e293b;
+    }
+    code {
+      color: #bae6fd;
+      background: #020617;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    .good { color: var(--good); font-weight: 800; }
+    .warn { color: var(--warn); font-weight: 800; }
+    .bad { color: var(--bad); font-weight: 800; }
+    .flow {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+      flex-wrap: wrap;
+      margin-top: 30px;
+    }
+    .node {
+      flex: 1 1 130px;
+      min-width: 130px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: #0b1224;
+      text-align: center;
+      font-size: 17px;
+    }
+    .node b {
+      display: block;
+      color: #fff;
+      margin-bottom: 5px;
+    }
+    .arrow {
+      align-self: center;
+      color: var(--accent);
+      font-size: 26px;
+      font-weight: 900;
+    }
+    .lane {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 0;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      margin-top: 22px;
+    }
+    .lane-label {
+      background: #1e293b;
+      padding: 16px;
+      font-weight: 800;
+    }
+    .lane-body {
+      padding: 16px;
+      background: rgba(15,23,42,.7);
+    }
+    .pill {
+      display: inline-block;
+      margin: 5px 5px 5px 0;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #0b1224;
+      font-size: 15px;
+    }
+    .statechart {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0,1fr));
+      gap: 10px;
+      align-items: center;
+      margin-top: 28px;
+    }
+    .state {
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: #0b1224;
+      text-align: center;
+      min-height: 112px;
+    }
+    .state strong { display: block; color: #fff; margin-bottom: 6px; }
+    .big-arrow { text-align: center; color: var(--accent2); font-size: 32px; font-weight: 900; }
+    .bars {
+      margin-top: 28px;
+      display: grid;
+      gap: 18px;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 230px 1fr 100px;
+      gap: 12px;
+      align-items: center;
+      font-size: 18px;
+    }
+    .bar {
+      height: 28px;
+      border-radius: 999px;
+      background: #0b1224;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+    .callout {
+      margin-top: 24px;
+      padding: 22px;
+      border-left: 5px solid var(--accent);
+      background: rgba(56,189,248,.08);
+      border-radius: 14px;
+    }
+    @media (max-width: 900px) {
+      h1 { font-size: 42px; }
+      h2 { font-size: 32px; }
+      .grid2, .grid3, .grid4, .statechart { grid-template-columns: 1fr; }
+      .arrow, .big-arrow { display: none; }
+      .lane { grid-template-columns: 1fr; }
+      section { padding: 28px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section>
+    <div class="badge">Apex Codex Round2 - solucao end-to-end</div>
+    <h1>Do problema Spark ao fix validado</h1>
+    <p class="muted">Uma solucao local-first para diagnosticar performance Spark, validar evidencia, propor correcao, aplicar com guarda, reexecutar e provar melhoria.</p>
+    <div class="grid3">
+      <div class="card"><strong>Deteccao</strong><p>5 cenarios oficiais cobertos: skew, GC, shuffle/spill, OOM e cartesian product.</p></div>
+      <div class="card"><strong>Confianca</strong><p>EvidenceValidator antes de qualquer recomendacao ou acao.</p></div>
+      <div class="card"><strong>Loop fechado</strong><p>G5 provou antes/depois em job Spark real.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Mensagem principal para o Luan</h2>
+    <div class="callout">
+      <p>Esta branch ainda nao e a V1 completa, mas ja prova a parte mais dificil do produto: sair de telemetria Spark e chegar a uma correcao aplicada com seguranca, medida e validada.</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <strong>Nao e so alerta</strong>
+        <p>O Apex nao termina dizendo "tem skew". Ele gera finding, explica evidencia, recomenda, mostra diff, aplica com token e reexecuta.</p>
+      </div>
+      <div class="card">
+        <strong>Nao depende de LLM no caminho critico</strong>
+        <p>O T1 deterministico foi medido em <span class="good">226.991 ms</span>, sem chamada obrigatoria a LLM.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Problema: o loop Spark hoje fica aberto</h2>
+    <div class="flow">
+      <div class="node"><b>Job lento</b>Spark UI/logs</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Humano interpreta</b>muitas telas</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Chute de fix</b>config/codigo</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Reexecuta</b>sem criterio comum</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Resultado incerto</b>melhorou mesmo?</div>
+    </div>
+    <p class="muted">O custo nao esta so no problema Spark. Esta na ausencia de um ciclo confiavel de diagnostico, acao e prova.</p>
+  </section>
+
+  <section>
+    <h2>Solucao: loop fechado com evidencia</h2>
+    <div class="flow">
+      <div class="node"><b>1. Event log</b>real/sintetico</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>2. Detector T1</b>sem LLM</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>3. Validator</b>evidencia</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>4. Finding</b>causa + severidade</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>5. Preview</b>diff</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>6. Apply</b>token + hash</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>7. Rerun</b>compare</div>
+    </div>
+    <div class="callout">
+      <p>O diferencial e a prova antes/depois. Sem isso, a ferramenta so muda o lugar onde o humano precisa adivinhar.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Arquitetura em camadas</h2>
+    <div class="lane">
+      <div class="lane-label">Entrada</div>
+      <div class="lane-body">
+        <span class="pill">cenarios oficiais</span>
+        <span class="pill">event log real</span>
+        <span class="pill">event log sintetico</span>
+        <span class="pill">job_id/app_id</span>
+      </div>
+      <div class="lane-label">Analise</div>
+      <div class="lane-body">
+        <span class="pill">diagnostic_mvp.py</span>
+        <span class="pill">telemetry.py</span>
+        <span class="pill">EvidenceValidator</span>
+        <span class="pill">ClickHouse adapter</span>
+      </div>
+      <div class="lane-label">Acao</div>
+      <div class="lane-body">
+        <span class="pill">recommendations.py</span>
+        <span class="pill">fix_preview.py</span>
+        <span class="pill">apply_verify.py</span>
+        <span class="pill">MCP stdio</span>
+      </div>
+      <div class="lane-label">Prova</div>
+      <div class="lane-body">
+        <span class="pill">rerun_compare.py</span>
+        <span class="pill">g3-real.log</span>
+        <span class="pill">g4-t1.log</span>
+        <span class="pill">g5-ciclo.log</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Diagrama de sequencia</h2>
+    <div class="flow">
+      <div class="node"><b>Engenheiro</b>submete job</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Spark</b>gera event log</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Apex T1</b>calcula finding</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Validator</b>aceita/bloqueia</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>MCP</b>mostra preview</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Apply</b>aplica com token</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Compare</b>prova resultado</div>
+    </div>
+    <table>
+      <tr><th>Passo</th><th>Quem age</th><th>Saida</th></tr>
+      <tr><td>1</td><td>Spark</td><td>Event log com stages/tasks/plano</td></tr>
+      <tr><td>2</td><td>Apex T1</td><td>Finding candidato com evidencia</td></tr>
+      <tr><td>3</td><td>EvidenceValidator</td><td>Finding aceito ou rejeitado</td></tr>
+      <tr><td>4</td><td>MCP/Preview</td><td>Diff revisavel</td></tr>
+      <tr><td>5</td><td>Apply guardado</td><td>Arquivo alterado com verify</td></tr>
+      <tr><td>6</td><td>Rerun/Compare</td><td>Metrica antes/depois</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Diagrama de estado do finding</h2>
+    <div class="statechart">
+      <div class="state"><strong>Candidato</strong>Detector encontrou sinal bruto</div>
+      <div class="big-arrow">→</div>
+      <div class="state"><strong>Validado</strong>Evidencia suficiente</div>
+      <div class="big-arrow">→</div>
+      <div class="state"><strong>Recomendado</strong>Runbook/fix proposto</div>
+      <div class="state"><strong>Preview</strong>Diff gerado sem alterar codigo</div>
+      <div class="big-arrow">→</div>
+      <div class="state"><strong>Aplicado</strong>Token + hash + verify</div>
+      <div class="big-arrow">→</div>
+      <div class="state"><strong>Verificado</strong>Rerun limpo ou issue aberta</div>
+    </div>
+    <p class="muted">Estados alternativos: rejeitado por evidencia fraca, bloqueado por token invalido, bloqueado por path fora do root, ou mantido aberto se o rerun nao limpar o finding.</p>
+  </section>
+
+  <section>
+    <h2>Infografico: antes/depois do caso real</h2>
+    <div class="grid2">
+      <div class="card">
+        <strong>Antes do fix</strong>
+        <p><code>app-20260712053414-0001</code></p>
+        <div class="metric">29.4x</div>
+        <p class="warn">1 finding high</p>
+        <p>Shuffle read: 1.157.481 bytes</p>
+      </div>
+      <div class="card">
+        <strong>Depois do fix</strong>
+        <p><code>app-20260712131734-0004</code></p>
+        <div class="metric">0</div>
+        <p class="good">0 findings</p>
+        <p>Shuffle read: 0 bytes</p>
+      </div>
+    </div>
+    <div class="bars">
+      <div class="bar-row"><span>Finding count antes</span><div class="bar"><div class="fill" style="width:100%"></div></div><span>1</span></div>
+      <div class="bar-row"><span>Finding count depois</span><div class="bar"><div class="fill" style="width:0%"></div></div><span>0</span></div>
+      <div class="bar-row"><span>Shuffle antes</span><div class="bar"><div class="fill" style="width:100%"></div></div><span>1.16MB</span></div>
+      <div class="bar-row"><span>Shuffle depois</span><div class="bar"><div class="fill" style="width:0%"></div></div><span>0</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Exemplo de correcao aplicada</h2>
+    <table>
+      <tr><th>Antes</th><th>Depois</th><th>Por que</th></tr>
+      <tr>
+        <td><code>spark.sql.adaptive.enabled=false</code></td>
+        <td><code>true</code></td>
+        <td>Permite AQE atuar no plano.</td>
+      </tr>
+      <tr>
+        <td><code>spark.sql.adaptive.skewJoin.enabled=false</code></td>
+        <td><code>true</code></td>
+        <td>Habilita mitigacao de skew join.</td>
+      </tr>
+      <tr>
+        <td><code>autoBroadcastJoinThreshold=-1</code></td>
+        <td><code>10485760</code></td>
+        <td>Permite broadcast do lado pequeno.</td>
+      </tr>
+      <tr>
+        <td><code>customers.hint("shuffle_merge")</code></td>
+        <td><code>broadcast(customers)</code></td>
+        <td>Remove shuffle desnecessario no caso validado.</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Aderencia ao que foi pedido pelo Luan</h2>
+    <table>
+      <tr><th>Item</th><th>Status</th><th>Evidencia/observacao</th></tr>
+      <tr><td>Pipeline T1/T2/acao</td><td class="warn">parcial forte</td><td>T1, recommend, preview, apply e rerun existem; Crew.ai ainda nao.</td></tr>
+      <tr><td>ClickHouse/job_id/app_id</td><td class="warn">parcial</td><td>Adapters e schema local existem; plataforma propria ainda precisa amadurecer.</td></tr>
+      <tr><td>Baseline negativo</td><td class="good">cumpre</td><td>G1 limpo.</td></tr>
+      <tr><td>Detectores oficiais</td><td class="good">cumpre</td><td>G2 nos 5 cenarios problematicos + baseline.</td></tr>
+      <tr><td>Dado real</td><td class="good">cumpre</td><td>G3 com app novo e 8 tasks reais.</td></tr>
+      <tr><td>Latencia sem LLM</td><td class="good">cumpre</td><td>G4: 226.991 ms.</td></tr>
+      <tr><td>apply_fix no IDE</td><td class="warn">parcial</td><td>Funcionalmente existe apply guardado, mas nome/IDE real ainda faltam.</td></tr>
+      <tr><td>Loop limpo apos fix</td><td class="good">cumpre</td><td>G5: finding 1 -> 0 e shuffle 1.16MB -> 0.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Seguranca e governanca</h2>
+    <div class="grid4">
+      <div class="card"><strong>Diff primeiro</strong><p>Preview nao altera arquivo.</p></div>
+      <div class="card"><strong>Token</strong><p>Aprovacao amarrada ao alvo e aos hashes.</p></div>
+      <div class="card"><strong>Root</strong><p>Bloqueio fora do workspace autorizado.</p></div>
+      <div class="card"><strong>Verify</strong><p>Confirma hash final esperado.</p></div>
+    </div>
+    <div class="callout">
+      <p>Autonomia aqui nao significa "deixar o agente solto". Significa permitir acao somente quando ha evidencia, diff, escopo, token e verificacao.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Diferenciais da nossa solucao</h2>
+    <div class="grid3">
+      <div class="card"><strong>Local-first</strong><p>O caminho critico roda local e nao exige SaaS.</p></div>
+      <div class="card"><strong>Auditavel</strong><p>Cada gate deixa log cru e referencia de app_id/job_id.</p></div>
+      <div class="card"><strong>Deterministico</strong><p>T1 funciona sem chamada obrigatoria a LLM.</p></div>
+      <div class="card"><strong>Seguro</strong><p>Apply com preview, token, hash, root e verify.</p></div>
+      <div class="card"><strong>Comparavel</strong><p>Usa cenarios oficiais e severidades esperadas.</p></div>
+      <div class="card"><strong>Fechado</strong><p>Prova melhoria apos rerun, nao apenas alerta.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>O que ainda falta</h2>
+    <table>
+      <tr><th>Gap</th><th>Impacto</th><th>Acao</th></tr>
+      <tr><td>SparkListener JVM real fail-safe</td><td>Completar L3/L1</td><td>Implementar listener/bridge real e teste de falha.</td></tr>
+      <tr><td>Docker/Compose autonomo</td><td>Completar fundacao V1</td><td>Integrar plataforma propria ou Spike/plat-v0 de forma controlada.</td></tr>
+      <tr><td><code>apply_fix</code> MCP real</td><td>Alinhar contrato do Luan</td><td>Renomear/compatibilizar tool e validar com cliente MCP.</td></tr>
+      <tr><td>IDE real</td><td>Provar UX</td><td>Smoke test em Cursor/VS Code/Claude Code.</td></tr>
+      <tr><td>Crew.ai/Judge opcional</td><td>Completar camada agentica</td><td>Entrar so depois do T1/validator/schema ficarem estaveis.</td></tr>
+      <tr><td>G6 oraculo/drift</td><td>Controle continuo</td><td>Agendar comparacao sintetico vs real.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Proximos passos recomendados</h2>
+    <div class="flow">
+      <div class="node"><b>1</b>Formalizar README da branch</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>2</b>Alinhar apply_fix MCP</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>3</b>Smoke test IDE</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>4</b>Docker/Compose V1</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>5</b>SparkListener real</div>
+      <div class="arrow">→</div>
+      <div class="node"><b>6</b>G6 drift/oraculo</div>
+    </div>
+    <p class="muted">Minha recomendacao: nao expandir LLM/agentico antes de preservar a linha verde G0-G5. A fundacao precisa continuar passando.</p>
+  </section>
+
+  <section>
+    <h2>Decisao pedida ao Commander</h2>
+    <div class="grid2">
+      <div class="card">
+        <strong>Opcao A - Fundacao V1 primeiro</strong>
+        <p>Docker/Compose autonomo, SparkListener real, ClickHouse canonico, depois UX.</p>
+      </div>
+      <div class="card">
+        <strong>Opcao B - Produto/IDE primeiro</strong>
+        <p>Alinhar <code>apply_fix</code>, validar MCP em IDE real e melhorar experiencia de uso.</p>
+      </div>
+    </div>
+    <div class="callout">
+      <p>Recomendacao Codex: Opcao A. A UX fica mais forte quando a base de telemetria, listener e schema estao estabilizados.</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apex Codex Round2 - Apresentacao para Luan</title>
+  <style>
+    :root {
+      --bg: #08111f;
+      --panel: #0f172a;
+      --ink: #e5e7eb;
+      --muted: #a3aab8;
+      --accent: #38bdf8;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --line: #334155;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Segoe UI, Inter, Arial, sans-serif;
+      line-height: 1.45;
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+    section {
+      min-height: 690px;
+      margin: 0 0 30px;
+      padding: 46px;
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at top right, rgba(56,189,248,.18), transparent 32%),
+        linear-gradient(145deg, #111827, #08111f);
+      box-shadow: 0 24px 70px rgba(0,0,0,.28);
+    }
+    h1, h2 {
+      margin: 0 0 18px;
+      letter-spacing: -0.035em;
+      color: #f8fafc;
+    }
+    h1 { font-size: 58px; max-width: 920px; }
+    h2 { font-size: 40px; }
+    h3 { color: var(--accent); margin: 22px 0 8px; }
+    p, li { font-size: 22px; }
+    .muted { color: var(--muted); }
+    .badge {
+      display: inline-block;
+      padding: 8px 13px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(15,23,42,.72);
+      color: #bae6fd;
+      font-size: 16px;
+      margin-bottom: 22px;
+    }
+    .grid2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 18px;
+      margin-top: 24px;
+    }
+    .grid3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(15,23,42,.82);
+    }
+    .card strong {
+      display: block;
+      font-size: 22px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+      font-size: 18px;
+      background: rgba(15,23,42,.72);
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 12px;
+      vertical-align: top;
+    }
+    th { background: #1e293b; color: #f8fafc; }
+    .good { color: var(--good); font-weight: 800; }
+    .warn { color: var(--warn); font-weight: 800; }
+    .bad { color: var(--bad); font-weight: 800; }
+    .flow {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+      flex-wrap: wrap;
+      margin-top: 28px;
+    }
+    .node {
+      flex: 1 1 135px;
+      min-width: 135px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #0b1224;
+      text-align: center;
+      font-size: 18px;
+    }
+    .arrow {
+      align-self: center;
+      color: var(--accent);
+      font-size: 26px;
+      font-weight: 900;
+    }
+    code {
+      background: #020617;
+      color: #bae6fd;
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section>
+    <div class="badge">Apex Codex Round2 - 2026-07-14</div>
+    <h1>Do alerta Spark ao fix validado com evidencia</h1>
+    <p class="muted">Uma esteira local para diagnosticar problemas Spark, propor correcao com guarda, reexecutar o job e provar melhoria antes/depois.</p>
+    <div class="grid2">
+      <div class="card"><strong>Mensagem para o Commander</strong><p>O projeto ainda nao e a V1 completa, mas ja prova o loop funcional mais importante.</p></div>
+      <div class="card"><strong>Resultado forte</strong><p>G0-G5 fechados com evidencia real: baseline, 5 detectores, dado real, latencia e apply/rerun.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Problema que estamos resolvendo</h2>
+    <p>Spark gera muita telemetria, mas o engenheiro ainda precisa transformar metricas em causa, correcao e validacao manual.</p>
+    <div class="grid3">
+      <div class="card"><strong>Diagnostico lento</strong><p>Skew, spill, GC e OOM aparecem espalhados em logs, UI e planos.</p></div>
+      <div class="card"><strong>Risco de chute</strong><p>Sem validator, a recomendacao pode nascer de sinal fraco.</p></div>
+      <div class="card"><strong>Loop aberto</strong><p>Detectar sem reexecutar e comparar nao prova que a correcao funcionou.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>O que o projeto faz hoje</h2>
+    <div class="flow">
+      <div class="node">Event log Spark</div><div class="arrow">→</div>
+      <div class="node">Detector T1</div><div class="arrow">→</div>
+      <div class="node">EvidenceValidator</div><div class="arrow">→</div>
+      <div class="node">Finding</div><div class="arrow">→</div>
+      <div class="node">Preview diff</div><div class="arrow">→</div>
+      <div class="node">Apply guardado</div><div class="arrow">→</div>
+      <div class="node">Rerun + compare</div>
+    </div>
+    <p>Essa e a diferenca central: o Apex nao para no alerta. Ele fecha o ciclo com evidencia antes/depois.</p>
+  </section>
+
+  <section>
+    <h2>Arquitetura atual</h2>
+    <table>
+      <tr><th>Camada</th><th>Componente</th><th>Funcao</th></tr>
+      <tr><td>Telemetria</td><td><code>telemetry.py</code>, ClickHouse adapters</td><td>Normaliza app_id, job_id, stages, tasks e planos.</td></tr>
+      <tr><td>Diagnostico</td><td><code>diagnostic_mvp.py</code></td><td>Detecta skew, GC, shuffle/spill, OOM e cartesian product.</td></tr>
+      <tr><td>Confianca</td><td><code>evidence_validator.py</code></td><td>Valida qualidade da evidencia antes de recomendar.</td></tr>
+      <tr><td>Acao</td><td><code>fix_preview.py</code>, <code>apply_verify.py</code></td><td>Gera diff, exige token, verifica hash e aplica com guarda.</td></tr>
+      <tr><td>Fechamento</td><td><code>rerun_compare.py</code></td><td>Reexecuta e compara metricas antes/depois.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Evidencias G0-G5</h2>
+    <table>
+      <tr><th>Gate</th><th>Status</th><th>Evidencia</th></tr>
+      <tr><td>G1</td><td class="good">limpo</td><td>Baseline saudavel sem finding warning+.</td></tr>
+      <tr><td>G2</td><td class="good">limpo</td><td>5 cenarios oficiais bateram severidade esperada.</td></tr>
+      <tr><td>G3</td><td class="good">real</td><td>Job Spark real multicore, ratio 29.4x, app novo.</td></tr>
+      <tr><td>G4</td><td class="good">226.991 ms</td><td>T1 deterministico abaixo de 1s, sem LLM obrigatoria.</td></tr>
+      <tr><td>G5</td><td class="good">loop fechado</td><td>Finding 1/high -> 0; shuffle read 1.157.481 bytes -> 0.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Caso de uso: skew em join</h2>
+    <div class="grid2">
+      <div class="card">
+        <strong>Antes</strong>
+        <p><code>app-20260712053414-0001</code></p>
+        <p>Finding: <span class="warn">shuffle_skew_candidate high</span></p>
+        <p>Ratio: 29.4x<br>Shuffle read: 1.157.481 bytes</p>
+      </div>
+      <div class="card">
+        <strong>Depois</strong>
+        <p><code>app-20260712131734-0004</code></p>
+        <p>Finding: <span class="good">0</span></p>
+        <p>Ratio valido: 0<br>Shuffle read: 0 bytes</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Seguranca do apply</h2>
+    <div class="grid3">
+      <div class="card"><strong>Preview obrigatorio</strong><p>Nada e aplicado sem diff revisavel.</p></div>
+      <div class="card"><strong>Approval token</strong><p>Token amarra job, recomendacao, target e hashes.</p></div>
+      <div class="card"><strong>Verify</strong><p>Hash final precisa bater com o esperado.</p></div>
+    </div>
+    <p>Essa e a resposta para o risco agentico: autonomia com cerca, evidencia e trilha de auditoria.</p>
+  </section>
+
+  <section>
+    <h2>Onde ainda nao estamos</h2>
+    <table>
+      <tr><th>Gap</th><th>Por que importa</th></tr>
+      <tr><td>SparkListener JVM real</td><td>Hoje a prova usa event log/template; falta listener fail-safe real.</td></tr>
+      <tr><td>Compose autonomo da branch</td><td>G3/G5 validaram contra plat-v0/spv0 existente.</td></tr>
+      <tr><td>Crew.ai/Judge</td><td>Escalonamento LLM continua como design, nao entrega.</td></tr>
+      <tr><td><code>apply_fix</code> MCP real</td><td>Funcionalmente existe apply, mas o contrato ainda se chama <code>apply_recommendation</code>.</td></tr>
+      <tr><td>IDE real</td><td>MCP stdio existe, mas ainda precisa smoke test em Cursor/VS Code/Claude Code.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Pedido para o Commander</h2>
+    <p>Decidir a proxima prioridade:</p>
+    <div class="grid2">
+      <div class="card"><strong>Opcao A: Fundacao V1</strong><p>Plataforma propria, Docker/Compose, SparkListener real, ClickHouse canonico.</p></div>
+      <div class="card"><strong>Opcao B: Produto/IDE</strong><p>Alinhar <code>apply_fix</code>, validar MCP em IDE real e melhorar experiencia de uso.</p></div>
+    </div>
+    <p class="muted">Minha recomendacao: primeiro fundacao V1, mantendo G0-G5 como gates para nao perder a evidencia que ja conquistamos.</p>
+  </section>
+</main>
+</body>
+</html>
