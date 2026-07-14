@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apex - Comparacao Solucoes LLM - 2026-07-13</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --ink: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --line: #334155;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      line-height: 1.45;
+    }
+    .deck {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+    section {
+      min-height: 680px;
+      margin: 0 0 28px;
+      padding: 44px;
+      background: linear-gradient(145deg, #111827, #0b1224);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+    h1, h2 {
+      margin: 0 0 18px;
+      letter-spacing: -0.03em;
+    }
+    h1 { font-size: 56px; }
+    h2 { font-size: 38px; color: #f8fafc; }
+    h3 { color: var(--accent); margin-top: 24px; }
+    p, li { font-size: 22px; color: var(--ink); }
+    .muted { color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 24px;
+    }
+    .cards3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(15, 23, 42, .8);
+    }
+    .card strong {
+      color: #fff;
+      font-size: 22px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+      font-size: 18px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 12px;
+      vertical-align: top;
+    }
+    th {
+      background: #1e293b;
+      color: #f8fafc;
+    }
+    .score { font-weight: 800; color: var(--accent); }
+    .good { color: var(--good); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+    .flow {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+    .node {
+      flex: 1 1 150px;
+      min-width: 150px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+      background: #0f172a;
+      text-align: center;
+      font-size: 18px;
+    }
+    .arrow {
+      align-self: center;
+      color: var(--accent);
+      font-size: 28px;
+    }
+    code {
+      color: #bae6fd;
+      background: #020617;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+<main class="deck">
+  <section>
+    <h1>Apex V1: comparacao das solucoes LLM</h1>
+    <p class="muted">Atualizado em 2026-07-13. Branches: Claude/Cowork, Kimi, Codex, Agmar/Spike e DataFlint como benchmark.</p>
+    <div class="grid">
+      <div class="card"><strong>Decisao central</strong><p>Nao existe uma branch unica perfeita. A V1 mais forte e uma composicao controlada.</p></div>
+      <div class="card"><strong>Regra do jogo</strong><p>So entra componente que passa pelos gates comuns e preserva evidencia crua.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Mapa rapido</h2>
+    <table>
+      <tr><th>Solucao</th><th>Melhor coisa</th><th>Principal problema</th></tr>
+      <tr><td>Codex Round2</td><td>G0-G5 com evidencia real</td><td>Ainda nao e plataforma completa</td></tr>
+      <tr><td>Claude/Cowork</td><td>MCP + apply_fix + UX</td><td>Dependencia de LLM e poucos detectores</td></tr>
+      <tr><td>Kimi</td><td>Go, validator, runbooks</td><td>Produto ponta a ponta fraco</td></tr>
+      <tr><td>Agmar/Spike</td><td>Infra real Spark/MinIO/ClickHouse/HyperDX</td><td>Sem loop apply_fix validado</td></tr>
+      <tr><td>DataFlint</td><td>Benchmark de produto e agentes Spark</td><td>Produto externo/proprietario</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Scorecard C1-C6</h2>
+    <table>
+      <tr><th>Solucao</th><th>C1</th><th>C2</th><th>C3</th><th>C4</th><th>C5</th><th>C6</th><th>Total</th></tr>
+      <tr><td>DataFlint</td><td>4</td><td>5</td><td>4</td><td>5</td><td>4</td><td>3</td><td class="score">25/30</td></tr>
+      <tr><td>Codex Round2</td><td>2</td><td>5</td><td>4</td><td>3</td><td>4</td><td>5</td><td class="score">23/30</td></tr>
+      <tr><td>Agmar/Spike</td><td>4</td><td>5</td><td>3</td><td>1</td><td>4</td><td>3</td><td class="score">20/30</td></tr>
+      <tr><td>Claude/Cowork</td><td>3</td><td>2</td><td>3</td><td>5</td><td>4</td><td>2</td><td class="score">19/30</td></tr>
+      <tr><td>Kimi</td><td>3</td><td>2</td><td>2</td><td>1</td><td>3</td><td>4</td><td class="score">15/30</td></tr>
+      <tr><td>Codex antiga</td><td>1</td><td>1</td><td>3</td><td>0</td><td>3</td><td>4</td><td class="score">12/30</td></tr>
+    </table>
+    <p class="muted">Nota: DataFlint pontua como benchmark externo, nao como codigo Apex mergeavel.</p>
+  </section>
+
+  <section>
+    <h2>Fluxo alvo</h2>
+    <div class="flow">
+      <div class="node">Spark job real</div><div class="arrow">→</div>
+      <div class="node">Event log MinIO</div><div class="arrow">→</div>
+      <div class="node">Loader Go</div><div class="arrow">→</div>
+      <div class="node">ClickHouse</div><div class="arrow">→</div>
+      <div class="node">T1 + Validator</div><div class="arrow">→</div>
+      <div class="node">MCP/IDE</div><div class="arrow">→</div>
+      <div class="node">apply_fix guardado</div><div class="arrow">→</div>
+      <div class="node">rerun + compare</div>
+    </div>
+    <p>O diferencial do Apex e fechar o loop com evidencia: detectar, propor, aplicar com seguranca, reexecutar e provar melhoria.</p>
+  </section>
+
+  <section>
+    <h2>DataFlint como norte</h2>
+    <div class="cards3">
+      <div class="card"><strong>Copilot IDE</strong><p>Contexto real de producao dentro do editor.</p></div>
+      <div class="card"><strong>Spark MCP</strong><p>Logs enriquecidos servidos para agentes.</p></div>
+      <div class="card"><strong>Fleet Observability</strong><p>Visao de custo e performance por frota.</p></div>
+    </div>
+    <h3>Como Apex supera</h3>
+    <p>Open source, local-first, thresholds auditaveis, EvidenceValidator versionado e apply guardado com diff/hash/token/rerun.</p>
+  </section>
+
+  <section>
+    <h2>O que testar antes de merge</h2>
+    <table>
+      <tr><th>Gate</th><th>Prova</th><th>Bloqueia merge se...</th></tr>
+      <tr><td>G0</td><td>Testes limpos</td><td>falhar build/test</td></tr>
+      <tr><td>G1</td><td>Baseline saudavel</td><td>qualquer warning falso positivo</td></tr>
+      <tr><td>G2</td><td>6 cenarios oficiais</td><td>severidade nao bater</td></tr>
+      <tr><td>G3</td><td>Event log real novo</td><td>nao tiver ratio real comparavel</td></tr>
+      <tr><td>G4</td><td>T1 menor que 1s</td><td>chamar LLM no caminho obrigatorio</td></tr>
+      <tr><td>G5</td><td>apply -> rerun -> limpo</td><td>nao provar metrica antes/depois</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Recomendacao</h2>
+    <p><code>Apex V1 = Spike platform + Codex gates/evidence + Cowork apply_fix UX + Kimi validator/runbooks + DataFlint product benchmark</code></p>
+    <div class="grid">
+      <div class="card"><strong>Primeiro passo</strong><p>Integrar Spike platform mantendo Codex G0-G5 como linha de aceitacao.</p></div>
+      <div class="card"><strong>Segundo passo</strong><p>Formalizar <code>apply_fix</code> via MCP com preview, token, verify e rerun.</p></div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
