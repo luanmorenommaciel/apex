@@ -21,4 +21,5 @@ htmlcov/
 # OS / editor junk
 .DS_Store
 *.swp
+*.code-workspace
 

@@ -1,0 +1,6 @@
+# OS / editor junk
+.DS_Store
+*.swp
+
+# VS Code multi-root workspace files (local, per-developer)
+*.code-workspace

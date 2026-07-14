@@ -1,4 +1,4 @@
-from apex_diagnostics.config import DiagnosticsThresholds
+from apex_diagnostics.config import DiagnosticsThresholds, load_plan_patterns
 from apex_diagnostics.detectors import run_all
 from apex_diagnostics.detectors.gc import GC_SQL, detect_gc
 from apex_diagnostics.detectors.oom import OOM_SQL, detect_oom
@@ -116,6 +116,37 @@ def test_plans_flags_pattern_in_adaptive_plan_only():
     assert [f.severity for f in findings] == [Severity.WARNING]
     assert findings[0].evidence["pattern"] == "BroadcastNestedLoopJoin"
     assert findings[0].execution_id == 7
+
+
+def test_plan_patterns_loaded_from_config_yaml():
+    """Seam 1b: the plan-pattern catalog is externalized to
+    src/config/anti_patterns.yaml, not a hardcoded list. Loading it yields the
+    implemented plan-text patterns with severities coerced to the enum."""
+    patterns = load_plan_patterns()
+    by_name = {p.name: p for p in patterns}
+    assert {"CartesianProduct", "BroadcastNestedLoopJoin", "groupByKey"} <= set(by_name)
+    assert by_name["CartesianProduct"].severity is Severity.CRITICAL
+    assert by_name["BroadcastNestedLoopJoin"].severity is Severity.WARNING
+    assert by_name["groupByKey"].severity is Severity.WARNING
+    assert by_name["CartesianProduct"].id == "ANTI-001"
+
+
+def test_plans_flags_groupbykey_from_config():
+    """A pattern added purely via YAML (no detector code change) is detected,
+    proving the catalog drives detection. The finding carries its catalog id."""
+    plan = "== Physical Plan ==\nMapGroups groupByKey(value)\n+- Exchange hashpartitioning"
+    client = FakeCHClient(
+        {
+            PLANS_SQL: [],
+            PLAN_TEXT_SQL: [{"execution_id": 9, "physical_plan": plan}],
+            ADAPTIVE_PLAN_TEXT_SQL: [],
+        }
+    )
+    findings = detect_plans(client, APP, THRESHOLDS.plans)
+    assert [f.severity for f in findings] == [Severity.WARNING]
+    assert findings[0].evidence["pattern"] == "groupByKey"
+    assert findings[0].evidence["anti_pattern_id"] == "ANTI-003"
+    assert findings[0].execution_id == 9
 
 
 def gc_row(stage_id=1, gc_ms=3000, total_ms=10000, max_gc_ms=800, n_tasks=8, stage_attempt_id=0):

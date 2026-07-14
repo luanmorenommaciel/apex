@@ -68,8 +68,8 @@ make removeimage  # remove local project images; keep downloaded caches
 
 ![apex_diagnostics engine: ClickHouse observability tables fan out to five deterministic detectors (skew, shuffle, plans, gc, oom) that converge into typed Pydantic findings; a CREW_LLM_MODEL decision routes either to the CrewAI Crew A (Diagnostic Analyst then Recommendation Writer producing spark.conf recommendations) or to a detectors-only report, both persisting to the spark_diagnostic_reports table](apex-v0.1/docs/diagrams/diagnostics-engine.png)
 
-- **Deterministic detectors** emit typed Pydantic findings from parameterized SQL: skew stragglers, shuffle volume with memory/disk spill and GC, AQE re-plan counts, plus GC and OOM signals. Thresholds live in [`src/config/diagnostics.yaml`](apex-v0.1/src/config/diagnostics.yaml) — tuning is a YAML edit.
-- **Optional LLM layer** — a CrewAI crew (Diagnostic Analyst → Recommendation Writer) writes `spark.conf` recommendations when `CREW_LLM_MODEL` and a provider API key are set. Without them, reports degrade to detectors-only output instead of failing.
+- **Deterministic detectors** emit typed Pydantic findings from parameterized SQL: skew stragglers, shuffle volume with memory/disk spill and GC, AQE re-plan counts, plus GC and OOM signals. Thresholds live in [`src/config/diagnostics.yaml`](apex-v0.1/src/config/diagnostics.yaml) and the plan-text anti-pattern catalog (`CartesianProduct`, `BroadcastNestedLoopJoin`, `groupByKey`, …) in [`src/config/anti_patterns.yaml`](apex-v0.1/src/config/anti_patterns.yaml) — tuning or adding a plan pattern is a YAML edit, not a code change.
+- **Optional LLM layer** — a CrewAI crew (Diagnostic Analyst → Recommendation Writer) writes `spark.conf` recommendations when `CREW_LLM_MODEL` and a provider API key are set. The writer is grounded in a validated conf catalog ([`src/config/conf_recommendations.yaml`](apex-v0.1/src/config/conf_recommendations.yaml)) so it reuses vetted keys/values per finding instead of inventing them. Without a model, reports degrade to detectors-only output instead of failing.
 
 ```bash
 make workloads              # run synthetic problem jobs that trigger findings
@@ -100,8 +100,8 @@ apex-v0.1/                           # the platform (run all commands here)
 │   │   ├── apps/sample_scripts/     # landing -> bronze -> sanity sample flow
 │   │   ├── workloads/               # synthetic problem jobs for diagnostics
 │   │   ├── apex_diagnostics/        # detectors, CrewAI crew, MCP server, report store
-│   │   └── config/                  # lakehouse.yaml + diagnostics.yaml
-│   ├── tests/                       # pytest suites (fake Spark + fake ClickHouse)
+│   │   └── config/                  # lakehouse.yaml, diagnostics.yaml, anti_patterns.yaml, conf_recommendations.yaml
+│   ├── tests/                       # pytest suites (fake Spark + fake ClickHouse; tests/e2e = ground-truth)
 │──-└── docs/                        # architecture, operations, observability guides
 ```
 
@@ -120,6 +120,8 @@ Tests are managed with `uv` from the project root. Fast IO tests use fake Spark 
 cd apex-v0.1
 make tests
 ```
+
+`make validate-detectors` closes the full loop against the running stack: it runs the problem workloads, ingests + diagnoses them, then asserts each detector actually fired at the expected severity. These ground-truth tests live in [`tests/e2e/`](apex-v0.1/tests/e2e/), are marked `e2e`, and are opt-in via `APEX_E2E=1`, so the default `make tests` never reaches ClickHouse.
 
 ## Notes
 

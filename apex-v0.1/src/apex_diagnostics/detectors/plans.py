@@ -1,5 +1,5 @@
 from apex_diagnostics.clickhouse import CHClient
-from apex_diagnostics.config import PlanThresholds
+from apex_diagnostics.config import PlanThresholds, load_plan_patterns
 from apex_diagnostics.models import Finding, Severity
 
 PLANS_SQL = """
@@ -32,18 +32,11 @@ WHERE app_id = {app_id:String}
 ORDER BY execution_id
 """
 
-PLAN_PATTERNS = [
-    (
-        "CartesianProduct",
-        Severity.CRITICAL,
-        "produto cartesiano (cross join sem chave) — custo cresce com N*M",
-    ),
-    (
-        "BroadcastNestedLoopJoin",
-        Severity.WARNING,
-        "nested-loop join broadcast — geralmente um join sem condição de igualdade",
-    ),
-]
+# Loaded once from src/config/anti_patterns.yaml (Seam 1b). Previously a
+# hardcoded list; externalizing it means a new plan-text pattern is a YAML edit,
+# not a code change, and the catalog stays in sync with the KB spec
+# (.claude/kb/spark/specs/anti-patterns.yaml).
+PLAN_PATTERNS = load_plan_patterns()
 
 
 def detect_plans(client: CHClient, app_id: str, thresholds: PlanThresholds) -> list[Finding]:
@@ -71,17 +64,17 @@ def detect_plans(client: CHClient, app_id: str, thresholds: PlanThresholds) -> l
         for row in client.query(sql, {"app_id": app_id}):
             execution_id = int(row["execution_id"])
             plan_text = str(row["physical_plan"])
-            for pattern, severity, explanation in PLAN_PATTERNS:
-                if pattern in plan_text and (execution_id, pattern) not in seen:
-                    seen.add((execution_id, pattern))
+            for pattern in PLAN_PATTERNS:
+                if pattern.signal in plan_text and (execution_id, pattern.name) not in seen:
+                    seen.add((execution_id, pattern.name))
                     findings.append(
                         Finding(
                             detector="plans",
-                            severity=severity,
+                            severity=pattern.severity,
                             app_id=app_id,
                             execution_id=execution_id,
-                            title=f"SQL execution {execution_id}: plano contém {pattern} — {explanation}",
-                            evidence={"pattern": pattern},
+                            title=f"SQL execution {execution_id}: plano contém {pattern.name} — {pattern.explanation}",
+                            evidence={"pattern": pattern.name, "anti_pattern_id": pattern.id},
                         )
                     )
     return findings

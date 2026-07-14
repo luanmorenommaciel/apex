@@ -4,7 +4,8 @@ from typing import Any
 from spark_platform.utils.logger import logger
 
 from apex_diagnostics.clickhouse import CHClient
-from apex_diagnostics.config import DiagnosticsThresholds
+from apex_diagnostics.config import DiagnosticsThresholds, load_conf_recommendations
+from apex_diagnostics.crew.recommendations import build_recommendation_grounding
 from apex_diagnostics.crew.tools import build_detector_tools
 from apex_diagnostics.models import DiagnosticReport, Finding
 
@@ -71,14 +72,27 @@ def run_crew(
         ),
         expected_output="A ranked root-cause analysis referencing finding evidence values.",
     )
+    # Seam 2: ground the writer in the validated conf catalog so recommendations
+    # use consistent spark.conf keys/values instead of the LLM inventing them per
+    # run. Grounding is best-effort — an empty/missing catalog degrades to the
+    # ungrounded prompt rather than failing (mirrors the detectors-only fallback).
+    writer_description = (
+        f"Write the final diagnostic report for '{app_id}'. Include a concise summary, keep the "
+        "original findings unchanged, and add at least one concrete recommendation per warning or "
+        "critical finding with an exact spark.conf key and suggested value. Set status to 'full'."
+    )
+    grounding = build_recommendation_grounding(findings, load_conf_recommendations())
+    if grounding:
+        writer_description += (
+            "\n\nGround each recommendation in this validated conf catalog — use these exact "
+            "spark.conf keys and values, set related_stage_ids from the finding being fixed, and "
+            "do not invent keys that are not listed here:\n" + grounding
+        )
+
     report = Task(
         agent=writer,
         context=[analyze],
-        description=(
-            f"Write the final diagnostic report for '{app_id}'. Include a concise summary, keep the "
-            "original findings unchanged, and add at least one concrete recommendation per warning or "
-            "critical finding with an exact spark.conf key and suggested value. Set status to 'full'."
-        ),
+        description=writer_description,
         expected_output="A DiagnosticReport object with summary, findings, and recommendations.",
         output_pydantic=DiagnosticReport,
     )

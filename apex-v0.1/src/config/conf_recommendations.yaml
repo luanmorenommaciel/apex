@@ -1,0 +1,82 @@
+# Spark conf recommendation grounding map (Seam 2).
+#
+# Runtime-loadable and packaged into the Spark image via src/, mirroring
+# diagnostics.yaml / anti_patterns.yaml. crew/recommendations.py loads this and
+# builds a grounding block that crew/pipeline.py injects into the Recommendation
+# Writer agent's task, so the LLM attaches consistent, validated spark.conf
+# keys/values per (detector, severity[, pattern]) instead of inventing them.
+#
+# Human source-of-truth and richer rationale (with fallback/secondary tuning):
+#   .claude/kb/spark/specs/conf-recommendations.yaml
+#
+# Shape mirrors apex_diagnostics.models.Recommendation
+# (conf_key, suggested_value, rationale); related_stage_ids is filled per
+# finding at report time, not here. A null conf_key means "no conf fix — code
+# review"; the grounding block still surfaces the rationale.
+
+version: "1.0"
+
+recommendations:
+
+  - detector: skew
+    severity: warning
+    conf_key: spark.sql.adaptive.skewJoin.enabled
+    suggested_value: "true"
+    rationale: "Ratio 3.0x-5.99x — AQE skew join splits the skewed partition at runtime with no code change (needs spark.sql.adaptive.enabled=true)."
+
+  - detector: skew
+    severity: critical
+    conf_key: spark.sql.autoBroadcastJoinThreshold
+    suggested_value: "209715200"
+    rationale: "Ratio >= 6.0x — if the non-skewed side is under ~200 MiB, broadcast promotion avoids the skewed shuffle. Fallback for extreme ratios: salt_join with salt_buckets = ratio/2 (cap 200), then broadcast the salted small side."
+
+  - detector: shuffle
+    severity: warning
+    conf_key: spark.sql.shuffle.partitions
+    suggested_value: "800"
+    rationale: "shuffle_bytes > 256 MiB or memory spill without disk spill — default 200 partitions are likely oversized; recompute from evidence.shuffle_bytes / 128 MiB target."
+
+  - detector: shuffle
+    severity: critical
+    conf_key: spark.memory.fraction
+    suggested_value: "0.7"
+    rationale: "Disk spill (or shuffle_bytes > 1 GiB) — execution memory exhausted; raise the execution+storage fraction before raw executor.memory. Secondary if spill persists: spark.executor.memory=8g."
+
+  - detector: gc
+    severity: warning
+    conf_key: spark.executor.memory
+    suggested_value: "8g"
+    rationale: "gc_ratio 10-19.9% — heap under moderate pressure; raise heap before off-heap changes."
+
+  - detector: gc
+    severity: critical
+    conf_key: spark.memory.offHeap.enabled
+    suggested_value: "true"
+    rationale: "gc_ratio >= 20% — heap-only tuning insufficient; move buffers off-heap. Required alongside: spark.memory.offHeap.size=4g."
+
+  - detector: oom
+    severity: critical
+    conf_key: spark.executor.memoryOverhead
+    suggested_value: "2g"
+    rationale: "Any OOM/lost-executor task is critical; memoryOverhead covers off-heap/native+container overhead (the typical gap for ExecutorLostFailure). If sample_reason mentions OutOfMemoryError (JVM heap), also raise spark.executor.memory=8g."
+
+  - detector: plans
+    severity: critical
+    pattern_match: CartesianProduct
+    conf_key: null
+    suggested_value: null
+    rationale: "Not a conf fix — a cross join with no key requires an explicit join condition; recommend a code review of the join predicate."
+
+  - detector: plans
+    severity: warning
+    pattern_match: BroadcastNestedLoopJoin
+    conf_key: spark.sql.autoBroadcastJoinThreshold
+    suggested_value: "-1"
+    rationale: "Temporarily disable auto-broadcast to confirm the nested-loop join stems from a missing equality condition, then fix the join predicate."
+
+  - detector: plans
+    severity: warning
+    pattern_match: groupByKey
+    conf_key: null
+    suggested_value: null
+    rationale: "Not a conf fix — replace groupByKey with reduceByKey/aggregateByKey or DataFrame groupBy().agg() to pre-aggregate per partition before the shuffle."

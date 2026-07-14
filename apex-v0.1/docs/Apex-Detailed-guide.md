@@ -279,15 +279,25 @@ recorded completion" alerts read exactly these conditions.
 
 `src/apex_diagnostics/detectors/` runs parameterized, pure SQL (**the LLM never
 writes SQL**) and emits typed findings (Pydantic). Thresholds and guards live in
-`src/config/diagnostics.yaml` — calibrating is a YAML edit:
+`src/config/diagnostics.yaml`, and the plan-text anti-pattern catalog in
+`src/config/anti_patterns.yaml` — calibrating a threshold or adding a plan pattern
+is a YAML edit:
 
 | Detector | Rule (summary) | Anti-false-positive guards |
 |----------|----------------|----------------------------|
 | `skew` | slowest task ÷ median ≥ 3 (warning) / ≥ 6 (critical) per stage | stage with ≥ 8 tasks **AND** slowest task ≥ 5 s |
 | `shuffle` | memory spill > 0 or shuffle > 256 MiB (warning); **disk spill > 0** or > 1 GiB (critical) | stage shuffle ≥ 16 MiB |
-| `plans` | ≥ 3 AQE re-plans (info); physical-plan analysis: `CartesianProduct` (critical), `BroadcastNestedLoopJoin` (warning) | — |
+| `plans` | ≥ 3 AQE re-plans (info); physical-plan anti-patterns from `anti_patterns.yaml`: `CartesianProduct` (critical), `BroadcastNestedLoopJoin` (warning), `groupByKey` (warning) | — |
 | `gc` | GC ≥ 10% of the stage's summed task time (warning) / ≥ 20% (critical) | summed stage duration ≥ 5 s |
 | `oom` | failed task with `OutOfMemoryError` or `ExecutorLostFailure` in `reason` (critical) | — |
+
+> **Plan anti-patterns are data, not code (Seam 1b).** `detect_plans` scans each
+> SQL execution's physical plan (initial + every AQE-adaptive version) for the
+> `signal` substrings in `src/config/anti_patterns.yaml`. Each entry carries a
+> stable `id` (e.g. `ANTI-001`), surfaced on the finding as
+> `evidence["anti_pattern_id"]`. Adding a plan-text-detectable anti-pattern is a
+> YAML entry — no detector code change. The ids stay in sync with the KB
+> superset at `.claude/kb/spark/specs/anti-patterns.yaml`.
 
 The guards are why a small, healthy run (`make smoke`) **never** produces a critical,
 even with statistically high ratios: a 96× skew on a 2.8 s task is not an
@@ -306,12 +316,23 @@ detectors → findings → [CREW_LLM_MODEL set?]
 ```
 
 - **Crew A** (CrewAI, `Process.sequential`): two agents.
-  - *Spark Diagnostic Analyst* — gets the three detector tools (`detect_skew`,
-    `detect_shuffle`, `detect_plans`), ranks root causes referencing the evidence.
+  - *Spark Diagnostic Analyst* — gets all five detector tools (`detect_skew`,
+    `detect_shuffle`, `detect_plans`, `detect_gc`, `detect_oom`), ranks root causes
+    referencing the evidence. The tools are built from the shared `DETECTORS`
+    registry (`crew/tools.py` iterates it), so the crew always sees exactly what
+    `run_all` and the MCP server expose — no 3-vs-5 drift.
   - *Spark Recommendation Writer* — uses the analyst's context, writes the summary,
     keeps the findings unchanged, and produces **≥ 1 recommendation per
     warning/critical finding** with an exact `spark.conf` key/value; its output is
     validated as a `DiagnosticReport` (`output_pydantic`), with `status="full"`.
+  - **Conf grounding (Seam 2).** Before the writer runs, `crew/recommendations.py`
+    turns the actionable findings + `src/config/conf_recommendations.yaml` into a
+    grounding block that is appended to the writer's task. Each line pins a
+    validated `spark.conf` key/value (or a "code review" note when `conf_key` is
+    null) per `(detector, severity[, pattern])`, so recommendations reuse vetted
+    tuning instead of the LLM inventing keys per run. Grounding is best-effort — an
+    empty/missing catalog degrades to the ungrounded prompt rather than failing
+    (mirrors the detectors-only fallback below).
   - Requires `CREW_LLM_MODEL` (e.g. `anthropic/claude-sonnet-4-5`, `temperature=0.2`)
     and the provider's API key.
 - **Graceful degradation in two layers:** `build_llm()` returns `None` when the model
@@ -347,6 +368,13 @@ Severity is ranked by `SEVERITY_RANK = {info: 0, warning: 1, critical: 2}`;
 > The YAML has **no** `oom` section because `detect_oom` takes no thresholds. The
 > ClickHouse connections read env: `CLICKHOUSE_HTTP_HOST`, `CLICKHOUSE_HTTP_PORT`
 > (default `28123`), `CLICKHOUSE_DB`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`.
+>
+> **Diagnostics config catalog (`src/config/`, all packaged into the Spark image):**
+> `diagnostics.yaml` (thresholds), `anti_patterns.yaml` (plan-text patterns, Seam 1b,
+> loaded by `load_plan_patterns`), and `conf_recommendations.yaml` (writer grounding,
+> Seam 2, loaded by `load_conf_recommendations`). All three are validated on load by
+> Pydantic models in `config.py`, so a bad `severity` or shape fails fast at parse
+> time.
 
 ---
 
@@ -586,10 +614,10 @@ are cached (`lru_cache`).
 | `get_report(app_id)` | the app's latest stored report |
 | `analyze_run(app_id)` | full pipeline (detectors + Crew A) and persists; degrades to `detectors_only` without an LLM |
 
-> **Note:** the MCP exposes the **5** detectors; the tools given to Crew A
-> (`crew/tools.py`) expose only **3** (`detect_skew`, `detect_shuffle`,
-> `detect_plans`) — the Analyst uses those to investigate, but `detect_gc`/
-> `detect_oom` enter the report via the deterministic path (`run_all`).
+> **Note:** the MCP server, Crew A (`crew/tools.py`), and `run_all` all derive their
+> detectors from the same `DETECTORS` registry (`detectors/__init__.py`), so every
+> surface exposes the same **5** detectors — the earlier 3-vs-5 drift (the Analyst
+> once saw only `detect_skew`/`detect_shuffle`/`detect_plans`) is gone.
 
 ---
 
@@ -612,6 +640,13 @@ make tests    # pytest: detectors/models/tools/store over FakeCHClient (fixtures
   image).
 - **Tests that call a real LLM**: mark with `@pytest.mark.llm` and gate with
   `RUN_LLM_TESTS=1` — they never run in the default `make tests`.
+- **Ground-truth E2E** (`tests/e2e/`, marked `e2e`): the only tests that hit the
+  **running** stack. `make validate-detectors` runs the problem workloads →
+  `make spark-logs` (ingest + diagnose) → then asserts each workload's expected
+  detector actually fired at the expected severity, reusing the production read
+  path (`ClickHouseConnectClient` + `get_report`) so real SQL/schema drift surfaces
+  here. Gated by `APEX_E2E=1` (set by the Make target), so `make tests` never
+  reaches ClickHouse. It skips gracefully if the stack is unreachable.
 
 ---
 
@@ -629,6 +664,7 @@ make tests    # pytest: detectors/models/tools/store over FakeCHClient (fixtures
 | `make workloads` | runs the 6 synthetic workloads |
 | `make workload-<name>` | runs an individual workload |
 | `make diagnose [APP_ID=<app>]` | diagnoses an app (or recent runs with no report) |
+| `make validate-detectors` | ground-truth E2E: runs the problem workloads → ingests + diagnoses → asserts each detector fired (`APEX_E2E=1`, needs the running stack) |
 | `make services` | prints URLs, credentials, and UI paths |
 | `make tests` / `make test` | fast Python tests via `uv` |
 | `make down` | stops the stack without deleting local data |

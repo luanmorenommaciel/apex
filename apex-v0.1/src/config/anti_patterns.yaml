@@ -1,0 +1,34 @@
+# Plan-text anti-pattern catalog for detectors/plans.py (Seam 1b).
+#
+# Runtime-loadable and packaged into the Spark image via src/, mirroring the
+# placement of src/config/diagnostics.yaml. detectors/plans.py scans each SQL
+# execution's physical plan (initial + AQE-adaptive) for `signal` as a
+# substring; a match yields one Finding at `severity` with `explanation`.
+#
+# To add a plan-text-detectable anti-pattern, add an entry here — NO code change
+# is needed. This externalizes what used to be the hardcoded PLAN_PATTERNS list.
+#
+# Human source-of-truth and full superset (also covers task-metric patterns that
+# are not yet implemented): .claude/kb/spark/specs/anti-patterns.yaml
+# Keep ids in sync with that catalog.
+
+version: "1.0"
+
+plan_patterns:
+  - id: ANTI-001
+    name: CartesianProduct
+    signal: CartesianProduct
+    severity: critical
+    explanation: "produto cartesiano (cross join sem chave) — custo cresce com N*M"
+
+  - id: ANTI-002
+    name: BroadcastNestedLoopJoin
+    signal: BroadcastNestedLoopJoin
+    severity: warning
+    explanation: "nested-loop join broadcast — geralmente um join sem condição de igualdade"
+
+  - id: ANTI-003
+    name: groupByKey
+    signal: groupByKey
+    severity: warning
+    explanation: "groupByKey embaralha todos os valores da chave pela rede antes de reduzir — prefira reduceByKey/aggregateByKey ou groupBy().agg()"

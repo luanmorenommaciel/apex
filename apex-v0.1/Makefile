@@ -7,7 +7,7 @@ COMPOSE := docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE)
 include .env.example
 -include .env
 
-.PHONY: bootstrap build validate compose ingest-landing bronze sanity smoke spark-logs services test tests down removeimage clean-data workload-skew workload-shuffle workload-gc workload-oom workload-crossjoin workload-cache workloads diagnose
+.PHONY: bootstrap build validate compose ingest-landing bronze sanity smoke spark-logs services test tests down removeimage clean-data workload-skew workload-shuffle workload-gc workload-oom workload-crossjoin workload-cache workloads diagnose validate-detectors
 
 SPARK_SUBMIT := $(COMPOSE) exec -T spark-master env PYTHONPATH=/opt/spark/src /opt/spark/bin/spark-submit \
 	--master spark://spark-master:7077 \
@@ -109,6 +109,14 @@ workloads: workload-skew workload-shuffle workload-gc workload-oom workload-cros
 diagnose:
 	@PYTHONPATH=src uv run python -m apex_diagnostics.cli analyze $(if $(APP_ID),$(APP_ID),--latest) \
 		|| echo "WARN: diagnostics failed or skipped; event-log loading unaffected"
+
+# Ground-truth end-to-end: run every problem workload through the real stack,
+# ingest + diagnose them (spark-logs), then assert each detector actually fired.
+# Prerequisites run in order (workloads -> spark-logs) before the assertion pass.
+# Re-sources .env so the host-side ClickHouse client gets CLICKHOUSE_PASSWORD.
+validate-detectors: workload-skew workload-shuffle workload-gc workload-oom workload-crossjoin spark-logs
+	@set -a; . $(ROOT_DIR)/.env.example; [ -f $(ROOT_DIR)/.env ] && . $(ROOT_DIR)/.env; set +a; \
+		APEX_E2E=1 PYTHONPATH=src uv run pytest tests/e2e -m e2e -v
 
 services:
 	@build/scripts/services.sh
