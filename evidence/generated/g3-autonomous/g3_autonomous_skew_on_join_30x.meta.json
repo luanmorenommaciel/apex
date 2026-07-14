@@ -1,0 +1,9 @@
+{
+  "scenario_id": "skew_on_join_30x",
+  "scenario_hash": "sha256:ec5372694030305d",
+  "generator_version": "4",
+  "generated_at": "2026-07-14T11:27:01.192938+00:00",
+  "job_file": "evidence\\generated\\g3-autonomous\\g3_autonomous_skew_on_join_30x.py",
+  "anti_pattern_line": 20,
+  "anti_pattern_class": "data_skew_on_join_key"
+}

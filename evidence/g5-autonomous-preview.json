@@ -1,0 +1,88 @@
+{
+  "mode": "preview",
+  "preview": {
+    "after_sha256": "3d1a644502edb4ac4b93461a52526eadda174aa1afe6d251b127db27e8d1e1d8",
+    "approval": {
+      "required": true,
+      "token": "77c80f67ac11c0f5642995a65a703b225a568a0adc626e3eff55bb538f00af7b",
+      "token_scope": "job_id+recommendation_id+target+before_sha256+after_sha256+diff_sha256"
+    },
+    "before_sha256": "7fee45b1982650284ab2ba3d6a05da1af1d577129dd25053f8f2ddb3c69acdb9",
+    "diff": "--- evidence\\generated\\g3-autonomous\\g3_autonomous_skew_on_join_30x.py\n+++ evidence\\generated\\g3-autonomous\\g3_autonomous_skew_on_join_30x.py (apex preview)\n@@ -1,13 +1,13 @@\n # Auto-gerado por code_generator v4 \u2014 scenario: skew_on_join_30x\n from pyspark.sql import SparkSession\n-from pyspark.sql.functions import col, rand, when, collect_list\n+from pyspark.sql.functions import broadcast, col, rand, when, collect_list\n \n spark = (SparkSession.builder.appName(\"skew_on_join_30x\")\n-    .config(\"spark.sql.adaptive.enabled\", \"false\")\n-    .config(\"spark.sql.adaptive.skewJoin.enabled\", \"false\")\n+    .config(\"spark.sql.adaptive.enabled\", \"true\")\n+    .config(\"spark.sql.adaptive.skewJoin.enabled\", \"true\")\n     .config(\"spark.sql.shuffle.partitions\", \"8\")\n     .config(\"spark.sql.adaptive.coalescePartitions.enabled\", \"false\")\n-    .config(\"spark.sql.adaptive.autoBroadcastJoinThreshold\", \"-1\")\n+    .config(\"spark.sql.adaptive.autoBroadcastJoinThreshold\", \"10485760\")\n     .getOrCreate())\n \n orders = spark.range(200000).select(\n@@ -17,6 +17,6 @@\n     when(rand(13) < 0.8, 7).otherwise(col('customer_id')))\n customers = spark.range(100).select(\n     col('id').alias('customer_id'), col('id').alias('customer_name'))\n-result = orders.join(customers.hint(\"shuffle_merge\"), \"customer_id\", \"inner\")  # APEX::ANTIPATTERN\n+result = orders.join(broadcast(customers), \"customer_id\", \"inner\")  # APEX::FIXED_BY_G5\n result.write.mode(\"overwrite\").parquet(\"/tmp/apex_output\")\n spark.stop()\n",
+    "diff_sha256": "0f475cfbb31de099c94aa6f2ec85d176784337e70e96548e5b15061d63ee8d3d",
+    "job_id": "app-20260714112858-0003",
+    "mode": "preview",
+    "recommendation": "Validate AQE skew join settings and the join key distribution before previewing salting or repartition changes.",
+    "recommendation_id": "app-20260714112858-0003:shuffle_skew_candidate:stage-2:0",
+    "recommendation_record": {
+      "action": "validate_aqe_then_consider_salting_or_repartition",
+      "confidence": "medium",
+      "evidence": {
+        "app_id": "app-20260714112858-0003",
+        "hot_records": 164956,
+        "median_cold_records": 5617,
+        "ratio": 29.4,
+        "stage_id": 2
+      },
+      "finding_kind": "shuffle_skew_candidate",
+      "guardrails": [
+        "Confirm the hot key and join side before changing code.",
+        "Prefer previewing a minimal code diff before any apply step.",
+        "Re-run the job and compare skew ratio before accepting the fix."
+      ],
+      "id": "app-20260714112858-0003:shuffle_skew_candidate:stage-2:0",
+      "job_id": "app-20260714112858-0003",
+      "preview": {
+        "mode": "manual_replacement",
+        "requires_approval_before_apply": true,
+        "tool": "preview_recommendation"
+      },
+      "rule_set": "apex.commander.recommendations.v1",
+      "severity": "high",
+      "summary": "Validate AQE skew join settings and the join key distribution before previewing salting or repartition changes.",
+      "title": "Review skew-safe join mitigation"
+    },
+    "requires_approval": true,
+    "status": "preview_ready",
+    "target": "evidence\\generated\\g3-autonomous\\g3_autonomous_skew_on_join_30x.py"
+  },
+  "recommendations": {
+    "count": 1,
+    "job_id": "app-20260714112858-0003",
+    "recommendations": [
+      {
+        "action": "validate_aqe_then_consider_salting_or_repartition",
+        "confidence": "medium",
+        "evidence": {
+          "app_id": "app-20260714112858-0003",
+          "hot_records": 164956,
+          "median_cold_records": 5617,
+          "ratio": 29.4,
+          "stage_id": 2
+        },
+        "finding_kind": "shuffle_skew_candidate",
+        "guardrails": [
+          "Confirm the hot key and join side before changing code.",
+          "Prefer previewing a minimal code diff before any apply step.",
+          "Re-run the job and compare skew ratio before accepting the fix."
+        ],
+        "id": "app-20260714112858-0003:shuffle_skew_candidate:stage-2:0",
+        "job_id": "app-20260714112858-0003",
+        "preview": {
+          "mode": "manual_replacement",
+          "requires_approval_before_apply": true,
+          "tool": "preview_recommendation"
+        },
+        "rule_set": "apex.commander.recommendations.v1",
+        "severity": "high",
+        "summary": "Validate AQE skew join settings and the join key distribution before previewing salting or repartition changes.",
+        "title": "Review skew-safe join mitigation"
+      }
+    ],
+    "rule_set": "apex.commander.recommendations.v1",
+    "skipped_count": 0,
+    "status": "found"
+  },
+  "source_finding_log": "evidence\\g3-autonomous-diagnosis.json",
+  "target_job": "evidence\\generated\\g3-autonomous\\g3_autonomous_skew_on_join_30x.py"
+}

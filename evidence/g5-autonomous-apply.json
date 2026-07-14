@@ -1,0 +1,16 @@
+{
+  "after_sha256": "3d1a644502edb4ac4b93461a52526eadda174aa1afe6d251b127db27e8d1e1d8",
+  "before_sha256": "7fee45b1982650284ab2ba3d6a05da1af1d577129dd25053f8f2ddb3c69acdb9",
+  "diff": "--- evidence\\generated\\g3-autonomous\\g3_autonomous_skew_on_join_30x.py\n+++ evidence\\generated\\g3-autonomous\\g3_autonomous_skew_on_join_30x.py (apex preview)\n@@ -1,13 +1,13 @@\n # Auto-gerado por code_generator v4 \u2014 scenario: skew_on_join_30x\n from pyspark.sql import SparkSession\n-from pyspark.sql.functions import col, rand, when, collect_list\n+from pyspark.sql.functions import broadcast, col, rand, when, collect_list\n \n spark = (SparkSession.builder.appName(\"skew_on_join_30x\")\n-    .config(\"spark.sql.adaptive.enabled\", \"false\")\n-    .config(\"spark.sql.adaptive.skewJoin.enabled\", \"false\")\n+    .config(\"spark.sql.adaptive.enabled\", \"true\")\n+    .config(\"spark.sql.adaptive.skewJoin.enabled\", \"true\")\n     .config(\"spark.sql.shuffle.partitions\", \"8\")\n     .config(\"spark.sql.adaptive.coalescePartitions.enabled\", \"false\")\n-    .config(\"spark.sql.adaptive.autoBroadcastJoinThreshold\", \"-1\")\n+    .config(\"spark.sql.adaptive.autoBroadcastJoinThreshold\", \"10485760\")\n     .getOrCreate())\n \n orders = spark.range(200000).select(\n@@ -17,6 +17,6 @@\n     when(rand(13) < 0.8, 7).otherwise(col('customer_id')))\n customers = spark.range(100).select(\n     col('id').alias('customer_id'), col('id').alias('customer_name'))\n-result = orders.join(customers.hint(\"shuffle_merge\"), \"customer_id\", \"inner\")  # APEX::ANTIPATTERN\n+result = orders.join(broadcast(customers), \"customer_id\", \"inner\")  # APEX::FIXED_BY_G5\n result.write.mode(\"overwrite\").parquet(\"/tmp/apex_output\")\n spark.stop()\n",
+  "job_id": "app-20260714112858-0003",
+  "mode": "guarded_apply",
+  "recommendation_id": "app-20260714112858-0003:shuffle_skew_candidate:stage-2:0",
+  "status": "applied",
+  "target": "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\g3-autonomous\\g3_autonomous_skew_on_join_30x.py",
+  "verification": {
+    "actual_sha256": "3d1a644502edb4ac4b93461a52526eadda174aa1afe6d251b127db27e8d1e1d8",
+    "expected_sha256": "3d1a644502edb4ac4b93461a52526eadda174aa1afe6d251b127db27e8d1e1d8",
+    "status": "verified",
+    "target": "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\g3-autonomous\\g3_autonomous_skew_on_join_30x.py"
+  }
+}

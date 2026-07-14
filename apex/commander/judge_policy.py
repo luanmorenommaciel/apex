@@ -17,6 +17,44 @@ CONFIDENCE_LABEL_SCORES = {
     "critical": 0.95,
 }
 
+FUTURE_CREW_JUDGE_CONTRACT = {
+    "tool": "crew_judge_diagnose",
+    "stage": "future_optional_after_evidence_validator",
+    "required_inputs": [
+        "job_id",
+        "finding_kind",
+        "confidence_score",
+        "evidence",
+        "validation",
+    ],
+    "optional_inputs": [
+        "telemetry_window",
+        "candidate_recommendations",
+        "rerun_compare",
+    ],
+    "must_return": [
+        "decision",
+        "rationale",
+        "cited_evidence",
+        "recommended_next_action",
+        "human_review_required",
+    ],
+    "allowed_decisions": [
+        "confirm_finding",
+        "reject_finding",
+        "request_more_evidence",
+        "manual_review",
+    ],
+    "anti_hallucination_constraints": [
+        "must_cite_existing_evidence",
+        "must_not_invent_metrics",
+        "must_not_invent_root_cause",
+        "must_mark_unknown_when_evidence_is_missing",
+        "must_not_apply_changes_directly",
+    ],
+    "guardrail": "judge_must_cite_existing_evidence",
+}
+
 
 def confidence_score(confidence: Any) -> float:
     """Normalize Commander confidence into a numeric score in [0.0, 1.0]."""
@@ -69,21 +107,5 @@ def evaluate_judge_policy(
         "reasons": reasons,
         "finding_kind": finding.get("kind") or finding.get("title"),
         "job_id": finding.get("job_id"),
-        "future_contract": {
-            "tool": "crew_judge_diagnose",
-            "required_inputs": [
-                "job_id",
-                "finding_kind",
-                "confidence_score",
-                "evidence",
-                "validation",
-            ],
-            "must_return": [
-                "decision",
-                "rationale",
-                "cited_evidence",
-                "recommended_next_action",
-            ],
-            "guardrail": "judge_must_cite_existing_evidence",
-        },
+        "future_contract": FUTURE_CREW_JUDGE_CONTRACT,
     }

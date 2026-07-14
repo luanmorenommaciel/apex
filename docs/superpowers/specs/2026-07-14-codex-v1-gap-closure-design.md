@@ -49,15 +49,18 @@ Escopo validado:
 - `tools/call apply_fix` aplica com token valido e verify.
 - `python -m apex.commander.mcp_stdio_cli` funciona como processo externo via
   stdin/stdout, aproximando o smoke de um cliente IDE real.
+- `tools/mcp_ide_subprocess_smoke.py` mantem o MCP server vivo como subprocesso,
+  executa `initialize`, `tools/list`, `recommend_fix`, `preview_recommendation`
+  e `apply_fix`, e grava transcript em
+  `evidence/g6-mcp-ide-subprocess-smoke.jsonl`.
 
 Limite:
 
-- isso ainda nao e validacao em IDE real. Falta smoke em Cursor, VS Code,
-  Claude Code ou cliente MCP equivalente.
+- isso ainda nao e validacao GUI em Cursor, VS Code ou Claude Code.
 
 ## Gate C - Docker Compose Autonomo
 
-Status: parcialmente implementado.
+Status: fechado localmente para a stack autonoma, com ressalva de versao Spark.
 
 O que existe:
 
@@ -87,11 +90,17 @@ spark-submit PythonPi gravando event log em s3a://spark-logs/events
 
 evidence/g7-autonomous-minio-events-v2.log
 eventlog_v2_app-20260714053216-0000 listado no bucket spark-logs/events
+
+evidence/g3-autonomous-diagnosis.json
+G3 autonomo: app-20260714112858-0003, finding_count=1, severity=high, ratio=29.4
+
+evidence/g5-autonomous-ciclo.log
+G5 autonomo: app antes app-20260714112858-0003, app depois app-20260714113809-0004,
+finding_count 1 -> 0, shuffle_read_bytes_total 1157481 -> 0
 ```
 
-Bloqueio restante:
+Ressalva restante:
 
-- G3/G5 ainda nao foram repetidos na stack autonoma;
 - a stack usa `apache/spark:4.0.0-scala2.13-java17-python3-ubuntu`, diferente
   da validacao historica em `plat-v0`; isso precisa ser declarado na comparacao.
 
@@ -196,10 +205,7 @@ spark.apex.listener.failMode=true gerou falhas internas, mas o job terminou com 
 
 ## Ordem Recomendada
 
-1. Fechar e publicar Gate A/B.
-2. Fazer smoke com IDE real.
-3. Build/up do compose autonomo paralelo.
-4. Reproduzir G3/G5 no compose autonomo.
-5. Compilar `listener-jvm` e gerar JAR.
-6. Reproduzir G3/G5 com listener habilitado.
-7. So depois expandir Crew.ai/Judge real.
+1. Promover G3/G5 autonomos para regressao automatizada.
+2. Fazer smoke GUI com IDE real.
+3. Promover listener JVM para template oficial dos jobs.
+4. So depois expandir Crew.ai/Judge real.

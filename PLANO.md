@@ -16,12 +16,12 @@ atual cobre uma parte do requisito, o status fica como `parcial`.
 
 | Premissa | Status | Evidencia atual |
 | --- | --- | --- |
-| L1 Pipeline: Spark Envy Docker -> SparkListener -> ClickHouse -> Crew.ai -> MCP | Parcial | Existe ClickHouse/store, MCP stdio/subprocess, compose autonomo paralelo que sobe e grava event log em S3A/MinIO, e listener JVM carregado via `spark-submit --jars` com NDJSON/fail-safe. Crew.ai real ainda nao existe; G3/G5 ainda nao foram repetidos na stack autonoma. |
-| L2 `docker compose up` sobe tudo sem configuracao manual | Parcial | `docker-compose.autonomous.yml` renderiza, builda a imagem Spark, sobe ClickHouse/MinIO/Spark sem `spark-plat-v0-*` e executa smoke Spark gravando event log em `s3a://spark-logs/events`. Falta repetir G3/G5 completos nessa stack. |
+| L1 Pipeline: Spark Envy Docker -> SparkListener -> ClickHouse -> Crew.ai -> MCP | Parcial | Existe ClickHouse/store, MCP stdio/subprocess, compose autonomo paralelo que sobe e grava event log em S3A/MinIO, listener JVM carregado via `spark-submit --jars` com NDJSON/fail-safe, e G3/G5 completos na stack autonoma. Crew.ai real ainda nao existe e IDE GUI real ainda nao foi validada. |
+| L2 `docker compose up` sobe tudo sem configuracao manual | Cumpre localmente | `docker-compose.autonomous.yml` renderiza, builda a imagem Spark, sobe ClickHouse/MinIO/Spark sem `spark-plat-v0-*`, executa smoke S3A e repetiu G3/G5 completos na stack autonoma. Ressalva: usa imagem publica Spark 4.0.0, nao a stack `plat-v0` historica. |
 | L3 Listener via `spark.extraListeners`, fail-safe | Cumpre | `listener-jvm/` implementa classe real fail-safe; `gradle selfTest jar` passa em container; `spark-submit --jars` registrou `apex.commander.spark.ApexSparkListener`, emitiu NDJSON e validou `spark.apex.listener.failMode=true` sem derrubar o job. Evidencias: `evidence/g9-listener-jvm-spark-submit.log`, `evidence/g9-listener-jvm-output.ndjson`, `evidence/g9-listener-jvm-failsafe-spark-submit.log`. |
 | L4 ClickHouse com schema definido, query por `app_id`/`job_id` | Parcial | `apex/commander/telemetry.py` carrega `job_id` e `app_id`; adapters consultam por `job_id`; falta DDL canonico `docs/specs/apex_telemetry_v1.sql`. |
 | L5 Diagnostico agentico Crew.ai explica o problema | Parcial | Diagnostico atual e deterministico em `apex/commander/diagnostic_mvp.py`; `apex/commander/judge_policy.py` define politica local de escalonamento para futuro Crew/Judge, mas nao ha Crew.ai/LLM real. |
-| L6 Fix via MCP no IDE + "aplica nossa sugestao" edita o codigo do cliente | Parcial | Existe MCP stdio e apply guardado em `apex/commander/apply_verify.py`; em F6, `apply_fix` foi exposto como contrato local guardado com smoke MCP stdio. Falta validacao com IDE real. |
+| L6 Fix via MCP no IDE + "aplica nossa sugestao" edita o codigo do cliente | Parcial | Existe MCP stdio e apply guardado em `apex/commander/apply_verify.py`; `apply_fix` foi exposto como contrato local guardado e validado por smoke subprocesso estilo cliente IDE com transcript JSON-RPC. Falta validação GUI real em Cursor/VS Code/Claude Code. |
 | L7 Decisoes de arquitetura registradas em ADR | Parcial | Existe `docs/adr-review-drafts.md`; falta estrutura formal `docs/adr/ADR-*.md`. |
 | L8 Nao focar Databricks/serverless agora — Spark puro primeiro | Cumpre | A branch trabalha com Spark event log, ClickHouse/local store e MCP; nao ha implementacao Databricks/serverless. |
 | L9 Minimo viavel de cada componente antes de expandir qualquer um | Parcial | Ha MVPs locais para ingest, store, detectores, validator, MCP, apply guardado e rerun; faltam MVPs centrais de Docker/Spark Envy, SparkListener real e Crew.ai. |
@@ -35,9 +35,9 @@ atual cobre uma parte do requisito, o status fica como `parcial`.
 | G2 cada detector pega seu cenario sintetico | Parcial | `tests/test_commander_detectors.py` cobre skew, spill/shuffle, GC, OOM e AQE localmente. | Nao ha ainda pacote completo de cenarios v1 comuns (`data_skew_on_join_key`, `gc_pressure`, `shuffle_spill`, `oom_task_failure`, `cartesian_product`, `none`). |
 | G3 sintetico ~= real no cluster + >=8 tasks reais | Parcial | `real_log.ndjson`, `oracle/compare.py`, docs v4 registram comparacao sintetico vs real para skew. | Cobre o slice de skew; nao cobre todos os detectores nem uma execucao cluster atual pelo pacote comum. |
 | G4 T1 < 1s sem LLM; LLM so confidence < 0.6 | Parcial | `evidence/g4-t1.log` mede o caminho T1 deterministico contra `app-20260712053414-0001`: 226.991 ms, com `EvidenceValidator` aceitando o finding e grep sem referencias a LLM/API no caminho medido. | A latencia T1 esta abaixo de 1s; a parte de escalonamento para Crew.ai/Judge quando confidence < 0.6 ainda e decisao de design sem implementacao real. |
-| G5 IDE: finding -> apply_fix -> rerun limpo | Parcial | `evidence/g5-ciclo.log` valida o ciclo funcional real com `preview_recommendation` -> `apply_recommendation` -> rerun Spark no `spv0-spark-master`; `evidence/g6-apply-fix-mcp-smoke.log` valida o contrato local `apply_fix` via MCP stdio. | Funcionalmente verde no ciclo local/plat-v0 e contrato `apply_fix` local; ainda nao foi validado dentro de IDE real. |
+| G5 IDE: finding -> apply_fix -> rerun limpo | Parcial | `evidence/g5-ciclo.log` valida o ciclo funcional real no `spv0-spark-master`; `evidence/g5-autonomous-ciclo.log` valida o mesmo ciclo na stack autonoma: finding 1 -> 0, shuffle 1.157.481 -> 0; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` valida `apply_fix` via cliente subprocesso JSON-RPC. | Funcionalmente verde no ciclo real e autonomo; ainda nao foi validado dentro de IDE GUI real. |
 | G6 oraculo agendado sintetico vs real drift | Nao cumpre | Existe `oracle/compare.py` manual. | Falta agendamento/infra de drift. |
-| G7 local MCP/compose/listener/judge | Parcial | `evidence/g6-apply-fix-mcp-smoke.log`, `evidence/g7-autonomous-spark-pi-v2.log`, `evidence/g7-autonomous-minio-events-v2.log`, `evidence/g8-agentic-loop-python.log`, `evidence/g9-listener-jvm-spark-submit.log`, `evidence/g9-listener-jvm-failsafe-spark-submit.log`. | Fecha contrato local, compose autonomo com S3A smoke, listener runtime/fail-safe e politica Judge local; ainda falta IDE real e G3/G5 completos na stack autonoma. |
+| G7 local MCP/compose/listener/judge | Parcial | `evidence/g6-mcp-ide-subprocess-smoke.jsonl`, `evidence/g7-autonomous-spark-pi-v2.log`, `evidence/g3-autonomous-diagnosis.json`, `evidence/g5-autonomous-ciclo.log`, `evidence/g9-listener-jvm-spark-submit.log`, `evidence/g9-listener-jvm-failsafe-spark-submit.log`. | Fecha contrato local, compose autonomo com G3/G5, listener runtime/fail-safe e politica Judge local; ainda falta IDE GUI real e Crew.ai real. |
 
 ## Mapeamento Do Gate 14 Interno
 
@@ -61,12 +61,12 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 
 | Premissa | Gap principal | Ordem proposta |
 | --- | --- | --- |
-| L1 | Falta Crew.ai real, IDE real e G3/G5 na stack autonoma | Fechar primeiro G3/G5 autonomo; depois IDE real; depois Crew.ai. |
-| L2 | Falta provar G3/G5 completos no compose autonomo | Reusar `docker-compose.autonomous.yml` ja validado com S3A e rodar os jobs oficiais. |
-| L3 | Fechado no smoke runtime; falta integrar ao G3/G5 autonomo | Usar o JAR validado no template dos jobs oficiais da stack autonoma. |
+| L1 | Falta Crew.ai real e IDE GUI real | Manter T1 deterministico como nucleo; validar IDE GUI; so depois Crew.ai. |
+| L2 | Fechado localmente na stack autonoma | Manter regressao G3/G5 autonoma e declarar ressalva Spark 4.0.0 vs `plat-v0`. |
+| L3 | Fechado no smoke runtime e usado no G3/G5 autonomo | Promover o JAR para template oficial dos jobs. |
 | L4 | Falta DDL canonico `apex_telemetry_v1.sql` e schema apex.* | Criar schema antes de expandir detectores. |
 | L5 | Falta Crew.ai e contrato anti-alucinacao | Integrar so depois de T1 e EvidenceValidator estarem ligados ao schema canonico. |
-| L6 | Falta validacao em IDE real | `apply_fix` ja existe como contrato local guardado; proximo passo e smoke test em Cursor/VS Code/Claude Code. |
+| L6 | Falta validacao em IDE GUI real | `apply_fix` ja existe como contrato local guardado e tem smoke subprocesso estilo cliente IDE; proximo passo e abrir em Cursor/VS Code/Claude Code. |
 | L7 | Falta ADR formal versionada | Promover rascunhos para `docs/adr/ADR-*.md`. |
 | L9 | Componentes centrais ainda faltam MVP | Nao expandir UX/LLM antes de Docker, schema e listener estarem minimamente verdes. |
 

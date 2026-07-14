@@ -1,0 +1,18 @@
+# G5 autonomous cycle - detect -> apply_fix -> rerun -> clean
+before_app_id=app-20260714112858-0003
+after_app_id=app-20260714113809-0004
+before_finding_count=1
+after_finding_count=0
+before_shuffle_read_bytes_total=1157481
+after_shuffle_read_bytes_total=0
+before_max_valid_skew_ratio=29.4
+after_max_valid_skew_ratio=0
+before_valid_shuffle_stage_count=1
+after_valid_shuffle_stage_count=0
+preview=evidence/g5-autonomous-preview.json
+apply=evidence/g5-autonomous-apply.json
+before_event_log=evidence/generated/g3-autonomous/g3_autonomous_real_eventlog.zstd
+after_event_log=evidence/generated/g3-autonomous/g5_autonomous_fixed_eventlog.zstd
+before_listener=evidence/g3-autonomous-listener-output.ndjson
+after_listener=evidence/g5-autonomous-listener-output.ndjson
+status=passed

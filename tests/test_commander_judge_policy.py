@@ -34,6 +34,7 @@ def test_low_confidence_escalates_to_future_crew_judge_contract():
     assert result["should_escalate"] is True
     assert result["reasons"] == ["confidence_below_threshold"]
     assert result["future_contract"]["tool"] == "crew_judge_diagnose"
+    assert result["future_contract"]["stage"] == "future_optional_after_evidence_validator"
 
 
 def test_numeric_confidence_below_threshold_escalates():
@@ -51,3 +52,41 @@ def test_validator_rejection_escalates_even_when_confidence_is_high():
 
     assert result["should_escalate"] is True
     assert result["reasons"] == ["evidence_validator_rejected"]
+
+
+def test_future_contract_declares_required_inputs_outputs_and_judge_decisions():
+    result = evaluate_judge_policy(base_finding("low"))
+    contract = result["future_contract"]
+
+    assert contract["required_inputs"] == [
+        "job_id",
+        "finding_kind",
+        "confidence_score",
+        "evidence",
+        "validation",
+    ]
+    assert contract["must_return"] == [
+        "decision",
+        "rationale",
+        "cited_evidence",
+        "recommended_next_action",
+        "human_review_required",
+    ]
+    assert contract["allowed_decisions"] == [
+        "confirm_finding",
+        "reject_finding",
+        "request_more_evidence",
+        "manual_review",
+    ]
+
+
+def test_future_contract_blocks_hallucinated_metrics_and_direct_apply():
+    result = evaluate_judge_policy(base_finding("low"))
+
+    assert result["future_contract"]["anti_hallucination_constraints"] == [
+        "must_cite_existing_evidence",
+        "must_not_invent_metrics",
+        "must_not_invent_root_cause",
+        "must_mark_unknown_when_evidence_is_missing",
+        "must_not_apply_changes_directly",
+    ]

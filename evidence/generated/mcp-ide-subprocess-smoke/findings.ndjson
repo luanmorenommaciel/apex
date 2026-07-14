@@ -1,0 +1,1 @@
+{"finding": {"job_id": "job-42", "kind": "shuffle_skew_candidate", "severity": "warning", "confidence": "medium", "evidence": {"app_id": "app-mcp-stdio", "stage_id": 2, "ratio": 29.5, "hot_records": 165297, "median_cold_records": 5596}}, "validation": {"status": "valid", "accepted": true}}

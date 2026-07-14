@@ -1,0 +1,5 @@
+`apex/spark-logs/events/eventlog_v2_app-20260714113809-0004/events_1_app-20260714113809-0004.zstd` -> `/out/g5_autonomous_fixed_eventlog.zstd`
+┌───────────┬─────────────┬──────────┬──────────────┐
+│ Total     │ Transferred │ Duration │ Speed        │
+│ 42.95 KiB │ 42.95 KiB   │ 00m00s   │ 215.44 KiB/s │
+└───────────┴─────────────┴──────────┴──────────────┘

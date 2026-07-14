@@ -26,9 +26,10 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Ciclo detectar -> fix -> rerun -> limpo | Fechado | `evidence/g5-ciclo.log` |
 | Contrato `apply_fix` + MCP stdio local | Fechado localmente | `evidence/g6-apply-fix-mcp-smoke.log` |
 | MCP subprocess, estilo cliente externo | Fechado localmente | `apex/commander/mcp_stdio_cli.py`; `evidence/g6-apply-fix-mcp-smoke.log` |
-| Docker autônomo paralelo | Parcial avançado | `docker-compose.autonomous.yml`; `evidence/g7-autonomous-spark-pi-v2.log`; `evidence/g7-autonomous-minio-events-v2.log` |
+| Docker autônomo paralelo | Fechado localmente | `docker-compose.autonomous.yml`; `evidence/g3-autonomous-diagnosis.json`; `evidence/g5-autonomous-ciclo.log` |
 | SparkListener JVM real | Fechado localmente/runtime smoke | `listener-jvm/`; `evidence/g9-listener-jvm-spark-submit.log`; `evidence/g9-listener-jvm-failsafe-spark-submit.log` |
 | Crew/Judge policy local | Fechado localmente | `apex/commander/judge_policy.py`; `evidence/g8-agentic-loop-python.log` |
+| MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
 | Autoavaliacao | Fechada | `docs/autoavaliacao.md` |
 | Catalogo de issues | Fechado/aberto conforme item | `ISSUES.md` |
 | Plano F0/F5 | Fechado | `PLANO.md` |
@@ -88,8 +89,9 @@ flowchart TD
 | G3 | Job real Spark multicore bate o comportamento sintetico | `evidence/g3-real.log` |
 | G4 | T1 deterministico roda abaixo de 1s sem LLM | `evidence/g4-t1.log` |
 | G5 | Ciclo completo detectar -> aplicar -> reexecutar -> limpar | `evidence/g5-ciclo.log` |
+| G5 autônomo | Mesmo ciclo na stack autônoma sem `plat-v0` | `evidence/g5-autonomous-ciclo.log` |
 | G6 local | Contrato `apply_fix` e smoke MCP stdio local | `evidence/g6-apply-fix-mcp-smoke.log` |
-| G7 local | Compose autônomo sobe sem `spark-plat-v0-*` e Spark grava event log em S3A/MinIO | `evidence/g7-autonomous-spark-pi-v2.log`; `evidence/g7-autonomous-minio-events-v2.log` |
+| G7 local | Compose autônomo sobe sem `spark-plat-v0-*`, Spark grava event log, G3/G5 passam e listener JVM roda | `evidence/g3-autonomous-diagnosis.json`; `evidence/g5-autonomous-ciclo.log`; `evidence/g9-listener-jvm-spark-submit.log` |
 | G8 local | Política Crew/Judge futura sem LLM obrigatória | `evidence/g8-agentic-loop-python.log` |
 | G9 local | Listener JVM compila, gera JAR, carrega via `spark-submit --jars`, emite NDJSON e não derruba job em fail-mode | `evidence/g9-listener-jvm-spark-submit.log`; `evidence/g9-listener-jvm-output.ndjson`; `evidence/g9-listener-jvm-failsafe-spark-submit.log` |
 
@@ -190,9 +192,9 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 | Gap | Impacto |
 |---|---|
 | SparkListener JVM real fail-safe | Fechado no smoke runtime: JAR carregado via `spark-submit --jars`, NDJSON emitido e falha interna nao derruba job |
-| `docker compose up` autonomo da branch | Compose autonomo paralelo sobe e grava event log em S3A/MinIO; falta repetir G3/G5 completos sem plat-v0 |
+| `docker compose up` autonomo da branch | Fechado localmente: compose autonomo sobe, grava event log em S3A/MinIO e repetiu G3/G5 sem plat-v0 |
 | Crew.ai/Judge | Politica local de escalonamento existe; Crew.ai/LLM real segue futuro e opcional |
-| IDE real | MCP stdio subprocess e `apply_fix` passam em smoke local, mas ainda precisa smoke test em Cursor/VS Code/Claude Code |
+| IDE real | MCP stdio subprocess estilo cliente externo passa com transcript; ainda precisa smoke GUI em Cursor/VS Code/Claude Code |
 | G6 oraculo/drift | Falta agendamento/validacao continua sintetico vs real |
 
 ## Aderencia Ao Pedido Do Luan
@@ -207,16 +209,16 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 | ClickHouse/job_id/app_id | Parcial |
 | MCP/apply_fix local | Cumpre localmente |
 | MCP subprocess estilo cliente externo | Cumpre localmente |
-| IDE real | Parcial |
+| IDE real | Parcial, subprocesso JSON-RPC validado; GUI pendente |
 | SparkListener real | Cumpre localmente/runtime smoke |
 | Crew.ai/Judge | Parcial, politica local criada sem LLM |
-| Plataforma Docker standalone | Parcial avançado, compose autonomo sobe e grava event log; falta repetir G3/G5 completos |
+| Plataforma Docker standalone | Cumpre localmente, G3/G5 autonomos passaram; ressalva Spark 4.0.0 vs plat-v0 |
 
 ## Proximos Passos Recomendados
 
-1. Fazer smoke test real com cliente MCP/IDE usando a tool `apply_fix`.
-2. Repetir G3/G5 completos na stack autonoma usando o event log em MinIO.
-3. Integrar o JAR do SparkListener no job template de G3/G5 autonomo, agora que o smoke `--jars` passou.
+1. Fazer smoke GUI real em Cursor/VS Code/Claude Code usando a tool `apply_fix`.
+2. Promover o G3/G5 autonomo para regressao automatizada.
+3. Integrar o JAR do SparkListener no job template oficial, agora que o smoke `--jars` e G3/G5 autonomos passaram.
 4. Promover ADRs formais para decisoes centrais.
 5. Criar G6: oraculo agendado e controle de drift.
 6. So depois expandir camada Crew.ai/Judge.
