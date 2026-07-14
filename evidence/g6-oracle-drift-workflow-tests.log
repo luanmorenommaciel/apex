@@ -1,0 +1,9 @@
+Command:
+uv run --with-requirements requirements.txt python -m pytest tests/test_g6_oracle_drift_smoke.py -q
+
+Output:
+..                                                                       [100%]
+2 passed in 5.18s
+
+Workflow update:
+.github/workflows/scenario-gate.yml now includes workflow_dispatch, weekly cron, and a g6-oracle-drift job that runs tools/g6_oracle_drift_smoke.py and uploads the generated G6 evidence as an artifact.

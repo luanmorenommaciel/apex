@@ -31,7 +31,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Crew/Judge policy local | Fechado localmente | `apex/commander/judge_policy.py`; `evidence/g8-agentic-loop-python.log` |
 | MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
 | Claude Code project MCP | Parcial, pendente de aprovacao interativa | `.mcp.json`; `evidence/g6-claude-code-project-mcp-smoke.log` |
-| G6 oracle/drift smoke | Parcial, smoke local verde | `tools/g6_oracle_drift_smoke.py`; `evidence/g6-oracle-drift-smoke.log`; `evidence/g6-oracle-drift-summary.json` |
+| G6 oracle/drift smoke | Parcial forte, smoke local verde + workflow definido | `tools/g6_oracle_drift_smoke.py`; `.github/workflows/scenario-gate.yml`; `evidence/g6-oracle-drift-smoke.log`; `evidence/g6-oracle-drift-summary.json` |
 | Comparacao campeonato 14/07 | Atualizada | `docs/architecture/llm-solution-validation-framework-2026-07-14.md`; `docs/presentations/llm-solution-validation-2026-07-14.html` |
 | Autoavaliacao | Fechada | `docs/autoavaliacao.md` |
 | Catalogo de issues | Fechado/aberto conforme item | `ISSUES.md` |
@@ -210,7 +210,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 | `docker compose up` autonomo da branch | Fechado localmente: compose autonomo sobe, grava event log em S3A/MinIO e repetiu G3/G5 sem plat-v0 |
 | Crew.ai/Judge | Politica local de escalonamento existe; Crew.ai/LLM real segue futuro e opcional |
 | IDE real | MCP stdio subprocess estilo cliente externo passa com transcript; `.mcp.json` project-scoped e reconhecido pelo Claude Code; ainda precisa aprovacao interativa/GUI em Cursor/VS Code/Claude Code |
-| G6 oraculo/drift | Smoke local verde contra `real_log.ndjson`; falta agendamento/validacao continua sintetico vs real |
+| G6 oraculo/drift | Smoke local verde contra `real_log.ndjson`; workflow semanal/manual definido; falta observar execucao remota do GitHub Actions |
 
 ## Aderencia Ao Pedido Do Luan
 
@@ -235,7 +235,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 2. Promover o G3/G5 autonomo para regressao automatizada.
 3. Integrar o JAR do SparkListener no job template oficial, agora que o smoke `--jars` e G3/G5 autonomos passaram.
 4. Promover ADRs formais para decisoes centrais.
-5. Promover G6 de smoke local para oraculo agendado e controle de drift continuo.
+5. Acionar/observar o workflow G6 no GitHub Actions para fechar drift continuo operacional.
 6. So depois expandir camada Crew.ai/Judge.
 
 ## Estado De Publicacao

@@ -2,6 +2,9 @@ name: Apex Scenario Gate
 on:
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
 jobs:
   gate:
     runs-on: ubuntu-latest
@@ -19,3 +22,23 @@ jobs:
             python3 generators/plan_generator.py "$s" log.ndjson
             python3 watchers/skew_watcher.py "$s" log.ndjson
           done
+  g6-oracle-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - name: G6 oracle drift smoke
+        run: |
+          python3 tools/g6_oracle_drift_smoke.py \
+            --real-log real_log.ndjson \
+            --summary evidence/g6-oracle-drift-summary.json
+      - name: Upload G6 evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: g6-oracle-drift-evidence
+          path: |
+            evidence/g6-oracle-drift-summary.json
+            evidence/generated/g6-oracle-drift/synthetic.ndjson
