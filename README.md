@@ -31,7 +31,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Crew/Judge policy local | Fechado localmente | `apex/commander/judge_policy.py`; `evidence/g8-agentic-loop-python.log` |
 | MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
 | Claude Code project MCP | Parcial, pendente de aprovacao interativa | `.mcp.json`; `evidence/g6-claude-code-project-mcp-smoke.log` |
-| G6 oracle/drift smoke | Fechado no job G6 remoto; CI geral com ressalva | `tools/g6_oracle_drift_smoke.py`; `.github/workflows/scenario-gate.yml`; `evidence/g6-oracle-drift-smoke.log`; `evidence/g6-oracle-drift-summary.json`; `evidence/g6-remote-workflow-run-29378169451-summary.json` |
+| G6 oracle/drift smoke | Fechado remoto | `tools/g6_oracle_drift_smoke.py`; `.github/workflows/scenario-gate.yml`; `evidence/g6-oracle-drift-smoke.log`; `evidence/g6-oracle-drift-summary.json`; `evidence/g6-remote-workflow-latest-summary.json` |
 | Loop agentico local | Parcial, sem LLM e sem mutacao; pendente MCP GUI | `apex/commander/agentic_loop.py`; `tools/agentic_validation_loop.py`; `evidence/agentic-validation-loop-report.json` |
 | Comparacao campeonato 14/07 | Atualizada | `docs/architecture/llm-solution-validation-framework-2026-07-14.md`; `docs/presentations/llm-solution-validation-2026-07-14.html` |
 | Autoavaliacao | Fechada | `docs/autoavaliacao.md` |
@@ -212,7 +212,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 | `docker compose up` autonomo da branch | Fechado localmente: compose autonomo sobe, grava event log em S3A/MinIO e repetiu G3/G5 sem plat-v0 |
 | Crew.ai/Judge | Politica local de escalonamento existe; Crew.ai/LLM real segue futuro e opcional |
 | IDE real | MCP stdio subprocess estilo cliente externo passa com transcript; `.mcp.json` project-scoped e reconhecido pelo Claude Code; ainda precisa aprovacao interativa/GUI em Cursor/VS Code/Claude Code |
-| G6 oraculo/drift | Smoke local verde contra `real_log.ndjson`; workflow semanal/manual definido; execucao remota observada no campeonato com job `g6-oracle-drift` verde e falha separada do job legado `gate` |
+| G6 oraculo/drift | Smoke local verde contra `real_log.ndjson`; workflow semanal/manual definido; execucao remota observada no campeonato com workflow inteiro verde, incluindo `gate` e `g6-oracle-drift` |
 | Loop agentico | Orquestrador deterministico local criado: coleta evidencia, julga status e recomenda proxima acao sem LLM/mutacao; apos G6 remoto, pendencia principal e aprovacao MCP GUI |
 
 ## Aderencia Ao Pedido Do Luan

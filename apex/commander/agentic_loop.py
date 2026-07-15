@@ -73,13 +73,21 @@ def check_mcp_project_config(root: Path) -> dict[str, Any]:
 
 def check_g6_oracle_drift(root: Path) -> dict[str, Any]:
     summary_path = root / "evidence" / "g6-oracle-drift-summary.json"
-    remote_summary_path = root / "evidence" / "g6-remote-workflow-run-29378169451-summary.json"
+    remote_summary_path = root / "evidence" / "g6-remote-workflow-latest-summary.json"
+    legacy_remote_summary_path = (
+        root / "evidence" / "g6-remote-workflow-run-29378169451-summary.json"
+    )
     workflow_path = root / ".github" / "workflows" / "scenario-gate.yml"
     result = {
         "id": "g6_oracle_drift",
         "title": "G6 oracle drift smoke and schedule",
         "status": FAIL,
-        "evidence": [str(summary_path), str(workflow_path), str(remote_summary_path)],
+        "evidence": [
+            str(summary_path),
+            str(workflow_path),
+            str(remote_summary_path),
+            str(legacy_remote_summary_path),
+        ],
         "details": [],
         "next_action": "run tools/g6_oracle_drift_smoke.py and create CI workflow",
     }
@@ -114,9 +122,13 @@ def check_g6_oracle_drift(root: Path) -> dict[str, Any]:
         else:
             result["details"].append("workflow exists but lacks dispatch/schedule/job")
 
-    if remote_summary_path.exists():
+    observed_remote_path = remote_summary_path
+    if not observed_remote_path.exists() and legacy_remote_summary_path.exists():
+        observed_remote_path = legacy_remote_summary_path
+
+    if observed_remote_path.exists():
         try:
-            remote_summary = json.loads(remote_summary_path.read_text(encoding="utf-8"))
+            remote_summary = json.loads(observed_remote_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
             result["status"] = PARTIAL
             result["details"].append(f"remote workflow summary invalid: {exc}")
@@ -134,6 +146,8 @@ def check_g6_oracle_drift(root: Path) -> dict[str, Any]:
                 result["details"].append(
                     "overall workflow failed because legacy gate job failed separately"
                 )
+            elif remote_summary.get("conclusion") == "success":
+                result["details"].append("overall remote workflow passed")
             result["next_action"] = "monitor scheduled G6 runs"
         else:
             result["status"] = PARTIAL

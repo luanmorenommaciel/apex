@@ -81,7 +81,7 @@ def test_g6_oracle_drift_passes_when_summary_and_workflow_exist(tmp_path):
 def test_g6_oracle_drift_records_remote_job_when_observed(tmp_path):
     write_minimal_agentic_fixture(tmp_path)
     write(
-        tmp_path / "evidence" / "g6-remote-workflow-run-29378169451-summary.json",
+        tmp_path / "evidence" / "g6-remote-workflow-latest-summary.json",
         json.dumps(
             {
                 "conclusion": "failure",
