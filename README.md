@@ -32,6 +32,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
 | Claude Code project MCP | Parcial, pendente de aprovacao interativa | `.mcp.json`; `evidence/g6-claude-code-project-mcp-smoke.log` |
 | G6 oracle/drift smoke | Parcial forte, smoke local verde + workflow definido | `tools/g6_oracle_drift_smoke.py`; `.github/workflows/scenario-gate.yml`; `evidence/g6-oracle-drift-smoke.log`; `evidence/g6-oracle-drift-summary.json` |
+| Loop agentico local | Parcial, sem LLM e sem mutacao | `apex/commander/agentic_loop.py`; `tools/agentic_validation_loop.py`; `evidence/agentic-validation-loop-report.json` |
 | Comparacao campeonato 14/07 | Atualizada | `docs/architecture/llm-solution-validation-framework-2026-07-14.md`; `docs/presentations/llm-solution-validation-2026-07-14.html` |
 | Autoavaliacao | Fechada | `docs/autoavaliacao.md` |
 | Catalogo de issues | Fechado/aberto conforme item | `ISSUES.md` |
@@ -189,6 +190,7 @@ evidence/g3-real.log
 evidence/g4-t1.log
 evidence/g5-ciclo.log
 evidence/g6-apply-fix-mcp-smoke.log
+evidence/agentic-validation-loop-report.json
 evidence/g7-autonomous-compose-config.log
 evidence/g8-agentic-loop-python.log
 evidence/g9-listener-jvm-environment.log
@@ -211,6 +213,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 | Crew.ai/Judge | Politica local de escalonamento existe; Crew.ai/LLM real segue futuro e opcional |
 | IDE real | MCP stdio subprocess estilo cliente externo passa com transcript; `.mcp.json` project-scoped e reconhecido pelo Claude Code; ainda precisa aprovacao interativa/GUI em Cursor/VS Code/Claude Code |
 | G6 oraculo/drift | Smoke local verde contra `real_log.ndjson`; workflow semanal/manual definido; falta observar execucao remota do GitHub Actions |
+| Loop agentico | Orquestrador deterministico local criado: coleta evidencia, julga status e recomenda proxima acao sem LLM/mutacao |
 
 ## Aderencia Ao Pedido Do Luan
 

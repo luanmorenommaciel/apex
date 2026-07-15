@@ -1,0 +1,21 @@
+Command:
+uv run --with-requirements requirements.txt python -m pytest tests/test_agentic_validation_loop.py tests/test_commander_judge_policy.py -q
+
+Output:
+...........                                                              [100%]
+11 passed in 0.87s
+
+Command:
+uv run --with-requirements requirements.txt python tools/agentic_validation_loop.py --iterations 2 --output evidence/agentic-validation-loop-report.json
+
+Output summary:
+status: partial
+iteration_count: 2
+passing checks:
+- g6_oracle_drift
+- judge_policy_contract
+partial checks:
+- mcp_project_config
+next_actions:
+- approve apex-commander in Claude Code/Cursor/VS Code GUI
+- trigger or observe remote workflow execution

@@ -1,0 +1,131 @@
+{
+  "name": "apex_agentic_validation_loop",
+  "generated_at": "2026-07-14T21:00:12-0300",
+  "iterations": [
+    {
+      "iteration": 1,
+      "agents": [
+        "EvidenceCollector",
+        "DeterministicJudge",
+        "NextActionPlanner"
+      ],
+      "checks": [
+        {
+          "id": "mcp_project_config",
+          "title": "Claude Code project MCP config",
+          "status": "partial",
+          "evidence": [
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\.mcp.json",
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\g6-claude-code-project-mcp-smoke.log"
+          ],
+          "details": [
+            "project-scoped MCP server configured",
+            "Claude Code CLI recognized server but pending approval"
+          ],
+          "next_action": "approve apex-commander in Claude Code/Cursor/VS Code GUI"
+        },
+        {
+          "id": "g6_oracle_drift",
+          "title": "G6 oracle drift smoke and schedule",
+          "status": "pass",
+          "evidence": [
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\g6-oracle-drift-summary.json",
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\.github\\workflows\\scenario-gate.yml"
+          ],
+          "details": [
+            "local G6 smoke passed",
+            "manual/weekly workflow is defined"
+          ],
+          "next_action": "trigger or observe remote workflow execution"
+        },
+        {
+          "id": "judge_policy_contract",
+          "title": "Future Crew/Judge escalation policy",
+          "status": "pass",
+          "evidence": [
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\apex\\commander\\judge_policy.py",
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\tests\\test_commander_judge_policy.py"
+          ],
+          "details": [
+            "low confidence escalates to future Crew/Judge",
+            "high confidence with accepted evidence stays deterministic"
+          ],
+          "next_action": "keep Crew/Judge external until IDE and CI evidence are complete"
+        }
+      ],
+      "status": "partial",
+      "next_actions": [
+        "mcp_project_config: approve apex-commander in Claude Code/Cursor/VS Code GUI",
+        "g6_oracle_drift: trigger or observe remote workflow execution"
+      ]
+    },
+    {
+      "iteration": 2,
+      "agents": [
+        "EvidenceCollector",
+        "DeterministicJudge",
+        "NextActionPlanner"
+      ],
+      "checks": [
+        {
+          "id": "mcp_project_config",
+          "title": "Claude Code project MCP config",
+          "status": "partial",
+          "evidence": [
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\.mcp.json",
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\g6-claude-code-project-mcp-smoke.log"
+          ],
+          "details": [
+            "project-scoped MCP server configured",
+            "Claude Code CLI recognized server but pending approval"
+          ],
+          "next_action": "approve apex-commander in Claude Code/Cursor/VS Code GUI"
+        },
+        {
+          "id": "g6_oracle_drift",
+          "title": "G6 oracle drift smoke and schedule",
+          "status": "pass",
+          "evidence": [
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\g6-oracle-drift-summary.json",
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\.github\\workflows\\scenario-gate.yml"
+          ],
+          "details": [
+            "local G6 smoke passed",
+            "manual/weekly workflow is defined"
+          ],
+          "next_action": "trigger or observe remote workflow execution"
+        },
+        {
+          "id": "judge_policy_contract",
+          "title": "Future Crew/Judge escalation policy",
+          "status": "pass",
+          "evidence": [
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\apex\\commander\\judge_policy.py",
+            "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\tests\\test_commander_judge_policy.py"
+          ],
+          "details": [
+            "low confidence escalates to future Crew/Judge",
+            "high confidence with accepted evidence stays deterministic"
+          ],
+          "next_action": "keep Crew/Judge external until IDE and CI evidence are complete"
+        }
+      ],
+      "status": "partial",
+      "next_actions": [
+        "mcp_project_config: approve apex-commander in Claude Code/Cursor/VS Code GUI",
+        "g6_oracle_drift: trigger or observe remote workflow execution"
+      ]
+    }
+  ],
+  "status": "partial",
+  "next_actions": [
+    "mcp_project_config: approve apex-commander in Claude Code/Cursor/VS Code GUI",
+    "g6_oracle_drift: trigger or observe remote workflow execution"
+  ],
+  "guardrails": [
+    "no_llm_required",
+    "no_file_mutation",
+    "evidence_first",
+    "human_approval_required_for_apply"
+  ]
+}
