@@ -1,5 +1,22 @@
 # Apresentacoes
 
+## `apex-codex-solucao-end-to-end-2026-07-15.html`
+
+Apresentacao final da solucao Codex Round2 para o juiz e para o Commander:
+G0-G6, workflow remoto verde, caso de uso skew, fluxo end-to-end, seguranca do
+`apply_fix`, pacote de evidencias e proximos passos reais.
+
+Use esta apresentacao para explicar somente a nossa branch no estado final
+publicado em `6ba5238`.
+
+## `llm-solution-validation-2026-07-15.html`
+
+Apresentacao comparativa final do campeonato depois do G6 remoto verde:
+Codex Round2, Cowork, Kimi, Agmar/Spike e DataFlint. Inclui pacote para o juiz,
+scorecard C1-C6 atualizado e recomendacao de composicao da V1.
+
+Use esta apresentacao para debate de escolha/composicao entre engines.
+
 ## `apex-codex-solucao-end-to-end-2026-07-14.html`
 
 Apresentacao da solucao Codex Round2 para o Commander: exemplo de skew real,

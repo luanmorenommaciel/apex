@@ -2,7 +2,7 @@
 
 Branch: `codex-round2`
 
-Estado: solucao local de diagnostico Spark com gates G0-G5 validados, stack autonoma exercitada e evidencias em `evidence/`.
+Estado: solucao local de diagnostico Spark com gates G0-G6 validados, stack autonoma exercitada, workflow remoto verde e evidencias em `evidence/`.
 
 ## O Que Tem Nesta Branch
 
@@ -13,7 +13,7 @@ event log -> detector deterministico -> EvidenceValidator -> finding
 -> recomendacao -> preview de diff -> apply guardado -> rerun -> compare
 ```
 
-Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loop funcional com evidencia: detectar um problema real, gerar uma correcao revisavel, aplicar com seguranca, reexecutar e provar que o finding sumiu. A rodada de 14/07 tambem provou a mesma logica em stack autonoma da propria branch, sem depender das imagens `spark-plat-v0-*`.
+Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loop funcional com evidencia: detectar um problema real, gerar uma correcao revisavel, aplicar com seguranca, reexecutar e provar que o finding sumiu. A rodada de 14/07 provou a mesma logica em stack autonoma da propria branch, sem depender das imagens `spark-plat-v0-*`; em 15/07, o G6 remoto tambem ficou verde no campeonato.
 
 ## Resumo Executivo
 
@@ -33,7 +33,9 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Claude Code project MCP | Parcial, pendente de aprovacao interativa | `.mcp.json`; `evidence/g6-claude-code-project-mcp-smoke.log` |
 | G6 oracle/drift smoke | Fechado remoto | `tools/g6_oracle_drift_smoke.py`; `.github/workflows/scenario-gate.yml`; `evidence/g6-oracle-drift-smoke.log`; `evidence/g6-oracle-drift-summary.json`; `evidence/g6-remote-workflow-latest-summary.json` |
 | Loop agentico local | Parcial, sem LLM e sem mutacao; pendente MCP GUI | `apex/commander/agentic_loop.py`; `tools/agentic_validation_loop.py`; `evidence/agentic-validation-loop-report.json` |
-| Comparacao campeonato 14/07 | Atualizada | `docs/architecture/llm-solution-validation-framework-2026-07-14.md`; `docs/presentations/llm-solution-validation-2026-07-14.html` |
+| Especificacao tecnica 15/07 | Atualizada para juiz | `docs/specs/apex-codex-technical-spec-2026-07-15.md` |
+| Comparacao campeonato 15/07 | Atualizada para juiz | `docs/architecture/llm-solution-validation-framework-2026-07-15.md`; `docs/presentations/llm-solution-validation-2026-07-15.html` |
+| Apresentacao Codex 15/07 | Atualizada para juiz | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html` |
 | Autoavaliacao | Fechada | `docs/autoavaliacao.md` |
 | Catalogo de issues | Fechado/aberto conforme item | `ISSUES.md` |
 | Plano F0/F5 | Fechado | `PLANO.md` |
@@ -157,9 +159,13 @@ O apply nao e uma edicao livre feita por agente. Ele passa por controles:
 | `docs/autoavaliacao.md` | Scorecard C1-C6 e Captain's Report |
 | `docs/specs/skew-slice-v4.md` | Especificacao tecnica atualizada da solucao Codex Round2 |
 | `docs/architecture/llm-solution-validation-framework-2026-07-14.md` | Comparacao atualizada entre Codex, Cowork, Kimi, Spike, Codex antiga e DataFlint |
+| `docs/architecture/llm-solution-validation-framework-2026-07-15.md` | Comparacao final para juiz, com G6 remoto verde |
+| `docs/specs/apex-codex-technical-spec-2026-07-15.md` | Especificacao tecnica reprodutivel da branch Codex |
 | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html` | Apresentacao end-to-end da nossa solucao |
+| `docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html` | Apresentacao final da nossa solucao para o juiz |
 | `docs/presentations/apex-codex-projeto-luan-2026-07-14.html` | Apresentacao executiva para o Luan |
 | `docs/presentations/llm-solution-validation-2026-07-14.html` | Apresentacao comparativa atualizada das solucoes |
+| `docs/presentations/llm-solution-validation-2026-07-15.html` | Apresentacao comparativa final para o juiz |
 
 ## Apresentacoes
 
@@ -167,15 +173,17 @@ Principais arquivos para apresentar:
 
 ```text
 docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html
+docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html
 docs/presentations/apex-codex-projeto-luan-2026-07-14.html
 docs/presentations/llm-solution-validation-2026-07-14.html
+docs/presentations/llm-solution-validation-2026-07-15.html
 ```
 
 Sugestao:
 
-1. Para falar so da nossa solucao: use `apex-codex-solucao-end-to-end-2026-07-14.html`.
+1. Para falar so da nossa solucao no estado final: use `apex-codex-solucao-end-to-end-2026-07-15.html`.
 2. Para explicar ao Luan em formato executivo: use `apex-codex-projeto-luan-2026-07-14.html`.
-3. Para comparar LLMs/DataFlint: use `llm-solution-validation-2026-07-14.html`.
+3. Para comparar LLMs/DataFlint no estado final: use `llm-solution-validation-2026-07-15.html`.
 
 ## Como Validar A Branch
 
@@ -191,6 +199,8 @@ evidence/g4-t1.log
 evidence/g5-ciclo.log
 evidence/g6-apply-fix-mcp-smoke.log
 evidence/agentic-validation-loop-report.json
+docs/specs/apex-codex-technical-spec-2026-07-15.md
+docs/architecture/llm-solution-validation-framework-2026-07-15.md
 evidence/g7-autonomous-compose-config.log
 evidence/g8-agentic-loop-python.log
 evidence/g9-listener-jvm-environment.log

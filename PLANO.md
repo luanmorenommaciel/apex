@@ -69,7 +69,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 | L5 | Falta Crew.ai e contrato anti-alucinacao | Integrar so depois de T1 e EvidenceValidator estarem ligados ao schema canonico. |
 | L6 | Falta validacao em IDE GUI real | `apply_fix` ja existe como contrato local guardado e tem smoke subprocesso estilo cliente IDE; proximo passo e abrir em Cursor/VS Code/Claude Code. |
 | L7 | Falta ADR formal versionada | Promover rascunhos para `docs/adr/ADR-*.md`. |
-| L9 | MVPs centrais locais existem; faltam produto IDE GUI e Crew.ai/Judge real | Nao expandir LLM antes de preservar regressao G0-G5, stack autonoma, schema e listener verdes. |
+| L9 | MVPs centrais locais existem; faltam produto IDE GUI e Crew.ai/Judge real | Nao expandir LLM antes de preservar regressao G0-G6, stack autonoma, schema e listener verdes. |
 
 ## Ordem De Trabalho Recomendada
 

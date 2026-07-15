@@ -5,9 +5,9 @@ por uma task Spark. Ele nasceu no slice `skew_on_join_30x` v4 e continua util
 como explicacao de fronteira de observabilidade. Para a fotografia atual da
 branch Codex Round2, use tambem `README.md`, `PLANO.md`,
 `docs/autoavaliacao.md` e
-`docs/architecture/llm-solution-validation-framework-2026-07-14.md`.
+`docs/architecture/llm-solution-validation-framework-2026-07-15.md`.
 
-## Atualizacao Round2 - 2026-07-14
+## Atualizacao Round2 - 2026-07-15
 
 O slice inicial foi expandido para uma esteira local com:
 
@@ -18,7 +18,9 @@ O slice inicial foi expandido para uma esteira local com:
 - G3/G5 repetidos na stack autonoma da branch: `app-20260714112858-0003` -> `app-20260714113809-0004`;
 - SparkListener JVM real com NDJSON e fail-safe;
 - MCP stdio e smoke subprocesso estilo cliente IDE;
-- gaps restantes: IDE GUI real, Crew.ai/Judge real e G6 drift/oraculo agendado.
+- G6 remoto verde no GitHub Actions do campeonato: workflow inteiro `Apex Scenario Gate` passou no commit `6ba5238`;
+- gap operacional restante: aprovacao interativa do `apex-commander` em IDE GUI real;
+- gap futuro deliberado: Crew.ai/Judge real.
 
 ## Legenda de maturidade
 
@@ -34,7 +36,7 @@ O slice inicial foi expandido para uma esteira local com:
 ```text
 O Apex saiu do slice isolado e hoje prova o loop detectar -> corrigir -> rerodar -> limpar.
 O caminho deterministico T1 continua sem LLM obrigatorio.
-Ainda falta transformar isso em produto V1 completo com IDE GUI real, Crew/Judge real e drift continuo.
+O drift G6 remoto ja foi observado no campeonato; ainda falta transformar isso em produto V1 completo com IDE GUI real e Crew/Judge real.
 ```
 
 ## Visao visual geral
