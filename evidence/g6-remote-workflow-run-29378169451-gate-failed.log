@@ -1,0 +1,310 @@
+gate	Testes	﻿2026-07-15T00:08:10.1649763Z ##[group]Run python3 -m pytest tests/ -v
+gate	Testes	2026-07-15T00:08:10.1650268Z ^[[36;1mpython3 -m pytest tests/ -v^[[0m
+gate	Testes	2026-07-15T00:08:10.1684841Z shell: /usr/bin/bash -e {0}
+gate	Testes	2026-07-15T00:08:10.1685397Z env:
+gate	Testes	2026-07-15T00:08:10.1685701Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+gate	Testes	2026-07-15T00:08:10.1686173Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+gate	Testes	2026-07-15T00:08:10.1686646Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+gate	Testes	2026-07-15T00:08:10.1687032Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+gate	Testes	2026-07-15T00:08:10.1687414Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+gate	Testes	2026-07-15T00:08:10.1687797Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+gate	Testes	2026-07-15T00:08:10.1688124Z ##[endgroup]
+gate	Testes	2026-07-15T00:08:10.7239895Z ============================= test session starts ==============================
+gate	Testes	2026-07-15T00:08:10.7241785Z platform linux -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /opt/hostedtoolcache/Python/3.12.13/x64/bin/python3
+gate	Testes	2026-07-15T00:08:10.7243785Z cachedir: .pytest_cache
+gate	Testes	2026-07-15T00:08:10.7244736Z rootdir: /home/runner/work/apex-workspace/apex-workspace
+gate	Testes	2026-07-15T00:08:11.1948162Z collecting ... collected 164 items
+gate	Testes	2026-07-15T00:08:11.1948969Z 
+gate	Testes	2026-07-15T00:08:11.1992935Z tests/test_agentic_validation_loop.py::test_agentic_loop_reports_partial_when_mcp_needs_gui_approval PASSED [  0%]
+gate	Testes	2026-07-15T00:08:11.2005970Z tests/test_agentic_validation_loop.py::test_mcp_project_config_missing_fails_with_next_action PASSED [  1%]
+gate	Testes	2026-07-15T00:08:11.2025922Z tests/test_agentic_validation_loop.py::test_g6_oracle_drift_passes_when_summary_and_workflow_exist PASSED [  1%]
+gate	Testes	2026-07-15T00:08:11.2041338Z tests/test_agentic_validation_loop.py::test_judge_policy_contract_keeps_llm_optional PASSED [  2%]
+gate	Testes	2026-07-15T00:08:11.2057171Z tests/test_commander_apply_verify.py::test_preview_recommendation_returns_approval_token PASSED [  3%]
+gate	Testes	2026-07-15T00:08:11.2071116Z tests/test_commander_apply_verify.py::test_apply_recommendation_requires_configured_apply_root PASSED [  3%]
+gate	Testes	2026-07-15T00:08:11.2088223Z tests/test_commander_apply_verify.py::test_apply_recommendation_rejects_invalid_approval_token PASSED [  4%]
+gate	Testes	2026-07-15T00:08:11.2105489Z tests/test_commander_apply_verify.py::test_apply_recommendation_rejects_path_outside_apply_root PASSED [  4%]
+gate	Testes	2026-07-15T00:08:11.2128972Z tests/test_commander_apply_verify.py::test_apply_recommendation_writes_and_verifies_with_matching_token PASSED [  5%]
+gate	Testes	2026-07-15T00:08:11.2150483Z tests/test_commander_apply_verify.py::test_apply_fix_is_guarded_contract_alias PASSED [  6%]
+gate	Testes	2026-07-15T00:08:11.2173792Z tests/test_commander_apply_verify.py::test_apply_recommendation_preserves_preview_token_for_relative_target PASSED [  6%]
+gate	Testes	2026-07-15T00:08:11.2190783Z tests/test_commander_apply_verify.py::test_verify_recommendation_apply_detects_mismatch PASSED [  7%]
+gate	Testes	2026-07-15T00:08:11.2200788Z tests/test_commander_clickhouse_adapter.py::test_clickhouse_adapter_creates_schema PASSED [  7%]
+gate	Testes	2026-07-15T00:08:11.2210261Z tests/test_commander_clickhouse_adapter.py::test_clickhouse_adapter_appends_and_queries_by_job_id PASSED [  8%]
+gate	Testes	2026-07-15T00:08:11.2223571Z tests/test_commander_clickhouse_adapter.py::test_clickhouse_adapter_rejects_unsafe_table_name PASSED [  9%]
+gate	Testes	2026-07-15T00:08:11.2232479Z tests/test_commander_clickhouse_adapter.py::test_diagnosis_reads_from_clickhouse_adapter PASSED [  9%]
+gate	Testes	2026-07-15T00:08:11.2243474Z tests/test_commander_clickhouse_adapter.py::test_explain_evidence_reads_from_clickhouse_adapter PASSED [ 10%]
+gate	Testes	2026-07-15T00:08:11.2252174Z tests/test_commander_clickhouse_findings.py::test_finding_store_creates_schema PASSED [ 10%]
+gate	Testes	2026-07-15T00:08:11.2261630Z tests/test_commander_clickhouse_findings.py::test_persist_validated_findings_inserts_and_queries_by_job_id PASSED [ 11%]
+gate	Testes	2026-07-15T00:08:11.2270932Z tests/test_commander_clickhouse_findings.py::test_commander_tool_queries_clickhouse_finding_store PASSED [ 12%]
+gate	Testes	2026-07-15T00:08:11.2289621Z tests/test_commander_clickhouse_findings.py::test_commander_tool_recommends_from_clickhouse_finding_store PASSED [ 12%]
+gate	Testes	2026-07-15T00:08:11.2311440Z tests/test_commander_clickhouse_findings.py::test_finding_store_rejects_unsafe_table_name PASSED [ 13%]
+gate	Testes	2026-07-15T00:08:11.2313112Z tests/test_commander_clickhouse_findings_real_integration.py::test_real_clickhouse_persists_validated_findings SKIPPED [ 14%]
+gate	Testes	2026-07-15T00:08:11.2336057Z tests/test_commander_clickhouse_http_client.py::test_command_sends_sql_with_basic_auth PASSED [ 14%]
+gate	Testes	2026-07-15T00:08:11.2343184Z tests/test_commander_clickhouse_http_client.py::test_insert_sends_json_each_row_body PASSED [ 15%]
+gate	Testes	2026-07-15T00:08:11.2352438Z tests/test_commander_clickhouse_http_client.py::test_query_parses_json_each_row_response PASSED [ 15%]
+gate	Testes	2026-07-15T00:08:11.2363923Z tests/test_commander_clickhouse_real_integration.py::test_real_clickhouse_roundtrip_and_diagnosis SKIPPED [ 16%]
+gate	Testes	2026-07-15T00:08:11.2384284Z tests/test_commander_detectors.py::test_build_finding_keeps_legacy_title_and_new_kind PASSED [ 17%]
+gate	Testes	2026-07-15T00:08:11.2386265Z tests/test_commander_detectors.py::test_build_telemetry_captures_extended_stage_metrics PASSED [ 17%]
+gate	Testes	2026-07-15T00:08:11.2395576Z tests/test_commander_detectors.py::test_detects_shuffle_spill_candidate PASSED [ 18%]
+gate	Testes	2026-07-15T00:08:11.2415854Z tests/test_commander_detectors.py::test_detects_gc_pressure_candidate PASSED [ 18%]
+gate	Testes	2026-07-15T00:08:11.2435877Z tests/test_commander_detectors.py::test_detects_oom_candidate PASSED     [ 19%]
+gate	Testes	2026-07-15T00:08:11.2456194Z tests/test_commander_detectors.py::test_detects_cartesian_product_from_physical_plan PASSED [ 20%]
+gate	Testes	2026-07-15T00:08:11.2457472Z tests/test_commander_detectors.py::test_detects_plan_aqe_candidate_from_event_counts PASSED [ 20%]
+gate	Testes	2026-07-15T00:08:11.2466642Z tests/test_commander_detectors.py::test_balanced_stage_has_no_detector_findings PASSED [ 21%]
+gate	Testes	2026-07-15T00:08:11.2468118Z tests/test_commander_evidence_validator.py::test_accepts_complete_skew_finding PASSED [ 21%]
+gate	Testes	2026-07-15T00:08:11.2469620Z tests/test_commander_evidence_validator.py::test_rejects_missing_job_id PASSED [ 22%]
+gate	Testes	2026-07-15T00:08:11.2478402Z tests/test_commander_evidence_validator.py::test_rejects_low_ratio_false_positive PASSED [ 23%]
+gate	Testes	2026-07-15T00:08:11.2488812Z tests/test_commander_evidence_validator.py::test_rejects_insufficient_task_count PASSED [ 23%]
+gate	Testes	2026-07-15T00:08:11.2497373Z tests/test_commander_evidence_validator.py::test_accepts_complete_shuffle_spill_finding PASSED [ 24%]
+gate	Testes	2026-07-15T00:08:11.2507048Z tests/test_commander_evidence_validator.py::test_accepts_complete_gc_pressure_finding PASSED [ 25%]
+gate	Testes	2026-07-15T00:08:11.2524897Z tests/test_commander_fix_preview.py::test_build_fix_preview_returns_diff_without_modifying_file PASSED [ 25%]
+gate	Testes	2026-07-15T00:08:11.2533332Z tests/test_commander_judge_policy.py::test_confidence_score_maps_commander_labels PASSED [ 26%]
+gate	Testes	2026-07-15T00:08:11.2542293Z tests/test_commander_judge_policy.py::test_medium_confidence_stays_on_deterministic_t1_at_default_threshold PASSED [ 26%]
+gate	Testes	2026-07-15T00:08:11.2550848Z tests/test_commander_judge_policy.py::test_low_confidence_escalates_to_future_crew_judge_contract PASSED [ 27%]
+gate	Testes	2026-07-15T00:08:11.2559462Z tests/test_commander_judge_policy.py::test_numeric_confidence_below_threshold_escalates PASSED [ 28%]
+gate	Testes	2026-07-15T00:08:11.2567997Z tests/test_commander_judge_policy.py::test_validator_rejection_escalates_even_when_confidence_is_high PASSED [ 28%]
+gate	Testes	2026-07-15T00:08:11.2576704Z tests/test_commander_judge_policy.py::test_future_contract_declares_required_inputs_outputs_and_judge_decisions PASSED [ 29%]
+gate	Testes	2026-07-15T00:08:11.2586150Z tests/test_commander_judge_policy.py::test_future_contract_blocks_hallucinated_metrics_and_direct_apply PASSED [ 29%]
+gate	Testes	2026-07-15T00:08:11.2602561Z tests/test_commander_mcp_contract.py::test_debug_job_returns_validated_finding PASSED [ 30%]
+gate	Testes	2026-07-15T00:08:11.2616741Z tests/test_commander_mcp_contract.py::test_debug_job_reports_not_found PASSED [ 31%]
+gate	Testes	2026-07-15T00:08:11.2632946Z tests/test_commander_mcp_contract.py::test_explain_evidence_returns_latest_envelope PASSED [ 31%]
+gate	Testes	2026-07-15T00:08:11.3477625Z tests/test_commander_mcp_ide_subprocess_smoke.py::test_mcp_ide_subprocess_smoke_writes_evidence PASSED [ 32%]
+gate	Testes	2026-07-15T00:08:11.3496602Z tests/test_commander_mcp_stdio_server.py::test_initialize_declares_read_only_tools_capability PASSED [ 32%]
+gate	Testes	2026-07-15T00:08:11.3513313Z tests/test_commander_mcp_stdio_server.py::test_tools_list_returns_mcp_tool_metadata PASSED [ 33%]
+gate	Testes	2026-07-15T00:08:11.3529667Z tests/test_commander_mcp_stdio_server.py::test_tools_call_returns_text_json_content PASSED [ 34%]
+gate	Testes	2026-07-15T00:08:11.3543622Z tests/test_commander_mcp_stdio_server.py::test_tools_call_can_query_persisted_findings PASSED [ 34%]
+gate	Testes	2026-07-15T00:08:11.3557783Z tests/test_commander_mcp_stdio_server.py::test_tools_call_can_recommend_fix_from_persisted_findings PASSED [ 35%]
+gate	Testes	2026-07-15T00:08:11.3574457Z tests/test_commander_mcp_stdio_server.py::test_tools_call_can_preview_recommendation_without_modifying_file PASSED [ 35%]
+gate	Testes	2026-07-15T00:08:11.3597430Z tests/test_commander_mcp_stdio_server.py::test_tools_call_can_apply_recommendation_with_matching_token PASSED [ 36%]
+gate	Testes	2026-07-15T00:08:11.3619629Z tests/test_commander_mcp_stdio_server.py::test_tools_call_can_apply_fix_with_matching_token PASSED [ 37%]
+gate	Testes	2026-07-15T00:08:11.3640101Z tests/test_commander_mcp_stdio_server.py::test_tools_call_can_compare_job_telemetry PASSED [ 37%]
+gate	Testes	2026-07-15T00:08:11.3661554Z tests/test_commander_mcp_stdio_server.py::test_tools_call_can_build_spark_submit_rerun_command PASSED [ 38%]
+gate	Testes	2026-07-15T00:08:11.3686889Z tests/test_commander_mcp_stdio_server.py::test_tools_call_can_plan_and_execute_rerun_with_fake_runner PASSED [ 39%]
+gate	Testes	2026-07-15T00:08:11.3712139Z tests/test_commander_mcp_stdio_server.py::test_tools_call_can_execute_rerun_poll_and_compare PASSED [ 39%]
+gate	Testes	2026-07-15T00:08:11.3725411Z tests/test_commander_mcp_stdio_server.py::test_initialized_notification_returns_no_response PASSED [ 40%]
+gate	Testes	2026-07-15T00:08:11.3739046Z tests/test_commander_mcp_stdio_server.py::test_unknown_method_returns_jsonrpc_error PASSED [ 40%]
+gate	Testes	2026-07-15T00:08:11.3766066Z tests/test_commander_mcp_stdio_server.py::test_stdio_loop_processes_line_delimited_jsonrpc PASSED [ 41%]
+gate	Testes	2026-07-15T00:08:11.5188460Z tests/test_commander_mcp_stdio_server.py::test_mcp_stdio_cli_subprocess_can_apply_fix PASSED [ 42%]
+gate	Testes	2026-07-15T00:08:11.5216281Z tests/test_commander_negative_baselines.py::test_negative_baseline_passes_for_healthy_job PASSED [ 42%]
+gate	Testes	2026-07-15T00:08:11.5224630Z tests/test_commander_negative_baselines.py::test_negative_baseline_fails_when_detector_fires PASSED [ 43%]
+gate	Testes	2026-07-15T00:08:11.5233616Z tests/test_commander_recommendations.py::test_recommend_fix_builds_deterministic_recommendation_from_persisted_finding PASSED [ 43%]
+gate	Testes	2026-07-15T00:08:11.5242216Z tests/test_commander_recommendations.py::test_recommend_fix_skips_unaccepted_validation PASSED [ 44%]
+gate	Testes	2026-07-15T00:08:11.5250860Z tests/test_commander_recommendations.py::test_recommend_fix_without_store_is_not_configured PASSED [ 45%]
+gate	Testes	2026-07-15T00:08:11.5268302Z tests/test_commander_recommendations.py::test_preview_recommendation_returns_diff_without_modifying_file PASSED [ 45%]
+gate	Testes	2026-07-15T00:08:11.5283818Z tests/test_commander_recommendations.py::test_preview_recommendation_rejects_unknown_recommendation_without_file_read PASSED [ 46%]
+gate	Testes	2026-07-15T00:08:11.5299201Z tests/test_commander_rerun_orchestrator.py::test_plan_rerun_returns_token_for_allowed_command PASSED [ 46%]
+gate	Testes	2026-07-15T00:08:11.5307886Z tests/test_commander_rerun_orchestrator.py::test_plan_rerun_blocks_without_rerun_root PASSED [ 47%]
+gate	Testes	2026-07-15T00:08:11.5320909Z tests/test_commander_rerun_orchestrator.py::test_plan_rerun_blocks_unapproved_command PASSED [ 48%]
+gate	Testes	2026-07-15T00:08:11.5337868Z tests/test_commander_rerun_orchestrator.py::test_plan_rerun_blocks_cwd_outside_root PASSED [ 48%]
+gate	Testes	2026-07-15T00:08:11.5354901Z tests/test_commander_rerun_orchestrator.py::test_execute_rerun_rejects_invalid_token_without_runner_call PASSED [ 49%]
+gate	Testes	2026-07-15T00:08:11.5378207Z tests/test_commander_rerun_orchestrator.py::test_execute_rerun_runs_fake_runner_and_compares_telemetry PASSED [ 50%]
+gate	Testes	2026-07-15T00:08:11.5395828Z tests/test_commander_rerun_orchestrator.py::test_build_spark_submit_rerun_command_includes_listener_and_job_id PASSED [ 50%]
+gate	Testes	2026-07-15T00:08:11.5413517Z tests/test_commander_rerun_orchestrator.py::test_build_spark_submit_rerun_command_blocks_path_outside_root PASSED [ 51%]
+gate	Testes	2026-07-15T00:08:11.5429707Z tests/test_commander_rerun_orchestrator.py::test_poll_for_telemetry_waits_until_after_job_is_visible PASSED [ 51%]
+gate	Testes	2026-07-15T00:08:11.5455735Z tests/test_commander_rerun_orchestrator.py::test_execute_rerun_poll_and_compare_waits_for_after_telemetry PASSED [ 52%]
+gate	Testes	2026-07-15T00:08:11.5476635Z tests/test_commander_rerun_orchestrator.py::test_execute_rerun_poll_and_compare_reports_missing_after_telemetry PASSED [ 53%]
+gate	Testes	2026-07-15T00:08:11.5496097Z tests/test_commander_rerun_orchestrator.py::test_execute_rerun_returns_failed_without_comparison PASSED [ 53%]
+gate	Testes	2026-07-15T00:08:11.5516682Z tests/test_commander_telemetry_compare.py::test_compare_job_telemetry_reports_improved_after_rerun PASSED [ 54%]
+gate	Testes	2026-07-15T00:08:11.5536700Z tests/test_commander_telemetry_compare.py::test_compare_job_telemetry_reports_regression PASSED [ 54%]
+gate	Testes	2026-07-15T00:08:11.5553436Z tests/test_commander_telemetry_compare.py::test_compare_job_telemetry_reports_not_comparable_when_after_missing PASSED [ 55%]
+gate	Testes	2026-07-15T00:08:11.5566206Z tests/test_commander_telemetry_compare.py::test_compare_job_telemetry_reads_from_clickhouse_adapter_fake PASSED [ 56%]
+gate	Testes	2026-07-15T00:08:11.5833929Z tests/test_commander_tool_contract.py::test_list_tools_exposes_only_read_only_commander_tools FAILED [ 56%]
+gate	Testes	2026-07-15T00:08:11.5911525Z tests/test_commander_tool_contract.py::test_unknown_tool_is_rejected FAILED [ 57%]
+gate	Testes	2026-07-15T00:08:11.5929501Z tests/test_commander_tool_contract.py::test_call_tool_debug_job_returns_findings PASSED [ 57%]
+gate	Testes	2026-07-15T00:08:11.5945756Z tests/test_commander_tool_contract.py::test_call_tool_explain_evidence_returns_stages PASSED [ 58%]
+gate	Testes	2026-07-15T00:08:11.5961817Z tests/test_commander_tool_contract.py::test_call_tool_evaluate_negative_baseline_returns_failed_for_skew PASSED [ 59%]
+gate	Testes	2026-07-15T00:08:11.5975547Z tests/test_commander_tool_contract.py::test_call_tool_query_persisted_findings_returns_records PASSED [ 59%]
+gate	Testes	2026-07-15T00:08:11.5989477Z tests/test_commander_tool_contract.py::test_call_tool_recommend_fix_returns_structured_recommendation PASSED [ 60%]
+gate	Testes	2026-07-15T00:08:11.6006256Z tests/test_commander_tool_contract.py::test_call_tool_preview_recommendation_returns_diff_without_modifying_file PASSED [ 60%]
+gate	Testes	2026-07-15T00:08:11.6021198Z tests/test_commander_tool_contract.py::test_call_tool_apply_recommendation_requires_apply_root PASSED [ 61%]
+gate	Testes	2026-07-15T00:08:11.6044086Z tests/test_commander_tool_contract.py::test_call_tool_apply_recommendation_writes_with_matching_token PASSED [ 62%]
+gate	Testes	2026-07-15T00:08:11.6061040Z tests/test_commander_tool_contract.py::test_call_tool_verify_recommendation_apply_returns_hash_status PASSED [ 62%]
+gate	Testes	2026-07-15T00:08:11.6082056Z tests/test_commander_tool_contract.py::test_call_tool_compare_job_telemetry_returns_improved PASSED [ 63%]
+gate	Testes	2026-07-15T00:08:11.6099326Z tests/test_commander_tool_contract.py::test_call_tool_build_spark_submit_rerun_command_returns_command PASSED [ 64%]
+gate	Testes	2026-07-15T00:08:11.6115547Z tests/test_commander_tool_contract.py::test_call_tool_poll_telemetry_returns_found PASSED [ 64%]
+gate	Testes	2026-07-15T00:08:11.6131798Z tests/test_commander_tool_contract.py::test_call_tool_plan_rerun_returns_approval_token PASSED [ 65%]
+gate	Testes	2026-07-15T00:08:11.6155081Z tests/test_commander_tool_contract.py::test_call_tool_execute_rerun_and_compare_runs_fake_runner PASSED [ 65%]
+gate	Testes	2026-07-15T00:08:11.6180124Z tests/test_commander_tool_contract.py::test_call_tool_execute_rerun_poll_and_compare_waits_for_telemetry PASSED [ 66%]
+gate	Testes	2026-07-15T00:08:11.6194438Z tests/test_commander_tool_contract.py::test_call_tool_query_persisted_findings_without_store_is_not_configured PASSED [ 67%]
+gate	Testes	2026-07-15T00:08:11.6210813Z tests/test_commander_tool_contract.py::test_call_tool_preview_fix_returns_diff_without_modifying_file PASSED [ 67%]
+gate	Testes	2026-07-15T00:08:11.6228058Z tests/test_commander_tool_contract.py::test_call_tool_rejects_missing_required_argument PASSED [ 68%]
+gate	Testes	2026-07-15T00:08:11.6238537Z tests/test_commander_v01.py::test_build_telemetry_envelope_summarizes_spark_events PASSED [ 68%]
+gate	Testes	2026-07-15T00:08:11.6256518Z tests/test_commander_v01.py::test_clickstack_mvp_appends_and_queries_by_job_id PASSED [ 69%]
+gate	Testes	2026-07-15T00:08:11.6273583Z tests/test_commander_v01.py::test_diagnose_job_returns_skew_finding PASSED [ 70%]
+gate	Testes	2026-07-15T00:08:11.6291324Z tests/test_commander_v01.py::test_diagnose_job_does_not_flag_balanced_baseline PASSED [ 70%]
+gate	Testes	2026-07-15T00:08:11.6986601Z tests/test_commander_v01.py::test_commander_v01_demo_cli_outputs_json_finding PASSED [ 71%]
+gate	Testes	2026-07-15T00:08:11.7040869Z tests/test_coverage_inventory.py::test_dynamic_map_entries_are_grouped PASSED [ 71%]
+gate	Testes	2026-07-15T00:08:11.7060678Z tests/test_coverage_inventory.py::test_inventory_counts_sources_and_applications PASSED [ 72%]
+gate	Testes	2026-07-15T00:08:11.7082010Z tests/test_coverage_inventory.py::test_small_corpus_warning_uses_application_count PASSED [ 73%]
+gate	Testes	2026-07-15T00:08:11.7091213Z tests/test_coverage_inventory.py::test_spark_plan_info_descendants_are_high_value PASSED [ 73%]
+gate	Testes	2026-07-15T00:08:11.7101193Z tests/test_coverage_inventory.py::test_recursive_spark_plan_paths_are_collapsed PASSED [ 74%]
+gate	Testes	2026-07-15T00:08:11.7118989Z tests/test_coverage_inventory.py::test_report_separates_evidence_categories PASSED [ 75%]
+gate	Testes	2026-07-15T00:08:11.7137804Z tests/test_coverage_inventory.py::test_report_does_not_count_dynamic_keys_as_separate_fields PASSED [ 75%]
+gate	Testes	2026-07-15T00:08:11.7155447Z tests/test_coverage_inventory.py::test_zero_metrics_do_not_count_as_exercised_scenarios PASSED [ 76%]
+gate	Testes	2026-07-15T00:08:11.7166906Z tests/test_coverage_inventory.py::test_validation_architecture_keeps_required_views PASSED [ 76%]
+gate	Testes	2026-07-15T00:08:11.7694093Z tests/test_foundation_contracts.py::test_canonical_clickhouse_ddl_is_published_under_docs_specs FAILED [ 77%]
+gate	Testes	2026-07-15T00:08:11.7703458Z tests/test_foundation_contracts.py::test_canonical_clickhouse_ddl_contains_required_contract_tables PASSED [ 78%]
+gate	Testes	2026-07-15T00:08:11.7773995Z tests/test_foundation_contracts.py::test_compose_uses_named_volume_for_clickhouse_and_publishes_canonical_schema PASSED [ 78%]
+gate	Testes	2026-07-15T00:08:11.7840349Z tests/test_foundation_contracts.py::test_compose_declares_spark_master_worker_and_event_log_volume PASSED [ 79%]
+gate	Testes	2026-07-15T00:08:11.7909652Z tests/test_foundation_contracts.py::test_compose_aligns_g3_environment_with_plat_v0_contract PASSED [ 79%]
+gate	Testes	2026-07-15T00:08:11.9249530Z tests/test_g6_oracle_drift_smoke.py::test_g6_oracle_drift_smoke_passes_with_realistic_log PASSED [ 80%]
+gate	Testes	2026-07-15T00:08:12.0584892Z tests/test_g6_oracle_drift_smoke.py::test_g6_oracle_drift_smoke_fails_on_join_drift PASSED [ 81%]
+gate	Testes	2026-07-15T00:08:12.0614281Z tests/test_slice.py::test_reader_autodecompress_zstd_streaming PASSED    [ 81%]
+gate	Testes	2026-07-15T00:08:12.0630674Z tests/test_slice.py::test_iter_events_is_lazy PASSED                     [ 82%]
+gate	Testes	2026-07-15T00:08:12.0652236Z tests/test_slice.py::test_reads_rolling_log_directory PASSED             [ 82%]
+gate	Testes	2026-07-15T00:08:12.0660983Z tests/test_slice.py::test_rolling_sort_is_numeric_not_lexical PASSED     [ 83%]
+gate	Testes	2026-07-15T00:08:12.0670477Z tests/test_slice.py::test_hottest_stage_prefers_join_named_stage PASSED  [ 84%]
+gate	Testes	2026-07-15T00:08:12.0681014Z tests/test_slice.py::test_hottest_stage_fallback_without_join_op PASSED  [ 84%]
+gate	Testes	2026-07-15T00:08:12.0690277Z tests/test_slice.py::test_shuffle_read_preserves_zero_record_partitions PASSED [ 85%]
+gate	Testes	2026-07-15T00:08:12.0698998Z tests/test_slice.py::test_shuffle_read_uses_only_successful_retry_per_partition PASSED [ 85%]
+gate	Testes	2026-07-15T00:08:12.0707632Z tests/test_slice.py::test_shuffle_read_deduplicates_successful_speculative_attempts PASSED [ 86%]
+gate	Testes	2026-07-15T00:08:12.0715801Z tests/test_slice.py::test_stage_selection_prefers_join_accumulator_correlation PASSED [ 87%]
+gate	Testes	2026-07-15T00:08:12.0756642Z tests/test_slice.py::test_versioned_real_log_uses_accumulator_correlation PASSED [ 87%]
+gate	Testes	2026-07-15T00:08:12.0764133Z tests/test_slice.py::test_join_operator_prefers_final_plan PASSED        [ 88%]
+gate	Testes	2026-07-15T00:08:12.0772013Z tests/test_slice.py::test_join_operator_finds_join_across_executions PASSED [ 89%]
+gate	Testes	2026-07-15T00:08:12.1486491Z tests/test_slice.py::test_plan_generator_ratio_is_realistic PASSED       [ 89%]
+gate	Testes	2026-07-15T00:08:12.1487818Z tests/test_slice.py::test_skew_metrics_single_task_collapse PASSED       [ 90%]
+gate	Testes	2026-07-15T00:08:12.1506011Z tests/test_slice.py::test_skew_metrics_rejects_zero_cold_median PASSED   [ 90%]
+gate	Testes	2026-07-15T00:08:12.1520462Z tests/test_slice.py::test_scenario_hash_is_deterministic PASSED          [ 91%]
+gate	Testes	2026-07-15T00:08:12.2816359Z tests/test_slice.py::test_code_and_plan_emit_same_hash PASSED            [ 92%]
+gate	Testes	2026-07-15T00:08:12.3496481Z tests/test_slice.py::test_provenance_passes_when_hash_matches PASSED     [ 92%]
+gate	Testes	2026-07-15T00:08:12.4182439Z tests/test_slice.py::test_provenance_error_on_stale_artifact PASSED      [ 93%]
+gate	Testes	2026-07-15T00:08:12.4199813Z tests/test_slice.py::test_real_log_without_provenance_passes PASSED      [ 93%]
+gate	Testes	2026-07-15T00:08:12.5506385Z tests/test_slice.py::test_watcher_green_on_synthetic PASSED              [ 94%]
+gate	Testes	2026-07-15T00:08:12.6808888Z tests/test_slice.py::test_watcher_rejects_stale_log PASSED               [ 95%]
+gate	Testes	2026-07-15T00:08:12.7486417Z tests/test_slice.py::test_watcher_rejects_real_collapse_as_invalid_evidence PASSED [ 95%]
+gate	Testes	2026-07-15T00:08:12.8159169Z tests/test_slice.py::test_watcher_rejects_stage_name_only_on_real_log PASSED [ 96%]
+gate	Testes	2026-07-15T00:08:12.8856522Z tests/test_slice.py::test_watcher_rejects_operator_mismatch_as_invalid_evidence PASSED [ 96%]
+gate	Testes	2026-07-15T00:08:12.9666861Z tests/test_slice.py::test_cli_runs_with_cp1252_output_encoding PASSED    [ 97%]
+gate	Testes	2026-07-15T00:08:13.0996640Z tests/test_slice.py::test_oracle_passes_synthetic_vs_realistic_real PASSED [ 98%]
+gate	Testes	2026-07-15T00:08:13.2336386Z tests/test_slice.py::test_oracle_warns_on_real_collapse PASSED           [ 98%]
+gate	Testes	2026-07-15T00:08:13.3651911Z tests/test_slice.py::test_oracle_reports_structural_mismatch PASSED      [ 99%]
+gate	Testes	2026-07-15T00:08:13.5213563Z tests/test_slice.py::test_oracle_catches_join_mismatch PASSED            [100%]
+gate	Testes	2026-07-15T00:08:13.5214480Z 
+gate	Testes	2026-07-15T00:08:13.5214911Z =================================== FAILURES ===================================
+gate	Testes	2026-07-15T00:08:13.5216180Z ____________ test_list_tools_exposes_only_read_only_commander_tools ____________
+gate	Testes	2026-07-15T00:08:13.5216808Z 
+gate	Testes	2026-07-15T00:08:13.5217253Z     def test_list_tools_exposes_only_read_only_commander_tools():
+gate	Testes	2026-07-15T00:08:13.5218015Z         tools = list_tools()
+gate	Testes	2026-07-15T00:08:13.5218630Z         tool_names = [tool["name"] for tool in tools]
+gate	Testes	2026-07-15T00:08:13.5219281Z     
+gate	Testes	2026-07-15T00:08:13.5219755Z >       assert tool_names == [
+gate	Testes	2026-07-15T00:08:13.5220317Z             "debug_job",
+gate	Testes	2026-07-15T00:08:13.5220861Z             "explain_evidence",
+gate	Testes	2026-07-15T00:08:13.5221449Z             "evaluate_negative_baseline",
+gate	Testes	2026-07-15T00:08:13.5222093Z             "query_persisted_findings",
+gate	Testes	2026-07-15T00:08:13.5222694Z             "recommend_fix",
+gate	Testes	2026-07-15T00:08:13.5223272Z             "preview_recommendation",
+gate	Testes	2026-07-15T00:08:13.5223876Z             "apply_recommendation",
+gate	Testes	2026-07-15T00:08:13.5224488Z             "verify_recommendation_apply",
+gate	Testes	2026-07-15T00:08:13.5225316Z             "compare_job_telemetry",
+gate	Testes	2026-07-15T00:08:13.5226365Z             "build_spark_submit_rerun_command",
+gate	Testes	2026-07-15T00:08:13.5227015Z             "poll_telemetry",
+gate	Testes	2026-07-15T00:08:13.5227567Z             "plan_rerun",
+gate	Testes	2026-07-15T00:08:13.5228116Z             "execute_rerun_and_compare",
+gate	Testes	2026-07-15T00:08:13.5228743Z             "execute_rerun_poll_and_compare",
+gate	Testes	2026-07-15T00:08:13.5229381Z             "preview_fix",
+gate	Testes	2026-07-15T00:08:13.5229892Z         ]
+gate	Testes	2026-07-15T00:08:13.5230616Z E       AssertionError: assert ['debug_job',...ndation', ...] == ['debug_job',...ndation', ...]
+gate	Testes	2026-07-15T00:08:13.5231478Z E         
+gate	Testes	2026-07-15T00:08:13.5232085Z E         At index 7 diff: 'apply_fix' != 'verify_recommendation_apply'
+gate	Testes	2026-07-15T00:08:13.5233092Z E         Left contains one more item: 'preview_fix'
+gate	Testes	2026-07-15T00:08:13.5233721Z E         
+gate	Testes	2026-07-15T00:08:13.5234170Z E         Full diff:
+gate	Testes	2026-07-15T00:08:13.5234637Z E           [
+gate	Testes	2026-07-15T00:08:13.5235302Z E               'debug_job',
+gate	Testes	2026-07-15T00:08:13.5235938Z E               'explain_evidence',
+gate	Testes	2026-07-15T00:08:13.5236565Z E               'evaluate_negative_baseline',
+gate	Testes	2026-07-15T00:08:13.5237367Z E               'query_persisted_findings',
+gate	Testes	2026-07-15T00:08:13.5238119Z E               'recommend_fix',
+gate	Testes	2026-07-15T00:08:13.5238839Z E               'preview_recommendation',
+gate	Testes	2026-07-15T00:08:13.5239464Z E               'apply_recommendation',
+gate	Testes	2026-07-15T00:08:13.5240133Z E         +     'apply_fix',
+gate	Testes	2026-07-15T00:08:13.5240792Z E               'verify_recommendation_apply',
+gate	Testes	2026-07-15T00:08:13.5241489Z E               'compare_job_telemetry',
+gate	Testes	2026-07-15T00:08:13.5242208Z E               'build_spark_submit_rerun_command',
+gate	Testes	2026-07-15T00:08:13.5242860Z E               'poll_telemetry',
+gate	Testes	2026-07-15T00:08:13.5243415Z E               'plan_rerun',
+gate	Testes	2026-07-15T00:08:13.5243964Z E               'execute_rerun_and_compare',
+gate	Testes	2026-07-15T00:08:13.5244591Z E               'execute_rerun_poll_and_compare',
+gate	Testes	2026-07-15T00:08:13.5245419Z E               'preview_fix',
+gate	Testes	2026-07-15T00:08:13.5245954Z E           ]
+gate	Testes	2026-07-15T00:08:13.5246272Z 
+gate	Testes	2026-07-15T00:08:13.5246660Z tests/test_commander_tool_contract.py:43: AssertionError
+gate	Testes	2026-07-15T00:08:13.5247519Z ________________________ test_unknown_tool_is_rejected _________________________
+gate	Testes	2026-07-15T00:08:13.5248129Z 
+gate	Testes	2026-07-15T00:08:13.5248655Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_unknown_tool_is_rejected0')
+gate	Testes	2026-07-15T00:08:13.5249367Z 
+gate	Testes	2026-07-15T00:08:13.5249702Z     def test_unknown_tool_is_rejected(tmp_path):
+gate	Testes	2026-07-15T00:08:13.5250451Z         contract = CommanderToolContract(tmp_path / "store.ndjson")
+gate	Testes	2026-07-15T00:08:13.5251150Z     
+gate	Testes	2026-07-15T00:08:13.5251696Z >       with pytest.raises(ValueError, match="unknown_tool"):
+gate	Testes	2026-07-15T00:08:13.5252406Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+gate	Testes	2026-07-15T00:08:13.5253076Z E       AssertionError: Regex pattern did not match.
+gate	Testes	2026-07-15T00:08:13.5253753Z E         Expected regex: 'unknown_tool'
+gate	Testes	2026-07-15T00:08:13.5254409Z E         Actual message: 'missing_argument:recommendation_id'
+gate	Testes	2026-07-15T00:08:13.5254933Z 
+gate	Testes	2026-07-15T00:08:13.5255639Z tests/test_commander_tool_contract.py:78: AssertionError
+gate	Testes	2026-07-15T00:08:13.5256497Z _________ test_canonical_clickhouse_ddl_is_published_under_docs_specs __________
+gate	Testes	2026-07-15T00:08:13.5257153Z 
+gate	Testes	2026-07-15T00:08:13.5257596Z     def test_canonical_clickhouse_ddl_is_published_under_docs_specs():
+gate	Testes	2026-07-15T00:08:13.5258443Z         expected = ROOT / "pacote-comum" / "apex_telemetry_v1.sql"
+gate	Testes	2026-07-15T00:08:13.5259264Z         published = ROOT / "docs" / "specs" / "apex_telemetry_v1.sql"
+gate	Testes	2026-07-15T00:08:13.5259950Z     
+gate	Testes	2026-07-15T00:08:13.5260563Z >       assert published.read_text(encoding="utf-8") == expected.read_text(
+gate	Testes	2026-07-15T00:08:13.5261338Z             encoding="utf-8"
+gate	Testes	2026-07-15T00:08:13.5261856Z         )
+gate	Testes	2026-07-15T00:08:13.5262234Z 
+gate	Testes	2026-07-15T00:08:13.5262660Z tests/test_foundation_contracts.py:13: 
+gate	Testes	2026-07-15T00:08:13.5263557Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+gate	Testes	2026-07-15T00:08:13.5264983Z /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/pathlib.py:1027: in read_text
+gate	Testes	2026-07-15T00:08:13.5266147Z     with self.open(mode='r', encoding=encoding, errors=errors) as f:
+gate	Testes	2026-07-15T00:08:13.5266911Z          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+gate	Testes	2026-07-15T00:08:13.5267608Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+gate	Testes	2026-07-15T00:08:13.5268139Z 
+gate	Testes	2026-07-15T00:08:13.5268791Z self = PosixPath('/home/runner/work/apex-workspace/apex-workspace/pacote-comum/apex_telemetry_v1.sql')
+gate	Testes	2026-07-15T00:08:13.5270005Z mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+gate	Testes	2026-07-15T00:08:13.5270818Z 
+gate	Testes	2026-07-15T00:08:13.5271185Z     def open(self, mode='r', buffering=-1, encoding=None,
+gate	Testes	2026-07-15T00:08:13.5271800Z              errors=None, newline=None):
+gate	Testes	2026-07-15T00:08:13.5272299Z         """
+gate	Testes	2026-07-15T00:08:13.5272826Z         Open the file pointed to by this path and return a file object, as
+gate	Testes	2026-07-15T00:08:13.5273492Z         the built-in open() function does.
+gate	Testes	2026-07-15T00:08:13.5273983Z         """
+gate	Testes	2026-07-15T00:08:13.5274383Z         if "b" not in mode:
+gate	Testes	2026-07-15T00:08:13.5274865Z             encoding = io.text_encoding(encoding)
+gate	Testes	2026-07-15T00:08:13.5275701Z >       return io.open(self, mode, buffering, encoding, errors, newline)
+gate	Testes	2026-07-15T00:08:13.5276417Z                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+gate	Testes	2026-07-15T00:08:13.5277695Z E       FileNotFoundError: [Errno 2] No such file or directory: '/home/runner/work/apex-workspace/apex-workspace/pacote-comum/apex_telemetry_v1.sql'
+gate	Testes	2026-07-15T00:08:13.5278744Z 
+gate	Testes	2026-07-15T00:08:13.5279304Z /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/pathlib.py:1013: FileNotFoundError
+gate	Testes	2026-07-15T00:08:13.5280257Z =========================== short test summary info ============================
+gate	Testes	2026-07-15T00:08:13.5281695Z FAILED tests/test_commander_tool_contract.py::test_list_tools_exposes_only_read_only_commander_tools - AssertionError: assert ['debug_job',...ndation', ...] == ['debug_job',...ndation', ...]
+gate	Testes	2026-07-15T00:08:13.5283092Z   
+gate	Testes	2026-07-15T00:08:13.5283640Z   At index 7 diff: 'apply_fix' != 'verify_recommendation_apply'
+gate	Testes	2026-07-15T00:08:13.5284378Z   Left contains one more item: 'preview_fix'
+gate	Testes	2026-07-15T00:08:13.5284951Z   
+gate	Testes	2026-07-15T00:08:13.5285585Z   Full diff:
+gate	Testes	2026-07-15T00:08:13.5286019Z     [
+gate	Testes	2026-07-15T00:08:13.5286453Z         'debug_job',
+gate	Testes	2026-07-15T00:08:13.5286943Z         'explain_evidence',
+gate	Testes	2026-07-15T00:08:13.5287476Z         'evaluate_negative_baseline',
+gate	Testes	2026-07-15T00:08:13.5288067Z         'query_persisted_findings',
+gate	Testes	2026-07-15T00:08:13.5288627Z         'recommend_fix',
+gate	Testes	2026-07-15T00:08:13.5289173Z         'preview_recommendation',
+gate	Testes	2026-07-15T00:08:13.5289756Z         'apply_recommendation',
+gate	Testes	2026-07-15T00:08:13.5290296Z   +     'apply_fix',
+gate	Testes	2026-07-15T00:08:13.5290807Z         'verify_recommendation_apply',
+gate	Testes	2026-07-15T00:08:13.5291384Z         'compare_job_telemetry',
+gate	Testes	2026-07-15T00:08:13.5291949Z         'build_spark_submit_rerun_command',
+gate	Testes	2026-07-15T00:08:13.5292553Z         'poll_telemetry',
+gate	Testes	2026-07-15T00:08:13.5293062Z         'plan_rerun',
+gate	Testes	2026-07-15T00:08:13.5293563Z         'execute_rerun_and_compare',
+gate	Testes	2026-07-15T00:08:13.5294149Z         'execute_rerun_poll_and_compare',
+gate	Testes	2026-07-15T00:08:13.5294745Z         'preview_fix',
+gate	Testes	2026-07-15T00:08:13.5295410Z     ]
+gate	Testes	2026-07-15T00:08:13.5296426Z FAILED tests/test_commander_tool_contract.py::test_unknown_tool_is_rejected - AssertionError: Regex pattern did not match.
+gate	Testes	2026-07-15T00:08:13.5297513Z   Expected regex: 'unknown_tool'
+gate	Testes	2026-07-15T00:08:13.5298138Z   Actual message: 'missing_argument:recommendation_id'
+gate	Testes	2026-07-15T00:08:13.5299930Z FAILED tests/test_foundation_contracts.py::test_canonical_clickhouse_ddl_is_published_under_docs_specs - FileNotFoundError: [Errno 2] No such file or directory: '/home/runner/work/apex-workspace/apex-workspace/pacote-comum/apex_telemetry_v1.sql'
+gate	Testes	2026-07-15T00:08:13.5301831Z =================== 3 failed, 159 passed, 2 skipped in 2.79s ===================
+gate	Testes	2026-07-15T00:08:13.5560202Z ##[error]Process completed with exit code 1.

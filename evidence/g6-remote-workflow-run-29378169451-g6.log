@@ -1,0 +1,263 @@
+g6-oracle-drift	Set up job	﻿2026-07-15T00:08:02.2503810Z Current runner version: '2.335.1'
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2562486Z ##[group]Runner Image Provisioner
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2563914Z Hosted Compute Agent
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2565106Z Version: 20260624.560
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2566209Z Commit: 925d229a51159bc391ae97e54a2dd1fe20af789d
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2567509Z Build Date: 2026-06-24T18:26:47Z
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2568970Z Worker ID: {33b5f537-18f3-4c4f-b564-372962371fb2}
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2570312Z Azure Region: eastus
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2571398Z ##[endgroup]
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2594060Z ##[group]Operating System
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2595350Z Ubuntu
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2596369Z 24.04.4
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2597304Z LTS
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2598313Z ##[endgroup]
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2599274Z ##[group]Runner Image
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2600322Z Image: ubuntu-24.04
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2601537Z Version: 20260705.232.1
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2603783Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260705.232/images/ubuntu/Ubuntu2404-Readme.md
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2606932Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260705.232
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2608706Z ##[endgroup]
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2611009Z ##[group]GITHUB_TOKEN Permissions
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2634167Z Contents: read
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2635260Z Metadata: read
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2636250Z Packages: read
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2637309Z ##[endgroup]
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2640311Z Secret source: Actions
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.2642711Z Prepare workflow directory
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.3304072Z Prepare all required actions
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.3359781Z Getting action download info
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.5908028Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.6799307Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.7654296Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+g6-oracle-drift	Set up job	2026-07-15T00:08:02.9850543Z Complete job name: g6-oracle-drift
+g6-oracle-drift	Run actions/checkout@v4	﻿2026-07-15T00:08:03.0569191Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0579212Z ##[group]Run actions/checkout@v4
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0580289Z with:
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0580786Z   repository: gustocezar/apex-workspace
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0584880Z   token: ***
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0585334Z   ssh-strict: true
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0585765Z   ssh-user: git
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0586209Z   persist-credentials: true
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0586691Z   clean: true
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0587125Z   sparse-checkout-cone-mode: true
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0587636Z   fetch-depth: 1
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0588050Z   fetch-tags: false
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0588469Z   show-progress: true
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0588917Z   lfs: false
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0589311Z   submodules: false
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0589772Z   set-safe-directory: true
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.0590566Z ##[endgroup]
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.1904358Z Syncing repository: gustocezar/apex-workspace
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.1906841Z ##[group]Getting Git version info
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.1908062Z Working directory is '/home/runner/work/apex-workspace/apex-workspace'
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.1909747Z [command]/usr/bin/git version
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3178864Z git version 2.54.0
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3194827Z ##[endgroup]
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3245978Z Temporarily overriding HOME='/home/runner/work/_temp/b280b95d-e4db-41c4-8060-487eed4b11ab' before making global git config changes
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3252718Z Adding repository directory to the temporary git global config as a safe directory
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3254719Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/apex-workspace/apex-workspace
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3257532Z Deleting the contents of '/home/runner/work/apex-workspace/apex-workspace'
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3259800Z ##[group]Initializing the repository
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3261166Z [command]/usr/bin/git init /home/runner/work/apex-workspace/apex-workspace
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3270983Z hint: Using 'master' as the name for the initial branch. This default branch name
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3285208Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3299017Z hint: to use in all of your new repositories, which will suppress this warning,
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3308632Z hint: call:
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3309332Z hint:
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3310156Z hint: 	git config --global init.defaultBranch <name>
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3311162Z hint:
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3312375Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3314019Z hint: 'development'. The just-created branch can be renamed via this command:
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3315271Z hint:
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3315967Z hint: 	git branch -m <name>
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3316795Z hint:
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3317953Z hint: Disable this message with "git config set advice.defaultBranchName false"
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3319832Z Initialized empty Git repository in /home/runner/work/apex-workspace/apex-workspace/.git/
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3331095Z [command]/usr/bin/git remote add origin https://github.com/gustocezar/apex-workspace
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3342957Z ##[endgroup]
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3344318Z ##[group]Disabling automatic garbage collection
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3349485Z [command]/usr/bin/git config --local gc.auto 0
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3360639Z ##[endgroup]
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3370196Z ##[group]Setting up auth
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3375752Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3387761Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3559178Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.3725411Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.4279356Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.4285194Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.4438724Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.4638498Z ##[endgroup]
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.4639921Z ##[group]Fetching the repository
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.4642943Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +5558d676dd1c3d0af0a8491cd69ee151134bb542:refs/remotes/origin/codex-round2
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.7469950Z From https://github.com/gustocezar/apex-workspace
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.7474170Z  * [new ref]         5558d676dd1c3d0af0a8491cd69ee151134bb542 -> origin/codex-round2
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.7515232Z ##[endgroup]
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.7517163Z ##[group]Determining the checkout info
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.7519249Z ##[endgroup]
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.7542739Z [command]/usr/bin/git sparse-checkout disable
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.7639760Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.7695706Z ##[group]Checking out the ref
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.7697778Z [command]/usr/bin/git checkout --progress --force -B codex-round2 refs/remotes/origin/codex-round2
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.8002037Z Switched to a new branch 'codex-round2'
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.8022756Z branch 'codex-round2' set up to track 'origin/codex-round2'.
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.8039272Z ##[endgroup]
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.8103535Z [command]/usr/bin/git log -1 --format=%H
+g6-oracle-drift	Run actions/checkout@v4	2026-07-15T00:08:03.8123557Z 5558d676dd1c3d0af0a8491cd69ee151134bb542
+g6-oracle-drift	Run actions/setup-python@v5	﻿2026-07-15T00:08:03.8496480Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:03.8501548Z ##[group]Run actions/setup-python@v5
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:03.8503088Z with:
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:03.8504030Z   python-version: 3.12
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:03.8505070Z   check-latest: false
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:03.8513754Z   token: ***
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:03.8514749Z   update-environment: true
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:03.8515859Z   allow-prereleases: false
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:03.8516926Z   freethreaded: false
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:03.8517914Z ##[endgroup]
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:04.0191418Z ##[group]Installed versions
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:04.5874118Z (node:2057) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:04.5880292Z (Use `node --trace-deprecation ...` to show where the warning was created)
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:04.5881378Z Successfully set up CPython (3.12.13)
+g6-oracle-drift	Run actions/setup-python@v5	2026-07-15T00:08:04.5904263Z ##[endgroup]
+g6-oracle-drift	Run pip install -r requirements.txt	﻿2026-07-15T00:08:04.6405051Z ##[group]Run pip install -r requirements.txt
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:04.6405888Z ^[[36;1mpip install -r requirements.txt^[[0m
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:04.6763141Z shell: /usr/bin/bash -e {0}
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:04.6763531Z env:
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:04.6763855Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:04.6764355Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:04.6765180Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:04.6765957Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:04.6766411Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:04.6767136Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:04.6767730Z ##[endgroup]
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.4453293Z Collecting pyyaml>=6.0 (from -r requirements.txt (line 1))
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.5042393Z   Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.5744542Z Collecting zstandard>=0.22 (from -r requirements.txt (line 2))
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.5792249Z   Downloading zstandard-0.25.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.3 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.6044808Z Collecting pytest>=8.0 (from -r requirements.txt (line 3))
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.6167351Z   Downloading pytest-9.1.1-py3-none-any.whl.metadata (7.6 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.6313557Z Collecting iniconfig>=1.0.1 (from pytest>=8.0->-r requirements.txt (line 3))
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.6353238Z   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.6526482Z Collecting packaging>=22 (from pytest>=8.0->-r requirements.txt (line 3))
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.6580681Z   Downloading packaging-26.2-py3-none-any.whl.metadata (3.5 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.6749076Z Collecting pluggy<2,>=1.5 (from pytest>=8.0->-r requirements.txt (line 3))
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.6792464Z   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.6990273Z Collecting pygments>=2.7.2 (from pytest>=8.0->-r requirements.txt (line 3))
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.7023338Z   Downloading pygments-2.20.0-py3-none-any.whl.metadata (2.5 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.7101544Z Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.7382951Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 45.1 MB/s  0:00:00
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.7428946Z Downloading zstandard-0.25.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (5.5 MB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.7919492Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.5/5.5 MB 120.8 MB/s  0:00:00
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.7955802Z Downloading pytest-9.1.1-py3-none-any.whl (386 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.8030477Z Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.8087052Z Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.8144717Z Downloading packaging-26.2-py3-none-any.whl (100 kB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.8201267Z Downloading pygments-2.20.0-py3-none-any.whl (1.2 MB)
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.8290527Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 150.6 MB/s  0:00:00
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:06.8703112Z Installing collected packages: zstandard, pyyaml, pygments, pluggy, packaging, iniconfig, pytest
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:08.0764534Z 
+g6-oracle-drift	Run pip install -r requirements.txt	2026-07-15T00:08:08.0779415Z Successfully installed iniconfig-2.3.0 packaging-26.2 pluggy-1.6.0 pygments-2.20.0 pytest-9.1.1 pyyaml-6.0.3 zstandard-0.25.0
+g6-oracle-drift	G6 oracle drift smoke	﻿2026-07-15T00:08:08.1254653Z ##[group]Run python3 tools/g6_oracle_drift_smoke.py \
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1255097Z ^[[36;1mpython3 tools/g6_oracle_drift_smoke.py \^[[0m
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1255454Z ^[[36;1m  --real-log real_log.ndjson \^[[0m
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1255822Z ^[[36;1m  --summary evidence/g6-oracle-drift-summary.json^[[0m
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1293294Z shell: /usr/bin/bash -e {0}
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1293559Z env:
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1293826Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1294262Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1294685Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1295060Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1295444Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1295823Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.1296139Z ##[endgroup]
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3082563Z {
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3083244Z   "gate": "G6",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3083630Z   "name": "oracle_drift_smoke",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3084071Z   "status": "passed",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3084459Z   "generated_at": "2026-07-15T00:08:08+0000",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3084935Z   "elapsed_ms": 138.15,
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3085355Z   "scenario": "scenarios/skew_on_join_30x.yaml",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3085863Z   "real_log": "real_log.ndjson",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3086418Z   "synthetic_log": "evidence/generated/g6-oracle-drift/synthetic.ndjson",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3086805Z   "commands": {
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3087015Z     "plan_generator": [
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3087301Z       "/opt/hostedtoolcache/Python/3.12.13/x64/bin/python3",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3087638Z       "generators/plan_generator.py",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3087913Z       "scenarios/skew_on_join_30x.yaml",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3088228Z       "evidence/generated/g6-oracle-drift/synthetic.ndjson"
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3088528Z     ],
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3088713Z     "oracle_compare": [
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3089012Z       "/opt/hostedtoolcache/Python/3.12.13/x64/bin/python3",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3089359Z       "oracle/compare.py",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3089607Z       "scenarios/skew_on_join_30x.yaml",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3089938Z       "evidence/generated/g6-oracle-drift/synthetic.ndjson",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3090256Z       "real_log.ndjson"
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3090460Z     ]
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3090625Z   },
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3090805Z   "plan_generator": {
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3091014Z     "returncode": 0,
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3091556Z     "stdout": "[OK] evidence/generated/g6-oracle-drift/synthetic.ndjson gerado: 14 eventos, scenario_hash sha256:ec5372694030305d embutido.\n",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3092856Z     "stderr": ""
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3093184Z   },
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3093487Z   "oracle_compare": {
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3093852Z     "returncode": 0,
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3097826Z     "stdout": "--- AUDIT TRAIL ---\nscenario:   skew_on_join_30x (hash sha256:ec5372694030305d)\nsynthetic:  evidence/generated/g6-oracle-drift/synthetic.ndjson  provenance=sha256:ec5372694030305d\nreal:       real_log.ndjson  provenance=n/a (log real)\n---\njoin:  synthetic=SortMergeJoin  real=SortMergeJoin\nhot:   synthetic=160000  real=165297\nratio: synthetic=27.9  real=29.5\npart:  synthetic=0  real=3\ntype:  synthetic=['ShuffleMapTask']  real=['ResultTask']\ncorr:  synthetic=stage_name  real=operator_accumulator\n[WARN] hot partition divergiu: 0 vs 3\n[WARN] task type divergiu: ['ShuffleMapTask'] vs ['ResultTask']\n\n[OK] ORACULO: sintetico fiel ao Spark real nos sinais agregados dentro da tolerancia.\n",
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3102794Z     "stderr": ""
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3103127Z   }
+g6-oracle-drift	G6 oracle drift smoke	2026-07-15T00:08:08.3103417Z }
+g6-oracle-drift	Upload G6 evidence	﻿2026-07-15T00:08:08.3202924Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3204233Z ##[group]Run actions/upload-artifact@v4
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3204502Z with:
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3204704Z   name: g6-oracle-drift-evidence
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3205185Z   path: evidence/g6-oracle-drift-summary.json
+g6-oracle-drift	Upload G6 evidence	evidence/generated/g6-oracle-drift/synthetic.ndjson
+g6-oracle-drift	Upload G6 evidence	
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3205674Z   if-no-files-found: warn
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3205908Z   compression-level: 6
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3206125Z   overwrite: false
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3206339Z   include-hidden-files: false
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3206566Z env:
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3206810Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3207229Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3207675Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3208051Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3208425Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3208799Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.3209120Z ##[endgroup]
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.5312997Z (node:2096) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.5332732Z (Use `node --trace-deprecation ...` to show where the warning was created)
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.5624929Z Multiple search paths detected. Calculating the least common ancestor of all paths
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.5629681Z The least common ancestor is /home/runner/work/apex-workspace/apex-workspace/evidence. This will be the root directory of the artifact
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.5630810Z With the provided path, there will be 2 files uploaded
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.5631614Z Artifact name is valid!
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.5632197Z Root directory input is valid!
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.7344179Z (node:2096) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.7360574Z Beginning upload of artifact content to blob storage
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.7831297Z Uploaded bytes 1828
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.7965128Z Finished uploading artifact content to blob storage!
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.7966533Z SHA256 digest of uploaded artifact zip is 2a8272b145aac961245ed62f3fdaa07c219c08be2c94444ada47a4c8ed0b2b61
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.7968394Z Finalizing artifact upload
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.9823434Z Artifact g6-oracle-drift-evidence.zip successfully finalized. Artifact ID 8328640619
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.9826346Z Artifact g6-oracle-drift-evidence has been successfully uploaded! Final size is 1828 bytes. Artifact ID is 8328640619
+g6-oracle-drift	Upload G6 evidence	2026-07-15T00:08:08.9827798Z Artifact download URL: https://github.com/gustocezar/apex-workspace/actions/runs/29378169451/artifacts/8328640619
+g6-oracle-drift	Post Run actions/setup-python@v5	﻿2026-07-15T00:08:08.9910879Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+g6-oracle-drift	Post Run actions/setup-python@v5	2026-07-15T00:08:08.9912647Z Post job cleanup.
+g6-oracle-drift	Post Run actions/setup-python@v5	2026-07-15T00:08:09.1216151Z (node:2108) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+g6-oracle-drift	Post Run actions/setup-python@v5	2026-07-15T00:08:09.1218394Z (Use `node --trace-deprecation ...` to show where the warning was created)
+g6-oracle-drift	Post Run actions/checkout@v4	﻿2026-07-15T00:08:09.1428668Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.1430778Z Post job cleanup.
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3246533Z [command]/usr/bin/git version
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3282333Z git version 2.54.0
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3676828Z Temporarily overriding HOME='/home/runner/work/_temp/2f4e9d9b-044a-4168-80aa-51c346f76407' before making global git config changes
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3678761Z Adding repository directory to the temporary git global config as a safe directory
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3680203Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/apex-workspace/apex-workspace
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3683569Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3686824Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3713505Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3741173Z http.https://github.com/.extraheader
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3744082Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.3923478Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.4144898Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+g6-oracle-drift	Post Run actions/checkout@v4	2026-07-15T00:08:09.4198308Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+g6-oracle-drift	Complete job	﻿2026-07-15T00:08:09.4736646Z Cleaning up orphan processes
+g6-oracle-drift	Complete job	2026-07-15T00:08:09.5022275Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

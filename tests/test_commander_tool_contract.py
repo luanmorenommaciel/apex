@@ -48,6 +48,7 @@ def test_list_tools_exposes_only_read_only_commander_tools():
         "recommend_fix",
         "preview_recommendation",
         "apply_recommendation",
+        "apply_fix",
         "verify_recommendation_apply",
         "compare_job_telemetry",
         "build_spark_submit_rerun_command",
@@ -57,18 +58,18 @@ def test_list_tools_exposes_only_read_only_commander_tools():
         "execute_rerun_poll_and_compare",
         "preview_fix",
     ]
-    assert [tool["safety"] for tool in tools].count("guarded_mutation") == 3
+    assert [tool["safety"] for tool in tools].count("guarded_mutation") == 4
     assert all(
         tool["safety"] == "read_only"
         for tool in tools
         if tool["name"]
         not in (
             "apply_recommendation",
+            "apply_fix",
             "execute_rerun_and_compare",
             "execute_rerun_poll_and_compare",
         )
     )
-    assert "apply_fix" not in tool_names
     assert tools[0]["input_schema"]["required"] == ["job_id"]
 
 
@@ -76,7 +77,7 @@ def test_unknown_tool_is_rejected(tmp_path):
     contract = CommanderToolContract(tmp_path / "store.ndjson")
 
     with pytest.raises(ValueError, match="unknown_tool"):
-        contract.call_tool("apply_fix", {"job_id": "job-42"})
+        contract.call_tool("not_a_tool", {"job_id": "job-42"})
 
 
 def telemetry_envelope(job_id="job-42"):

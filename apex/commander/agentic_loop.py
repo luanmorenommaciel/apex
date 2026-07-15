@@ -73,12 +73,13 @@ def check_mcp_project_config(root: Path) -> dict[str, Any]:
 
 def check_g6_oracle_drift(root: Path) -> dict[str, Any]:
     summary_path = root / "evidence" / "g6-oracle-drift-summary.json"
+    remote_summary_path = root / "evidence" / "g6-remote-workflow-run-29378169451-summary.json"
     workflow_path = root / ".github" / "workflows" / "scenario-gate.yml"
     result = {
         "id": "g6_oracle_drift",
         "title": "G6 oracle drift smoke and schedule",
         "status": FAIL,
-        "evidence": [str(summary_path), str(workflow_path)],
+        "evidence": [str(summary_path), str(workflow_path), str(remote_summary_path)],
         "details": [],
         "next_action": "run tools/g6_oracle_drift_smoke.py and create CI workflow",
     }
@@ -112,6 +113,31 @@ def check_g6_oracle_drift(root: Path) -> dict[str, Any]:
             result["next_action"] = "trigger or observe remote workflow execution"
         else:
             result["details"].append("workflow exists but lacks dispatch/schedule/job")
+
+    if remote_summary_path.exists():
+        try:
+            remote_summary = json.loads(remote_summary_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            result["status"] = PARTIAL
+            result["details"].append(f"remote workflow summary invalid: {exc}")
+            return result
+
+        jobs = remote_summary.get("jobs") or []
+        g6_jobs = [job for job in jobs if job.get("name") == "g6-oracle-drift"]
+        gate_jobs = [job for job in jobs if job.get("name") == "gate"]
+        if g6_jobs and g6_jobs[0].get("conclusion") == "success":
+            result["status"] = PASS
+            result["details"].append(
+                f"remote G6 workflow job passed: {g6_jobs[0].get('url')}"
+            )
+            if gate_jobs and gate_jobs[0].get("conclusion") != "success":
+                result["details"].append(
+                    "overall workflow failed because legacy gate job failed separately"
+                )
+            result["next_action"] = "monitor scheduled G6 runs"
+        else:
+            result["status"] = PARTIAL
+            result["details"].append("remote workflow observed, but G6 job did not pass")
 
     return result
 
@@ -164,7 +190,7 @@ def _next_actions(checks: list[dict[str, Any]]) -> list[str]:
     return [
         f"{check['id']}: {check['next_action']}"
         for check in checks
-        if check["status"] != PASS or "remote workflow" in check["next_action"]
+        if check["status"] != PASS
     ]
 
 

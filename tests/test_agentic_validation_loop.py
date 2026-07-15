@@ -78,6 +78,36 @@ def test_g6_oracle_drift_passes_when_summary_and_workflow_exist(tmp_path):
     assert "manual/weekly workflow is defined" in result["details"]
 
 
+def test_g6_oracle_drift_records_remote_job_when_observed(tmp_path):
+    write_minimal_agentic_fixture(tmp_path)
+    write(
+        tmp_path / "evidence" / "g6-remote-workflow-run-29378169451-summary.json",
+        json.dumps(
+            {
+                "conclusion": "failure",
+                "jobs": [
+                    {
+                        "name": "gate",
+                        "conclusion": "failure",
+                        "url": "https://example.invalid/gate",
+                    },
+                    {
+                        "name": "g6-oracle-drift",
+                        "conclusion": "success",
+                        "url": "https://example.invalid/g6",
+                    },
+                ],
+            }
+        ),
+    )
+
+    result = check_g6_oracle_drift(tmp_path)
+
+    assert result["status"] == "pass"
+    assert result["next_action"] == "monitor scheduled G6 runs"
+    assert any("remote G6 workflow job passed" in detail for detail in result["details"])
+
+
 def test_judge_policy_contract_keeps_llm_optional(tmp_path):
     result = check_judge_policy_contract(tmp_path)
 
