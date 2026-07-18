@@ -1,0 +1,39 @@
+IDE: Claude Code
+Server: apex-commander
+Status: approved/active
+
+Claude Code project trust:
+User selected "Yes, I trust this folder" for:
+C:\Users\Guest\Documents\project\codex\apex\apex-official
+
+MCP approval:
+User selected "Use this MCP server" for apex-commander.
+
+claude mcp get apex-commander:
+Scope: Project config (shared via .mcp.json)
+Status: Connected
+Type: stdio
+Command: python -m apex.commander.mcp_stdio_cli
+Args: --store evidence\generated\mcp-ide-subprocess-smoke\store.ndjson --finding-store evidence\generated\mcp-ide-subprocess-smoke\findings.ndjson --apply-root evidence\generated\mcp-ide-subprocess-smoke
+
+tools/list: success
+Claude Code listed 16 apex-commander tools, including debug_job, query_persisted_findings, explain_evidence, evaluate_negative_baseline, recommend_fix, preview_fix, preview_recommendation, apply_fix, apply_recommendation, verify_recommendation_apply, plan_rerun, build_spark_submit_rerun_command, execute_rerun_and_compare, execute_rerun_poll_and_compare, poll_telemetry, and compare_job_telemetry.
+
+recommend_fix: success
+recommend_fix(job_id="job-42") returned one recommendation:
+recommendation_id: job-42:shuffle_skew_candidate:stage-2:0
+kind: shuffle_skew_candidate
+severity: warning
+confidence: medium
+evidence: stage 2, hot_records 165297, median_cold_records 5596, ratio approximately 29.5x
+
+preview_fix: success, no file mutation
+preview_recommendation(job_id="job-42", recommendation_id="job-42:shuffle_skew_candidate:stage-2:0", path="evidence\generated\mcp-ide-subprocess-smoke\job.py") generated a diff and returned preview_ready without modifying the file.
+before_sha256: f8cf90cf...997885e5
+after_sha256: 1357994d...4d5be3
+
+apply_fix: success, guarded mutation inside apply_root
+apply_fix(job_id="job-42", recommendation_id="job-42:shuffle_skew_candidate:stage-2:0", path="evidence\generated\mcp-ide-subprocess-smoke\job.py") was approved in Claude Code and applied inside the configured apply_root:
+evidence\generated\mcp-ide-subprocess-smoke
+Result: applied, hash verification verified, actual matches expected 1357994d...4d5be3.
+

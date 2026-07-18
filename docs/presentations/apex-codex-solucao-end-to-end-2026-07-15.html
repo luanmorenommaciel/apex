@@ -440,7 +440,7 @@
       <tr><td>Detectores oficiais</td><td class="good">cumpre</td><td>G2 nos 5 cenarios problematicos + baseline.</td></tr>
       <tr><td>Dado real</td><td class="good">cumpre</td><td>G3 com app novo e 8 tasks reais.</td></tr>
       <tr><td>Latencia sem LLM</td><td class="good">cumpre</td><td>G4: 226.991 ms.</td></tr>
-      <tr><td>apply_fix no IDE</td><td class="warn">parcial</td><td>Funcionalmente existe apply guardado e smoke subprocesso MCP; IDE GUI real ainda falta.</td></tr>
+      <tr><td>apply_fix no IDE</td><td class="good">cumpre</td><td>Validado em Claude Code GUI real com `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` guardado no apply_root.</td></tr>
       <tr><td>Loop limpo apos fix</td><td class="good">cumpre</td><td>G5: finding 1 -> 0 e shuffle 1.16MB -> 0.</td></tr>
       <tr><td>G6 oraculo remoto</td><td class="good">cumpre</td><td>Workflow remoto `Apex Scenario Gate` verde no campeonato: `gate` e `g6-oracle-drift` passaram em `6ba5238`.</td></tr>
     </table>
@@ -454,7 +454,7 @@
       <tr><td>Commit final</td><td><code>6ba5238a78b863c8b665e735d1b30057cbf73803</code></td></tr>
       <tr><td>Workflow remoto</td><td><code>https://github.com/gustocezar/apex-workspace/actions/runs/29379009885</code></td></tr>
       <tr><td>Testes finais</td><td><code>evidence/ci-remote-gate-fix-tests.log</code>: 163 passed, 2 skipped</td></tr>
-      <tr><td>Loop agêntico</td><td><code>evidence/agentic-validation-loop-report.json</code>: so resta aprovar MCP GUI.</td></tr>
+      <tr><td>Loop agêntico</td><td><code>evidence/agentic-validation-loop-report.json</code>: status pass e sem proximas acoes locais.</td></tr>
     </table>
   </section>
 
@@ -487,7 +487,7 @@
     <h2>O que ainda falta</h2>
     <table>
       <tr><th>Gap</th><th>Impacto</th><th>Acao</th></tr>
-      <tr><td>IDE GUI real</td><td>Provar UX no ambiente do dev</td><td>Smoke test em Cursor/VS Code/Claude Code, alem do subprocesso MCP ja validado.</td></tr>
+      <tr><td>IDE GUI real</td><td class="good">Fechado</td><td>Smoke test em Claude Code GUI real executado e registrado.</td></tr>
       <tr><td>Crew.ai/Judge opcional</td><td>Completar camada agentica</td><td>Entrar so depois do T1/validator/schema ficarem estaveis.</td></tr>
       <tr><td>Versao Spark alvo</td><td>Padronizar V1</td><td>Decidir entre Spark 4.0.0 da stack autonoma Codex e Spark 4.1.2 da plataforma Spike.</td></tr>
       <tr><td>G6 oraculo/drift</td><td class="good">Fechado remoto</td><td>Manter monitoramento agendado; run manual ja passou no campeonato.</td></tr>
@@ -499,7 +499,7 @@
     <div class="flow">
       <div class="node"><b>1</b>Pacote juiz 15/07</div>
       <div class="arrow">→</div>
-      <div class="node"><b>2</b>Smoke IDE GUI</div>
+      <div class="node"><b>2</b>Regredir MCP GUI</div>
       <div class="arrow">→</div>
       <div class="node"><b>3</b>Regressao G3/G5 autonoma</div>
       <div class="arrow">→</div>
@@ -525,7 +525,7 @@
       </div>
     </div>
     <div class="callout">
-      <p>Recomendacao Codex: Opcao A primeiro. A base local ja tem stack autonoma e listener; agora falta provar a experiencia em IDE GUI real.</p>
+      <p>Recomendacao Codex: a base local ja tem stack autonoma, listener e MCP GUI real. O proximo salto e decidir Crew/Judge real ou composicao controlada com a plataforma Spike.</p>
     </div>
   </section>
 </main>

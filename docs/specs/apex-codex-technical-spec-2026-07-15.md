@@ -24,7 +24,7 @@ Commit avaliado:
 
 Provar uma versao local-first do Apex que captura telemetria Spark, detecta anomalias deterministicas, gera recomendacao, aplica fix guardado e reexecuta o job para comparar evidencia antes/depois.
 
-Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e auditavel de gates G0-G6, com uma pendencia operacional restante: aprovar `apex-commander` em uma IDE GUI real.
+Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e auditavel de gates G0-G6, agora com `apex-commander` aprovado e validado em Claude Code GUI real. A pendencia restante e Crew.ai/Judge real.
 
 ## Componentes
 
@@ -71,7 +71,7 @@ Resultados esperados:
 
 - `git rev-parse HEAD` deve retornar `6ba5238a78b863c8b665e735d1b30057cbf73803`;
 - pytest deve fechar com `163 passed, 2 skipped`;
-- o loop agentico deve listar apenas `mcp_project_config: approve apex-commander in Claude Code/Cursor/VS Code GUI` como proxima acao.
+- o loop agentico deve fechar com `status=pass` e `next_actions=[]`.
 
 ## Diagrama End-to-End
 
@@ -96,7 +96,7 @@ flowchart LR
 
 | Pendencia | Por que ainda existe | Proxima acao |
 |---|---|---|
-| IDE GUI real | Claude Code reconhece `.mcp.json`, mas ainda exige aprovacao interativa do servidor `apex-commander` | Aprovar na GUI e salvar transcript de `tools/list`, `preview_fix` e `apply_fix` |
+| IDE GUI real | Fechado no Claude Code com `apex-commander` conectado, `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` guardado | Manter transcript em `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
 | Crew.ai/Judge real | Decidido como camada futura para nao comprometer T1 deterministico | Implementar depois de preservar G0-G6 verdes |
 | Versao Spark alvo | Codex autonomo usa Spark 4.0.0; Spike usa 4.1.2 | Commander escolher padrao antes da V1 final |
 

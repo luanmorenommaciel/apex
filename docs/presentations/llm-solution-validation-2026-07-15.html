@@ -45,12 +45,12 @@
     <table>
       <thead><tr><th>Solucao</th><th>Total</th><th>Melhor coisa</th><th>Principal gap</th></tr></thead>
       <tbody>
-        <tr><td>Codex Round2</td><td class="score">28/30</td><td>G0-G6, workflow remoto verde, G3/G5 autonomo, listener JVM, MCP subprocess, T1 226.991 ms</td><td>IDE GUI real e Crew.ai/Judge real ainda faltam</td></tr>
+        <tr><td>Codex Round2</td><td class="score">29/30</td><td>G0-G6, workflow remoto verde, G3/G5 autonomo, listener JVM, MCP GUI real, T1 226.991 ms</td><td>Crew.ai/Judge real ainda falta</td></tr>
         <tr><td>DataFlint</td><td class="score">25/30</td><td>Produto maduro: Spark MCP, Copilot, Cluster Agent, Review Agent, Fleet Observability</td><td>Produto externo; menos auditavel/customizavel localmente</td></tr>
         <tr><td>Agmar/Spike</td><td class="score">22/30</td><td>Melhor plataforma: Spark, MinIO, ClickHouse, HyperDX, loader, ground-truth tests</td><td>Merge bruto e arriscado; loop apply_fix ainda fraco</td></tr>
         <tr><td>Cowork</td><td class="score">19/30</td><td>Melhor UX/IDE: MCP + apply_fix + narrativa de produto</td><td>Poucos detectores e dependencia mais forte de LLM</td></tr>
         <tr><td>Kimi</td><td class="score">18/30</td><td>Disciplina Go/CLI, ClickHouse mock e contratos</td><td>Nao fecha loop de produto ponta a ponta</td></tr>
-        <tr><td>Codex publicada</td><td class="score">28/30</td><td>Mesma HEAD da Round2 no repo do Luan: 6ba5238</td><td>Pendente apenas aprovacao MCP GUI para fechar experiencia IDE real</td></tr>
+        <tr><td>Codex publicada</td><td class="score">29/30</td><td>Mesma HEAD da Round2 no repo do Luan, com MCP GUI validado</td><td>Pendente apenas Crew.ai/Judge real</td></tr>
       </tbody>
     </table>
   </section>
@@ -129,7 +129,7 @@
         <tr><td>Commit final</td><td>6ba5238a78b863c8b665e735d1b30057cbf73803</td></tr>
         <tr><td>Workflow remoto verde</td><td>github.com/gustocezar/apex-workspace/actions/runs/29379009885</td></tr>
         <tr><td>Testes finais</td><td>evidence/ci-remote-gate-fix-tests.log: 163 passed, 2 skipped</td></tr>
-        <tr><td>Pendencia restante</td><td>Aprovar apex-commander em IDE GUI real; G0-G6 nao dependem disso.</td></tr>
+        <tr><td>Pendencia restante</td><td>Crew.ai/Judge real como camada futura; G0-G6 e MCP GUI estao verdes.</td></tr>
       </tbody>
     </table>
   </section>
@@ -137,7 +137,7 @@
   <section>
     <h2>Proximos passos</h2>
     <ol>
-      <li>Rodar smoke em IDE GUI real: Cursor, VS Code ou Claude Code.</li>
+      <li>Manter smoke em IDE GUI real como regressao quando o contrato MCP mudar.</li>
       <li>Escolher versao Spark alvo: manter 4.0.0 Codex autonomo ou alinhar com 4.1.2 Spike.</li>
       <li>Portar plataforma Spike por modulo, mantendo Codex G0-G6 como gate.</li>
       <li>Formalizar Crew.ai/Judge real apenas depois do caminho deterministico continuar verde.</li>

@@ -4,7 +4,7 @@ Status: comparacao read-only das branches atualizadas em 2026-07-15, com DataFli
 
 ## Resumo Executivo
 
-A rodada final mudou o estado da engine Codex: alem de G0-G5, stack autonoma, SparkListener JVM real e smoke MCP por subprocesso, ela agora tem G6 remoto observado e verde no GitHub Actions do campeonato. O workflow `Apex Scenario Gate` passou inteiro no commit `6ba5238`, incluindo o job legado `gate` e o job `g6-oracle-drift`. Isso nao transforma a branch em V1 final, porque ainda falta aprovacao interativa do MCP em IDE GUI real e Crew.ai/Judge real, mas deixa a branch pronta para avaliacao do juiz como pacote reprodutivel.
+A rodada final mudou o estado da engine Codex: alem de G0-G5, stack autonoma, SparkListener JVM real e smoke MCP por subprocesso, ela agora tem G6 remoto observado e verde no GitHub Actions do campeonato e MCP aprovado/validado em Claude Code GUI real. O workflow `Apex Scenario Gate` passou inteiro no commit `6ba5238`, incluindo o job legado `gate` e o job `g6-oracle-drift`. Isso nao transforma a branch em V1 final, porque ainda falta Crew.ai/Judge real, mas deixa a branch pronta para avaliacao do juiz como pacote reprodutivel.
 
 As outras solucoes tambem evoluiram:
 
@@ -83,7 +83,7 @@ Pontuacao: 0 a 5. A nota mede evidencia disponivel hoje, nao potencial.
 | C4 Loop IDE/apply | 5 | 1 | 4 | 4 | 2 | 5 |
 | C5 Qualidade de engenharia | 4 | 4 | 5 | 5 | 4 | 4 |
 | C6 Custo/latencia | 2 | 4 | 5 | 5 | 3 | 3 |
-| Total | 19/30 | 18/30 | 28/30 | 28/30 | 22/30 | 25/30 |
+| Total | 19/30 | 18/30 | 29/30 | 29/30 | 22/30 | 25/30 |
 
 Leitura honesta:
 
@@ -153,7 +153,7 @@ O site atual posiciona DataFlint como uma plataforma de agentes production-aware
 
 | Risco | Estado em 15/07 | Acao recomendada |
 |---|---|---|
-| IDE GUI real nao validada | Codex tem subprocess smoke e `.mcp.json` reconhecido; falta aprovacao interativa do `apex-commander` | aprovar MCP em Claude Code/Cursor/VS Code e salvar transcript |
+| IDE GUI real | Fechada no Claude Code GUI com `apex-commander` conectado e `apply_fix` guardado | repetir smoke quando mudar `.mcp.json` ou contrato MCP |
 | Crew.ai/Judge real ausente | politica local existe, sem agente externo | manter futuro, com T1 deterministico como base |
 | Divergencia de Spark | Codex autonomo usa Spark 4.0.0; Spike usa 4.1.2 | escolher versao-alvo antes da V1 final |
 | Merge bruto de Spike | plataforma forte, mas grande | portar por modulo com gates |
@@ -198,8 +198,8 @@ O que o juiz deve testar:
 1. Conferir que `git rev-parse HEAD` na branch publicada retorna `6ba5238`.
 2. Rodar `uv run --with-requirements requirements.txt python -m pytest -q` e esperar `163 passed, 2 skipped`.
 3. Conferir `evidence/g6-remote-workflow-latest-summary.json`: `conclusion=success`, jobs `gate=success` e `g6-oracle-drift=success`.
-4. Conferir que o loop agêntico aponta apenas uma pendencia: aprovacao GUI do MCP (`evidence/agentic-validation-loop-report.json`).
-5. Validar que a pendencia nao invalida G0-G6: ela pertence ao fechamento de produto IDE real.
+4. Conferir que o loop agêntico termina com `status=pass` e `next_actions=[]` (`evidence/agentic-validation-loop-report.json`).
+5. Validar que a pendencia restante e futura: Crew.ai/Judge real, sem invalidar G0-G6.
 
 ## Decisao Recomendada
 
