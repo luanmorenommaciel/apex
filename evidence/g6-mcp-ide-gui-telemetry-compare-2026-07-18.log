@@ -1,0 +1,57 @@
+IDE: Claude Code
+Server: apex-commander
+Tool: compare_job_telemetry
+Mode: read-only
+Command execution: none
+File mutation: none
+
+Input:
+before_job_id: before-job
+after_job_id: after-job
+
+Result:
+status: improved
+rule_set: apex.commander.telemetry_compare.v1
+
+Before:
+app_id: app-mcp-gui-telemetry-before
+finding_count: 3
+finding_kinds:
+- gc_pressure_candidate
+- plan_aqe_replan_candidate
+- shuffle_skew_candidate
+max_skew_ratio: 29.5
+total_spilled_bytes: 2097152
+max_gc_ratio: 0.4
+oom_failure_count: 0
+adaptive_execution_updates: 4
+
+After:
+app_id: app-mcp-gui-telemetry-after
+finding_count: 0
+finding_kinds: []
+max_skew_ratio: 1.0
+total_spilled_bytes: 0
+max_gc_ratio: 0.0
+oom_failure_count: 0
+adaptive_execution_updates: 0
+
+Comparisons:
+- finding_count: 3 -> 0, improved
+- max_skew_ratio: 29.5 -> 1.0, improved
+- total_spilled_bytes: 2097152 -> 0, improved
+- max_gc_ratio: 0.4 -> 0.0, improved
+- oom_failure_count: 0 -> 0, unchanged
+- adaptive_execution_updates: 4 -> 0, improved
+
+Summary:
+resolved_findings:
+- gc_pressure_candidate
+- plan_aqe_replan_candidate
+- shuffle_skew_candidate
+improved_metric_count: 5
+regressed_metric_count: 0
+new_findings: []
+
+compare_job_telemetry: success, status improved
+

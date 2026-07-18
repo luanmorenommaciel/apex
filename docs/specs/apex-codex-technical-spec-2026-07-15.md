@@ -35,7 +35,7 @@ Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e 
 | ClickHouse schema/adapters | `docs/specs/apex_telemetry_v1.sql`, `apex/commander/clickhouse_store.py` | Schema canonico versionado |
 | MCP stdio | `apex/commander/mcp_stdio_cli.py`, `apex/commander/mcp_stdio_server.py` | Validado por subprocesso |
 | apply_fix guardado | `apex/commander/apply_verify.py`, `apex/commander/tool_contract.py` | Preview, token, hash, root e verify |
-| Rerun/compare | `apex/commander/rerun_orchestrator.py`, `apex/commander/telemetry_compare.py` | Validado em G5 |
+| Rerun/compare | `apex/commander/rerun_orchestrator.py`, `apex/commander/telemetry_compare.py` | Validado em G5 e comparado via MCP GUI read-only |
 | Stack autonoma | `docker-compose.autonomous.yml`, `docker/autonomous/` | G3/G5 repetidos sem `plat-v0` |
 | SparkListener JVM | `listener-jvm/` | JAR real, NDJSON e fail-safe |
 | G6 oracle/drift | `tools/g6_oracle_drift_smoke.py`, `.github/workflows/scenario-gate.yml` | Local e remoto verdes |
@@ -52,6 +52,7 @@ Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e 
 | G4 latencia T1 | `evidence/g4-t1.log` | 226.991 ms sem LLM obrigatorio |
 | G5 detectar -> fix -> rerun -> limpo | `evidence/g5-ciclo.log` | finding 1 -> 0; shuffle 1.157.481 -> 0 |
 | G6 drift remoto | `evidence/g6-remote-workflow-latest-summary.json` | Workflow remoto verde |
+| Telemetria MCP GUI | `evidence/g6-mcp-ide-gui-telemetry-compare-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-local-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-tests-2026-07-18.log` | `compare_job_telemetry` read-only retornou `status=improved`; validacao focada fechou com 24 testes |
 
 Workflow remoto:
 
@@ -72,6 +73,8 @@ Resultados esperados:
 - `git rev-parse HEAD` deve retornar `6ba5238a78b863c8b665e735d1b30057cbf73803`;
 - pytest deve fechar com `163 passed, 2 skipped`;
 - o loop agentico deve fechar com `status=pass` e `next_actions=[]`.
+- `compare_job_telemetry` via MCP GUI deve mostrar `before-job -> after-job` com `status=improved`, `finding_count 3 -> 0`, `max_skew_ratio 29.5 -> 1.0` e `total_spilled_bytes 2097152 -> 0`;
+- a validacao focada de contrato MCP/telemetria deve fechar com `24 passed`.
 
 ## Diagrama End-to-End
 

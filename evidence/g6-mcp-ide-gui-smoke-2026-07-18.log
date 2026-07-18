@@ -37,3 +37,6 @@ apply_fix(job_id="job-42", recommendation_id="job-42:shuffle_skew_candidate:stag
 evidence\generated\mcp-ide-subprocess-smoke
 Result: applied, hash verification verified, actual matches expected 1357994d...4d5be3.
 
+compare_job_telemetry: success, status improved
+compare_job_telemetry(before_job_id="before-job", after_job_id="after-job") was executed read-only in Claude Code with no command execution and no file mutation.
+Result: status improved, finding_count 3 -> 0, max_skew_ratio 29.5 -> 1.0, total_spilled_bytes 2097152 -> 0, max_gc_ratio 0.4 -> 0.0, adaptive_execution_updates 4 -> 0.
