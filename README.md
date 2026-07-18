@@ -29,7 +29,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Docker autonomo paralelo | Fechado localmente | `docker-compose.autonomous.yml`; `evidence/g3-autonomous-diagnosis.json`; `evidence/g5-autonomous-ciclo.log` |
 | SparkListener JVM real | Fechado localmente/runtime smoke | `listener-jvm/`; `evidence/g9-listener-jvm-spark-submit.log`; `evidence/g9-listener-jvm-failsafe-spark-submit.log` |
 | Spark 4.1.2 + listener oficial | Fechado localmente com G3/G5 real | `docker-compose.yml`; `docker-compose.autonomous.yml`; `docker/spark/spark-defaults.conf`; `docker/autonomous/spark/spark-defaults.conf`; `evidence/f7-spark412-g5-compare-memory-2026-07-18.log`; `evidence/f7-spark412-final-focused-tests-2026-07-18.log`; `ISSUES.md` CODEX-041 a CODEX-044 |
-| Loop CI stack autonoma | Fechado localmente com execução real; contrato integrado ao `Apex Scenario Gate`; remoto real pendente de runner preparado | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/scenario-gate.yml`; `.github/workflows/autonomous-stack-loop.yml`; `tests/test_f7_autonomous_stack_loop.py`; `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/generated/f7-autonomous-loop/20260718-real-local-6/`; `ISSUES.md` CODEX-045/CODEX-048 |
+| Loop CI stack autonoma | Fechado localmente com execução real; contrato integrado ao `Apex Scenario Gate`; dispatch remoto aceito, mas bloqueado antes de alocar runner | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/scenario-gate.yml`; `.github/workflows/autonomous-stack-loop.yml`; `tests/test_f7_autonomous_stack_loop.py`; `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/f7-scenario-gate-remote-run-29664707350-summary.json`; `ISSUES.md` CODEX-045/CODEX-049 |
 | Crew/Judge policy local | Fechado localmente | `apex/commander/judge_policy.py`; `evidence/g8-agentic-loop-python.log` |
 | MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
 | Claude Code project MCP | Fechado em IDE GUI real | `.mcp.json`; `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
@@ -252,7 +252,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 
 1. Fazer smoke GUI real em Cursor/VS Code/Claude Code usando a tool `apply_fix`.
 2. Promover o G3/G5 autonomo para regressao automatizada.
-3. Acionar o job `real-stack` do workflow `Apex Autonomous Stack Loop` em runner self-hosted preparado com Docker/Spark 4.1.2 para transformar a evidência local real do runner em evidência remota real.
+3. Verificar a configuração/capacidade do GitHub Actions no campeonato: o dispatch remoto do `Apex Scenario Gate` foi aceito, mas as runs `29664652802` e `29664707350` falharam antes de qualquer step.
 4. Revisar com o Commander as ADRs formais criadas em `docs/adr/`.
 5. Monitorar proximas execucoes agendadas do G6 e manter o job legado `gate` verde no CI remoto.
 6. So depois expandir camada Crew.ai/Judge.
