@@ -29,7 +29,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Docker autonomo paralelo | Fechado localmente | `docker-compose.autonomous.yml`; `evidence/g3-autonomous-diagnosis.json`; `evidence/g5-autonomous-ciclo.log` |
 | SparkListener JVM real | Fechado localmente/runtime smoke | `listener-jvm/`; `evidence/g9-listener-jvm-spark-submit.log`; `evidence/g9-listener-jvm-failsafe-spark-submit.log` |
 | Spark 4.1.2 + listener oficial | Fechado localmente com G3/G5 real | `docker-compose.yml`; `docker-compose.autonomous.yml`; `docker/spark/spark-defaults.conf`; `docker/autonomous/spark/spark-defaults.conf`; `evidence/f7-spark412-g5-compare-memory-2026-07-18.log`; `evidence/f7-spark412-final-focused-tests-2026-07-18.log`; `ISSUES.md` CODEX-041 a CODEX-044 |
-| Loop CI stack autonoma | Construido; contrato/dry-run verde; execucao real remota pendente de runner preparado | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/autonomous-stack-loop.yml`; `tests/test_f7_autonomous_stack_loop.py`; `evidence/f7-autonomous-stack-loop-contract-tests-2026-07-18.log`; `evidence/f7-autonomous-stack-loop-20260718-local-contract.log`; `ISSUES.md` CODEX-045/CODEX-046 |
+| Loop CI stack autonoma | Fechado localmente com execução real; remoto pendente de runner preparado | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/autonomous-stack-loop.yml`; `tests/test_f7_autonomous_stack_loop.py`; `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/generated/f7-autonomous-loop/20260718-real-local-6/`; `ISSUES.md` CODEX-045/CODEX-047 |
 | Crew/Judge policy local | Fechado localmente | `apex/commander/judge_policy.py`; `evidence/g8-agentic-loop-python.log` |
 | MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
 | Claude Code project MCP | Fechado em IDE GUI real | `.mcp.json`; `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
@@ -115,7 +115,7 @@ flowchart TD
 | G5 autônomo | Mesmo ciclo na stack autônoma sem `plat-v0` | `evidence/g5-autonomous-ciclo.log` |
 | G6 local | Contrato `apply_fix` e smoke MCP stdio local | `evidence/g6-apply-fix-mcp-smoke.log` |
 | G7 local | Compose autônomo sobe sem `spark-plat-v0-*`, Spark grava event log, G3/G5 passam e listener JVM roda | `evidence/g3-autonomous-diagnosis.json`; `evidence/g5-autonomous-ciclo.log`; `evidence/g9-listener-jvm-spark-submit.log` |
-| F7 loop | Runner orquestra G3/G5 autônomo em Spark 4.1.2 e workflow valida contrato/dry-run | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/autonomous-stack-loop.yml`; `evidence/f7-autonomous-stack-loop-20260718-local-contract.log` |
+| F7 loop | Runner orquestra G3/G5 autônomo em Spark 4.1.2 e fechou execução real local | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/autonomous-stack-loop.yml`; `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log` |
 | G8 local | Política Crew/Judge futura sem LLM obrigatória | `evidence/g8-agentic-loop-python.log` |
 | G9 local | Listener JVM compila, gera JAR, carrega via `spark-submit --jars`, emite NDJSON e não derruba job em fail-mode | `evidence/g9-listener-jvm-spark-submit.log`; `evidence/g9-listener-jvm-output.ndjson`; `evidence/g9-listener-jvm-failsafe-spark-submit.log` |
 
@@ -252,7 +252,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 
 1. Fazer smoke GUI real em Cursor/VS Code/Claude Code usando a tool `apply_fix`.
 2. Promover o G3/G5 autonomo para regressao automatizada.
-3. Acionar o job `real-stack` do workflow `Apex Autonomous Stack Loop` em runner self-hosted preparado com Docker/Spark 4.1.2 para transformar o loop construido em evidência remota real.
+3. Acionar o job `real-stack` do workflow `Apex Autonomous Stack Loop` em runner self-hosted preparado com Docker/Spark 4.1.2 para transformar a evidência local real do runner em evidência remota real.
 4. Revisar com o Commander as ADRs formais criadas em `docs/adr/`.
 5. Monitorar proximas execucoes agendadas do G6 e manter o job legado `gate` verde no CI remoto.
 6. So depois expandir camada Crew.ai/Judge.

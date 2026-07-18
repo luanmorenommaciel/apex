@@ -1,0 +1,12 @@
+apex autonomous stack loop
+run_id=20260718-real-local
+spark_target=4.1.2
+compose_file=C:\Users\Guest\Documents\project\codex\apex\apex-official\docker-compose.autonomous.yml
+
+## generate before job
+$ C:\Users\Guest\AppData\Local\uv\cache\builds-v0\.tmpisbb9e\Scripts\python.exe C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\code_generator.py C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\scenarios\skew_on_join_30x.yaml C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\f7-autonomous-loop\20260718-real-local\skew_on_join_30x_before.py
+Traceback (most recent call last):
+  File "C:\Users\Guest\Documents\project\codex\apex\apex-official\pacote-comum\generators\code_generator.py", line 14, in <module>
+    from apex import apexlib
+ModuleNotFoundError: No module named 'apex'
+exit_code=1

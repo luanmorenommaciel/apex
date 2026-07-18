@@ -25,7 +25,7 @@ def test_build_fetch_eventlog_command_uses_minio_bucket_and_network():
     assert command[:4] == ["docker", "run", "--rm", "--network"]
     assert "apex-autonomous_default" in command
     assert "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" in command
-    assert "local/spark-logs/events/eventlog_v2_app-1/events_1_*" in command[-1]
+    assert "local/spark-logs/events/eventlog_v2_app-1/events_1_app-1.zstd" in command[-1]
     assert "/out/before_eventlog.zstd" in command[-1]
 
 
@@ -37,9 +37,12 @@ def test_write_after_job_applies_official_skew_safe_join(tmp_path):
             [
                 "from pyspark.sql.functions import col, rand, when, collect_list",
                 '(SparkSession.builder.appName("x")',
+                '    .config("spark.sql.adaptive.enabled", "false")',
+                '    .config("spark.sql.adaptive.skewJoin.enabled", "false")',
                 '    .config("spark.sql.adaptive.coalescePartitions.enabled", "false")',
+                '    .config("spark.sql.adaptive.autoBroadcastJoinThreshold", "-1")',
                 "    .getOrCreate())",
-                'result = orders.join(customers, "customer_id", "inner")',
+                'result = orders.join(customers.hint("shuffle_merge"), "customer_id", "inner")  # APEX::ANTIPATTERN',
             ]
         ),
         encoding="utf-8",
@@ -49,9 +52,13 @@ def test_write_after_job_applies_official_skew_safe_join(tmp_path):
 
     text = after.read_text(encoding="utf-8")
     assert "from pyspark.sql.functions import broadcast, col, rand, when, collect_list" in text
+    assert 'spark.sql.adaptive.enabled", "true"' in text
+    assert 'spark.sql.adaptive.skewJoin.enabled", "true"' in text
     assert 'spark.sql.adaptive.autoBroadcastJoinThreshold", "10485760"' in text
     assert 'orders.join(broadcast(customers), "customer_id", "inner")' in text
     assert "APEX::FIXED_BY_F7_LOOP" in text
+    assert "APEX::ANTIPATTERN" not in text
+    assert "shuffle_merge" not in text
 
 
 def test_assert_gate_accepts_clean_improved_comparison():
@@ -104,3 +111,19 @@ def test_make_paths_keeps_evidence_under_generated_loop_dir():
 
     assert paths.run_dir == Path(loop.ROOT, "evidence", "generated", "f7-autonomous-loop", "unit")
     assert paths.evidence_log == Path(loop.ROOT, "evidence", "f7-autonomous-stack-loop-unit.log")
+
+
+def test_prepend_pythonpath_keeps_repo_root_first():
+    assert loop._prepend_pythonpath("existing", Path("repo")) == f"repo{loop.os.pathsep}existing"
+    assert loop._prepend_pythonpath(None, Path("repo")) == "repo"
+
+
+def test_extract_app_id_prefers_real_spark_app_id_over_application_name():
+    output = "\n".join(
+        [
+            "INFO SparkContext: Submitted application: skew_on_join_30x",
+            "INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20260718201021-0000",
+        ]
+    )
+
+    assert loop.extract_app_id(output) == "app-20260718201021-0000"

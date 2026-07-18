@@ -1,0 +1,11 @@
+apex autonomous stack loop
+run_id=20260718-local-contract-after-fixes
+spark_target=4.1.2
+compose_file=C:\Users\Guest\Documents\project\codex\apex\apex-official\docker-compose.autonomous.yml
+
+## dry run commands
+docker compose -f C:\Users\Guest\Documents\project\codex\apex\apex-official\docker-compose.autonomous.yml build spark-master spark-worker
+docker compose -f C:\Users\Guest\Documents\project\codex\apex\apex-official\docker-compose.autonomous.yml up -d
+docker exec apex-autonomous-spark-master /opt/spark/bin/spark-submit --master spark://spark-master:7077 /tmp/apex-before.py
+docker run --rm --network apex-autonomous_default -v C:\Users\Guest\Documents\project\codex\apex\apex-official\evidence\generated\f7-autonomous-loop:/out --entrypoint /bin/sh quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z -lc mc alias set local http://minio:9000 spv0 spv0spv0 >/dev/null && mc cp local/spark-logs/events/eventlog_v2_app-example/events_1_app-example.zstd /out/before_eventlog.zstd
+dry_run_status=success

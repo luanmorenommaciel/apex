@@ -1,0 +1,9 @@
+{
+  "scenario_id": "skew_on_join_30x",
+  "scenario_hash": "sha256:ec5372694030305d",
+  "generator_version": "4",
+  "generated_at": "2026-07-18T19:47:33.872354+00:00",
+  "job_file": "C:\\Users\\Guest\\Documents\\project\\codex\\apex\\apex-official\\evidence\\generated\\f7-autonomous-loop\\20260718-real-local-2\\skew_on_join_30x_before.py",
+  "anti_pattern_line": 20,
+  "anti_pattern_class": "data_skew_on_join_key"
+}

@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -72,7 +73,12 @@ class EvidenceLogger:
     def line(self, text: str = "") -> None:
         with self.path.open("a", encoding="utf-8") as fh:
             fh.write(text + "\n")
-        print(text)
+        console_encoding = sys.stdout.encoding or "utf-8"
+        safe_text = text.encode(console_encoding, errors="replace").decode(
+            console_encoding,
+            errors="replace",
+        )
+        print(safe_text)
 
     def section(self, title: str) -> None:
         self.line()
@@ -96,6 +102,8 @@ def run_command(
         command,
         cwd=str(cwd),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         timeout=timeout_seconds,
     )
@@ -140,7 +148,7 @@ def build_fetch_eventlog_command(app_id: str, output_name: str) -> list[str]:
         "-lc",
         (
             "mc alias set local http://minio:9000 spv0 spv0spv0 >/dev/null && "
-            f"mc cp local/spark-logs/events/eventlog_v2_{app_id}/events_1_* /out/{output_name}"
+            f"mc cp local/spark-logs/events/eventlog_v2_{app_id}/events_1_{app_id}.zstd /out/{output_name}"
         ),
     ]
 
@@ -149,6 +157,7 @@ def generate_before_job(paths: LoopPaths, logger: EvidenceLogger) -> None:
     paths.run_dir.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
+    env["PYTHONPATH"] = _prepend_pythonpath(env.get("PYTHONPATH"), ROOT)
     logger.section("generate before job")
     result = subprocess.run(
         [sys.executable, str(GENERATOR), str(SCENARIO), str(paths.before_job)],
@@ -167,6 +176,13 @@ def generate_before_job(paths: LoopPaths, logger: EvidenceLogger) -> None:
         raise RuntimeError("code generation failed")
 
 
+def _prepend_pythonpath(current: str | None, root: Path) -> str:
+    parts = [str(root)]
+    if current:
+        parts.append(current)
+    return os.pathsep.join(parts)
+
+
 def write_after_job(before_path: Path, after_path: Path) -> None:
     text = before_path.read_text(encoding="utf-8")
     text = text.replace(
@@ -174,18 +190,28 @@ def write_after_job(before_path: Path, after_path: Path) -> None:
         "from pyspark.sql.functions import broadcast, col, rand, when, collect_list",
     )
     text = text.replace(
-        '.config("spark.sql.adaptive.coalescePartitions.enabled", "false")\n',
-        '.config("spark.sql.adaptive.coalescePartitions.enabled", "false")\n'
-        '    .config("spark.sql.adaptive.autoBroadcastJoinThreshold", "10485760")\n',
+        '.config("spark.sql.adaptive.enabled", "false")',
+        '.config("spark.sql.adaptive.enabled", "true")',
     )
     text = text.replace(
-        'orders.join(customers, "customer_id", "inner")',
+        '.config("spark.sql.adaptive.skewJoin.enabled", "false")',
+        '.config("spark.sql.adaptive.skewJoin.enabled", "true")',
+    )
+    text = text.replace(
+        '.config("spark.sql.adaptive.autoBroadcastJoinThreshold", "-1")',
+        '.config("spark.sql.adaptive.autoBroadcastJoinThreshold", "10485760")',
+    )
+    text = text.replace(
+        'orders.join(customers.hint("shuffle_merge"), "customer_id", "inner")  # APEX::ANTIPATTERN',
         'orders.join(broadcast(customers), "customer_id", "inner")  # APEX::FIXED_BY_F7_LOOP',
     )
     after_path.write_text(text, encoding="utf-8")
 
 
 def extract_app_id(output: str) -> str:
+    app_ids = re.findall(r"app-\d{14}-\d+", output)
+    if app_ids:
+        return app_ids[-1]
     for line in output.splitlines():
         if "Submitted application" in line:
             return line.rsplit(" ", 1)[-1].strip()
