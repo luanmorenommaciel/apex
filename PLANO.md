@@ -22,7 +22,7 @@ atual cobre uma parte do requisito, o status fica como `parcial`.
 | L4 ClickHouse com schema definido, query por `app_id`/`job_id` | Cumpre localmente | `docs/specs/apex_telemetry_v1.sql` foi copiado literalmente do pacote comum em G0; `apex/commander/telemetry.py` carrega `job_id` e `app_id`; adapters consultam por `job_id`; a stack autonoma validou leitura/diagnostico por `app_id` em `evidence/g3-autonomous-diagnosis.json`. |
 | L5 Diagnostico agentico Crew.ai explica o problema | Parcial | Diagnostico atual e deterministico em `apex/commander/diagnostic_mvp.py`; `apex/commander/judge_policy.py` define politica local de escalonamento para futuro Crew/Judge, mas nao ha Crew.ai/LLM real. |
 | L6 Fix via MCP no IDE + "aplica nossa sugestao" edita o codigo do cliente | Parcial | Existe MCP stdio e apply guardado em `apex/commander/apply_verify.py`; `apply_fix` foi exposto como contrato local guardado e validado por smoke subprocesso estilo cliente IDE com transcript JSON-RPC. Falta validação GUI real em Cursor/VS Code/Claude Code. |
-| L7 Decisoes de arquitetura registradas em ADR | Parcial | Existe `docs/adr-review-drafts.md`; falta estrutura formal `docs/adr/ADR-*.md`. |
+| L7 Decisoes de arquitetura registradas em ADR | Cumpre localmente | ADRs formais criadas em `docs/adr/`: onde o Apex roda, T1 antes de Crew/Judge, Spark alvo da branch Codex e MCP/`apply_fix` guardado. |
 | L8 Nao focar Databricks/serverless agora — Spark puro primeiro | Cumpre | A branch trabalha com Spark event log, ClickHouse/local store e MCP; nao ha implementacao Databricks/serverless. |
 | L9 Minimo viavel de cada componente antes de expandir qualquer um | Parcial | Ha MVPs locais para ingest, store, detectores, validator, MCP, apply guardado, rerun, Docker/Compose autonomo e SparkListener JVM real/fail-safe. Continua parcial porque Crew.ai/Judge real e IDE GUI real ainda nao foram implementados/validados. |
 
@@ -68,7 +68,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 | L4 | Fechado localmente com DDL canonico e adapters por `app_id`/`job_id`; ainda falta consolidar como schema de producao na V1 composta | Manter o DDL do pacote comum como contrato imutavel e validar qualquer migracao ClickHouse contra ele. |
 | L5 | Falta Crew.ai e contrato anti-alucinacao | Integrar so depois de T1 e EvidenceValidator estarem ligados ao schema canonico. |
 | L6 | Falta validacao em IDE GUI real | `apply_fix` ja existe como contrato local guardado e tem smoke subprocesso estilo cliente IDE; proximo passo e abrir em Cursor/VS Code/Claude Code. |
-| L7 | Falta ADR formal versionada | Promover rascunhos para `docs/adr/ADR-*.md`. |
+| L7 | ADR formal versionada criada | Manter ADRs curtas e atualizar quando o Commander decidir a V1 composta. |
 | L9 | MVPs centrais locais existem; faltam produto IDE GUI e Crew.ai/Judge real | Nao expandir LLM antes de preservar regressao G0-G6, stack autonoma, schema e listener verdes. |
 
 ## Ordem De Trabalho Recomendada
@@ -122,7 +122,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 - Listener real fail-safe: ja existe runtime smoke; alinhar ao job template oficial e manter teste de fail-safe.
 - Crew.ai: implementar camada nova, sem substituir T1 deterministico.
 - Tool `apply_fix`: contrato local ja adaptado; falta validar em IDE real e, se necessario, ajustar formato ao cliente MCP escolhido.
-- ADRs formais: promover rascunhos para `docs/adr/ADR-*.md`.
+- ADRs formais: criadas em `docs/adr/ADR-*.md`; falta revisao do Commander para decisoes finais de produto.
 
 ## Observacoes F0
 

@@ -31,6 +31,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Crew/Judge policy local | Fechado localmente | `apex/commander/judge_policy.py`; `evidence/g8-agentic-loop-python.log` |
 | MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
 | Claude Code project MCP | Parcial, pendente de aprovacao interativa | `.mcp.json`; `evidence/g6-claude-code-project-mcp-smoke.log` |
+| Playbook IDE GUI MCP | Criado, aguardando aprovacao na GUI | `docs/playbooks/mcp-ide-gui-approval-smoke-2026-07-18.md`; `evidence/g6-claude-code-project-mcp-smoke-2026-07-18.log` |
 | G6 oracle/drift smoke | Fechado remoto | `tools/g6_oracle_drift_smoke.py`; `.github/workflows/scenario-gate.yml`; `evidence/g6-oracle-drift-smoke.log`; `evidence/g6-oracle-drift-summary.json`; `evidence/g6-remote-workflow-latest-summary.json` |
 | Loop agentico local | Parcial, sem LLM e sem mutacao; pendente MCP GUI | `apex/commander/agentic_loop.py`; `tools/agentic_validation_loop.py`; `evidence/agentic-validation-loop-report.json` |
 | Especificacao tecnica 15/07 | Atualizada para juiz | `docs/specs/apex-codex-technical-spec-2026-07-15.md` |
@@ -38,6 +39,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Apresentacao Codex 15/07 | Atualizada para juiz | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html` |
 | Autoavaliacao | Fechada | `docs/autoavaliacao.md` |
 | Catalogo de issues | Fechado/aberto conforme item | `ISSUES.md` |
+| ADRs formais | Criadas | `docs/adr/ADR-001-onde-o-apex-roda.md`; `docs/adr/ADR-002-t1-antes-de-crew-judge.md`; `docs/adr/ADR-003-spark-alvo-da-branch-codex.md`; `docs/adr/ADR-004-mcp-ide-e-apply-fix-guardado.md` |
 | Plano F0/F5 | Fechado | `PLANO.md` |
 
 ## Resultado Mais Importante
@@ -247,7 +249,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 1. Fazer smoke GUI real em Cursor/VS Code/Claude Code usando a tool `apply_fix`.
 2. Promover o G3/G5 autonomo para regressao automatizada.
 3. Integrar o JAR do SparkListener no job template oficial, agora que o smoke `--jars` e G3/G5 autonomos passaram.
-4. Promover ADRs formais para decisoes centrais.
+4. Revisar com o Commander as ADRs formais criadas em `docs/adr/`.
 5. Monitorar proximas execucoes agendadas do G6 e manter o job legado `gate` verde no CI remoto.
 6. So depois expandir camada Crew.ai/Judge.
 
