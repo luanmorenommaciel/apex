@@ -1,0 +1,56 @@
+name: Apex Autonomous Stack Loop
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_real_stack:
+        description: "Run the real Docker/Spark/MinIO loop on a prepared runner"
+        required: false
+        default: "false"
+  schedule:
+    - cron: "41 6 * * 1"
+
+jobs:
+  contract:
+    name: Contract and dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Validate autonomous loop contract
+        run: python -m pytest tests/test_f7_autonomous_stack_loop.py -q
+      - name: Render autonomous loop dry-run evidence
+        run: python scripts/f7_autonomous_stack_loop.py --dry-run --run-id github-contract
+      - name: Upload dry-run evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: f7-autonomous-stack-loop-contract
+          path: evidence/f7-autonomous-stack-loop-github-contract.log
+
+  real-stack:
+    name: Real Docker/Spark stack
+    if: github.event_name == 'workflow_dispatch' && inputs.run_real_stack == 'true'
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Run autonomous G3/G5 loop
+        run: python scripts/f7_autonomous_stack_loop.py --run-id github-real-stack
+      - name: Upload real evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: f7-autonomous-stack-loop-real
+          path: |
+            evidence/f7-autonomous-stack-loop-github-real-stack.log
+            evidence/generated/f7-autonomous-loop/github-real-stack/**

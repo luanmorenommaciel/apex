@@ -75,7 +75,9 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 
 1. **Etapa 1 — Docker/Spark Envy minimo**
    - Fechado localmente com `docker-compose.autonomous.yml`.
-   - Proximo passo: transformar G3/G5 Spark 4.1.2 em regressao automatizada de CI quando o ambiente suportar Docker.
+   - Loop automatizado construido em `scripts/f7_autonomous_stack_loop.py`.
+   - Workflow `Apex Autonomous Stack Loop` valida contrato/dry-run em CI comum.
+   - Proximo passo: executar o job real `real-stack` em runner self-hosted preparado com Docker e imagem/base Spark 4.1.2.
 
 2. **Etapa 2 — Schema ClickHouse canonico**
    - Fechado localmente com `docs/specs/apex_telemetry_v1.sql`.

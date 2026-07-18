@@ -24,7 +24,7 @@ Commit avaliado:
 
 Provar uma versao local-first do Apex que captura telemetria Spark, detecta anomalias deterministicas, gera recomendacao, aplica fix guardado e reexecuta o job para comparar evidencia antes/depois.
 
-Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e auditavel de gates G0-G6, agora com `apex-commander` aprovado e validado em Claude Code GUI real. Em 18/07, Spark 4.1.2 foi definido como alvo oficial, o SparkListener JVM foi promovido para caminho padrao dos jobs e G3/G5 foram reexecutados com sucesso na stack autonoma Spark 4.1.2. A pendencia restante de arquitetura e Crew.ai/Judge real.
+Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e auditavel de gates G0-G6, agora com `apex-commander` aprovado e validado em Claude Code GUI real. Em 18/07, Spark 4.1.2 foi definido como alvo oficial, o SparkListener JVM foi promovido para caminho padrao dos jobs, G3/G5 foram reexecutados com sucesso na stack autonoma Spark 4.1.2 e o loop de regressao autonoma foi transformado em runner + workflow. A pendencia restante de arquitetura e Crew.ai/Judge real; a execucao real remota do novo loop ainda exige runner preparado.
 
 ## Componentes
 
@@ -39,6 +39,7 @@ Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e 
 | Stack autonoma | `docker-compose.autonomous.yml`, `docker/autonomous/` | G3/G5 repetidos em Spark 4.1.2 com listener oficial |
 | SparkListener JVM | `listener-jvm/`; `docker/spark/spark-defaults.conf`; `docker/autonomous/spark/spark-defaults.conf` | JAR real, NDJSON, fail-safe e caminho oficial via `spark.jars` + `spark.extraListeners` |
 | G6 oracle/drift | `tools/g6_oracle_drift_smoke.py`, `.github/workflows/scenario-gate.yml` | Local e remoto verdes |
+| Loop CI autonoma | `scripts/f7_autonomous_stack_loop.py`, `.github/workflows/autonomous-stack-loop.yml` | Contrato e dry-run verdes; job real manual em runner self-hosted |
 | Loop agentico local | `apex/commander/agentic_loop.py`, `tools/agentic_validation_loop.py` | Sem LLM, sem mutacao, evidence-first |
 
 ## Gates E Evidencias
@@ -54,6 +55,7 @@ Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e 
 | G6 drift remoto | `evidence/g6-remote-workflow-latest-summary.json` | Workflow remoto verde |
 | Telemetria MCP GUI | `evidence/g6-mcp-ide-gui-telemetry-compare-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-local-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-tests-2026-07-18.log` | `compare_job_telemetry` read-only retornou `status=improved`; validacao focada fechou com 24 testes |
 | Spark 4.1.2 + listener oficial | `evidence/f7-spark412-official-listener-docker-build-2026-07-18.log`; `evidence/f7-spark412-autonomous-ps-2026-07-18.log`; `evidence/f7-spark412-g3-before-diagnosis-2026-07-18.log`; `evidence/f7-spark412-g5-compare-memory-2026-07-18.log`; `evidence/f7-spark412-final-focused-tests-2026-07-18.log` | Stack autonoma Spark 4.1.2 sobe; G3 detecta skew high ratio 29.4; G5 after-memory fecha finding_count 1 -> 0; suite focada 59 passed |
+| Loop CI autonoma | `evidence/f7-autonomous-stack-loop-contract-tests-2026-07-18.log`; `evidence/f7-autonomous-stack-loop-20260718-local-contract.log`; `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/autonomous-stack-loop.yml` | Runner construido; contrato 6 passed; dry-run mostra comandos de build/up/submit/fetch; execucao real remota pendente |
 
 Workflow remoto:
 
@@ -102,7 +104,7 @@ flowchart LR
 |---|---|---|
 | IDE GUI real | Fechado no Claude Code com `apex-commander` conectado, `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` guardado | Manter transcript em `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
 | Crew.ai/Judge real | Decidido como camada futura para nao comprometer T1 deterministico | Implementar depois de preservar G0-G6 verdes |
-| Versao Spark alvo | Spark 4.1.2 definido como alvo oficial; compose raiz e autonomo alinhados; G3/G5 reexecutados | Automatizar regressao Docker quando o CI suportar esse perfil |
+| Versao Spark alvo | Spark 4.1.2 definido como alvo oficial; compose raiz e autonomo alinhados; G3/G5 reexecutados; runner de loop autonomo construido | Acionar job `real-stack` em runner self-hosted preparado e anexar evidencia remota |
 
 ## Honestidade De Proveniencia
 
