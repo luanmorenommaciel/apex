@@ -433,7 +433,15 @@ def test_tools_call_can_build_spark_submit_rerun_command(tmp_path):
     payload = json.loads(response["result"]["content"][0]["text"])
     assert payload["status"] == "planned"
     assert payload["command"][0] == "spark-submit"
+    assert "--jars" in payload["command"]
+    assert (
+        "listener-jvm/build/libs/apex-spark-listener-0.1.0.jar"
+        in payload["command"]
+    )
     assert "spark.apex.jobId=after-job" in payload["command"]
+    assert "spark.apex.listener.output=/tmp/apex-listener-events.ndjson" in payload[
+        "command"
+    ]
     assert payload["command"][-1] == str(source.resolve())
 
 

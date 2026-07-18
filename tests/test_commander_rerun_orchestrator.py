@@ -198,8 +198,17 @@ def test_build_spark_submit_rerun_command_includes_listener_and_job_id(tmp_path)
 
     assert result["status"] == "planned"
     assert result["command"][0] == "spark-submit"
+    assert "--jars" in result["command"]
+    assert (
+        "listener-jvm/build/libs/apex-spark-listener-0.1.0.jar"
+        in result["command"]
+    )
     assert "--conf" in result["command"]
     assert "spark.apex.jobId=after-job" in result["command"]
+    assert "spark.apex.listener.output=/tmp/apex-listener-events.ndjson" in result[
+        "command"
+    ]
+    assert "spark.apex.listener.failMode=false" in result["command"]
     assert (
         "spark.extraListeners=apex.commander.spark.ApexSparkListener"
         in result["command"]

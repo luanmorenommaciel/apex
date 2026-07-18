@@ -19,8 +19,8 @@ docker compose -f docker-compose.autonomous.yml ps
 | `clickhouse` | `clickhouse/clickhouse-server:26.5.1` | Apex telemetry store with `docs/specs/apex_telemetry_v1.sql` mounted at init. |
 | `minio` | `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` | S3-compatible Spark event log storage. |
 | `minio-init` | `quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z` | Explicitly creates `spark-logs` and the `events/` prefix marker. |
-| `spark-master` | local `docker/autonomous/spark/Dockerfile` | Spark master with S3A jars installed. |
-| `spark-worker` | local `apex-autonomous-spark:4.0.0-s3a` | 8-core Spark worker for real skew validation. |
+| `spark-master` | local `docker/autonomous/spark/Dockerfile` | Spark 4.1.2 master with S3A jars and official Apex listener path. |
+| `spark-worker` | local `apex-autonomous-spark:4.1.2-s3a` | 8-core Spark 4.1.2 worker for real skew validation. |
 
 ## Ports
 
@@ -41,6 +41,14 @@ Inside the Docker network, Spark still writes event logs to:
 
 ```text
 s3a://spark-logs/events
+```
+
+The Apex listener is mounted and loaded by default:
+
+```text
+/opt/apex/listener/apex-spark-listener-0.1.0.jar
+spark.extraListeners apex.commander.spark.ApexSparkListener
+spark.apex.listener.output /tmp/apex-listener-events.ndjson
 ```
 
 ## Validation Commands
@@ -84,19 +92,19 @@ docker exec apex-autonomous-minio-init /bin/sh -lc "mc alias set apex http://min
 
 ## Current Status
 
-This module is a minimal autonomous-stack proposal. It has not been Docker-tested
-in this worker pass.
+This module is aligned to the Commander decision that Spark 4.1.2 is the target
+runtime. Compose rendering is validated in
+`evidence/f7-spark412-official-listener-compose-autonomous-2026-07-18.log`.
 
 Known validation points before declaring the gap fully closed:
 
-- confirm the public MinIO tags are pullable in the target environment;
-- confirm the public Apache Spark image path and `/opt/spark` layout match the
-  Dockerfile assumptions;
+- close CODEX-041: the Spark 4.1.2 image resolves, but the Maven download of
+  the AWS SDK bundle for S3A timed out during this pass;
 - confirm `hadoop-aws` and `aws-java-sdk-bundle` versions are compatible with
   the Spark/Hadoop runtime in the base image;
 - run the G3 skew job and verify event log capture in MinIO;
 - rerun G5 after the real job proves this stack is equivalent to the validated
-  `spv0` platform.
+  Spark 4.1.2 platform.
 
 If any public image tag is unavailable, pin the nearest approved tag here rather
 than falling back to the old `spark-plat-v0-*` images.

@@ -26,6 +26,8 @@ from apex.commander.rerun_orchestrator import (
 )
 from apex.commander.spark_rerun_template import (
     DEFAULT_LISTENER_CLASS,
+    DEFAULT_LISTENER_JAR,
+    DEFAULT_LISTENER_OUTPUT,
     DEFAULT_MASTER,
     DEFAULT_SPARK_SUBMIT,
     build_spark_submit_rerun_command,
@@ -191,6 +193,8 @@ TOOL_SPECS = [
                     "additionalProperties": {"type": "string"},
                 },
                 "listener_class": {"type": "string"},
+                "listener_jar": {"type": ["string", "null"]},
+                "listener_output": {"type": "string"},
             },
         },
     },
@@ -367,6 +371,8 @@ class CommanderToolContract:
                 app_args=args.get("app_args"),
                 conf=args.get("conf"),
                 listener_class=args.get("listener_class", DEFAULT_LISTENER_CLASS),
+                listener_jar=args.get("listener_jar", DEFAULT_LISTENER_JAR),
+                listener_output=args.get("listener_output", DEFAULT_LISTENER_OUTPUT),
                 rerun_root=self.rerun_root,
             )
         if name == "poll_telemetry":

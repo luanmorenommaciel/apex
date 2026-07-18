@@ -13,7 +13,7 @@ event log -> detector deterministico -> EvidenceValidator -> finding
 -> recomendacao -> preview de diff -> apply guardado -> rerun -> compare
 ```
 
-Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loop funcional com evidencia: detectar um problema real, gerar uma correcao revisavel, aplicar com seguranca, reexecutar e provar que o finding sumiu. A rodada de 14/07 provou a mesma logica em stack autonoma da propria branch, sem depender das imagens `spark-plat-v0-*`; em 15/07, o G6 remoto tambem ficou verde no campeonato.
+Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loop funcional com evidencia: detectar um problema real, gerar uma correcao revisavel, aplicar com seguranca, reexecutar e provar que o finding sumiu. A rodada de 14/07 provou a mesma logica em stack autonoma da propria branch, sem depender das imagens `spark-plat-v0-*`; em 15/07, o G6 remoto tambem ficou verde no campeonato. Em 18/07, o Commander definiu Spark 4.1.2 como alvo e o SparkListener JVM foi promovido para caminho oficial dos jobs.
 
 ## Resumo Executivo
 
@@ -28,6 +28,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | MCP subprocess, estilo cliente externo | Fechado localmente | `apex/commander/mcp_stdio_cli.py`; `evidence/g6-apply-fix-mcp-smoke.log` |
 | Docker autonomo paralelo | Fechado localmente | `docker-compose.autonomous.yml`; `evidence/g3-autonomous-diagnosis.json`; `evidence/g5-autonomous-ciclo.log` |
 | SparkListener JVM real | Fechado localmente/runtime smoke | `listener-jvm/`; `evidence/g9-listener-jvm-spark-submit.log`; `evidence/g9-listener-jvm-failsafe-spark-submit.log` |
+| Spark 4.1.2 + listener oficial | Decisao aplicada, runtime autonomo pendente | `docker-compose.yml`; `docker-compose.autonomous.yml`; `docker/spark/spark-defaults.conf`; `docker/autonomous/spark/spark-defaults.conf`; `evidence/f7-spark412-official-listener-tests-2026-07-18.log`; `ISSUES.md` CODEX-041 |
 | Crew/Judge policy local | Fechado localmente | `apex/commander/judge_policy.py`; `evidence/g8-agentic-loop-python.log` |
 | MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
 | Claude Code project MCP | Fechado em IDE GUI real | `.mcp.json`; `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
@@ -243,13 +244,13 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 | IDE real | Fechado em Claude Code GUI: `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` |
 | SparkListener real | Cumpre localmente/runtime smoke |
 | Crew.ai/Judge | Parcial, politica local criada sem LLM |
-| Plataforma Docker standalone | Cumpre localmente, G3/G5 autonomos passaram; ressalva Spark 4.0.0 vs plat-v0 |
+| Plataforma Docker standalone | Parcial apos migracao alvo Spark 4.1.2: compose renderiza e listener oficial esta montado; G3/G5 4.1.2 aguardam resolver download S3A/AWS |
 
 ## Proximos Passos Recomendados
 
 1. Fazer smoke GUI real em Cursor/VS Code/Claude Code usando a tool `apply_fix`.
 2. Promover o G3/G5 autonomo para regressao automatizada.
-3. Integrar o JAR do SparkListener no job template oficial, agora que o smoke `--jars` e G3/G5 autonomos passaram.
+3. Reexecutar G3/G5/G6 em Spark 4.1.2 depois de resolver o bloqueio de build S3A/AWS registrado em CODEX-041.
 4. Revisar com o Commander as ADRs formais criadas em `docs/adr/`.
 5. Monitorar proximas execucoes agendadas do G6 e manter o job legado `gate` verde no CI remoto.
 6. So depois expandir camada Crew.ai/Judge.

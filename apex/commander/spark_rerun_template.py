@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_LISTENER_CLASS = "apex.commander.spark.ApexSparkListener"
+DEFAULT_LISTENER_JAR = "listener-jvm/build/libs/apex-spark-listener-0.1.0.jar"
+DEFAULT_LISTENER_OUTPUT = "/tmp/apex-listener-events.ndjson"
 DEFAULT_MASTER = "local[*]"
 DEFAULT_SPARK_SUBMIT = "spark-submit"
 RULE_SET = "apex.commander.spark_rerun_template.v1"
@@ -21,6 +23,8 @@ def build_spark_submit_rerun_command(
     app_args: Sequence[str] | None = None,
     conf: Mapping[str, str] | None = None,
     listener_class: str = DEFAULT_LISTENER_CLASS,
+    listener_jar: str | None = DEFAULT_LISTENER_JAR,
+    listener_output: str = DEFAULT_LISTENER_OUTPUT,
     rerun_root: str | None = None,
 ) -> dict[str, Any]:
     """Build a shell-free Spark command that emits Commander telemetry."""
@@ -32,6 +36,7 @@ def build_spark_submit_rerun_command(
             "spark_submit": spark_submit,
             "master": master,
             "listener_class": listener_class,
+            "listener_output": listener_output,
         }
     )
     if invalid:
@@ -53,9 +58,16 @@ def build_spark_submit_rerun_command(
         **extra_conf,
         "spark.extraListeners": listener_class,
         "spark.apex.jobId": after_job_id,
+        "spark.apex.listener.output": listener_output,
+        "spark.apex.listener.failMode": "false",
     }
 
     command = [spark_submit, "--master", master]
+    if listener_jar is not None:
+        listener_jar = _validate_listener_jar(listener_jar)
+        if isinstance(listener_jar, dict):
+            return listener_jar
+        command.extend(["--jars", listener_jar])
     for key in sorted(effective_conf):
         command.extend(["--conf", f"{key}={effective_conf[key]}"])
     command.append(str(app_target))
@@ -71,6 +83,8 @@ def build_spark_submit_rerun_command(
         "master": master,
         "conf": effective_conf,
         "app_args": extra_args,
+        "listener_jar": listener_jar,
+        "listener_output": listener_output,
     }
 
 
@@ -116,6 +130,16 @@ def _validate_args(values: Iterable[str]) -> list[str] | dict[str, Any]:
             "reason": "app_args must contain only non-empty strings",
         }
     return args
+
+
+def _validate_listener_jar(value: str) -> str | dict[str, Any]:
+    if not isinstance(value, str) or not value.strip():
+        return {
+            "status": "invalid_spark_template_listener_jar",
+            "rule_set": RULE_SET,
+            "reason": "listener_jar must be a non-empty string or null",
+        }
+    return value
 
 
 def _validate_conf(

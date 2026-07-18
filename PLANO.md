@@ -16,9 +16,9 @@ atual cobre uma parte do requisito, o status fica como `parcial`.
 
 | Premissa | Status | Evidencia atual |
 | --- | --- | --- |
-| L1 Pipeline: Spark Envy Docker -> SparkListener -> ClickHouse -> Crew.ai -> MCP | Parcial | Existe ClickHouse/store, MCP stdio/subprocess, compose autonomo paralelo que sobe e grava event log em S3A/MinIO, listener JVM carregado via `spark-submit --jars` com NDJSON/fail-safe, G3/G5 completos na stack autonoma e MCP aprovado/validado em Claude Code GUI. Crew.ai real ainda nao existe. |
-| L2 `docker compose up` sobe tudo sem configuracao manual | Cumpre localmente | `docker-compose.autonomous.yml` renderiza, builda a imagem Spark, sobe ClickHouse/MinIO/Spark sem `spark-plat-v0-*`, executa smoke S3A e repetiu G3/G5 completos na stack autonoma. Ressalva: usa imagem publica Spark 4.0.0, nao a stack `plat-v0` historica. |
-| L3 Listener via `spark.extraListeners`, fail-safe | Cumpre | `listener-jvm/` implementa classe real fail-safe; `gradle selfTest jar` passa em container; `spark-submit --jars` registrou `apex.commander.spark.ApexSparkListener`, emitiu NDJSON e validou `spark.apex.listener.failMode=true` sem derrubar o job. Evidencias: `evidence/g9-listener-jvm-spark-submit.log`, `evidence/g9-listener-jvm-output.ndjson`, `evidence/g9-listener-jvm-failsafe-spark-submit.log`. |
+| L1 Pipeline: Spark Envy Docker -> SparkListener -> ClickHouse -> Crew.ai -> MCP | Parcial | Existe ClickHouse/store, MCP stdio/subprocess, compose autonomo paralelo, listener JVM promovido para caminho oficial dos jobs, G3/G5 completos historicos na stack autonoma e MCP aprovado/validado em Claude Code GUI. Crew.ai real ainda nao existe; G3/G5 autonomos precisam ser reexecutados em Spark 4.1.2. |
+| L2 `docker compose up` sobe tudo sem configuracao manual | Parcial | `docker-compose.yml` raiz usa Spark 4.1.2 e monta o listener oficial; `docker-compose.autonomous.yml` renderiza em Spark 4.1.2 e monta o mesmo listener. O build real autonomo 4.1.2 ainda ficou bloqueado no download Maven do AWS SDK bundle para S3A, registrado em CODEX-041. |
+| L3 Listener via `spark.extraListeners`, fail-safe | Cumpre | `listener-jvm/` implementa classe real fail-safe; `gradle selfTest jar` passa em container; `spark-submit --jars` registrou `apex.commander.spark.ApexSparkListener`; em F7 o listener foi promovido para `spark-defaults.conf`, compose raiz/autonomo e `build_spark_submit_rerun_command` com `--jars`, `spark.extraListeners`, output e fail-safe default. Evidencias: `evidence/g9-listener-jvm-spark-submit.log`, `evidence/g9-listener-jvm-output.ndjson`, `evidence/g9-listener-jvm-failsafe-spark-submit.log`, `evidence/f7-spark412-official-listener-tests-2026-07-18.log`. |
 | L4 ClickHouse com schema definido, query por `app_id`/`job_id` | Cumpre localmente | `docs/specs/apex_telemetry_v1.sql` foi copiado literalmente do pacote comum em G0; `apex/commander/telemetry.py` carrega `job_id` e `app_id`; adapters consultam por `job_id`; a stack autonoma validou leitura/diagnostico por `app_id` em `evidence/g3-autonomous-diagnosis.json`. |
 | L5 Diagnostico agentico Crew.ai explica o problema | Parcial | Diagnostico atual e deterministico em `apex/commander/diagnostic_mvp.py`; `apex/commander/judge_policy.py` define politica local de escalonamento para futuro Crew/Judge, mas nao ha Crew.ai/LLM real. |
 | L6 Fix via MCP no IDE + "aplica nossa sugestao" edita o codigo do cliente | Cumpre | Existe MCP stdio e apply guardado em `apex/commander/apply_verify.py`; `apply_fix` foi exposto como contrato local guardado, validado por smoke subprocesso e validado em Claude Code GUI real com `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` dentro do `apply_root`. Evidencia: `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log`. |
@@ -63,7 +63,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 | Premissa | Gap principal | Ordem proposta |
 | --- | --- | --- |
 | L1 | Falta Crew.ai real | Manter T1 deterministico como nucleo; so depois integrar Crew.ai. |
-| L2 | Fechado localmente na stack autonoma | Manter regressao G3/G5 autonoma e declarar ressalva Spark 4.0.0 vs `plat-v0`. |
+| L2 | Parcial apos decisao Spark 4.1.2 | Resolver cache/mirror/vendor dos jars S3A/AWS e reexecutar G3/G5/G6 na stack autonoma 4.1.2. |
 | L3 | Fechado no smoke runtime e usado no G3/G5 autonomo | Promover o JAR para template oficial dos jobs. |
 | L4 | Fechado localmente com DDL canonico e adapters por `app_id`/`job_id`; ainda falta consolidar como schema de producao na V1 composta | Manter o DDL do pacote comum como contrato imutavel e validar qualquer migracao ClickHouse contra ele. |
 | L5 | Falta Crew.ai e contrato anti-alucinacao | Integrar so depois de T1 e EvidenceValidator estarem ligados ao schema canonico. |
@@ -75,7 +75,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 
 1. **Etapa 1 — Docker/Spark Envy minimo**
    - Fechado localmente com `docker-compose.autonomous.yml`.
-   - Proximo passo: promover G3/G5 autonomo para regressao oficial e decidir versao Spark alvo.
+   - Proximo passo: resolver download S3A/AWS e reexecutar G3/G5 autonomo em Spark 4.1.2.
 
 2. **Etapa 2 — Schema ClickHouse canonico**
    - Fechado localmente com `docs/specs/apex_telemetry_v1.sql`.
@@ -117,7 +117,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 
 ### Refazer Ou Alinhar Ao Pacote Comum
 
-- Docker/Spark Envy: ja existe stack autonoma local; proximo passo e transformar em regressao oficial e decidir versao Spark alvo.
+- Docker/Spark Envy: ja existe stack autonoma local; Spark 4.1.2 foi definido como alvo, mas falta resolver o build S3A/AWS e transformar G3/G5 4.1.2 em regressao oficial.
 - DDL ClickHouse canonico `apex_telemetry_v1.sql`: reaproveitar como contrato imutavel, ja alinhado ao pacote comum.
 - Listener real fail-safe: ja existe runtime smoke; alinhar ao job template oficial e manter teste de fail-safe.
 - Crew.ai: implementar camada nova, sem substituir T1 deterministico.

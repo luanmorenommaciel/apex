@@ -68,6 +68,12 @@ def test_compose_declares_spark_master_worker_and_event_log_volume():
     assert "apex_spark_event_logs:/tmp/spark-events" in services["spark-worker"][
         "volumes"
     ]
+    listener_mount = (
+        "./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar:"
+        "/opt/apex/listener/apex-spark-listener-0.1.0.jar:ro"
+    )
+    assert listener_mount in services["spark-master"]["volumes"]
+    assert listener_mount in services["spark-worker"]["volumes"]
     assert "SPARK_MASTER_URL=spark://spark-master:7077" in services["spark-worker"][
         "environment"
     ]
@@ -104,3 +110,32 @@ def test_compose_aligns_g3_environment_with_plat_v0_contract():
     )
     assert "spark.eventLog.dir s3a://spark-logs/events" in spark_defaults
     assert "spark.hadoop.fs.s3a.endpoint http://minio:9000" in spark_defaults
+    assert "spark.jars /opt/apex/listener/apex-spark-listener-0.1.0.jar" in spark_defaults
+    assert "spark.extraListeners apex.commander.spark.ApexSparkListener" in spark_defaults
+    assert "spark.apex.listener.output /tmp/apex-listener-events.ndjson" in spark_defaults
+    assert "spark.apex.listener.failMode false" in spark_defaults
+
+
+def test_autonomous_compose_uses_spark_412_and_official_listener_path():
+    compose = yaml.safe_load(
+        (ROOT / "docker-compose.autonomous.yml").read_text(encoding="utf-8")
+    )
+    services = compose["services"]
+
+    assert services["spark-master"]["image"] == "apex-autonomous-spark:4.1.2-s3a"
+    assert services["spark-worker"]["image"] == "apex-autonomous-spark:4.1.2-s3a"
+
+    listener_mount = (
+        "./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar:"
+        "/opt/apex/listener/apex-spark-listener-0.1.0.jar:ro"
+    )
+    assert listener_mount in services["spark-master"]["volumes"]
+    assert listener_mount in services["spark-worker"]["volumes"]
+
+    spark_defaults = (
+        ROOT / "docker" / "autonomous" / "spark" / "spark-defaults.conf"
+    ).read_text(encoding="utf-8")
+    assert "spark.jars /opt/apex/listener/apex-spark-listener-0.1.0.jar" in spark_defaults
+    assert "spark.extraListeners apex.commander.spark.ApexSparkListener" in spark_defaults
+    assert "spark.apex.listener.output /tmp/apex-listener-events.ndjson" in spark_defaults
+    assert "spark.apex.listener.failMode false" in spark_defaults

@@ -24,7 +24,7 @@ Commit avaliado:
 
 Provar uma versao local-first do Apex que captura telemetria Spark, detecta anomalias deterministicas, gera recomendacao, aplica fix guardado e reexecuta o job para comparar evidencia antes/depois.
 
-Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e auditavel de gates G0-G6, agora com `apex-commander` aprovado e validado em Claude Code GUI real. A pendencia restante e Crew.ai/Judge real.
+Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e auditavel de gates G0-G6, agora com `apex-commander` aprovado e validado em Claude Code GUI real. Em 18/07, Spark 4.1.2 foi definido como alvo oficial e o SparkListener JVM foi promovido para caminho padrao dos jobs. As pendencias restantes sao Crew.ai/Judge real e reexecucao G3/G5/G6 na stack autonoma Spark 4.1.2 apos resolver o download S3A/AWS.
 
 ## Componentes
 
@@ -37,7 +37,7 @@ Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e 
 | apply_fix guardado | `apex/commander/apply_verify.py`, `apex/commander/tool_contract.py` | Preview, token, hash, root e verify |
 | Rerun/compare | `apex/commander/rerun_orchestrator.py`, `apex/commander/telemetry_compare.py` | Validado em G5 e comparado via MCP GUI read-only |
 | Stack autonoma | `docker-compose.autonomous.yml`, `docker/autonomous/` | G3/G5 repetidos sem `plat-v0` |
-| SparkListener JVM | `listener-jvm/` | JAR real, NDJSON e fail-safe |
+| SparkListener JVM | `listener-jvm/`; `docker/spark/spark-defaults.conf`; `docker/autonomous/spark/spark-defaults.conf` | JAR real, NDJSON, fail-safe e caminho oficial via `spark.jars` + `spark.extraListeners` |
 | G6 oracle/drift | `tools/g6_oracle_drift_smoke.py`, `.github/workflows/scenario-gate.yml` | Local e remoto verdes |
 | Loop agentico local | `apex/commander/agentic_loop.py`, `tools/agentic_validation_loop.py` | Sem LLM, sem mutacao, evidence-first |
 
@@ -53,6 +53,7 @@ Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e 
 | G5 detectar -> fix -> rerun -> limpo | `evidence/g5-ciclo.log` | finding 1 -> 0; shuffle 1.157.481 -> 0 |
 | G6 drift remoto | `evidence/g6-remote-workflow-latest-summary.json` | Workflow remoto verde |
 | Telemetria MCP GUI | `evidence/g6-mcp-ide-gui-telemetry-compare-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-local-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-tests-2026-07-18.log` | `compare_job_telemetry` read-only retornou `status=improved`; validacao focada fechou com 24 testes |
+| Spark 4.1.2 + listener oficial | `evidence/f7-spark412-official-listener-tests-2026-07-18.log`; `evidence/f7-spark412-official-listener-commander-suite-2026-07-18.log`; `evidence/f7-spark412-official-listener-compose-root-2026-07-18.log`; `evidence/f7-spark412-official-listener-compose-autonomous-2026-07-18.log`; `evidence/f7-spark412-official-listener-docker-build-2026-07-18.log` | Compose raiz/autonomo renderizam com listener oficial; contrato Commander fechou com 54 testes; build autonomo bloqueado no download AWS SDK bundle |
 
 Workflow remoto:
 
@@ -101,7 +102,7 @@ flowchart LR
 |---|---|---|
 | IDE GUI real | Fechado no Claude Code com `apex-commander` conectado, `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` guardado | Manter transcript em `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
 | Crew.ai/Judge real | Decidido como camada futura para nao comprometer T1 deterministico | Implementar depois de preservar G0-G6 verdes |
-| Versao Spark alvo | Codex autonomo usa Spark 4.0.0; Spike usa 4.1.2 | Commander escolher padrao antes da V1 final |
+| Versao Spark alvo | Spark 4.1.2 definido como alvo oficial; compose raiz e autonomo alinhados | Reexecutar G3/G5/G6 na stack autonoma 4.1.2 apos resolver CODEX-041 |
 
 ## Honestidade De Proveniencia
 

@@ -352,7 +352,15 @@ def test_call_tool_build_spark_submit_rerun_command_returns_command(tmp_path):
 
     assert result["status"] == "planned"
     assert result["command"][0] == "spark-submit"
+    assert "--jars" in result["command"]
+    assert (
+        "listener-jvm/build/libs/apex-spark-listener-0.1.0.jar"
+        in result["command"]
+    )
     assert "spark.apex.jobId=after-job" in result["command"]
+    assert "spark.apex.listener.output=/tmp/apex-listener-events.ndjson" in result[
+        "command"
+    ]
     assert "spark.sql.adaptive.enabled=true" in result["command"]
     assert result["command"][-1] == str(source.resolve())
 

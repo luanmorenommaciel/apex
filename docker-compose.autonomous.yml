@@ -61,7 +61,7 @@ services:
     build:
       context: .
       dockerfile: docker/autonomous/spark/Dockerfile
-    image: apex-autonomous-spark:4.0.0-s3a
+    image: apex-autonomous-spark:4.1.2-s3a
     container_name: apex-autonomous-spark-master
     depends_on:
       minio-init:
@@ -83,10 +83,11 @@ services:
       - "38080:8080"
     volumes:
       - ./docker/autonomous/spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - ./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar:/opt/apex/listener/apex-spark-listener-0.1.0.jar:ro
       - apex_autonomous_spark_event_logs:/tmp/spark-events
 
   spark-worker:
-    image: apex-autonomous-spark:4.0.0-s3a
+    image: apex-autonomous-spark:4.1.2-s3a
     container_name: apex-autonomous-spark-worker
     depends_on:
       - spark-master
@@ -107,6 +108,7 @@ services:
       - "38081:8081"
     volumes:
       - ./docker/autonomous/spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - ./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar:/opt/apex/listener/apex-spark-listener-0.1.0.jar:ro
       - apex_autonomous_spark_event_logs:/tmp/spark-events
 
 volumes:
