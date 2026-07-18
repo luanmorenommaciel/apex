@@ -1,0 +1,113 @@
+{
+  "before": {
+    "app_id": "app-20260718172202-0002",
+    "finding_count": 1,
+    "finding_kinds": [
+      "shuffle_skew_candidate"
+    ],
+    "shuffle_read_bytes_total": 1157481,
+    "max_valid_skew_ratio": 29.4
+  },
+  "after": {
+    "app_id": "app-20260718175410-0004",
+    "finding_count": 0,
+    "finding_kinds": [],
+    "findings": [],
+    "shuffle_read_bytes_total": 0,
+    "max_valid_skew_ratio": 0
+  },
+  "comparison": {
+    "rule_set": "apex.commander.telemetry_compare.v1",
+    "status": "improved",
+    "before_job_id": "f7-spark412-g3-before",
+    "after_job_id": "f7-spark412-g5-after-memory",
+    "before": {
+      "job_id": "f7-spark412-g3-before",
+      "app_id": "app-20260718172202-0002",
+      "finding_count": 1,
+      "finding_kinds": [
+        "shuffle_skew_candidate"
+      ],
+      "metrics": {
+        "max_skew_ratio": 29.4,
+        "total_spilled_bytes": 0,
+        "max_gc_ratio": 0.07052620113724022,
+        "oom_failure_count": 0,
+        "adaptive_execution_updates": 0,
+        "finding_count": 1
+      }
+    },
+    "after": {
+      "job_id": "f7-spark412-g5-after-memory",
+      "app_id": "app-20260718175410-0004",
+      "finding_count": 0,
+      "finding_kinds": [],
+      "metrics": {
+        "max_skew_ratio": 0.0,
+        "total_spilled_bytes": 0,
+        "max_gc_ratio": 0.057705029983567725,
+        "oom_failure_count": 0,
+        "adaptive_execution_updates": 0,
+        "finding_count": 0
+      }
+    },
+    "summary": {
+      "resolved_findings": [
+        "shuffle_skew_candidate"
+      ],
+      "new_findings": [],
+      "improved_metric_count": 3,
+      "regressed_metric_count": 0
+    },
+    "comparisons": [
+      {
+        "metric": "finding_count",
+        "direction": "lower_is_better",
+        "before": 1,
+        "after": 0,
+        "delta": -1,
+        "status": "improved"
+      },
+      {
+        "metric": "max_skew_ratio",
+        "direction": "lower_is_better",
+        "before": 29.4,
+        "after": 0.0,
+        "delta": -29.4,
+        "status": "improved"
+      },
+      {
+        "metric": "total_spilled_bytes",
+        "direction": "lower_is_better",
+        "before": 0,
+        "after": 0,
+        "delta": 0,
+        "status": "unchanged"
+      },
+      {
+        "metric": "max_gc_ratio",
+        "direction": "lower_is_better",
+        "before": 0.07052620113724022,
+        "after": 0.057705029983567725,
+        "delta": -0.01282117115367249,
+        "status": "improved"
+      },
+      {
+        "metric": "oom_failure_count",
+        "direction": "lower_is_better",
+        "before": 0,
+        "after": 0,
+        "delta": 0,
+        "status": "unchanged"
+      },
+      {
+        "metric": "adaptive_execution_updates",
+        "direction": "lower_is_better",
+        "before": 0,
+        "after": 0,
+        "delta": 0,
+        "status": "unchanged"
+      }
+    ]
+  }
+}

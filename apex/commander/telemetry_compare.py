@@ -98,9 +98,12 @@ def _snapshot(job_id, envelope, findings):
 
 def _metrics_from_envelope(envelope):
     stages = envelope.get("stages") or []
+    valid_stages = [
+        stage for stage in stages if stage.get("evidence_status", "valid") == "valid"
+    ]
     return {
         "max_skew_ratio": max(
-            [_float(stage.get("ratio")) for stage in stages] or [0.0]
+            [_float(stage.get("ratio")) for stage in valid_stages] or [0.0]
         ),
         "total_spilled_bytes": sum(
             _int(stage.get("disk_bytes_spilled"))

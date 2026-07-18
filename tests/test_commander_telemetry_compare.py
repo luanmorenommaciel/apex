@@ -156,5 +156,26 @@ def test_compare_job_telemetry_reads_from_clickhouse_adapter_fake():
     assert result["after"]["metrics"]["max_skew_ratio"] == 1.0
 
 
+def test_compare_job_telemetry_ignores_invalid_skew_ratio_stages(tmp_path):
+    store = tmp_path / "store.ndjson"
+    before = telemetry_envelope("before-job", ratio=29.5)
+    before["stages"].append(
+        {
+            **before["stages"][0],
+            "stage_id": 3,
+            "ratio": float("inf"),
+            "evidence_status": "invalid",
+            "quality_issues": ["median_cold_records_zero"],
+        }
+    )
+    append_envelope(store, before)
+    append_envelope(store, telemetry_envelope("after-job", ratio=1.0))
+
+    result = compare_job_telemetry(store, "before-job", "after-job")
+
+    assert result["before"]["metrics"]["max_skew_ratio"] == 29.5
+    assert _comparison(result, "max_skew_ratio")["status"] == "improved"
+
+
 def _comparison(result, metric):
     return next(item for item in result["comparisons"] if item["metric"] == metric)

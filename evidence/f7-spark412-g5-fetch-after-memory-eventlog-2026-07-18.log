@@ -1,0 +1,5 @@
+`apex/spark-logs/events/eventlog_v2_app-20260718175410-0004/events_1_app-20260718175410-0004.zstd` -> `/work/after_memory_eventlog.zstd`
+┌───────────┬─────────────┬──────────┬─────────────┐
+│ Total     │ Transferred │ Duration │ Speed       │
+│ 43.55 KiB │ 43.55 KiB   │ 00m01s   │ 30.05 KiB/s │
+└───────────┴─────────────┴──────────┴─────────────┘

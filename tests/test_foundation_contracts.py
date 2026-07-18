@@ -114,6 +114,8 @@ def test_compose_aligns_g3_environment_with_plat_v0_contract():
     assert "spark.extraListeners apex.commander.spark.ApexSparkListener" in spark_defaults
     assert "spark.apex.listener.output /tmp/apex-listener-events.ndjson" in spark_defaults
     assert "spark.apex.listener.failMode false" in spark_defaults
+    assert "spark.executor.memory 3g" in spark_defaults
+    assert "spark.driver.memory 2g" in spark_defaults
 
 
 def test_autonomous_compose_uses_spark_412_and_official_listener_path():
@@ -139,3 +141,5 @@ def test_autonomous_compose_uses_spark_412_and_official_listener_path():
     assert "spark.extraListeners apex.commander.spark.ApexSparkListener" in spark_defaults
     assert "spark.apex.listener.output /tmp/apex-listener-events.ndjson" in spark_defaults
     assert "spark.apex.listener.failMode false" in spark_defaults
+    assert "spark.executor.memory 3g" in spark_defaults
+    assert "spark.driver.memory 2g" in spark_defaults

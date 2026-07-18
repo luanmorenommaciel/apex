@@ -13,7 +13,7 @@ Escala: 0 a 5.
 
 | Critério | Nota | Evidência por célula |
 | --- | ---: | --- |
-| C1 Arquitetura V1 (L1-L9) | 4/5 | `PLANO.md` classifica L3/L6/L7 como cumpridas e L1/L2/L5/L9 como parciais: há compose autônomo paralelo, Spark 4.1.2 definido como alvo, listener JVM promovido para caminho oficial dos jobs, MCP validado em Claude Code GUI real, `apply_fix` local e política Judge local. Não é 5/5 porque ainda falta Crew.ai/LLM real e G3/G5/G6 autônomos precisam ser reexecutados em Spark 4.1.2 após resolver CODEX-041. |
+| C1 Arquitetura V1 (L1-L9) | 4/5 | `PLANO.md` classifica L2/L3/L6/L7 como cumpridas localmente e L1/L5/L9 como parciais: há compose autônomo Spark 4.1.2, listener JVM promovido para caminho oficial dos jobs, G3/G5 reexecutados em Spark 4.1.2, MCP validado em Claude Code GUI real, `apply_fix` local e política Judge local. Não é 5/5 porque ainda falta Crew.ai/LLM real. |
 | C2 Cobertura de detecção | 5/5 | G2 passou nos 6 cenários oficiais de `pacote-comum/scenarios/`: baseline sem finding (`no_skew_baseline.yaml`) e 5 detectores com severidade esperada: skew high, GC critical, shuffle spill critical, OOM critical, cartesian product critical. Evidências: `evidence/g1-baseline.log`, `evidence/g2-cenarios.log`, `evidence/generated/official-scenarios/*.ndjson`, CODEX-009 a CODEX-014. |
 | C3 Confiabilidade | 5/5 | Baseline negativo oficial ficou limpo em G1 (`evidence/g1-baseline.log`, CODEX-009). Findings passam por `EvidenceValidator` (`apex/commander/evidence_validator.py`) e G4/G5 validaram finding real com `accepted=true`. G5 corrigiu bug real no token de apply guardado (CODEX-021). Em F6, o listener JVM provou fail-safe com `spark.apex.listener.failMode=true` e job Spark terminando com exit 0 (`evidence/g9-listener-jvm-failsafe-spark-submit.log`). Em 15/07, o workflow remoto `Apex Scenario Gate` passou inteiro no campeonato em `6ba5238`, incluindo `gate` e `g6-oracle-drift` (`evidence/g6-remote-workflow-latest-summary.json`). |
 | C4 Loop no IDE | 5/5 | O ciclo funcional detectar -> preview -> apply guardado -> verify -> rerun -> limpo foi provado em G5 contra Spark real e repetido na stack autônoma em `evidence/g5-autonomous-ciclo.log`. Em F6/F7, `apply_fix` foi validado via MCP stdio, por harness de cliente subprocesso em `evidence/g6-mcp-ide-subprocess-smoke.jsonl` e dentro do Claude Code GUI real em `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log`: `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` com mutação guardada no `apply_root`. |
@@ -69,10 +69,10 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
 ### Bloqueado
 
 - A branch agora tem direção de plataforma mais alinhada: Spark 4.1.2 é o alvo
-  oficial, o compose raiz/autônomo renderiza com o listener JVM no caminho
-  oficial, e `build_spark_submit_rerun_command` inclui o JAR por padrão.
-  Ressalva: G3/G5 autônomos antigos continuam evidências históricas de Spark
-  4.0.0; a reexecução completa em Spark 4.1.2 está pendente por CODEX-041.
+  oficial, o compose raiz/autônomo sobe com o listener JVM no caminho oficial,
+  `build_spark_submit_rerun_command` inclui o JAR por padrão e G3/G5 foram
+  reexecutados em Spark 4.1.2. Before: `app-20260718172202-0002`, finding high
+  ratio 29.4. After final: `app-20260718175410-0004`, finding_count 0.
 - SparkListener JVM real fail-safe foi carregado em Spark real via
   `spark-submit --jars`, emitiu NDJSON e não derrubou o job quando falhou
   internamente.
@@ -87,8 +87,8 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
 
 ### Precisa Do Commander
 
-- Resolver CODEX-041: cache/mirror/vendor dos jars S3A/AWS para fechar build
-  autônomo Spark 4.1.2 e então reexecutar G3/G5/G6 nessa stack.
+- Promover G3/G5 Spark 4.1.2 para regressão automatizada quando o CI suportar
+  Docker/Compose.
 - Decidir se o próximo fechamento deve priorizar Crew.ai/Judge real ou UI de
   produto. A IDE GUI real já tem evidência no Claude Code.
 - Validar se broadcast do lado `customers` é a correção canônica aceitável para

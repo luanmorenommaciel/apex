@@ -1,0 +1,40 @@
+{
+  "event_count": 69,
+  "app_id": "app-20260718172202-0002",
+  "job_id": "f7-spark412-g3-before",
+  "stage_count": 3,
+  "skew_candidates": [
+    {
+      "kind": "shuffle_skew_candidate",
+      "stage_id": 2,
+      "ratio": 29.4,
+      "hot_records": 164956,
+      "median_cold_records": 5617,
+      "task_count": 8
+    }
+  ],
+  "finding_count": 1,
+  "findings": [
+    {
+      "status": "finding",
+      "kind": "shuffle_skew_candidate",
+      "title": "shuffle_skew_candidate",
+      "severity": "high",
+      "confidence": "medium",
+      "job_id": "f7-spark412-g3-before",
+      "evidence": {
+        "schema_version": "apex.commander.telemetry.v1",
+        "app_id": "app-20260718172202-0002",
+        "stage_id": 2,
+        "ratio": 29.4,
+        "hot_records": 164956,
+        "median_cold_records": 5617,
+        "task_count": 8
+      },
+      "recommendations": [
+        "Validar habilitacao de spark.sql.adaptive.skewJoin.enabled para este job.",
+        "Confirmar chave de join e avaliar salting/repartition antes de aplicar mudanca."
+      ]
+    }
+  ]
+}

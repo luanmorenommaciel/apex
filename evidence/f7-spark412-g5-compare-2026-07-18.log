@@ -1,0 +1,157 @@
+{
+  "before": {
+    "event_count": 69,
+    "app_id": "app-20260718172202-0002",
+    "finding_count": 1,
+    "findings": [
+      {
+        "status": "finding",
+        "kind": "shuffle_skew_candidate",
+        "title": "shuffle_skew_candidate",
+        "severity": "high",
+        "confidence": "medium",
+        "job_id": "f7-spark412-g3-before",
+        "evidence": {
+          "schema_version": "apex.commander.telemetry.v1",
+          "app_id": "app-20260718172202-0002",
+          "stage_id": 2,
+          "ratio": 29.4,
+          "hot_records": 164956,
+          "median_cold_records": 5617,
+          "task_count": 8
+        },
+        "recommendations": [
+          "Validar habilitacao de spark.sql.adaptive.skewJoin.enabled para este job.",
+          "Confirmar chave de join e avaliar salting/repartition antes de aplicar mudanca."
+        ]
+      }
+    ],
+    "shuffle_read_bytes_total": 1157481,
+    "max_valid_skew_ratio": 29.4
+  },
+  "after": {
+    "event_count": 55,
+    "app_id": "app-20260718173901-0003",
+    "finding_count": 1,
+    "findings": [
+      {
+        "status": "finding",
+        "kind": "gc_pressure_candidate",
+        "title": "gc_pressure_candidate",
+        "severity": "critical",
+        "confidence": "high",
+        "job_id": "f7-spark412-g5-after",
+        "evidence": {
+          "app_id": "app-20260718173901-0003",
+          "stage_id": 0,
+          "gc_ratio": 0.24263193414506998,
+          "jvm_gc_time_ms": 60040,
+          "executor_run_time_ms": 247453
+        },
+        "recommendations": [
+          "Avaliar tamanho de particoes, cache e memoria antes de aumentar executores."
+        ]
+      }
+    ],
+    "shuffle_read_bytes_total": 0,
+    "max_valid_skew_ratio": 0
+  },
+  "comparison": {
+    "rule_set": "apex.commander.telemetry_compare.v1",
+    "status": "mixed",
+    "before_job_id": "f7-spark412-g3-before",
+    "after_job_id": "f7-spark412-g5-after",
+    "before": {
+      "job_id": "f7-spark412-g3-before",
+      "app_id": "app-20260718172202-0002",
+      "finding_count": 1,
+      "finding_kinds": [
+        "shuffle_skew_candidate"
+      ],
+      "metrics": {
+        "max_skew_ratio": Infinity,
+        "total_spilled_bytes": 0,
+        "max_gc_ratio": 0.07052620113724022,
+        "oom_failure_count": 0,
+        "adaptive_execution_updates": 0,
+        "finding_count": 1
+      }
+    },
+    "after": {
+      "job_id": "f7-spark412-g5-after",
+      "app_id": "app-20260718173901-0003",
+      "finding_count": 1,
+      "finding_kinds": [
+        "gc_pressure_candidate"
+      ],
+      "metrics": {
+        "max_skew_ratio": Infinity,
+        "total_spilled_bytes": 0,
+        "max_gc_ratio": 0.24263193414506998,
+        "oom_failure_count": 0,
+        "adaptive_execution_updates": 0,
+        "finding_count": 1
+      }
+    },
+    "summary": {
+      "resolved_findings": [
+        "shuffle_skew_candidate"
+      ],
+      "new_findings": [
+        "gc_pressure_candidate"
+      ],
+      "improved_metric_count": 0,
+      "regressed_metric_count": 1
+    },
+    "comparisons": [
+      {
+        "metric": "finding_count",
+        "direction": "lower_is_better",
+        "before": 1,
+        "after": 1,
+        "delta": 0,
+        "status": "unchanged"
+      },
+      {
+        "metric": "max_skew_ratio",
+        "direction": "lower_is_better",
+        "before": Infinity,
+        "after": Infinity,
+        "delta": NaN,
+        "status": "unchanged"
+      },
+      {
+        "metric": "total_spilled_bytes",
+        "direction": "lower_is_better",
+        "before": 0,
+        "after": 0,
+        "delta": 0,
+        "status": "unchanged"
+      },
+      {
+        "metric": "max_gc_ratio",
+        "direction": "lower_is_better",
+        "before": 0.07052620113724022,
+        "after": 0.24263193414506998,
+        "delta": 0.17210573300782978,
+        "status": "regressed"
+      },
+      {
+        "metric": "oom_failure_count",
+        "direction": "lower_is_better",
+        "before": 0,
+        "after": 0,
+        "delta": 0,
+        "status": "unchanged"
+      },
+      {
+        "metric": "adaptive_execution_updates",
+        "direction": "lower_is_better",
+        "before": 0,
+        "after": 0,
+        "delta": 0,
+        "status": "unchanged"
+      }
+    ]
+  }
+}

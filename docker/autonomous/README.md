@@ -93,18 +93,27 @@ docker exec apex-autonomous-minio-init /bin/sh -lc "mc alias set apex http://min
 ## Current Status
 
 This module is aligned to the Commander decision that Spark 4.1.2 is the target
-runtime. Compose rendering is validated in
-`evidence/f7-spark412-official-listener-compose-autonomous-2026-07-18.log`.
+runtime. Compose rendering, image build, service startup, listener smoke and
+G3/G5 runtime were validated on 2026-07-18.
 
 Known validation points before declaring the gap fully closed:
 
-- close CODEX-041: the Spark 4.1.2 image resolves, but the Maven download of
-  the AWS SDK bundle for S3A timed out during this pass;
-- confirm `hadoop-aws` and `aws-java-sdk-bundle` versions are compatible with
-  the Spark/Hadoop runtime in the base image;
-- run the G3 skew job and verify event log capture in MinIO;
-- rerun G5 after the real job proves this stack is equivalent to the validated
-  Spark 4.1.2 platform.
+- promote the G3/G5 Spark 4.1.2 runtime checks to automated regression when the
+  CI environment supports Docker/Compose;
+- keep `spark.executor.memory=3g` and `spark.driver.memory=2g` as part of the
+  official local profile, because the first after-run without explicit memory
+  resolved skew but triggered a GC finding.
+
+## Current Evidence
+
+```text
+evidence/f7-spark412-official-listener-docker-build-2026-07-18.log
+evidence/f7-spark412-autonomous-ps-2026-07-18.log
+evidence/f7-spark412-autonomous-spark-jvm-pi-2026-07-18.log
+evidence/f7-spark412-autonomous-listener-events-2026-07-18.ndjson
+evidence/f7-spark412-g3-before-diagnosis-2026-07-18.log
+evidence/f7-spark412-g5-compare-memory-2026-07-18.log
+```
 
 If any public image tag is unavailable, pin the nearest approved tag here rather
 than falling back to the old `spark-plat-v0-*` images.

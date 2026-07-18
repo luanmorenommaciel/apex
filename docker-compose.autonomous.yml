@@ -55,7 +55,10 @@ services:
       MINIO_LOG_BUCKET: spark-logs
     volumes:
       - ./docker/autonomous/minio/init-spark-logs.sh:/init-spark-logs.sh:ro
-    entrypoint: ["/bin/sh", "/init-spark-logs.sh"]
+    entrypoint:
+      - /bin/sh
+      - -lc
+      - tr -d '\r' < /init-spark-logs.sh > /tmp/init-spark-logs.sh && /bin/sh /tmp/init-spark-logs.sh
 
   spark-master:
     build:

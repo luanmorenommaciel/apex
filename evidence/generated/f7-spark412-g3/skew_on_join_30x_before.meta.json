@@ -1,0 +1,9 @@
+{
+  "scenario_id": "skew_on_join_30x",
+  "scenario_hash": "sha256:ec5372694030305d",
+  "generator_version": "4",
+  "generated_at": "2026-07-18T17:18:28.438597+00:00",
+  "job_file": "evidence/generated/f7-spark412-g3/skew_on_join_30x_before.py",
+  "anti_pattern_line": 20,
+  "anti_pattern_class": "data_skew_on_join_key"
+}

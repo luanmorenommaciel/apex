@@ -1,0 +1,58 @@
+WARNING: Using incubator modules: jdk.incubator.vector
+26/07/18 17:04:36 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+26/07/18 17:05:20 INFO SparkContext: Running Spark version 4.1.2
+26/07/18 17:05:20 INFO SparkContext: OS info Linux, 6.18.33.2-microsoft-standard-WSL2, amd64
+26/07/18 17:05:20 INFO SparkContext: Java version 17.0.19+10
+26/07/18 17:05:20 INFO ResourceUtils: ==============================================================
+26/07/18 17:05:20 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/07/18 17:05:20 INFO ResourceUtils: ==============================================================
+26/07/18 17:05:20 INFO SparkContext: Submitted application: PythonPi
+26/07/18 17:05:21 INFO SecurityManager: Changing view acls to: spark
+26/07/18 17:05:21 INFO SecurityManager: Changing modify acls to: spark
+26/07/18 17:05:21 INFO SecurityManager: Changing view acls groups to: spark
+26/07/18 17:05:21 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/18 17:05:21 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/18 17:05:23 INFO Utils: Successfully started service 'sparkDriver' on port 43821.
+26/07/18 17:05:24 INFO SparkEnv: Registering MapOutputTracker
+26/07/18 17:05:25 INFO SparkEnv: Registering BlockManagerMaster
+26/07/18 17:05:25 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/07/18 17:05:25 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/07/18 17:05:25 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/07/18 17:05:25 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-71ec16e0-9abb-404c-9502-3a8b7b4a76a8
+26/07/18 17:05:26 INFO SparkEnv: Registering OutputCommitCoordinator
+26/07/18 17:05:30 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+26/07/18 17:05:32 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/07/18 17:05:33 INFO SparkContext: Added JAR file:///opt/apex/listener/apex-spark-listener-0.1.0.jar at spark://be8caec07f13:43821/jars/apex-spark-listener-0.1.0.jar with timestamp 1784394319867
+26/07/18 17:05:35 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/07/18 17:05:35 INFO ResourceProfile: Limiting resource is cpu
+26/07/18 17:05:35 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/07/18 17:05:35 INFO SecurityManager: Changing view acls to: spark
+26/07/18 17:05:35 INFO SecurityManager: Changing modify acls to: spark
+26/07/18 17:05:35 INFO SecurityManager: Changing view acls groups to: spark
+26/07/18 17:05:35 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/18 17:05:35 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/18 17:05:41 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+26/07/18 17:05:44 INFO TransportClientFactory: Successfully created connection to spark-master/172.19.0.4:7077 after 2533 ms (0 ms spent in bootstraps)
+26/07/18 17:05:49 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20260718170549-0000
+26/07/18 17:05:50 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 34307.
+26/07/18 17:05:50 INFO NettyBlockTransferService: Server created on be8caec07f13:34307
+26/07/18 17:05:50 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/07/18 17:05:50 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20260718170549-0000/0 on worker-20260718170425-172.19.0.5-32995 (172.19.0.5:32995) with 8 core(s)
+26/07/18 17:05:51 INFO StandaloneSchedulerBackend: Granted executor ID app-20260718170549-0000/0 on hostPort 172.19.0.5:32995 with 8 core(s), 1024.0 MiB RAM
+26/07/18 17:05:52 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, be8caec07f13, 34307, None)
+26/07/18 17:05:52 INFO BlockManagerMasterEndpoint: Registering block manager be8caec07f13:34307 with 434.4 MiB RAM, BlockManagerId(driver, be8caec07f13, 34307, None)
+26/07/18 17:05:52 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, be8caec07f13, 34307, None)
+26/07/18 17:05:52 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, be8caec07f13, 34307, None)
+26/07/18 17:05:55 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20260718170549-0000/0 is now RUNNING
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+26/07/18 17:06:52 INFO UploadContentProviders: Stream recreated: ByteArrayContentProvider{buffer with length=0, offset=0} BaseContentProvider{size=0, initiated at 2026-07-18T17:06:51.631641018, streamCreationCount=2, currentStream=null}
+26/07/18 17:06:54 INFO UploadContentProviders: Stream recreated: FileWithOffsetContentProvider{file=/tmp/hadoop-spark/s3a/s3ablock-0001-5309211149720321728.tmp, offset=0} BaseContentProvider{size=0, initiated at 2026-07-18T17:06:54.820937869, streamCreationCount=2, currentStream=null}
+26/07/18 17:06:56 INFO RollingEventLogFilesWriter: Logging events to s3a://spark-logs/events/eventlog_v2_app-20260718170549-0000/events_1_app-20260718170549-0000.zstd
+26/07/18 17:06:58 WARN S3ABlockOutputStream: Application invoked the Syncable API against stream writing to events/eventlog_v2_app-20260718170549-0000/events_1_app-20260718170549-0000.zstd. This is Unsupported
+26/07/18 17:06:58 INFO SparkContext: Registered listenerapex.commander.spark.ApexSparkListener
+26/07/18 17:07:00 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+26/07/18 17:07:05 INFO StandaloneSchedulerBackend$StandaloneDriverEndpoint: Registered executor NettyRpcEndpointRef(spark-client://Executor) (172.19.0.5:34354) with ID 0, ResourceProfileId 0
+26/07/18 17:07:07 INFO BlockManagerMasterEndpoint: Registering block manager 172.19.0.5:34273 with 434.4 MiB RAM, BlockManagerId(0, 172.19.0.5, 34273, None)
