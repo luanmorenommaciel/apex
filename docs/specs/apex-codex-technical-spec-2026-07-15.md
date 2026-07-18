@@ -39,7 +39,7 @@ Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e 
 | Stack autonoma | `docker-compose.autonomous.yml`, `docker/autonomous/` | G3/G5 repetidos em Spark 4.1.2 com listener oficial |
 | SparkListener JVM | `listener-jvm/`; `docker/spark/spark-defaults.conf`; `docker/autonomous/spark/spark-defaults.conf` | JAR real, NDJSON, fail-safe e caminho oficial via `spark.jars` + `spark.extraListeners` |
 | G6 oracle/drift | `tools/g6_oracle_drift_smoke.py`, `.github/workflows/scenario-gate.yml` | Local e remoto verdes |
-| Loop CI autonoma | `scripts/f7_autonomous_stack_loop.py`, `.github/workflows/autonomous-stack-loop.yml` | Execucao real local verde; job real remoto manual em runner self-hosted |
+| Loop CI autonoma | `scripts/f7_autonomous_stack_loop.py`, `.github/workflows/scenario-gate.yml`, `.github/workflows/autonomous-stack-loop.yml` | Execucao real local verde; contrato integrado ao workflow reconhecido; job real remoto manual em runner self-hosted |
 | Loop agentico local | `apex/commander/agentic_loop.py`, `tools/agentic_validation_loop.py` | Sem LLM, sem mutacao, evidence-first |
 
 ## Gates E Evidencias
@@ -55,7 +55,7 @@ Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e 
 | G6 drift remoto | `evidence/g6-remote-workflow-latest-summary.json` | Workflow remoto verde |
 | Telemetria MCP GUI | `evidence/g6-mcp-ide-gui-telemetry-compare-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-local-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-tests-2026-07-18.log` | `compare_job_telemetry` read-only retornou `status=improved`; validacao focada fechou com 24 testes |
 | Spark 4.1.2 + listener oficial | `evidence/f7-spark412-official-listener-docker-build-2026-07-18.log`; `evidence/f7-spark412-autonomous-ps-2026-07-18.log`; `evidence/f7-spark412-g3-before-diagnosis-2026-07-18.log`; `evidence/f7-spark412-g5-compare-memory-2026-07-18.log`; `evidence/f7-spark412-final-focused-tests-2026-07-18.log` | Stack autonoma Spark 4.1.2 sobe; G3 detecta skew high ratio 29.4; G5 after-memory fecha finding_count 1 -> 0; suite focada 59 passed |
-| Loop CI autonoma | `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/generated/f7-autonomous-loop/20260718-real-local-6/`; `evidence/f7-autonomous-stack-loop-real-local-tests-2026-07-18.log`; `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/autonomous-stack-loop.yml` | Runner executou G3/G5 real local: before `app-20260718211145-0005` findings 2/skew 29.4; after `app-20260718211552-0006` finding_count 0/skew 0.0; execucao real remota pendente |
+| Loop CI autonoma | `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/generated/f7-autonomous-loop/20260718-real-local-6/`; `evidence/f7-autonomous-stack-loop-real-local-tests-2026-07-18.log`; `evidence/f7-autonomous-stack-loop-scenario-gate-contract-tests-2026-07-18.log`; `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/scenario-gate.yml` | Runner executou G3/G5 real local: before `app-20260718211145-0005` findings 2/skew 29.4; after `app-20260718211552-0006` finding_count 0/skew 0.0; contrato entrou no workflow reconhecido; execucao real remota pendente |
 
 Workflow remoto:
 

@@ -3,6 +3,11 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      run_real_stack:
+        description: "Run the real Docker/Spark/MinIO loop on a prepared self-hosted runner"
+        required: false
+        default: "false"
   schedule:
     - cron: "17 6 * * 1"
 jobs:
@@ -42,3 +47,38 @@ jobs:
           path: |
             evidence/g6-oracle-drift-summary.json
             evidence/generated/g6-oracle-drift/synthetic.ndjson
+  autonomous-loop-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - name: Validate autonomous loop contract
+        run: python3 -m pytest tests/test_f7_autonomous_stack_loop.py -q
+      - name: Render autonomous loop dry-run evidence
+        run: python3 scripts/f7_autonomous_stack_loop.py --dry-run --run-id github-scenario-gate-contract
+      - name: Upload autonomous loop contract evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: f7-autonomous-stack-loop-contract
+          path: evidence/f7-autonomous-stack-loop-github-scenario-gate-contract.log
+  real-stack:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_real_stack == 'true'
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - name: Run autonomous G3/G5 loop
+        run: python3 scripts/f7_autonomous_stack_loop.py --run-id github-real-stack
+      - name: Upload real autonomous loop evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: f7-autonomous-stack-loop-real
+          path: |
+            evidence/f7-autonomous-stack-loop-github-real-stack.log
+            evidence/generated/f7-autonomous-loop/github-real-stack/**
