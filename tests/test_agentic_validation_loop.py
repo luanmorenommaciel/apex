@@ -69,6 +69,30 @@ def test_mcp_project_config_missing_fails_with_next_action(tmp_path):
     assert result["next_action"] == "create .mcp.json for apex-commander"
 
 
+def test_mcp_project_config_passes_when_gui_smoke_evidence_exists(tmp_path):
+    write_minimal_agentic_fixture(tmp_path)
+    write(
+        tmp_path / "evidence" / "g6-mcp-ide-gui-smoke-2026-07-18.log",
+        "\n".join(
+            [
+                "IDE: Claude Code",
+                "Server: apex-commander",
+                "Status: approved/active",
+                "tools/list: success",
+                "recommend_fix: success",
+                "preview_fix: success, no file mutation",
+                "apply_fix: success, guarded mutation inside apply_root",
+            ]
+        ),
+    )
+
+    result = check_mcp_project_config(tmp_path)
+
+    assert result["status"] == "pass"
+    assert result["next_action"] == "monitor MCP GUI regression evidence"
+    assert "IDE GUI smoke approved apex-commander and apply_fix" in result["details"]
+
+
 def test_g6_oracle_drift_passes_when_summary_and_workflow_exist(tmp_path):
     write_minimal_agentic_fixture(tmp_path)
 

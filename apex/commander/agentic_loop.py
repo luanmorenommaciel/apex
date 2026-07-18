@@ -23,11 +23,12 @@ FAIL = "fail"
 def check_mcp_project_config(root: Path) -> dict[str, Any]:
     config_path = root / ".mcp.json"
     evidence_path = root / "evidence" / "g6-claude-code-project-mcp-smoke.log"
+    gui_evidence_path = root / "evidence" / "g6-mcp-ide-gui-smoke-2026-07-18.log"
     result = {
         "id": "mcp_project_config",
         "title": "Claude Code project MCP config",
         "status": FAIL,
-        "evidence": [str(config_path), str(evidence_path)],
+        "evidence": [str(config_path), str(evidence_path), str(gui_evidence_path)],
         "details": [],
         "next_action": "create .mcp.json for apex-commander",
     }
@@ -67,6 +68,26 @@ def check_mcp_project_config(root: Path) -> dict[str, Any]:
         elif "Status:" in evidence:
             result["status"] = PASS
             result["details"].append("Claude Code CLI status evidence present")
+
+    if gui_evidence_path.exists():
+        gui_evidence = gui_evidence_path.read_text(encoding="utf-8", errors="replace")
+        required_markers = (
+            "Status: approved/active",
+            "tools/list: success",
+            "recommend_fix: success",
+            "preview_fix: success",
+            "apply_fix: success",
+        )
+        missing = [marker for marker in required_markers if marker not in gui_evidence]
+        if missing:
+            result["status"] = PARTIAL
+            result["details"].append(
+                "IDE GUI smoke evidence missing markers: " + ", ".join(missing)
+            )
+        else:
+            result["status"] = PASS
+            result["details"].append("IDE GUI smoke approved apex-commander and apply_fix")
+            result["next_action"] = "monitor MCP GUI regression evidence"
 
     return result
 

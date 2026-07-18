@@ -86,9 +86,17 @@ CODEX-029 fecha quando:
 - `apply_fix` funciona apenas dentro de `apply_root`;
 - a evidencia fica salva em `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log`.
 
+Depois de salvar o transcript, rode:
+
+```powershell
+uv run --with-requirements requirements.txt python tools/agentic_validation_loop.py --iterations 2 --output evidence/agentic-validation-loop-report.json
+```
+
+O loop deve reconhecer automaticamente os marcadores do transcript e mudar
+`mcp_project_config` para `pass`.
+
 ## O Que Nao Fazer
 
 - Nao aplicar fix fora de `evidence/generated/mcp-ide-subprocess-smoke`.
 - Nao usar arquivo real de cliente para smoke.
 - Nao fechar CODEX-029 apenas com subprocesso local; isso ja foi feito e nao substitui GUI real.
-
