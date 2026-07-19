@@ -38,6 +38,7 @@ MINIO_CLIENT_IMAGE = "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z"
 NETWORK = "apex-autonomous_default"
 BEFORE_JOB_ID = "f7-autonomous-before"
 AFTER_JOB_ID = "f7-autonomous-after"
+LISTENER_JAR = ROOT / "listener-jvm" / "build" / "libs" / "apex-spark-listener-0.1.0.jar"
 
 
 @dataclass(frozen=True)
@@ -119,6 +120,23 @@ def run_command(
 
 def build_compose_command(*args: str) -> list[str]:
     return ["docker", "compose", "-f", str(COMPOSE_FILE), *args]
+
+
+def build_listener_jar_command() -> list[str]:
+    return [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{str((ROOT / 'listener-jvm').resolve())}:/home/gradle/project",
+        "-w",
+        "/home/gradle/project",
+        "gradle:8.10.2-jdk17",
+        "gradle",
+        "--no-daemon",
+        "clean",
+        "jar",
+    ]
 
 
 def build_spark_submit_command(container_job_path: str) -> list[str]:
@@ -282,6 +300,7 @@ def run_loop(args: argparse.Namespace) -> int:
 
     if args.dry_run:
         logger.section("dry run commands")
+        logger.line(command_to_text(build_listener_jar_command()))
         logger.line(command_to_text(build_compose_command("build", "spark-master", "spark-worker")))
         logger.line(command_to_text(build_compose_command("up", "-d")))
         logger.line(command_to_text(build_spark_submit_command("/tmp/apex-before.py")))
@@ -291,6 +310,13 @@ def run_loop(args: argparse.Namespace) -> int:
 
     generate_before_job(paths, logger)
     write_after_job(paths.before_job, paths.after_job)
+
+    logger.section("build listener jar")
+    if not args.skip_build:
+        run_command(build_listener_jar_command(), logger, timeout_seconds=1800)
+    if not LISTENER_JAR.exists():
+        raise RuntimeError(f"listener jar missing after build: {LISTENER_JAR}")
+    logger.line(f"listener_jar={LISTENER_JAR}")
 
     logger.section("compose build/up")
     if not args.skip_build:

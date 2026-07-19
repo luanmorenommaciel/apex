@@ -1,0 +1,260 @@
+apex autonomous stack loop
+run_id=github-real-stack
+spark_target=4.1.2
+compose_file=C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\docker-compose.autonomous.yml
+
+## generate before job
+$ C:\Program Files\Python311\python.exe C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\pacote-comum\generators\code_generator.py C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\pacote-comum\scenarios\skew_on_join_30x.yaml C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.py
+âœ… C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.py gerado. Anti-pattern na linha 20. Manifesto: C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.meta.json (hash sha256:288c6f65d4f11e93)
+exit_code=0
+
+## compose build/up
+$ docker compose -f C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\docker-compose.autonomous.yml build spark-master spark-worker
+#1 [internal] load local bake definitions
+#1 reading from stdin 695B 1.2s done
+#1 DONE 1.2s
+
+#2 [internal] load build definition from Dockerfile
+#2 DONE 0.2s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 263B 2.6s done
+#2 DONE 4.5s
+
+#3 [internal] load metadata for docker.io/library/spark-plat-v0-spark:4.1.2
+#3 DONE 4.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context:
+#4 transferring context: 2B 0.1s done
+#4 DONE 0.8s
+
+#5 [internal] load build context
+#5 ...
+
+#6 [1/3] FROM docker.io/library/spark-plat-v0-spark:4.1.2@sha256:7228e032dffecb75d50bc393e52cd234bc105e8c8243f1e4b478e3026570ee79
+#6 resolve docker.io/library/spark-plat-v0-spark:4.1.2@sha256:7228e032dffecb75d50bc393e52cd234bc105e8c8243f1e4b478e3026570ee79 0.7s done
+#6 DONE 0.7s
+
+#5 [internal] load build context
+#5 transferring context: 942B 0.4s done
+#5 DONE 1.4s
+
+#7 [2/3] RUN mkdir -p /opt/apex/listener
+#7 CACHED
+
+#8 [3/3] COPY docker/autonomous/spark/spark-defaults.conf /opt/spark/conf/spark-defaults.conf
+#8 DONE 1.4s
+
+#9 exporting to image
+#9 exporting layers
+#9 exporting layers 2.4s done
+#9 exporting manifest sha256:caefaec3daf171ddbb8e3881ce8de48f122503c77bba599998548cf4f14dabd7
+#9 exporting manifest sha256:caefaec3daf171ddbb8e3881ce8de48f122503c77bba599998548cf4f14dabd7 0.6s done
+#9 exporting config sha256:ae1ad532d7a98bc9bd2d35e7c9f3108bd58b08100a5cd730b7b0f973b1f4fbbe
+#9 exporting config sha256:ae1ad532d7a98bc9bd2d35e7c9f3108bd58b08100a5cd730b7b0f973b1f4fbbe 0.4s done
+#9 exporting attestation manifest sha256:c5efec23e8e6ac5b04def3a57790df7be352487eeb06cf059f9e5c4211b7e7f8
+#9 exporting attestation manifest sha256:c5efec23e8e6ac5b04def3a57790df7be352487eeb06cf059f9e5c4211b7e7f8 0.6s done
+#9 exporting manifest list sha256:55aacc84bb1e88ecc5f79fb4f483b37a7e6077121d739df37e458242b0089669
+#9 exporting manifest list sha256:55aacc84bb1e88ecc5f79fb4f483b37a7e6077121d739df37e458242b0089669 0.3s done
+#9 naming to docker.io/library/apex-autonomous-spark:4.1.2-s3a
+#9 naming to docker.io/library/apex-autonomous-spark:4.1.2-s3a 0.1s done
+#9 unpacking to docker.io/library/apex-autonomous-spark:4.1.2-s3a
+#9 unpacking to docker.io/library/apex-autonomous-spark:4.1.2-s3a 1.1s done
+#9 DONE 6.4s
+
+#10 resolving provenance for metadata file
+#10 DONE 4.8s
+ Image apex-autonomous-spark:4.1.2-s3a Building 
+ Image apex-autonomous-spark:4.1.2-s3a Built
+exit_code=0
+$ docker compose -f C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\docker-compose.autonomous.yml up -d
+ Container apex-autonomous-minio Running 
+ Container apex-autonomous-clickhouse Recreate 
+ Container apex-autonomous-minio-init Recreate 
+ Container apex-autonomous-minio-init Recreated 
+ Container apex-autonomous-spark-master Recreate 
+ Container apex-autonomous-spark-master Recreated 
+ Container apex-autonomous-spark-worker Recreate 
+ Container apex-autonomous-clickhouse Recreated 
+ Container apex-autonomous-spark-worker Recreated 
+ Container apex-autonomous-minio Waiting 
+ Container apex-autonomous-clickhouse Starting 
+ Container apex-autonomous-minio Healthy 
+ Container apex-autonomous-minio-init Starting 
+ Container apex-autonomous-clickhouse Started 
+ Container apex-autonomous-minio-init Started 
+ Container apex-autonomous-minio-init Waiting 
+ Container apex-autonomous-minio-init Exited 
+ Container apex-autonomous-spark-master Starting 
+ Container apex-autonomous-spark-master Started 
+ Container apex-autonomous-spark-worker Starting 
+ Container apex-autonomous-spark-worker Started
+exit_code=0
+$ docker compose -f C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\docker-compose.autonomous.yml ps
+NAME                           IMAGE                                              COMMAND                  SERVICE        CREATED              STATUS                             PORTS
+apex-autonomous-clickhouse     clickhouse/clickhouse-server:26.5.1                "/entrypoint.sh"         clickhouse     About a minute ago   Up 28 seconds (health: starting)   0.0.0.0:38123->8123/tcp, [::]:38123->8123/tcp, 0.0.0.0:39000->9000/tcp, [::]:39000->9000/tcp
+apex-autonomous-minio          quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z   "/usr/bin/docker-ent…"   minio          8 hours ago          Up 8 hours (healthy)               0.0.0.0:39001->9000/tcp, [::]:39001->9000/tcp, 0.0.0.0:39002->9001/tcp, [::]:39002->9001/tcp
+apex-autonomous-spark-master   apex-autonomous-spark:4.1.2-s3a                    "/opt/entrypoint.sh …"   spark-master   About a minute ago   Up 13 seconds                      0.0.0.0:37077->7077/tcp, [::]:37077->7077/tcp, 0.0.0.0:38080->8080/tcp, [::]:38080->8080/tcp
+apex-autonomous-spark-worker   apex-autonomous-spark:4.1.2-s3a                    "/opt/entrypoint.sh …"   spark-worker   46 seconds ago       Up 8 seconds                       0.0.0.0:38081->8081/tcp, [::]:38081->8081/tcp
+exit_code=0
+
+## submit before
+$ docker cp C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.py apex-autonomous-spark-master:/tmp/apex-f7-before.py
+exit_code=0
+$ docker exec apex-autonomous-spark-master /opt/spark/bin/spark-submit --master spark://spark-master:7077 /tmp/apex-f7-before.py
+Traceback (most recent call last):
+  File "/tmp/apex-f7-before.py", line 11, in <module>
+    .getOrCreate())
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/sql/session.py", line 557, in getOrCreate
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/core/context.py", line 542, in getOrCreate
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/core/context.py", line 208, in __init__
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/core/context.py", line 301, in _do_init
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/core/context.py", line 448, in _initialize_context
+  File "/opt/spark/python/lib/py4j-0.10.9.9-src.zip/py4j/java_gateway.py", line 1627, in __call__
+  File "/opt/spark/python/lib/py4j-0.10.9.9-src.zip/py4j/protocol.py", line 327, in get_return_value
+py4j.protocol.Py4JJavaError: An error occurred while calling None.org.apache.spark.api.java.JavaSparkContext.
+: org.apache.spark.SparkException: Exception when registering SparkListener
+	at org.apache.spark.SparkContext.setupAndStartListenerBus(SparkContext.scala:2927)
+	at org.apache.spark.SparkContext.<init>(SparkContext.scala:695)
+	at org.apache.spark.api.java.JavaSparkContext.<init>(JavaSparkContext.scala:59)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:247)
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)
+	at py4j.Gateway.invoke(Gateway.java:238)
+	at py4j.commands.ConstructorCommand.invokeConstructor(ConstructorCommand.java:80)
+	at py4j.commands.ConstructorCommand.execute(ConstructorCommand.java:69)
+	at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:108)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: java.lang.ClassNotFoundException: apex.commander.spark.ApexSparkListener
+	at java.base/java.net.URLClassLoader.findClass(URLClassLoader.java:445)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:592)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:525)
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:469)
+	at org.apache.spark.util.SparkClassUtils.classForName(SparkClassUtils.scala:42)
+	at org.apache.spark.util.SparkClassUtils.classForName$(SparkClassUtils.scala:37)
+	at org.apache.spark.util.Utils$.classForName(Utils.scala:97)
+	at org.apache.spark.util.Utils$.$anonfun$loadExtensions$1(Utils.scala:2853)
+	at scala.collection.StrictOptimizedIterableOps.flatMap(StrictOptimizedIterableOps.scala:118)
+	at scala.collection.StrictOptimizedIterableOps.flatMap$(StrictOptimizedIterableOps.scala:105)
+	at scala.collection.immutable.ArraySeq.flatMap(ArraySeq.scala:35)
+	at org.apache.spark.util.Utils$.loadExtensions(Utils.scala:2851)
+	at org.apache.spark.SparkContext.$anonfun$setupAndStartListenerBus$1(SparkContext.scala:2915)
+	at org.apache.spark.SparkContext.$anonfun$setupAndStartListenerBus$1$adapted(SparkContext.scala:2914)
+	at scala.Option.foreach(Option.scala:437)
+	at org.apache.spark.SparkContext.setupAndStartListenerBus(SparkContext.scala:2914)
+	... 15 more
+WARNING: Using incubator modules: jdk.incubator.vector
+26/07/19 01:31:22 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+26/07/19 01:32:19 INFO SparkContext: Running Spark version 4.1.2
+26/07/19 01:32:19 INFO SparkContext: OS info Linux, 6.18.33.2-microsoft-standard-WSL2, amd64
+26/07/19 01:32:19 INFO SparkContext: Java version 17.0.19+10
+26/07/19 01:32:20 INFO ResourceUtils: ==============================================================
+26/07/19 01:32:20 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/07/19 01:32:20 INFO ResourceUtils: ==============================================================
+26/07/19 01:32:20 INFO SparkContext: Submitted application: skew_on_join_30x
+26/07/19 01:32:22 INFO SecurityManager: Changing view acls to: spark
+26/07/19 01:32:22 INFO SecurityManager: Changing modify acls to: spark
+26/07/19 01:32:22 INFO SecurityManager: Changing view acls groups to: spark
+26/07/19 01:32:22 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/19 01:32:22 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/19 01:32:26 INFO Utils: Successfully started service 'sparkDriver' on port 46357.
+26/07/19 01:32:27 INFO SparkEnv: Registering MapOutputTracker
+26/07/19 01:32:27 INFO SparkEnv: Registering BlockManagerMaster
+26/07/19 01:32:27 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/07/19 01:32:27 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/07/19 01:32:27 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/07/19 01:32:28 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-cfc7b26c-3133-495a-a2fb-15707d525fdf
+26/07/19 01:32:29 INFO SparkEnv: Registering OutputCommitCoordinator
+26/07/19 01:32:32 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+26/07/19 01:32:32 INFO Server: jetty-11.0.26; built: 2025-08-14T18:03:14.457Z; git: 7559873b6e46eea7c2c6da2b58327ea2ecf941f4; jvm 17.0.19+10
+26/07/19 01:32:33 INFO Server: Started Server@53593748{STARTING}[11.0.26,sto=30000] @150957ms
+26/07/19 01:32:33 INFO AbstractConnector: Started ServerConnector@4a8b252{HTTP/1.1, (http/1.1)}{0.0.0.0:4040}
+26/07/19 01:32:33 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/07/19 01:32:34 INFO ContextHandler: Started o.s.j.s.ServletContextHandler@15164705{/,null,AVAILABLE,@Spark}
+26/07/19 01:32:34 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 3072, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/07/19 01:32:34 INFO ResourceProfile: Limiting resource is cpu
+26/07/19 01:32:34 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/07/19 01:32:35 INFO SecurityManager: Changing view acls to: spark
+26/07/19 01:32:35 INFO SecurityManager: Changing modify acls to: spark
+26/07/19 01:32:35 INFO SecurityManager: Changing view acls groups to: spark
+26/07/19 01:32:35 INFO SecurityManager: Changing modify acls groups to: spark
+26/07/19 01:32:35 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/19 01:32:40 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+26/07/19 01:32:41 INFO TransportClientFactory: Successfully created connection to spark-master/172.19.0.3:7077 after 383 ms (0 ms spent in bootstraps)
+26/07/19 01:32:46 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20260719013245-0000
+26/07/19 01:32:46 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 38607.
+26/07/19 01:32:46 INFO NettyBlockTransferService: Server created on caceb038145d:38607
+26/07/19 01:32:46 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/07/19 01:32:47 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20260719013245-0000/0 on worker-20260719013111-172.19.0.5-34391 (172.19.0.5:34391) with 8 core(s)
+26/07/19 01:32:47 INFO StandaloneSchedulerBackend: Granted executor ID app-20260719013245-0000/0 on hostPort 172.19.0.5:34391 with 8 core(s), 3.0 GiB RAM
+26/07/19 01:32:47 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, caceb038145d, 38607, None)
+26/07/19 01:32:48 INFO BlockManagerMasterEndpoint: Registering block manager caceb038145d:38607 with 1048.8 MiB RAM, BlockManagerId(driver, caceb038145d, 38607, None)
+26/07/19 01:32:48 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, caceb038145d, 38607, None)
+26/07/19 01:32:48 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, caceb038145d, 38607, None)
+26/07/19 01:32:51 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20260719013245-0000/0 is now RUNNING
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+26/07/19 01:34:00 INFO RollingEventLogFilesWriter: Logging events to s3a://spark-logs/events/eventlog_v2_app-20260719013245-0000/events_1_app-20260719013245-0000.zstd
+26/07/19 01:34:07 INFO SparkContext: SparkContext is stopping with exitCode 0 from JavaSparkContext at NativeConstructorAccessorImpl.java:0.
+26/07/19 01:34:07 INFO Server: Stopped Server@53593748{STOPPING}[11.0.26,sto=30000]
+26/07/19 01:34:07 INFO Server: Shutdown Server@53593748{STOPPING}[11.0.26,sto=30000]
+26/07/19 01:34:07 INFO AbstractConnector: Stopped Spark@4a8b252{HTTP/1.1, (http/1.1)}{0.0.0.0:4040}
+26/07/19 01:34:08 INFO SparkUI: Stopped Spark web UI at http://caceb038145d:4040
+26/07/19 01:34:08 INFO StandaloneSchedulerBackend: Shutting down all executors
+26/07/19 01:34:08 INFO StandaloneSchedulerBackend$StandaloneDriverEndpoint: Asking each executor to shut down
+26/07/19 01:34:13 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+26/07/19 01:34:13 INFO MemoryStore: MemoryStore started with capacity 1048.8 MiB
+26/07/19 01:34:13 INFO MemoryStore: MemoryStore cleared
+26/07/19 01:34:13 INFO BlockManager: BlockManager stopped
+26/07/19 01:34:13 INFO BlockManagerMaster: BlockManagerMaster stopped
+26/07/19 01:34:13 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+26/07/19 01:34:14 INFO SparkContext: Successfully stopped SparkContext (Uptime: 115111 ms)
+26/07/19 01:34:14 ERROR SparkContext: Error initializing SparkContext.
+org.apache.spark.SparkException: Exception when registering SparkListener
+	at org.apache.spark.SparkContext.setupAndStartListenerBus(SparkContext.scala:2927)
+	at org.apache.spark.SparkContext.<init>(SparkContext.scala:695)
+	at org.apache.spark.api.java.JavaSparkContext.<init>(JavaSparkContext.scala:59)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:247)
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)
+	at py4j.Gateway.invoke(Gateway.java:238)
+	at py4j.commands.ConstructorCommand.invokeConstructor(ConstructorCommand.java:80)
+	at py4j.commands.ConstructorCommand.execute(ConstructorCommand.java:69)
+	at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:108)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: java.lang.ClassNotFoundException: apex.commander.spark.ApexSparkListener
+	at java.base/java.net.URLClassLoader.findClass(URLClassLoader.java:445)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:592)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:525)
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:469)
+	at org.apache.spark.util.SparkClassUtils.classForName(SparkClassUtils.scala:42)
+	at org.apache.spark.util.SparkClassUtils.classForName$(SparkClassUtils.scala:37)
+	at org.apache.spark.util.Utils$.classForName(Utils.scala:97)
+	at org.apache.spark.util.Utils$.$anonfun$loadExtensions$1(Utils.scala:2853)
+	at scala.collection.StrictOptimizedIterableOps.flatMap(StrictOptimizedIterableOps.scala:118)
+	at scala.collection.StrictOptimizedIterableOps.flatMap$(StrictOptimizedIterableOps.scala:105)
+	at scala.collection.immutable.ArraySeq.flatMap(ArraySeq.scala:35)
+	at org.apache.spark.util.Utils$.loadExtensions(Utils.scala:2851)
+	at org.apache.spark.SparkContext.$anonfun$setupAndStartListenerBus$1(SparkContext.scala:2915)
+	at org.apache.spark.SparkContext.$anonfun$setupAndStartListenerBus$1$adapted(SparkContext.scala:2914)
+	at scala.Option.foreach(Option.scala:437)
+	at org.apache.spark.SparkContext.setupAndStartListenerBus(SparkContext.scala:2914)
+	... 15 more
+26/07/19 01:34:14 INFO SparkContext: SparkContext is stopping with exitCode 0 from JavaSparkContext at NativeConstructorAccessorImpl.java:0.
+26/07/19 01:34:14 INFO SparkContext: SparkContext already stopped.
+exit_code=1

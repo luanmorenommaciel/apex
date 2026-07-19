@@ -29,6 +29,15 @@ def test_build_fetch_eventlog_command_uses_minio_bucket_and_network():
     assert "/out/before_eventlog.zstd" in command[-1]
 
 
+def test_build_listener_jar_command_builds_gradle_project_from_checkout():
+    command = loop.build_listener_jar_command()
+
+    assert command[:3] == ["docker", "run", "--rm"]
+    assert "gradle:8.10.2-jdk17" in command
+    assert "/home/gradle/project" in command
+    assert "jar" in command
+
+
 def test_write_after_job_applies_official_skew_safe_join(tmp_path):
     before = tmp_path / "before.py"
     after = tmp_path / "after.py"
