@@ -1,0 +1,52 @@
+GitHub Actions self-hosted runner diagnostic excerpt for run 29668195435 / job 88142348102
+Source: local runner _diag Worker_20260719-011141-utc.log
+
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:133:      "displayNameToken": {
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:134:        "type": 0,
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:135:        "file": 1,
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:136:        "line": 75,
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:137:        "col": 15,
+> C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:138:        "lit": "Validate self-hosted Python"
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:139:      },
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:140:      "contextName": "__run",
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:141:      "inputs": {
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:142:        "type": 2,
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:143:        "map": [
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:144:          {
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:145:            "key": "script",
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:146:            "value": {
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2967:  "finishTime": "2026-07-19T01:13:18.3247701Z"
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2968:}.
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2969:[2026-07-19 01:13:18Z INFO JobServerQueue] Try to upload 1 log files or attachments, success rate: 1/1.
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2970:[2026-07-19 01:13:18Z INFO StepsRunner] No need for updating job result with current step result 'Succeeded'.
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2971:[2026-07-19 01:13:18Z INFO StepsRunner] Current state: job state = ''
+> C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2972:[2026-07-19 01:13:18Z INFO StepsRunner] Processing step: DisplayName='Validate self-hosted Python'
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2973:[2026-07-19 01:13:18Z INFO StepsRunner] Evaluating: success()
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2974:[2026-07-19 01:13:18Z INFO StepsRunner] Result: true
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2975:[2026-07-19 01:13:18Z INFO StepsRunner] Starting the step.
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2976:[2026-07-19 01:13:18Z INFO HostContext] Well known directory 'Bin': 'C:\Users\Guest\actions-runner-apex-workspace\bin'
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2977:[2026-07-19 01:13:18Z INFO HostContext] Well known directory 'Root': 'C:\Users\Guest\actions-runner-apex-workspace'
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2978:[2026-07-19 01:13:18Z INFO HostContext] Well known directory 'Work': 'C:\Users\Guest\actions-runner-apex-workspace\_work'
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2979:[2026-07-19 01:13:18Z INFO StepsRunner] Which2: 'chcp'
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:2980:[2026-07-19 01:13:18Z INFO StepsRunner] Location: 'C:\Windows\system32\chcp.COM'
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3047:[2026-07-19 01:13:23Z INFO ProcessInvokerWrapper] STDOUT/STDERR stream read finished.
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3048:[2026-07-19 01:13:23Z INFO JobServerQueue] Try to append 1 batches web console lines for record 'd5e0b95c-0b3d-4e4c-b026-6f4f8dde7c17', success rate: 1/1.
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3049:[2026-07-19 01:13:23Z INFO ProcessInvokerWrapper] STDOUT/STDERR stream read finished.
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3050:[2026-07-19 01:13:23Z INFO ProcessInvokerWrapper] Finished process 12636 with exit code 1, and elapsed time 00:00:04.1106376.
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3051:[2026-07-19 01:13:23Z INFO CreateStepSummaryCommand] Step Summary file (C:\Users\Guest\actions-runner-apex-workspace\_work\_temp\_runner_file_commands\step_summary_427adda4-5875-499a-a866-a30a5909f039) is empty; skipping attachment upload
+> C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3052:[2026-07-19 01:13:23Z INFO StepsRunner] Step result: Failed
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3053:[2026-07-19 01:13:23Z INFO ExecutionContext] Publish step telemetry for current step {
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3054:  "action": "powershell",
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3055:  "type": "run",
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3056:  "stage": "Main",
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3057:  "stepId": "d5e0b95c-0b3d-4e4c-b026-6f4f8dde7c17",
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3058:  "stepContextName": "__run",
+> C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3059:  "result": "failed",
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3060:  "errorMessages": [
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3061:    "Process completed with exit code 1."
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3062:  ],
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3063:  "executionTimeInSeconds": 5,
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3064:  "startTime": "2026-07-19T01:13:18.6658937Z",
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3065:  "finishTime": "2026-07-19T01:13:23.2787744Z"
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3066:}.
+  C:\Users\Guest\actions-runner-apex-workspace\_diag\Worker_20260719-011141-utc.log:3067:[2026-07-19 01:13:23Z INFO StepsRunner] Update job result with current step result 'Failed'.
