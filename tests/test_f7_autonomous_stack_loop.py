@@ -49,6 +49,7 @@ def test_build_listener_jar_command_compiles_with_spark_image():
     assert f"{output_jar.parent.resolve()}:/out" in command
     assert "javac -cp '/opt/spark/jars/*'" in command[-1]
     assert "/tmp/apex-listener-build/classes" in command[-1]
+    assert "mkdir -p /tmp/apex-listener-build/classes build/libs" not in command[-1]
     assert "rm -rf /out/apex-spark-listener-0.1.0.jar" in command[-1]
     assert "cp /tmp/apex-listener-build/apex-spark-listener-0.1.0.jar" in command[-1]
     assert "/out/apex-spark-listener-0.1.0.jar" in command[-1]

@@ -145,7 +145,7 @@ def build_listener_jar_command(output_jar: Path = LISTENER_JAR) -> list[str]:
         "-lc",
         (
             "rm -rf /tmp/apex-listener-build && "
-            "mkdir -p /tmp/apex-listener-build/classes build/libs && "
+            "mkdir -p /tmp/apex-listener-build/classes && "
             "javac -cp '/opt/spark/jars/*' -d /tmp/apex-listener-build/classes "
             "$(find src/main/java -name '*.java') && "
             "jar cf /tmp/apex-listener-build/apex-spark-listener-0.1.0.jar "
