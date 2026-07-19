@@ -138,7 +138,6 @@ def build_listener_jar_command() -> list[str]:
         "/bin/sh",
         "-lc",
         (
-            "rm -rf build && "
             "mkdir -p build/classes/java/main build/libs && "
             "javac -cp '/opt/spark/jars/*' -d build/classes/java/main "
             "$(find src/main/java -name '*.java') && "
