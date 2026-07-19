@@ -252,7 +252,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 
 1. Fazer smoke GUI real em Cursor/VS Code/Claude Code usando a tool `apply_fix`.
 2. Promover o G3/G5 autonomo para regressao automatizada.
-3. Verificar a configuração/capacidade do GitHub Actions no campeonato: o dispatch remoto do `Apex Scenario Gate` foi aceito, mas as runs `29664652802` e `29664707350` falharam antes de qualquer step.
+3. Executar o playbook `docs/playbooks/f7-remote-real-stack-self-hosted.md` para registrar runner temporário com labels `apex,docker,spark412` e disparar `Apex Scenario Gate` com `run_real_stack=true`.
 4. Revisar com o Commander as ADRs formais criadas em `docs/adr/`.
 5. Monitorar proximas execucoes agendadas do G6 e manter o job legado `gate` verde no CI remoto.
 6. So depois expandir camada Crew.ai/Judge.

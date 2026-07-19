@@ -1,0 +1,7 @@
+register script parse: ok
+unregister script parse: ok
+workflow yaml jobs:
+.github/workflows/scenario-gate.yml ['gate', 'g6-oracle-drift', 'autonomous-loop-contract', 'real-stack']
+.github/workflows/autonomous-stack-loop.yml ['contract', 'real-stack']
+runner contract tests:
+8 passed
