@@ -35,6 +35,7 @@ SCENARIO = ROOT / "pacote-comum" / "scenarios" / "skew_on_join_30x.yaml"
 GENERATOR = ROOT / "pacote-comum" / "generators" / "code_generator.py"
 SPARK_MASTER_CONTAINER = "apex-autonomous-spark-master"
 MINIO_CLIENT_IMAGE = "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z"
+SPARK_IMAGE = "spark-plat-v0-spark:4.1.2"
 NETWORK = "apex-autonomous_default"
 BEFORE_JOB_ID = "f7-autonomous-before"
 AFTER_JOB_ID = "f7-autonomous-after"
@@ -130,14 +131,20 @@ def build_listener_jar_command() -> list[str]:
         "--user",
         "root",
         "-v",
-        f"{str((ROOT / 'listener-jvm').resolve())}:/home/gradle/project",
+        f"{str((ROOT / 'listener-jvm').resolve())}:/work",
         "-w",
-        "/home/gradle/project",
-        "gradle:8.10.2-jdk17",
-        "gradle",
-        "--no-daemon",
-        "clean",
-        "jar",
+        "/work",
+        SPARK_IMAGE,
+        "/bin/sh",
+        "-lc",
+        (
+            "rm -rf build && "
+            "mkdir -p build/classes/java/main build/libs && "
+            "javac -cp '/opt/spark/jars/*' -d build/classes/java/main "
+            "$(find src/main/java -name '*.java') && "
+            "jar cf build/libs/apex-spark-listener-0.1.0.jar "
+            "-C build/classes/java/main ."
+        ),
     ]
 
 

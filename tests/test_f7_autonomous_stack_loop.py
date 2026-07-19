@@ -35,9 +35,10 @@ def test_build_listener_jar_command_builds_gradle_project_from_checkout():
     assert command[:3] == ["docker", "run", "--rm"]
     assert "--user" in command
     assert "root" in command
-    assert "gradle:8.10.2-jdk17" in command
-    assert "/home/gradle/project" in command
-    assert "jar" in command
+    assert "spark-plat-v0-spark:4.1.2" in command
+    assert "/work" in command
+    assert "javac -cp '/opt/spark/jars/*'" in command[-1]
+    assert "apex-spark-listener-0.1.0.jar" in command[-1]
 
 
 def test_write_after_job_applies_official_skew_safe_join(tmp_path):
