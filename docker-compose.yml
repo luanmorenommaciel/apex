@@ -76,7 +76,7 @@ services:
       - "8080:8080"
     volumes:
       - ./docker/spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
-      - ./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar:/opt/apex/listener/apex-spark-listener-0.1.0.jar:ro
+      - ${APEX_LISTENER_JAR_PATH:-./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar}:/opt/apex/listener/apex-spark-listener-0.1.0.jar:ro
       - apex_spark_event_logs:/tmp/spark-events
 
   spark-worker:
@@ -99,7 +99,7 @@ services:
       - spark://spark-master:7077
     volumes:
       - ./docker/spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
-      - ./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar:/opt/apex/listener/apex-spark-listener-0.1.0.jar:ro
+      - ${APEX_LISTENER_JAR_PATH:-./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar}:/opt/apex/listener/apex-spark-listener-0.1.0.jar:ro
       - apex_spark_event_logs:/tmp/spark-events
 
 volumes:

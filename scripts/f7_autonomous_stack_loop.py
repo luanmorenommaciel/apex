@@ -46,6 +46,7 @@ LISTENER_JAR = ROOT / "listener-jvm" / "build" / "libs" / "apex-spark-listener-0
 class LoopPaths:
     run_dir: Path
     evidence_log: Path
+    listener_jar: Path
     before_job: Path
     after_job: Path
     before_eventlog: Path
@@ -58,6 +59,7 @@ def make_paths(run_id: str) -> LoopPaths:
     return LoopPaths(
         run_dir=run_dir,
         evidence_log=ROOT / "evidence" / f"f7-autonomous-stack-loop-{run_id}.log",
+        listener_jar=run_dir / "listener" / "apex-spark-listener-0.1.0.jar",
         before_job=run_dir / "skew_on_join_30x_before.py",
         after_job=run_dir / "skew_on_join_30x_after.py",
         before_eventlog=run_dir / "before_eventlog.zstd",
@@ -123,7 +125,9 @@ def build_compose_command(*args: str) -> list[str]:
     return ["docker", "compose", "-f", str(COMPOSE_FILE), *args]
 
 
-def build_listener_jar_command() -> list[str]:
+def build_listener_jar_command(output_jar: Path = LISTENER_JAR) -> list[str]:
+    output_dir = output_jar.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
     return [
         "docker",
         "run",
@@ -132,6 +136,8 @@ def build_listener_jar_command() -> list[str]:
         "root",
         "-v",
         f"{str((ROOT / 'listener-jvm').resolve())}:/work",
+        "-v",
+        f"{str(output_dir.resolve())}:/out",
         "-w",
         "/work",
         SPARK_IMAGE,
@@ -144,9 +150,9 @@ def build_listener_jar_command() -> list[str]:
             "$(find src/main/java -name '*.java') && "
             "jar cf /tmp/apex-listener-build/apex-spark-listener-0.1.0.jar "
             "-C /tmp/apex-listener-build/classes . && "
-            "rm -rf build/libs/apex-spark-listener-0.1.0.jar && "
+            "rm -rf /out/apex-spark-listener-0.1.0.jar && "
             "cp /tmp/apex-listener-build/apex-spark-listener-0.1.0.jar "
-            "build/libs/apex-spark-listener-0.1.0.jar"
+            "/out/apex-spark-listener-0.1.0.jar"
         ),
     ]
 
@@ -333,7 +339,7 @@ def run_loop(args: argparse.Namespace) -> int:
 
     if args.dry_run:
         logger.section("dry run commands")
-        logger.line(command_to_text(build_listener_jar_command()))
+        logger.line(command_to_text(build_listener_jar_command(paths.listener_jar)))
         logger.line(command_to_text(build_compose_command("build", "spark-master", "spark-worker")))
         logger.line(command_to_text(build_compose_command("up", "-d")))
         logger.line(command_to_text(build_spark_submit_command("/tmp/apex-before.py")))
@@ -346,11 +352,12 @@ def run_loop(args: argparse.Namespace) -> int:
 
     logger.section("build listener jar")
     if not args.skip_build:
-        prepare_listener_build_dir(logger)
-        run_command(build_listener_jar_command(), logger, timeout_seconds=1800)
-    if not LISTENER_JAR.exists():
-        raise RuntimeError(f"listener jar missing after build: {LISTENER_JAR}")
-    logger.line(f"listener_jar={LISTENER_JAR}")
+        run_command(build_listener_jar_command(paths.listener_jar), logger, timeout_seconds=1800)
+    if not paths.listener_jar.exists():
+        raise RuntimeError(f"listener jar missing after build: {paths.listener_jar}")
+    os.environ["APEX_LISTENER_JAR_PATH"] = str(paths.listener_jar.resolve())
+    logger.line(f"listener_jar={paths.listener_jar}")
+    logger.line(f"APEX_LISTENER_JAR_PATH={os.environ['APEX_LISTENER_JAR_PATH']}")
 
     logger.section("compose build/up")
     if not args.skip_build:

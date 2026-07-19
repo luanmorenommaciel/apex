@@ -38,18 +38,20 @@ class _MemoryLogger:
 
 
 def test_build_listener_jar_command_compiles_with_spark_image():
-    command = loop.build_listener_jar_command()
+    output_jar = Path(loop.ROOT, "evidence", "generated", "unit", "listener.jar")
+    command = loop.build_listener_jar_command(output_jar)
 
     assert command[:3] == ["docker", "run", "--rm"]
     assert "--user" in command
     assert "root" in command
     assert "spark-plat-v0-spark:4.1.2" in command
     assert "/work" in command
+    assert f"{output_jar.parent.resolve()}:/out" in command
     assert "javac -cp '/opt/spark/jars/*'" in command[-1]
     assert "/tmp/apex-listener-build/classes" in command[-1]
-    assert "rm -rf build/libs/apex-spark-listener-0.1.0.jar" in command[-1]
+    assert "rm -rf /out/apex-spark-listener-0.1.0.jar" in command[-1]
     assert "cp /tmp/apex-listener-build/apex-spark-listener-0.1.0.jar" in command[-1]
-    assert "apex-spark-listener-0.1.0.jar" in command[-1]
+    assert "/out/apex-spark-listener-0.1.0.jar" in command[-1]
 
 
 def test_prepare_listener_build_dir_recreates_clean_host_paths(tmp_path):
@@ -166,6 +168,7 @@ def test_make_paths_keeps_evidence_under_generated_loop_dir():
 
     assert paths.run_dir == Path(loop.ROOT, "evidence", "generated", "f7-autonomous-loop", "unit")
     assert paths.evidence_log == Path(loop.ROOT, "evidence", "f7-autonomous-stack-loop-unit.log")
+    assert paths.listener_jar == paths.run_dir / "listener" / "apex-spark-listener-0.1.0.jar"
 
 
 def test_prepend_pythonpath_keeps_repo_root_first():

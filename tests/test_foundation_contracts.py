@@ -69,7 +69,7 @@ def test_compose_declares_spark_master_worker_and_event_log_volume():
         "volumes"
     ]
     listener_mount = (
-        "./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar:"
+        "${APEX_LISTENER_JAR_PATH:-./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar}:"
         "/opt/apex/listener/apex-spark-listener-0.1.0.jar:ro"
     )
     assert listener_mount in services["spark-master"]["volumes"]
@@ -128,7 +128,7 @@ def test_autonomous_compose_uses_spark_412_and_official_listener_path():
     assert services["spark-worker"]["image"] == "apex-autonomous-spark:4.1.2-s3a"
 
     listener_mount = (
-        "./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar:"
+        "${APEX_LISTENER_JAR_PATH:-./listener-jvm/build/libs/apex-spark-listener-0.1.0.jar}:"
         "/opt/apex/listener/apex-spark-listener-0.1.0.jar:ro"
     )
     assert listener_mount in services["spark-master"]["volumes"]
