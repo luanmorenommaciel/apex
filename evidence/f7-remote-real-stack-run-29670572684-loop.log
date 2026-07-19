@@ -1,0 +1,25 @@
+apex autonomous stack loop
+run_id=github-real-stack
+spark_target=4.1.2
+compose_file=C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\docker-compose.autonomous.yml
+
+## generate before job
+$ C:\Program Files\Python311\python.exe C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\pacote-comum\generators\code_generator.py C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\pacote-comum\scenarios\skew_on_join_30x.yaml C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.py
+âœ… C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.py gerado. Anti-pattern na linha 20. Manifesto: C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.meta.json (hash sha256:288c6f65d4f11e93)
+exit_code=0
+
+## build listener jar
+listener_build_dir_prepared=C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\listener-jvm\build
+$ docker run --rm --user root -v C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\listener-jvm:/work -w /work spark-plat-v0-spark:4.1.2 /bin/sh -lc mkdir -p build/classes/java/main build/libs && javac -cp '/opt/spark/jars/*' -d build/classes/java/main $(find src/main/java -name '*.java') && jar cf build/libs/apex-spark-listener-0.1.0.jar -C build/classes/java/main .
+java.nio.file.FileAlreadyExistsException: build/libs/apex-spark-listener-0.1.0.jar
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:94)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixCopyFile.copyFile(UnixCopyFile.java:246)
+	at java.base/sun.nio.fs.UnixCopyFile.move(UnixCopyFile.java:492)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.move(UnixFileSystemProvider.java:266)
+	at java.base/java.nio.file.Files.move(Files.java:1432)
+	at jdk.jartool/sun.tools.jar.Main.validateAndClose(Main.java:462)
+	at jdk.jartool/sun.tools.jar.Main.run(Main.java:334)
+	at jdk.jartool/sun.tools.jar.Main.main(Main.java:1681)
+exit_code=1

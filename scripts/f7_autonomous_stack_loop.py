@@ -141,6 +141,7 @@ def build_listener_jar_command() -> list[str]:
             "mkdir -p build/classes/java/main build/libs && "
             "javac -cp '/opt/spark/jars/*' -d build/classes/java/main "
             "$(find src/main/java -name '*.java') && "
+            "rm -f build/libs/apex-spark-listener-0.1.0.jar && "
             "jar cf build/libs/apex-spark-listener-0.1.0.jar "
             "-C build/classes/java/main ."
         ),
