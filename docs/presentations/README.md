@@ -34,7 +34,8 @@ G0-G6, workflow remoto verde, caso de uso skew, fluxo end-to-end, seguranca do
 `apply_fix`, pacote de evidencias e proximos passos reais.
 
 Use esta apresentacao para explicar somente a nossa branch no estado final
-publicado em `6ba5238`.
+do pacote de 15/07. Ela e uma apresentacao historica; para o estado atual use
+tambem `apex-commander-ui-mvp.html` e o README da branch.
 
 ## `llm-solution-validation-2026-07-15.html`
 

@@ -14,11 +14,13 @@ Branch de campeonato:
 https://github.com/gustocezar/apex-workspace/tree/codex-round2
 ```
 
-Commit avaliado:
+Referencia historica do pacote avaliado em 15/07:
 
 ```text
 6ba5238a78b863c8b665e735d1b30057cbf73803
 ```
+
+Para o estado atual da branch, use `git rev-parse HEAD` e consulte o README.
 
 ## Objetivo
 
@@ -48,7 +50,7 @@ comparacao continue auditavel.
 |---|---|---|
 | Detectores T1 | `apex/commander/detectors.py`, `apex/commander/diagnostic_mvp.py` | Validado nos 6 cenarios oficiais |
 | EvidenceValidator | `apex/commander/evidence_validator.py` | Validado em G1/G4/G5 |
-| ClickHouse schema/adapters | `docs/specs/apex_telemetry_v1.sql`, `apex/commander/clickhouse_store.py` | Schema canonico versionado |
+| ClickHouse schema/adapters | `docs/specs/apex_telemetry_v1.sql`, `apex/commander/clickhouse_adapter.py`, `apex/commander/clickhouse_findings.py` | Schema canonico e adaptadores versionados |
 | MCP stdio | `apex/commander/mcp_stdio_cli.py`, `apex/commander/mcp_stdio_server.py` | Validado por subprocesso |
 | apply_fix guardado | `apex/commander/apply_verify.py`, `apex/commander/tool_contract.py` | Preview, token, hash, root e verify |
 | Rerun/compare | `apex/commander/rerun_orchestrator.py`, `apex/commander/telemetry_compare.py` | Validado em G5 e comparado via MCP GUI read-only |
@@ -62,7 +64,7 @@ comparacao continue auditavel.
 
 | Gate | Evidencia | Resultado |
 |---|---|---|
-| G0 build/testes | `evidence/g0-testes.log`, `evidence/ci-remote-gate-fix-tests.log` | Verde, suite final `163 passed, 2 skipped` |
+| G0 build/testes | `evidence/g0-testes.log`, `evidence/ci-remote-gate-fix-tests.log` | Verde; validacao local mais recente da branch: `197 passed, 2 skipped` |
 | G1 baseline negativo | `evidence/g1-baseline.log` | Zero finding warning+ |
 | G2 deteccao sintetica | `evidence/g2-cenarios.log` | 5 cenarios problematicos com severidade esperada |
 | G3 dado real | `evidence/g3-real.log` | Spark real multicore, ratio 29.4x |
@@ -89,8 +91,8 @@ uv run --with-requirements requirements.txt python tools/agentic_validation_loop
 
 Resultados esperados:
 
-- `git rev-parse HEAD` deve retornar `6ba5238a78b863c8b665e735d1b30057cbf73803`;
-- pytest deve fechar com `163 passed, 2 skipped`;
+- `git rev-parse HEAD` deve retornar o commit publicado mais recente da branch remota; compare com `git ls-remote origin refs/heads/gustocezar/feature/codex-desacoplamento-geradores`;
+- pytest deve fechar com `197 passed, 2 skipped` na validacao local mais recente desta branch;
 - o loop agentico deve fechar com `status=pass` e `next_actions=[]`.
 - `compare_job_telemetry` via MCP GUI deve mostrar `before-job -> after-job` com `status=improved`, `finding_count 3 -> 0`, `max_skew_ratio 29.5 -> 1.0` e `total_spilled_bytes 2097152 -> 0`;
 - a validacao focada de contrato MCP/telemetria deve fechar com `24 passed`.

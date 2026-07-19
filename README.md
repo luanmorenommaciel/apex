@@ -39,6 +39,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | G6 oracle/drift smoke | Fechado remoto | `tools/g6_oracle_drift_smoke.py`; `.github/workflows/scenario-gate.yml`; `evidence/g6-oracle-drift-smoke.log`; `evidence/g6-oracle-drift-summary.json`; `evidence/g6-remote-workflow-latest-summary.json` |
 | Loop agentico local | Fechado para checks locais, sem LLM e sem mutacao | `apex/commander/agentic_loop.py`; `tools/agentic_validation_loop.py`; `evidence/agentic-validation-loop-report.json` |
 | Product readiness UI + Judge local | Fechado localmente | `docs/presentations/apex-product-readiness-2026-07-19.html`; `evidence/apex-product-readiness-2026-07-19-summary.json`; `apex/commander/product_report.py`; `tools/generate_product_report.py`; `ISSUES.md` CODEX-063 |
+| Apex Commander UI local + demo MCP segura | Fechado localmente | `tools/run_commander_ui.py`; `docs/presentations/apex-commander-ui-mvp.html`; `docs/guides/apex-commander-ui-demo.md`; `apex/commander/ui_server.py` |
 | Especificacao tecnica 15/07 | Atualizada para juiz | `docs/specs/apex-codex-technical-spec-2026-07-15.md` |
 | Comparacao campeonato 15/07 | Atualizada para juiz | `docs/architecture/llm-solution-validation-framework-2026-07-15.md`; `docs/presentations/llm-solution-validation-2026-07-15.html` |
 | Apresentacao Codex 15/07 | Atualizada para juiz | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html` |
@@ -84,7 +85,7 @@ flowchart TD
     REC --> PREV["Preview diff<br/>fix_preview.py"]
     PREV --> APPLY["Apply guardado<br/>apply_verify.py"]
     APPLY --> RERUN["Rerun Spark<br/>spark_rerun_template.py"]
-    RERUN --> CMP["Compare telemetry<br/>rerun_compare.py"]
+    RERUN --> CMP["Compare telemetry<br/>telemetry_compare.py"]
     CMP --> OUT["Resultado<br/>limpo ou issue aberta"]
 ```
 
@@ -95,13 +96,13 @@ flowchart TD
 | Detectores deterministicos | `apex/commander/diagnostic_mvp.py` | Detecta skew, GC, shuffle/spill, OOM e cartesian product |
 | Validador de evidencia | `apex/commander/evidence_validator.py` | Confere se o finding tem evidencia suficiente |
 | Telemetria | `apex/commander/telemetry.py` | Normaliza `job_id`, `app_id`, stages, tasks e plano |
-| ClickHouse adapter | `apex/commander/clickhouse_adapter.py` | Store local/fake para testes e persistencia |
+| ClickHouse adapter | `apex/commander/clickhouse_adapter.py`, `apex/commander/clickhouse_findings.py` | Store e adaptadores para testes e persistencia de findings |
 | ClickHouse HTTP client | `apex/commander/clickhouse_http_client.py` | Cliente para ambiente ClickHouse real |
 | MCP stdio | `apex/commander/mcp_stdio_server.py` | Exposicao local de tools para agente/IDE |
 | Recomendacoes | `apex/commander/recommendations.py` | Converte finding em recomendacao |
 | Preview de fix | `apex/commander/fix_preview.py` | Gera diff antes de qualquer apply |
 | Apply guardado | `apex/commander/apply_verify.py` | Aplica com token, hash, root permitido e verificacao |
-| Rerun/compare | `apex/commander/rerun_compare.py` | Compara telemetria antes/depois |
+| Rerun/compare | `apex/commander/rerun_orchestrator.py`, `apex/commander/telemetry_compare.py` | Reexecuta de forma guardada e compara telemetria antes/depois |
 | Template Spark rerun | `apex/commander/spark_rerun_template.py` | Monta comando Spark para reexecucao controlada |
 
 ## Gates Validados
@@ -171,7 +172,10 @@ O apply nao e uma edicao livre feita por agente. Ele passa por controles:
 | `docs/specs/apex-codex-technical-spec-2026-07-15.md` | Especificacao tecnica reprodutivel da branch Codex |
 | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html` | Apresentacao end-to-end da nossa solucao |
 | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html` | Apresentacao final da nossa solucao para o juiz |
-| `docs/presentations/apex-product-readiness-2026-07-19.html` | Relatorio HTML de prontidao produto/Judge local com score 90/100, before/after remoto, MCP GUI, T1 e gaps conhecidos |
+| `docs/presentations/apex-product-readiness-2026-07-19.html` | Relatorio HTML de prontidao produto/Judge local com score 100/100 no pacote de evidencias, before/after remoto, MCP GUI, T1 e gaps conhecidos |
+| `docs/presentations/apex-commander-ui-mvp.html` | UI local navegavel: caso `job-42`, telemetria, Judge, recomendacao e preview seguro |
+| `docs/guides/apex-commander-ui-demo.md` | Roteiro de 10 minutos para testar a UI com o time |
+| `docs/superpowers/specs/2026-07-19-apex-commander-ui-local-app-design.md` | Decisoes, rotas e limites de seguranca da UI local |
 | `docs/presentations/apex-codex-projeto-luan-2026-07-14.html` | Apresentacao executiva para o Luan |
 | `docs/presentations/llm-solution-validation-2026-07-14.html` | Apresentacao comparativa atualizada das solucoes |
 | `docs/presentations/llm-solution-validation-2026-07-15.html` | Apresentacao comparativa final para o juiz |
@@ -184,6 +188,7 @@ Principais arquivos para apresentar:
 docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html
 docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html
 docs/presentations/apex-product-readiness-2026-07-19.html
+docs/presentations/apex-commander-ui-mvp.html
 docs/presentations/apex-codex-projeto-luan-2026-07-14.html
 docs/presentations/llm-solution-validation-2026-07-14.html
 docs/presentations/llm-solution-validation-2026-07-15.html
@@ -191,10 +196,10 @@ docs/presentations/llm-solution-validation-2026-07-15.html
 
 Sugestao:
 
-1. Para falar so da nossa solucao no estado final: use `apex-codex-solucao-end-to-end-2026-07-15.html`.
-2. Para mostrar prontidao de produto/Judge local com gaps honestos: use `apex-product-readiness-2026-07-19.html`.
-3. Para explicar ao Luan em formato executivo: use `apex-codex-projeto-luan-2026-07-14.html`.
-4. Para comparar LLMs/DataFlint no estado final: use `llm-solution-validation-2026-07-15.html`.
+1. Para demonstrar o produto atual: execute `python tools/run_commander_ui.py` e use `apex-commander-ui-mvp.html`.
+2. Para mostrar prontidao e evidencias: use `apex-product-readiness-2026-07-19.html`.
+3. Para explicar a arquitetura ao Luan: use `apex-codex-solucao-end-to-end-2026-07-15.html` como contexto historico e complemente com a UI atual.
+4. Para comparar LLMs/DataFlint: use `llm-solution-validation-2026-07-15.html` como comparativo historico da rodada.
 
 ## Produto Visual Local
 
@@ -247,16 +252,15 @@ python -m pytest tests -q
 
 Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local por permissao no diretorio temporario do usuario. Isso foi registrado durante G5.
 
-## O Que Ainda Nao Esta Pronto
+## Limites Reais Da Primeira Entrega
 
-| Gap | Impacto |
+| Limite | Impacto e tratamento atual |
 |---|---|
-| SparkListener JVM real fail-safe | Fechado no smoke runtime: JAR carregado via `spark-submit --jars`, NDJSON emitido e falha interna nao derruba job |
-| `docker compose up` autonomo da branch | Fechado localmente: compose autonomo sobe, grava event log em S3A/MinIO e repetiu G3/G5 sem plat-v0 |
-| Crew.ai/Judge | Provider plugável existe como `crew_judge_diagnose`; `crewai` está instalado e LLM externo real foi observado com provider `crew_ai`, `status=judged`, citações de evidência e decisão conservadora `manual_review` |
-| IDE real | Fechado no Claude Code GUI: `.mcp.json` project-scoped reconhecido; `tools/list`, `recommend_fix`, `preview_recommendation`, `apply_fix` e `compare_job_telemetry` validados |
-| G6 oraculo/drift | Smoke local verde contra `real_log.ndjson`; workflow semanal/manual definido; execucao remota observada no campeonato com workflow inteiro verde, incluindo `gate` e `g6-oracle-drift` |
-| Loop agentico | Orquestrador deterministico local criado: coleta evidencia, julga status e recomenda proxima acao sem LLM/mutacao; apos smoke GUI, status local do loop ficou `pass` sem proximas acoes |
+| UI local e single-user | A demonstracao roda somente em `127.0.0.1`; nao ha autenticacao, RBAC ou sessao compartilhada. |
+| UI nao aplica mudancas | Por seguranca, a UI so permite recomendacao e preview no caso fixo. `apply_fix` continua no MCP/IDE, com aprovacao humana. |
+| Demo baseada em evidencia versionada | O caso `job-42` e reproduzivel, mas a UI ainda nao lista jobs de um ClickHouse produtivo em tempo real. |
+| Judge externo | Crew.ai com LLM externo foi observado, mas a matriz de baixa confianca, evidencia incompleta e rejeicao do validator ainda deve crescer. |
+| Runner self-hosted | O workflow real depende de runner com Docker, Spark 4.1.2 e S3A/MinIO preparados; o ciclo de vida dele precisa de dono operacional. |
 
 ## Aderencia Ao Pedido Do Luan
 
@@ -280,8 +284,8 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 1. Decidir se o runner self-hosted `apex-local-GUSTUS` fica ativo para novas rodadas ou se deve ser removido apos a avaliacao.
 2. Monitorar proximas execucoes agendadas do G6 e manter o job legado `gate` verde no CI remoto.
 3. Revisar com o Commander as ADRs formais criadas em `docs/adr/`.
-4. Decidir se a proxima entrega de produto sera UI/dashboard navegável ou endurecimento do Judge com mais casos reais.
-5. Manter Crew.ai/Judge sempre depois de T1 deterministico e EvidenceValidator, sem permitir apply direto pelo agente.
+4. Rodar um smoke em clone limpo da UI local antes da apresentacao ao Luan.
+5. Endurecer o Judge com mais casos reais, mantendo-o sempre depois de T1 e do EvidenceValidator, sem permitir apply direto pelo agente.
 
 ## Estado De Publicacao
 
