@@ -66,12 +66,15 @@ def test_ui_html_escapes_external_evidence_and_hides_sensitive_fields(tmp_path):
     assert "OPENAI_API_KEY" not in rendered
 
 
-def test_ui_is_read_only_and_does_not_render_apply_control(tmp_path):
+def test_ui_offers_only_read_only_live_actions(tmp_path):
     build_sources(tmp_path)
 
     rendered = render_commander_ui(snapshot_for(tmp_path))
 
     assert "Fix Center" in rendered
     assert "MCP preview_fix" in rendered
-    assert "<button" not in rendered
+    assert "Carregar recomendacao real" in rendered
+    assert "Gerar preview real" in rendered
+    assert 'loadDemo("/api/recommendations")' in rendered
+    assert '"/api/apply' not in rendered
     assert "approval_token" not in rendered

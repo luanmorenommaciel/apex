@@ -18,7 +18,7 @@
   </style>
 </head>
 <body>
-<header><h1>Apex Commander UI</h1><p>MVP local e somente leitura. Evidencia, recomendacao e comparacao sem acionar mutacoes.</p></header>
+<header><h1>Apex Commander UI</h1><p>MVP local. Evidencia, recomendacao e preview sem acionar mutacoes.</p></header>
 <nav><a href="#overview">Visao geral</a><a href="#findings">Findings</a><a href="#telemetry">Telemetria</a><a href="#judge">Crew/Judge</a><a href="#compare">Before/After</a><a href="#fix-center">Fix Center</a></nav>
 <main>
   <section id="overview"><h2>Visao Geral</h2><div class="grid">
@@ -29,6 +29,22 @@
   <section id="judge"><h2>Crew/Judge</h2><div class="grid"><div class="card"><div class="label">Provider</div><div class="value">crew_ai</div></div><div class="card"><div class="label">Decisao</div><div class="value">manual_review</div></div><div class="card"><div class="label">Status</div><div class="value">judged</div></div></div><h3>Rationale</h3><p>The evidence indicates that the application (app-crew-smoke) has a significant number of hot records (165297) and the median cold records are at 5596, with a ratio of 29.5. The stage_id is 2, and the validation status is accepted.</p><h3>Citacoes verificaveis</h3><ul><li>finding.evidence.app_id=app-crew-smoke</li><li>finding.evidence.stage_id=2</li><li>finding.evidence.ratio=29.5</li><li>finding.evidence.hot_records=165297</li><li>finding.evidence.median_cold_records=5596</li><li>validation.accepted=True</li></ul><p class="notice">O Judge e read-only: nao aplica alteracoes e deve citar evidencia existente.</p></section>
   <section id="compare"><h2>Comparacao Before/After</h2><p>Status: <span class="badge improved">improved</span></p><div class="scroll"><table><thead><tr><th>Metrica</th><th>Antes</th><th>Depois</th><th>Resultado</th></tr></thead><tbody><tr><td>finding_count</td><td>1</td><td>0</td><td><span class="badge improved">improved</span></td></tr><tr><td>max_skew_ratio</td><td>29.4</td><td>0.0</td><td><span class="badge improved">improved</span></td></tr><tr><td>total_spilled_bytes</td><td>0</td><td>0</td><td><span class="badge unchanged">unchanged</span></td></tr><tr><td>max_gc_ratio</td><td>0.09662122110254891</td><td>0.032758620689655175</td><td><span class="badge improved">improved</span></td></tr><tr><td>oom_failure_count</td><td>0</td><td>0</td><td><span class="badge unchanged">unchanged</span></td></tr><tr><td>adaptive_execution_updates</td><td>0</td><td>0</td><td><span class="badge unchanged">unchanged</span></td></tr></tbody></table></div></section>
   <section id="fix-center"><h2>Fix Center</h2><p class="notice">Demonstrativo e somente leitura. Esta tela nao chama MCP, nao cria approval token e nao modifica arquivos.</p><div class="grid"><div class="card"><div class="label">Recomendacao</div><div class="value">Review skew-safe join mitigation</div></div><div class="card"><div class="label">Finding relacionado</div><div class="value">shuffle_skew_candidate</div></div><div class="card"><div class="label">Estado do preview</div><div class="value">not_persisted_in_approved_sources</div></div></div><h3>Diff</h3><pre>No persisted preview diff is available in the approved local evidence. Use MCP preview_fix for an explicitly reviewed diff.</pre></section>
+  <section id="live-demo"><h2>Demo MCP Segura</h2><p class="notice">Usa o contrato real de recomendacao e preview para o job de demonstracao. Nao aceita caminho livre, nao exibe approval token e nao chama apply_fix.</p><p><button id="load-recommendation" type="button">Carregar recomendacao real</button> <button id="load-preview" type="button">Gerar preview real</button></p><pre id="live-result">Aguardando uma acao read-only.</pre></section>
 </main>
+<script>
+  const result = document.getElementById("live-result");
+  async function loadDemo(endpoint) {
+    result.textContent = "Consultando Commander...";
+    try {
+      const response = await fetch(endpoint, { method: "GET", cache: "no-store" });
+      const payload = await response.json();
+      result.textContent = JSON.stringify(payload, null, 2);
+    } catch (error) {
+      result.textContent = "Nao foi possivel consultar a demo local: " + error.message;
+    }
+  }
+  document.getElementById("load-recommendation").addEventListener("click", () => loadDemo("/api/recommendations"));
+  document.getElementById("load-preview").addEventListener("click", () => loadDemo("/api/preview"));
+</script>
 </body>
 </html>

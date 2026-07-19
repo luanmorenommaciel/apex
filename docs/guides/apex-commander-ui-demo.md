@@ -28,6 +28,10 @@ no terminal.
 5. Em **Before/After**, confirme que o finding e as metricas melhoraram.
 6. Em **Fix Center**, confirme que a tela e demonstrativa: ela nao aplica
    alteracao, nao possui token e orienta usar `preview_fix` pelo MCP.
+7. Em **Demo MCP Segura**, clique em **Carregar recomendacao real** e depois
+   em **Gerar preview real**. A resposta vem do contrato real do Commander,
+   mas o arquivo alvo e fixo (`examples/apex_ui_demo_skew_job.py`) e nenhum
+   approval token e devolvido ao navegador.
 
 ## Rotas Para Teste Tecnico
 
@@ -38,7 +42,8 @@ GET http://127.0.0.1:8765/api/snapshot
 ```
 
 Qualquer `POST` retorna `405 method_not_allowed`. O servidor recusa hosts fora
-de loopback para evitar uma exposicao acidental de evidencias locais.
+de loopback para evitar uma exposicao acidental de evidencias locais. As rotas
+`GET /api/recommendations` e `GET /api/preview` sao uma demo fixa e read-only.
 
 ## Limites Declarados
 

@@ -210,6 +210,10 @@ Abra `http://127.0.0.1:8765/`. A UI e apenas de leitura e mostra evidencia,
 findings, Crew/Judge, before/after e Fix Center. O roteiro completo esta em
 `docs/guides/apex-commander-ui-demo.md`.
 
+Na secao **Demo MCP Segura**, a interface executa `recommend_fix` e um preview
+real para o job de demonstracao. Ela usa um alvo fixo, remove o approval token
+da resposta e nao oferece `apply_fix`.
+
 ## Como Validar A Branch
 
 Os logs crus ja estao em `evidence/`. Para nova validacao completa, use os gates do pacote comum e os scripts locais.

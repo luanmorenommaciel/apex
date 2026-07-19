@@ -62,6 +62,38 @@ def test_ui_server_health_and_mutations_are_blocked(ui_server):
     assert json.loads(payload)["status"] == "method_not_allowed"
 
 
+def test_ui_server_live_demo_preview_is_fixed_and_sanitized(tmp_path):
+    evidence = tmp_path / "evidence" / "generated" / "mcp-ide-subprocess-smoke"
+    evidence.mkdir(parents=True)
+    (evidence / "store.ndjson").write_text("", encoding="utf-8")
+    (evidence / "findings.ndjson").write_text(
+        json.dumps({"finding": {"job_id": "job-42", "kind": "shuffle_skew_candidate", "severity": "high", "confidence": "medium", "evidence": {}}, "validation": {"accepted": True}}) + "\n",
+        encoding="utf-8",
+    )
+    target = tmp_path / "examples" / "apex_ui_demo_skew_job.py"
+    target.parent.mkdir()
+    target.write_text("df.join(dim, \"id\").count()\n", encoding="utf-8")
+    server = create_ui_server(tmp_path, port=0)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, _, payload = request(server, "GET", "/api/recommendations")
+        assert status == 200
+        assert json.loads(payload)["count"] == 1
+
+        status, _, payload = request(server, "GET", "/api/preview?path=outside.py")
+        preview = json.loads(payload)
+        assert status == 200
+        assert preview["status"] == "preview_ready"
+        assert preview["approval_token_exposed"] is False
+        assert "approval" not in preview
+        assert str(target) == preview["target"]
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+        server.server_close()
+
+
 def test_ui_server_rejects_non_loopback_host(tmp_path):
     with pytest.raises(ValueError, match="loopback"):
         create_ui_server(tmp_path, host="0.0.0.0", port=0)

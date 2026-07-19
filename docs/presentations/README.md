@@ -6,6 +6,10 @@ Interface navegavel local do Apex Commander para demonstracao e teste do time.
 Mostra telemetria, findings, Crew/Judge, before/after e Fix Center read-only;
 nao chama `apply_fix`, nao exibe tokens e nao depende de servidor externo.
 
+Quando servida por `tools/run_commander_ui.py`, inclui **Demo MCP Segura**:
+`recommend_fix` e `preview_recommendation` reais para o job de demonstracao,
+com alvo fixo e sem expor approval token.
+
 Para abrir como aplicacao local, execute `python tools/run_commander_ui.py` e
 consulte `docs/guides/apex-commander-ui-demo.md`.
 

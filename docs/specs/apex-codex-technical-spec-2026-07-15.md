@@ -34,6 +34,11 @@ as evidencias locais sanitizadas. O fluxo mutavel continua exclusivamente no
 MCP guardado; a proxima evolucao real e ampliar a matriz de casos do Judge e
 decidir se uma UI autenticada/multiusuario e desejada.
 
+Complemento de demo MCP: `GET /api/recommendations` e `GET /api/preview`
+chamam o mesmo contrato deterministico do Commander para o `job-42` de
+demonstracao. O preview usa apenas `examples/apex_ui_demo_skew_job.py`, ignora
+caminhos fornecidos pelo navegador e remove o approval token antes de responder.
+
 ## Componentes
 
 | Componente | Caminho | Estado |

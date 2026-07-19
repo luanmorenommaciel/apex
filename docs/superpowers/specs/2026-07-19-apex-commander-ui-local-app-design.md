@@ -16,10 +16,13 @@ serve a pagina HTML e duas rotas somente leitura:
 GET /              pagina Apex Commander UI
 GET /api/health    estado local do servidor
 GET /api/snapshot  snapshot sanitizado das evidencias
+GET /api/recommendations recomendacao deterministica do job demo
+GET /api/preview   preview real em alvo demo fixo, sem approval token
 ```
 
 Nao existem rotas `POST`, `apply_fix`, tokens de aprovacao ou credenciais na
-UI. O preview continua uma etapa MCP separada, com revisao humana.
+UI. O preview usa o contrato real, mas apenas um alvo versionado e uma
+substituicao fixa; o token retornado internamente e removido antes da resposta.
 
 ## Fontes Permitidas
 

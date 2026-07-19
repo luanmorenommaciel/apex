@@ -9,8 +9,18 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from apex.commander.commander_ui import build_commander_ui_snapshot, render_commander_ui
+from apex.commander.mcp_stdio_cli import JsonFindingStore
+from apex.commander.tool_contract import CommanderToolContract
 
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+DEMO_JOB_ID = "job-42"
+DEMO_TARGET = Path("examples/apex_ui_demo_skew_job.py")
+DEMO_REPLACEMENT = """# Apex Commander UI demo target. This file is never changed by the UI.
+# Safe AQE skew join mitigation preview.
+spark.conf.set(\"spark.sql.adaptive.enabled\", \"true\")
+spark.conf.set(\"spark.sql.adaptive.skewJoin.enabled\", \"true\")
+df.join(dim, \"id\").count()
+"""
 
 
 def create_ui_server(root: str | Path, host: str = "127.0.0.1", port: int = 8765):
@@ -32,6 +42,12 @@ def create_ui_server(root: str | Path, host: str = "127.0.0.1", port: int = 8765
                 return
             if path == "/api/snapshot":
                 self._send_json(snapshot)
+                return
+            if path == "/api/recommendations":
+                self._send_json(_demo_recommendations(base))
+                return
+            if path == "/api/preview":
+                self._send_json(_demo_preview(base))
                 return
             self._send_json({"status": "not_found"}, status=HTTPStatus.NOT_FOUND)
 
@@ -57,3 +73,51 @@ def create_ui_server(root: str | Path, host: str = "127.0.0.1", port: int = 8765
             self.wfile.write(encoded)
 
     return ThreadingHTTPServer((host, port), Handler)
+
+
+def _demo_contract(root: Path) -> CommanderToolContract:
+    evidence = root / "evidence" / "generated" / "mcp-ide-subprocess-smoke"
+    return CommanderToolContract(
+        str(evidence / "store.ndjson"),
+        finding_store=JsonFindingStore(evidence / "findings.ndjson"),
+    )
+
+
+def _demo_recommendations(root: Path) -> dict:
+    """Run the real deterministic recommendation contract for the fixed demo job."""
+    payload = _demo_contract(root).call_tool("recommend_fix", {"job_id": DEMO_JOB_ID})
+    return {"mode": "read_only_demo", "job_id": DEMO_JOB_ID, **payload}
+
+
+def _demo_preview(root: Path) -> dict:
+    """Return a real preview, with a fixed target and without its approval token."""
+    target = (root / DEMO_TARGET).resolve()
+    if not target.is_file():
+        return {
+            "status": "demo_target_not_found",
+            "mode": "read_only_demo",
+            "target": str(DEMO_TARGET),
+        }
+
+    recommendations = _demo_recommendations(root)
+    items = recommendations.get("recommendations") or []
+    if not items:
+        return {
+            "status": "recommendation_not_found",
+            "mode": "read_only_demo",
+            "target": str(DEMO_TARGET),
+        }
+
+    preview = _demo_contract(root).call_tool(
+        "preview_recommendation",
+        {
+            "job_id": DEMO_JOB_ID,
+            "recommendation_id": items[0]["id"],
+            "path": str(target),
+            "replacement": DEMO_REPLACEMENT,
+        },
+    )
+    preview.pop("approval", None)
+    preview["approval_token_exposed"] = False
+    preview["mode"] = "read_only_demo"
+    return preview

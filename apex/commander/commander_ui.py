@@ -117,7 +117,7 @@ def render_commander_ui(snapshot: dict[str, Any]) -> str:
   </style>
 </head>
 <body>
-<header><h1>Apex Commander UI</h1><p>MVP local e somente leitura. Evidencia, recomendacao e comparacao sem acionar mutacoes.</p></header>
+<header><h1>Apex Commander UI</h1><p>MVP local. Evidencia, recomendacao e preview sem acionar mutacoes.</p></header>
 <nav>{navigation}</nav>
 <main>
   <section id="overview"><h2>Visao Geral</h2><div class="grid">
@@ -128,7 +128,23 @@ def render_commander_ui(snapshot: dict[str, Any]) -> str:
   <section id="judge"><h2>Crew/Judge</h2><div class="grid">{_card('Provider', judge.get('provider'))}{_card('Decisao', judge.get('decision'))}{_card('Status', judge.get('status'))}</div><h3>Rationale</h3><p>{_e(judge.get('rationale'))}</p><h3>Citacoes verificaveis</h3>{_list(judge.get('cited_evidence'))}<p class="notice">O Judge e read-only: nao aplica alteracoes e deve citar evidencia existente.</p></section>
   <section id="compare"><h2>Comparacao Before/After</h2><p>Status: {_badge(snapshot['comparison'].get('status'))}</p><div class="scroll"><table><thead><tr><th>Metrica</th><th>Antes</th><th>Depois</th><th>Resultado</th></tr></thead><tbody>{comparison_rows}</tbody></table></div></section>
   <section id="fix-center"><h2>Fix Center</h2><p class="notice">Demonstrativo e somente leitura. Esta tela nao chama MCP, nao cria approval token e nao modifica arquivos.</p><div class="grid">{_card('Recomendacao', fix.get('recommendation'))}{_card('Finding relacionado', fix.get('finding_kind'))}{_card('Estado do preview', fix.get('preview_status'))}</div><h3>Diff</h3><pre>{_e(fix.get('diff'))}</pre></section>
+  <section id="live-demo"><h2>Demo MCP Segura</h2><p class="notice">Usa o contrato real de recomendacao e preview para o job de demonstracao. Nao aceita caminho livre, nao exibe approval token e nao chama apply_fix.</p><p><button id="load-recommendation" type="button">Carregar recomendacao real</button> <button id="load-preview" type="button">Gerar preview real</button></p><pre id="live-result">Aguardando uma acao read-only.</pre></section>
 </main>
+<script>
+  const result = document.getElementById("live-result");
+  async function loadDemo(endpoint) {{
+    result.textContent = "Consultando Commander...";
+    try {{
+      const response = await fetch(endpoint, {{ method: "GET", cache: "no-store" }});
+      const payload = await response.json();
+      result.textContent = JSON.stringify(payload, null, 2);
+    }} catch (error) {{
+      result.textContent = "Nao foi possivel consultar a demo local: " + error.message;
+    }}
+  }}
+  document.getElementById("load-recommendation").addEventListener("click", () => loadDemo("/api/recommendations"));
+  document.getElementById("load-preview").addEventListener("click", () => loadDemo("/api/preview"));
+</script>
 </body>
 </html>"""
 
