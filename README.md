@@ -170,6 +170,9 @@ O apply nao e uma edicao livre feita por agente. Ele passa por controles:
 | `docs/architecture/llm-solution-validation-framework-2026-07-14.md` | Comparacao atualizada entre Codex, Cowork, Kimi, Spike, Codex antiga e DataFlint |
 | `docs/architecture/llm-solution-validation-framework-2026-07-15.md` | Comparacao final para juiz, com G6 remoto verde |
 | `docs/specs/apex-codex-technical-spec-2026-07-15.md` | Especificacao tecnica reprodutivel da branch Codex |
+| `docs/presentations/apex-codex-luan-3min-2026-07-19.pptx` | Deck executivo atual de quatro slides para o Luan |
+| `docs/presentations/apex-commander-one-slide-2026-07-19.html` | Resumo visual de uma pagina para abertura da demonstracao |
+| `docs/presentations/apex-codex-luan-3min-2026-07-19.md` | Roteiro falado de tres minutos, com tempo por slide |
 | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html` | Apresentacao end-to-end da nossa solucao |
 | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html` | Apresentacao final da nossa solucao para o juiz |
 | `docs/presentations/apex-product-readiness-2026-07-19.html` | Relatorio HTML de prontidao produto/Judge local com score 100/100 no pacote de evidencias, before/after remoto, MCP GUI, T1 e gaps conhecidos |
@@ -182,24 +185,22 @@ O apply nao e uma edicao livre feita por agente. Ele passa por controles:
 
 ## Apresentacoes
 
-Principais arquivos para apresentar:
+Pacote atual para apresentar ao Luan:
 
 ```text
-docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html
-docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html
-docs/presentations/apex-product-readiness-2026-07-19.html
+docs/presentations/apex-codex-luan-3min-2026-07-19.pptx
+docs/presentations/apex-commander-one-slide-2026-07-19.html
+docs/presentations/apex-codex-luan-3min-2026-07-19.md
 docs/presentations/apex-commander-ui-mvp.html
-docs/presentations/apex-codex-projeto-luan-2026-07-14.html
-docs/presentations/llm-solution-validation-2026-07-14.html
-docs/presentations/llm-solution-validation-2026-07-15.html
+docs/presentations/apex-product-readiness-2026-07-19.html
 ```
 
 Sugestao:
 
-1. Para demonstrar o produto atual: execute `python tools/run_commander_ui.py` e use `apex-commander-ui-mvp.html`.
-2. Para mostrar prontidao e evidencias: use `apex-product-readiness-2026-07-19.html`.
-3. Para explicar a arquitetura ao Luan: use `apex-codex-solucao-end-to-end-2026-07-15.html` como contexto historico e complemente com a UI atual.
-4. Para comparar LLMs/DataFlint: use `llm-solution-validation-2026-07-15.html` como comparativo historico da rodada.
+1. Abra o deck de tres minutos e use o roteiro correspondente.
+2. Demonstre o produto atual com `python tools/run_commander_ui.py` e `apex-commander-ui-mvp.html`.
+3. Para perguntas sobre prontidao e evidencias, abra `apex-product-readiness-2026-07-19.html`.
+4. Os materiais de 14/07 e 15/07 permanecem como historico. Os comparativos de LLMs/DataFlint nao fazem parte desta apresentacao da nossa solucao.
 
 ## Produto Visual Local
 

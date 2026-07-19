@@ -1,5 +1,21 @@
 # Apresentacoes
 
+## Pacote atual para o Luan
+
+Este e o conjunto recomendado para a primeira demonstracao da solucao Codex.
+Ele trata apenas da nossa entrega atual; nao faz comparacao com outras branches.
+
+| Artefato | Uso na reuniao |
+|---|---|
+| `apex-codex-luan-3min-2026-07-19.pptx` | Deck executivo de quatro slides para uma conversa de tres minutos. |
+| `apex-commander-one-slide-2026-07-19.html` | Resumo visual de uma pagina, com caso, numeros e pedido de decisao. |
+| `apex-codex-luan-3min-2026-07-19.md` | Roteiro falado, com tempo por slide. |
+| `apex-commander-ui-mvp.html` | Produto local navegavel para demonstrar o caso `job-42`. |
+| `apex-product-readiness-2026-07-19.html` | Relatorio objetivo de prontidao e limites declarados. |
+
+Sequencia sugerida: apresente o deck, abra a UI no caso `job-42` e use o
+relatorio de prontidao apenas para perguntas de evidencia e operacao.
+
 ## `apex-commander-ui-mvp.html`
 
 Interface navegavel local do Apex Commander para demonstracao e teste do time.
@@ -27,7 +43,12 @@ Use este artefato quando o juiz ou o Commander quiser uma leitura objetiva de
 produto: o que ja esta provado, quais dependencias operacionais continuam
 existindo, e quais evidencias sustentam essa conclusao.
 
-## `apex-codex-solucao-end-to-end-2026-07-15.html`
+## Materiais historicos e de referencia
+
+Os arquivos abaixo preservam o contexto de rodadas anteriores. Eles nao sao o
+pacote recomendado para a apresentacao atual ao Luan.
+
+### `apex-codex-solucao-end-to-end-2026-07-15.html`
 
 Apresentacao final da solucao Codex Round2 para o juiz e para o Commander:
 G0-G6, workflow remoto verde, caso de uso skew, fluxo end-to-end, seguranca do
