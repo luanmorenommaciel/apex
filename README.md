@@ -115,7 +115,7 @@ flowchart TD
 | G5 autônomo | Mesmo ciclo na stack autônoma sem `plat-v0` | `evidence/g5-autonomous-ciclo.log` |
 | G6 local | Contrato `apply_fix` e smoke MCP stdio local | `evidence/g6-apply-fix-mcp-smoke.log` |
 | G7 local | Compose autônomo sobe sem `spark-plat-v0-*`, Spark grava event log, G3/G5 passam e listener JVM roda | `evidence/g3-autonomous-diagnosis.json`; `evidence/g5-autonomous-ciclo.log`; `evidence/g9-listener-jvm-spark-submit.log` |
-| F7 loop | Runner orquestra G3/G5 autônomo em Spark 4.1.2, fechou execução real local e tem contrato no workflow reconhecido | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/scenario-gate.yml`; `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log` |
+| F7 loop | Runner orquestra G3/G5 autônomo em Spark 4.1.2, fechou execução real local e execução remota verde no GitHub Actions/self-hosted | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/scenario-gate.yml`; `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/f7-remote-real-stack-run-29671461366-loop.log` |
 | G8 local | Política Crew/Judge futura sem LLM obrigatória | `evidence/g8-agentic-loop-python.log` |
 | G9 local | Listener JVM compila, gera JAR, carrega via `spark-submit --jars`, emite NDJSON e não derruba job em fail-mode | `evidence/g9-listener-jvm-spark-submit.log`; `evidence/g9-listener-jvm-output.ndjson`; `evidence/g9-listener-jvm-failsafe-spark-submit.log` |
 
