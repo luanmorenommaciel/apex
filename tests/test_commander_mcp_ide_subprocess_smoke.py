@@ -13,5 +13,6 @@ def test_mcp_ide_subprocess_smoke_writes_evidence(tmp_path):
     assert records[-1] == {"event": "harness_result", "status": "passed"}
     assert any(record["event"] == "initialize" for record in records)
     assert any(record["event"] == "tools_list" for record in records)
+    assert any(record["event"] == "crew_judge_diagnose" for record in records)
     assert any(record["event"] == "apply_fix" for record in records)
     assert (work_dir / "job.py").read_text(encoding="utf-8").startswith("# REVIEW")

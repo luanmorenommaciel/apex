@@ -11,6 +11,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from apex.commander.clickstack_mvp import append_envelope
+
 
 JOB_ID = "job-42"
 RECOMMENDATION_ID = "job-42:shuffle_skew_candidate:stage-2:0"
@@ -85,6 +90,7 @@ def main(argv=None):
         tool_names = [tool["name"] for tool in tools["result"]["tools"]]
         transcript.append(event("tools_list", tool_names=tool_names, response=tools))
         require("apply_fix" in tool_names, "apply_fix_not_listed")
+        require("crew_judge_diagnose" in tool_names, "crew_judge_diagnose_not_listed")
 
         recommendation = client.tool_call(
             "recommend_fix",
@@ -92,6 +98,20 @@ def main(argv=None):
         )
         transcript.append(event("recommend_fix", payload=recommendation))
         require(recommendation["status"] == "found", "recommendation_not_found")
+
+        judge = client.tool_call(
+            "crew_judge_diagnose",
+            {"job_id": JOB_ID, "provider": "deterministic"},
+        )
+        transcript.append(event("crew_judge_diagnose", payload=judge))
+        require(judge["status"] == "judged", "judge_not_judged")
+        require(judge["provider_used"] == "deterministic", "judge_provider_mismatch")
+        require(judge["read_only"] is True, "judge_not_read_only")
+        require(judge["mutation_allowed"] is False, "judge_allows_mutation")
+        require(
+            judge["contract_validation"]["accepted"] is True,
+            "judge_contract_invalid",
+        )
 
         preview = client.tool_call(
             "preview_recommendation",
@@ -148,6 +168,7 @@ def prepare_smoke_inputs(work_dir):
 
     store = work_dir / "store.ndjson"
     store.write_text("", encoding="utf-8")
+    append_envelope(store, telemetry_envelope())
 
     finding_store = work_dir / "findings.ndjson"
     finding_store.write_text(json.dumps(persisted_skew_record()) + "\n", encoding="utf-8")
@@ -171,6 +192,43 @@ def persisted_skew_record():
             },
         },
         "validation": {"status": "valid", "accepted": True},
+    }
+
+
+def telemetry_envelope():
+    return {
+        "schema_version": "apex.commander.telemetry.v1",
+        "job_id": JOB_ID,
+        "app_id": "app-mcp-stdio",
+        "event_counts": {"SparkListenerTaskEnd": 4},
+        "stages": [
+            {
+                "stage_id": 2,
+                "task_count": 8,
+                "records": [165297, 5596, 5600, 5700],
+                "total_records": 182193,
+                "max_records": 165297,
+                "median_cold_records": 5596,
+                "ratio": 29.5,
+                "evidence_status": "valid",
+                "quality_issues": [],
+                "disk_bytes_spilled": 0,
+                "memory_bytes_spilled": 0,
+                "jvm_gc_time_ms": 0,
+                "executor_run_time_ms": 10000,
+                "failure_reasons": [],
+            }
+        ],
+        "skew_candidates": [
+            {
+                "kind": "shuffle_skew_candidate",
+                "stage_id": 2,
+                "ratio": 29.5,
+                "hot_records": 165297,
+                "median_cold_records": 5596,
+                "task_count": 8,
+            }
+        ],
     }
 
 
