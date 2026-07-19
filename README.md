@@ -31,7 +31,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Spark 4.1.2 + listener oficial | Fechado localmente com G3/G5 real | `docker-compose.yml`; `docker-compose.autonomous.yml`; `docker/spark/spark-defaults.conf`; `docker/autonomous/spark/spark-defaults.conf`; `evidence/f7-spark412-g5-compare-memory-2026-07-18.log`; `evidence/f7-spark412-final-focused-tests-2026-07-18.log`; `ISSUES.md` CODEX-041 a CODEX-044 |
 | Loop CI stack autonoma | Fechado local e remotamente: `Apex Scenario Gate` executou `real-stack` verde no runner self-hosted | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/scenario-gate.yml`; `tests/test_f7_autonomous_stack_loop.py`; `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/f7-remote-real-stack-run-29671461366-loop.log`; `ISSUES.md` CODEX-045/CODEX-046/CODEX-062 |
 | Crew/Judge provider opcional | Fechado como tool read-only | `apex/commander/crew_judge.py`; `apex/commander/judge_contract.py`; `apex/commander/judge_providers.py`; `evidence/crew-judge-real-provider-smoke-2026-07-19.json`; `ISSUES.md` CODEX-064/CODEX-065 |
-| Crew.ai external smoke | Chegou ao provedor, bloqueado por quota/billing | `tools/crew_judge_provider_smoke.py`; `evidence/crew-judge-external-llm-success-2026-07-19.json`; `ISSUES.md` CODEX-065/CODEX-068 |
+| Crew.ai external smoke | Fechado com LLM externo real | `tools/crew_judge_provider_smoke.py`; `evidence/crew-judge-external-llm-success-final-2026-07-19.json`; `ISSUES.md` CODEX-065/CODEX-068 |
 | MCP/IDE subprocess smoke | Fechado localmente, incluindo `crew_judge_diagnose` | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl`; `evidence/g6-mcp-crew-judge-subprocess-smoke-2026-07-19.jsonl`; `ISSUES.md` CODEX-066 |
 | Claude Code project MCP | Fechado em IDE GUI real | `.mcp.json`; `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
 | Playbook IDE GUI MCP | Executado no Claude Code | `docs/playbooks/mcp-ide-gui-approval-smoke-2026-07-18.md`; `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
@@ -231,7 +231,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 |---|---|
 | SparkListener JVM real fail-safe | Fechado no smoke runtime: JAR carregado via `spark-submit --jars`, NDJSON emitido e falha interna nao derruba job |
 | `docker compose up` autonomo da branch | Fechado localmente: compose autonomo sobe, grava event log em S3A/MinIO e repetiu G3/G5 sem plat-v0 |
-| Crew.ai/Judge | Provider plugável existe como `crew_judge_diagnose`; `crewai` está instalado, `APEX_CREW_JUDGE_ENABLED=1` foi testado, chamada externa chegou à OpenAI, mas parou em `429 insufficient_quota` |
+| Crew.ai/Judge | Provider plugável existe como `crew_judge_diagnose`; `crewai` está instalado e LLM externo real foi observado com provider `crew_ai`, `status=judged`, citações de evidência e decisão conservadora `manual_review` |
 | IDE real | Fechado no Claude Code GUI: `.mcp.json` project-scoped reconhecido; `tools/list`, `recommend_fix`, `preview_recommendation`, `apply_fix` e `compare_job_telemetry` validados |
 | G6 oraculo/drift | Smoke local verde contra `real_log.ndjson`; workflow semanal/manual definido; execucao remota observada no campeonato com workflow inteiro verde, incluindo `gate` e `g6-oracle-drift` |
 | Loop agentico | Orquestrador deterministico local criado: coleta evidencia, julga status e recomenda proxima acao sem LLM/mutacao; apos smoke GUI, status local do loop ficou `pass` sem proximas acoes |
@@ -250,7 +250,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 | MCP subprocess estilo cliente externo | Cumpre localmente |
 | IDE real | Fechado em Claude Code GUI: `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` |
 | SparkListener real | Cumpre localmente/runtime smoke |
-| Crew.ai/Judge | Parcial avançado: tool read-only, contrato anti-alucinação e provider Crew.ai opcional existem; falta observar execução com LLM externo |
+| Crew.ai/Judge | Cumpre localmente: tool read-only, contrato anti-alucinação, provider Crew.ai opcional e execução real com LLM externo observada |
 | Plataforma Docker standalone | Cumpre localmente em Spark 4.1.2: compose sobe, listener oficial carrega, G3/G5 reais passam |
 
 ## Proximos Passos Recomendados
@@ -258,7 +258,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 1. Decidir se o runner self-hosted `apex-local-GUSTUS` fica ativo para novas rodadas ou se deve ser removido apos a avaliacao.
 2. Monitorar proximas execucoes agendadas do G6 e manter o job legado `gate` verde no CI remoto.
 3. Revisar com o Commander as ADRs formais criadas em `docs/adr/`.
-4. Decidir se a proxima entrega de produto sera UI/dashboard navegável ou execução Crew.ai com LLM externo configurado.
+4. Decidir se a proxima entrega de produto sera UI/dashboard navegável ou endurecimento do Judge com mais casos reais.
 5. Manter Crew.ai/Judge sempre depois de T1 deterministico e EvidenceValidator, sem permitir apply direto pelo agente.
 
 ## Estado De Publicacao

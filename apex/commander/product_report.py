@@ -14,6 +14,9 @@ DEFAULT_F7_LOG = Path("evidence/f7-remote-real-stack-run-29671461366-loop.log")
 DEFAULT_MCP_GUI_LOG = Path("evidence/g6-mcp-ide-gui-smoke-2026-07-18.log")
 DEFAULT_LATENCY_LOG = Path("evidence/g4-t1.log")
 DEFAULT_ISSUES = Path("ISSUES.md")
+DEFAULT_CREW_JUDGE_SUCCESS = Path(
+    "evidence/crew-judge-external-llm-success-final-2026-07-19.json"
+)
 
 
 @dataclass(frozen=True)
@@ -23,6 +26,7 @@ class ProductReportInputs:
     mcp_gui_log: Path = DEFAULT_MCP_GUI_LOG
     latency_log: Path = DEFAULT_LATENCY_LOG
     issues_file: Path = DEFAULT_ISSUES
+    crew_judge_success_file: Path = DEFAULT_CREW_JUDGE_SUCCESS
 
 
 def build_product_snapshot(inputs: ProductReportInputs) -> dict[str, Any]:
@@ -31,11 +35,13 @@ def build_product_snapshot(inputs: ProductReportInputs) -> dict[str, Any]:
     mcp_gui_log = _read_optional(root / inputs.mcp_gui_log)
     latency_log = _read_optional(root / inputs.latency_log)
     issues_text = _read_optional(root / inputs.issues_file)
+    crew_judge_success_text = _read_optional(root / inputs.crew_judge_success_file)
 
     compare = _extract_compare(f7_log)
     latency_ms = _extract_latency_ms(latency_log)
     open_items = _count_issue_status(issues_text, ("aberta", "rascunho"))
     closed_items = _count_issue_status(issues_text, ("fechada", "fechada (fato estabelecido)"))
+    crew_judge_external_green = _crew_judge_external_green(crew_judge_success_text)
 
     signals = {
         "remote_real_stack_green": "loop_status=success" in f7_log,
@@ -49,8 +55,12 @@ def build_product_snapshot(inputs: ProductReportInputs) -> dict[str, Any]:
             )
         ),
         "t1_under_1s": latency_ms is not None and latency_ms < 1000,
-        "crew_judge_real_missing": "Crew.ai/Judge real" in issues_text
-        or "Crew.ai" in issues_text,
+        "crew_judge_external_green": crew_judge_external_green,
+        "crew_judge_real_missing": not crew_judge_external_green
+        and (
+            "Crew.ai/Judge real" in issues_text
+            or "Crew.ai" in issues_text
+        ),
         "runner_operational_dependency": "self-hosted" in issues_text,
     }
 
@@ -117,7 +127,7 @@ def render_product_report(snapshot: dict[str, Any]) -> str:
   <section>
     <div class="score">{_e(snapshot["score"])}/100</div>
     <p>Status: <strong>{_e(snapshot["status"])}</strong></p>
-    <p>Leitura: pronto para avaliacao com gaps conhecidos, sem vender Crew.ai/Judge real como entregue.</p>
+    <p>Leitura: pronto para avaliacao com evidencias reais; Crew.ai/Judge externo foi observado como camada opcional e read-only, fora do caminho critico T1.</p>
   </section>
   <section class="grid">
     <div class="card"><strong>Before app</strong><br><code>{_e(f7.get("before_app_id"))}</code></div>
@@ -215,9 +225,9 @@ def _readiness_score(signals: dict[str, bool]) -> int:
         score += 20
     if signals["t1_under_1s"]:
         score += 20
+    if signals["crew_judge_external_green"]:
+        score += 20
     if signals["runner_operational_dependency"]:
-        score += 10
-    if signals["crew_judge_real_missing"]:
         score += 10
     return score
 
@@ -230,6 +240,8 @@ def _strengths(signals: dict[str, bool]) -> list[str]:
         items.append("MCP GUI real validado com tools/list, recommend, preview e apply_fix.")
     if signals["t1_under_1s"]:
         items.append("T1 deterministico abaixo de 1s, sem LLM obrigatorio.")
+    if signals["crew_judge_external_green"]:
+        items.append("Crew.ai/Judge externo observado com provider crew_ai, status judged e citacoes de evidencia existentes.")
     return items
 
 
@@ -250,8 +262,25 @@ def _next_actions(signals: dict[str, bool]) -> list[str]:
         actions.append(
             "Escolher entre UI de produto navegavel ou execucao Crew.ai com LLM externo configurado."
         )
+    else:
+        actions.append("Ampliar matriz Crew.ai/Judge com casos de baixa confianca, evidencia incompleta e rejeicao pelo validator.")
     actions.append("Manter T1 deterministico e EvidenceValidator como caminho obrigatorio antes de qualquer LLM.")
     return actions
+
+
+def _crew_judge_external_green(text: str) -> bool:
+    if not text.strip():
+        return False
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return False
+    crew_ai = payload.get("crew_ai") or {}
+    return (
+        crew_ai.get("provider") == "crew_ai"
+        and crew_ai.get("status") == "judged"
+        and bool(crew_ai.get("cited_evidence"))
+    )
 
 
 def _count_issue_status(text: str, statuses: tuple[str, ...]) -> int:

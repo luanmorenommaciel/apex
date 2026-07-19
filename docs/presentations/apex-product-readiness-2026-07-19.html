@@ -24,9 +24,9 @@
 <main>
   <h1>Apex Codex Product Readiness</h1>
   <section>
-    <div class="score">90/100</div>
+    <div class="score">100/100</div>
     <p>Status: <strong>ready_for_judge_with_known_gaps</strong></p>
-    <p>Leitura: pronto para avaliacao com gaps conhecidos, sem vender Crew.ai/Judge real como entregue.</p>
+    <p>Leitura: pronto para avaliacao com evidencias reais; Crew.ai/Judge externo foi observado como camada opcional e read-only, fora do caminho critico T1.</p>
   </section>
   <section class="grid">
     <div class="card"><strong>Before app</strong><br><code>app-20260719032011-0000</code></div>
@@ -47,15 +47,15 @@
   </section>
   <section>
     <h2>Forcas</h2>
-    <ul><li>F7 remoto real-stack verde com Spark 4.1.2 e loop G3/G5 completo.</li><li>MCP GUI real validado com tools/list, recommend, preview e apply_fix.</li><li>T1 deterministico abaixo de 1s, sem LLM obrigatorio.</li></ul>
+    <ul><li>F7 remoto real-stack verde com Spark 4.1.2 e loop G3/G5 completo.</li><li>MCP GUI real validado com tools/list, recommend, preview e apply_fix.</li><li>T1 deterministico abaixo de 1s, sem LLM obrigatorio.</li><li>Crew.ai/Judge externo observado com provider crew_ai, status judged e citacoes de evidencia existentes.</li></ul>
   </section>
   <section>
     <h2>Gaps Honestamente Declarados</h2>
-    <ul><li>Crew.ai/Judge provider existe como caminho opcional; execucao com LLM externo real ainda nao foi observada.</li><li>F7 remoto depende de runner self-hosted preparado com Docker/Spark 4.1.2.</li></ul>
+    <ul><li>F7 remoto depende de runner self-hosted preparado com Docker/Spark 4.1.2.</li></ul>
   </section>
   <section>
     <h2>Proximas Acoes</h2>
-    <ol><li>Decidir ciclo de vida do runner self-hosted apos avaliacao.</li><li>Escolher entre UI de produto navegavel ou execucao Crew.ai com LLM externo configurado.</li><li>Manter T1 deterministico e EvidenceValidator como caminho obrigatorio antes de qualquer LLM.</li></ol>
+    <ol><li>Decidir ciclo de vida do runner self-hosted apos avaliacao.</li><li>Ampliar matriz Crew.ai/Judge com casos de baixa confianca, evidencia incompleta e rejeicao pelo validator.</li><li>Manter T1 deterministico e EvidenceValidator como caminho obrigatorio antes de qualquer LLM.</li></ol>
   </section>
 </main>
 </body>

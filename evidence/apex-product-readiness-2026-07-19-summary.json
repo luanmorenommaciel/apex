@@ -63,22 +63,22 @@
     }
   },
   "gaps": [
-    "Crew.ai/Judge provider existe como caminho opcional; execucao com LLM externo real ainda nao foi observada.",
     "F7 remoto depende de runner self-hosted preparado com Docker/Spark 4.1.2."
   ],
   "issues": {
-    "closed": 55,
-    "open_or_draft": 26
+    "closed": 58,
+    "open_or_draft": 25
   },
   "latency_ms": 226.991,
   "next_actions": [
     "Decidir ciclo de vida do runner self-hosted apos avaliacao.",
-    "Escolher entre UI de produto navegavel ou execucao Crew.ai com LLM externo configurado.",
+    "Ampliar matriz Crew.ai/Judge com casos de baixa confianca, evidencia incompleta e rejeicao pelo validator.",
     "Manter T1 deterministico e EvidenceValidator como caminho obrigatorio antes de qualquer LLM."
   ],
-  "score": 90,
+  "score": 100,
   "signals": {
-    "crew_judge_real_missing": true,
+    "crew_judge_external_green": true,
+    "crew_judge_real_missing": false,
     "mcp_gui_green": true,
     "remote_real_stack_green": true,
     "runner_operational_dependency": true,
@@ -88,6 +88,7 @@
   "strengths": [
     "F7 remoto real-stack verde com Spark 4.1.2 e loop G3/G5 completo.",
     "MCP GUI real validado com tools/list, recommend, preview e apply_fix.",
-    "T1 deterministico abaixo de 1s, sem LLM obrigatorio."
+    "T1 deterministico abaixo de 1s, sem LLM obrigatorio.",
+    "Crew.ai/Judge externo observado com provider crew_ai, status judged e citacoes de evidencia existentes."
   ]
 }
