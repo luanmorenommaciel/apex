@@ -1,0 +1,9 @@
+apex autonomous stack loop
+run_id=github-real-stack
+spark_target=4.1.2
+compose_file=C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\docker-compose.autonomous.yml
+
+## generate before job
+$ C:\Program Files\Python311\python.exe C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\pacote-comum\generators\code_generator.py C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\pacote-comum\scenarios\skew_on_join_30x.yaml C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.py
+C:\Program Files\Python311\python.exe: can't open file 'C:\\Users\\Guest\\actions-runner-apex-workspace\\_work\\apex-workspace\\apex-workspace\\pacote-comum\\generators\\code_generator.py': [Errno 2] No such file or directory
+exit_code=2
