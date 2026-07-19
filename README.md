@@ -214,6 +214,10 @@ Na secao **Demo MCP Segura**, a interface executa `recommend_fix` e um preview
 real para o job de demonstracao. Ela usa um alvo fixo, remove o approval token
 da resposta e nao oferece `apply_fix`.
 
+Para manter a apresentacao coerente, `job-42` e o identificador do caso. As
+linhas `before-job` e `after-job` sao as duas execucoes de telemetria exibidas
+na comparacao antes/depois desse mesmo caso.
+
 ## Como Validar A Branch
 
 Os logs crus ja estao em `evidence/`. Para nova validacao completa, use os gates do pacote comum e os scripts locais.

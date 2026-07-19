@@ -20,7 +20,9 @@ no terminal.
 ## Roteiro de 10 Minutos
 
 1. Em **Visao Geral**, confirme score, latencia T1 e os apps before/after.
-2. Em **Jobs e Findings**, abra o finding de skew e confira ratio e stage.
+   O caso de demonstracao e `job-42`; `before-job` e `after-job` sao as duas
+   execucoes de telemetria desse mesmo caso.
+2. Em **Finding do Caso**, abra o finding de skew de `job-42` e confira ratio e stage.
 3. Em **Telemetria por Stage**, compare `before-job` (ratio `29.5`) com
    `after-job` (ratio `1.0`).
 4. Em **Crew/Judge**, confira provider, decisao conservadora e citacoes de

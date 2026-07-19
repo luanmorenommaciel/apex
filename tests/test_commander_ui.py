@@ -48,6 +48,9 @@ def test_ui_snapshot_reads_approved_evidence_shapes(tmp_path):
 
     assert snapshot["read_only"] is True
     assert snapshot["overview"]["score"] == 100
+    assert snapshot["overview"]["case_id"] == "job-42"
+    assert snapshot["case"]["before_run_id"] == "before-job"
+    assert snapshot["case"]["after_run_id"] == "not_available"
     assert snapshot["jobs"][0]["stages"][0]["ratio"] == 29.5
     assert snapshot["findings"][0]["kind"] == "shuffle_skew_candidate"
     assert snapshot["judge"]["provider"] == "crew_ai"
@@ -74,6 +77,8 @@ def test_ui_offers_only_read_only_live_actions(tmp_path):
     assert "Fix Center" in rendered
     assert "MCP preview_fix" in rendered
     assert "Carregar recomendacao real" in rendered
+    assert "Caso job-42" in rendered
+    assert "execucao antes" in rendered
     assert "Gerar preview real" in rendered
     assert 'loadDemo("/api/recommendations")' in rendered
     assert '"/api/apply' not in rendered

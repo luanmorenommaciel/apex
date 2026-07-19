@@ -80,11 +80,13 @@ def test_ui_server_live_demo_preview_is_fixed_and_sanitized(tmp_path):
         status, _, payload = request(server, "GET", "/api/recommendations")
         assert status == 200
         assert json.loads(payload)["count"] == 1
+        assert json.loads(payload)["case_id"] == "job-42"
 
         status, _, payload = request(server, "GET", "/api/preview?path=outside.py")
         preview = json.loads(payload)
         assert status == 200
         assert preview["status"] == "preview_ready"
+        assert preview["case_id"] == "job-42"
         assert preview["approval_token_exposed"] is False
         assert "approval" not in preview
         assert str(target) == preview["target"]

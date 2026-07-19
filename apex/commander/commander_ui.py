@@ -32,6 +32,7 @@ def build_commander_ui_snapshot(
     findings = [_ui_finding(item) for item in finding_records if isinstance(item, dict)]
     jobs = [_ui_job(item) for item in telemetry if isinstance(item, dict)]
     compare = readiness.get("f7", {}) if isinstance(readiness, dict) else {}
+    case_id = next((finding.get("job_id") for finding in findings if finding.get("job_id")), "not_available")
 
     return _scrub_sensitive(
         {
@@ -40,6 +41,7 @@ def build_commander_ui_snapshot(
                 "status": readiness.get("status", "not_available"),
                 "score": readiness.get("score", 0),
                 "latency_ms": readiness.get("latency_ms"),
+                "case_id": case_id,
                 "before_app_id": compare.get("before_app_id"),
                 "after_app_id": compare.get("after_app_id"),
                 "strengths": readiness.get("strengths", []),
@@ -49,6 +51,11 @@ def build_commander_ui_snapshot(
                 "status": compare.get("status", "not_available"),
                 "comparisons": compare.get("comparisons", []),
                 "summary": compare.get("summary", {}),
+            },
+            "case": {
+                "case_id": case_id,
+                "before_run_id": jobs[0].get("job_id") if jobs else "not_available",
+                "after_run_id": jobs[1].get("job_id") if len(jobs) > 1 else "not_available",
             },
             "jobs": jobs,
             "findings": findings,
@@ -117,18 +124,18 @@ def render_commander_ui(snapshot: dict[str, Any]) -> str:
   </style>
 </head>
 <body>
-<header><h1>Apex Commander UI</h1><p>MVP local. Evidencia, recomendacao e preview sem acionar mutacoes.</p></header>
+<header><h1>Apex Commander UI</h1><p>Caso { _e(overview.get('case_id')) }: evidencia, recomendacao e preview sem acionar mutacoes.</p></header>
 <nav>{navigation}</nav>
 <main>
   <section id="overview"><h2>Visao Geral</h2><div class="grid">
-    {_card('Status', overview.get('status'))}{_card('Score', f"{overview.get('score')}/100")}{_card('T1', _format_ms(overview.get('latency_ms')))}{_card('App antes', overview.get('before_app_id'))}{_card('App depois', overview.get('after_app_id'))}
-  </div><h3>Forcas</h3>{_list(overview.get('strengths'))}<h3>Gaps declarados</h3>{_list(overview.get('gaps'))}</section>
-  <section id="findings"><h2>Jobs e Findings</h2><div class="scroll"><table><thead><tr><th>Job</th><th>Tipo</th><th>Severidade</th><th>Confianca</th><th>Evidencia</th></tr></thead><tbody>{finding_rows}</tbody></table></div></section>
-  <section id="telemetry"><h2>Telemetria por Stage</h2><div class="scroll"><table><thead><tr><th>Job</th><th>App</th><th>Stage</th><th>Tasks</th><th>Skew ratio</th><th>Disk spill</th><th>GC</th><th>Evidence</th></tr></thead><tbody>{job_rows}</tbody></table></div></section>
+    {_card('Caso', overview.get('case_id'))}{_card('Status', overview.get('status'))}{_card('Score', f"{overview.get('score')}/100")}{_card('T1', _format_ms(overview.get('latency_ms')))}{_card('App antes', overview.get('before_app_id'))}{_card('App depois', overview.get('after_app_id'))}
+  </div><p class="notice">Caso <strong>{_e(snapshot['case'].get('case_id'))}</strong>: execucao antes <code>{_e(snapshot['case'].get('before_run_id'))}</code> -> execucao depois <code>{_e(snapshot['case'].get('after_run_id'))}</code>. Os IDs de execucao permanecem distintos para preservar a comparacao de telemetria.</p><h3>Forcas</h3>{_list(overview.get('strengths'))}<h3>Gaps declarados</h3>{_list(overview.get('gaps'))}</section>
+  <section id="findings"><h2>Finding do Caso</h2><div class="scroll"><table><thead><tr><th>Caso</th><th>Tipo</th><th>Severidade</th><th>Confianca</th><th>Evidencia</th></tr></thead><tbody>{finding_rows}</tbody></table></div></section>
+  <section id="telemetry"><h2>Telemetria por Stage</h2><p class="notice">Execucoes de telemetria do caso {_e(snapshot['case'].get('case_id'))}: antes e depois da mitigacao.</p><div class="scroll"><table><thead><tr><th>Execucao</th><th>App</th><th>Stage</th><th>Tasks</th><th>Skew ratio</th><th>Disk spill</th><th>GC</th><th>Evidence</th></tr></thead><tbody>{job_rows}</tbody></table></div></section>
   <section id="judge"><h2>Crew/Judge</h2><div class="grid">{_card('Provider', judge.get('provider'))}{_card('Decisao', judge.get('decision'))}{_card('Status', judge.get('status'))}</div><h3>Rationale</h3><p>{_e(judge.get('rationale'))}</p><h3>Citacoes verificaveis</h3>{_list(judge.get('cited_evidence'))}<p class="notice">O Judge e read-only: nao aplica alteracoes e deve citar evidencia existente.</p></section>
   <section id="compare"><h2>Comparacao Before/After</h2><p>Status: {_badge(snapshot['comparison'].get('status'))}</p><div class="scroll"><table><thead><tr><th>Metrica</th><th>Antes</th><th>Depois</th><th>Resultado</th></tr></thead><tbody>{comparison_rows}</tbody></table></div></section>
   <section id="fix-center"><h2>Fix Center</h2><p class="notice">Demonstrativo e somente leitura. Esta tela nao chama MCP, nao cria approval token e nao modifica arquivos.</p><div class="grid">{_card('Recomendacao', fix.get('recommendation'))}{_card('Finding relacionado', fix.get('finding_kind'))}{_card('Estado do preview', fix.get('preview_status'))}</div><h3>Diff</h3><pre>{_e(fix.get('diff'))}</pre></section>
-  <section id="live-demo"><h2>Demo MCP Segura</h2><p class="notice">Usa o contrato real de recomendacao e preview para o job de demonstracao. Nao aceita caminho livre, nao exibe approval token e nao chama apply_fix.</p><p><button id="load-recommendation" type="button">Carregar recomendacao real</button> <button id="load-preview" type="button">Gerar preview real</button></p><pre id="live-result">Aguardando uma acao read-only.</pre></section>
+  <section id="live-demo"><h2>Demo MCP Segura</h2><p class="notice">Usa o contrato real de recomendacao e preview para o caso {_e(snapshot['case'].get('case_id'))}. Nao aceita caminho livre, nao exibe approval token e nao chama apply_fix.</p><p><button id="load-recommendation" type="button">Carregar recomendacao real</button> <button id="load-preview" type="button">Gerar preview real</button></p><pre id="live-result">Aguardando uma acao read-only.</pre></section>
 </main>
 <script>
   const result = document.getElementById("live-result");

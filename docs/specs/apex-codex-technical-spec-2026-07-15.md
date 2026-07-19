@@ -38,6 +38,9 @@ Complemento de demo MCP: `GET /api/recommendations` e `GET /api/preview`
 chamam o mesmo contrato deterministico do Commander para o `job-42` de
 demonstracao. O preview usa apenas `examples/apex_ui_demo_skew_job.py`, ignora
 caminhos fornecidos pelo navegador e remove o approval token antes de responder.
+Para a apresentacao, `job-42` e o ID unico do caso; `before-job` e `after-job`
+sao IDs das execucoes de telemetria antes/depois, mantidos distintos para que a
+comparacao continue auditavel.
 
 ## Componentes
 

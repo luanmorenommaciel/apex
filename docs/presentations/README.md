@@ -10,6 +10,9 @@ Quando servida por `tools/run_commander_ui.py`, inclui **Demo MCP Segura**:
 `recommend_fix` e `preview_recommendation` reais para o job de demonstracao,
 com alvo fixo e sem expor approval token.
 
+O caso da apresentacao e `job-42`; `before-job` e `after-job` identificam as
+execucoes Spark usadas para mostrar a telemetria antes/depois.
+
 Para abrir como aplicacao local, execute `python tools/run_commander_ui.py` e
 consulte `docs/guides/apex-commander-ui-demo.md`.
 

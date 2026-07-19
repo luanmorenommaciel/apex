@@ -14,6 +14,7 @@ from apex.commander.tool_contract import CommanderToolContract
 
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 DEMO_JOB_ID = "job-42"
+DEMO_CASE_ID = DEMO_JOB_ID
 DEMO_TARGET = Path("examples/apex_ui_demo_skew_job.py")
 DEMO_REPLACEMENT = """# Apex Commander UI demo target. This file is never changed by the UI.
 # Safe AQE skew join mitigation preview.
@@ -86,7 +87,12 @@ def _demo_contract(root: Path) -> CommanderToolContract:
 def _demo_recommendations(root: Path) -> dict:
     """Run the real deterministic recommendation contract for the fixed demo job."""
     payload = _demo_contract(root).call_tool("recommend_fix", {"job_id": DEMO_JOB_ID})
-    return {"mode": "read_only_demo", "job_id": DEMO_JOB_ID, **payload}
+    return {
+        "mode": "read_only_demo",
+        "case_id": DEMO_CASE_ID,
+        "job_id": DEMO_JOB_ID,
+        **payload,
+    }
 
 
 def _demo_preview(root: Path) -> dict:
@@ -118,6 +124,7 @@ def _demo_preview(root: Path) -> dict:
         },
     )
     preview.pop("approval", None)
+    preview["case_id"] = DEMO_CASE_ID
     preview["approval_token_exposed"] = False
     preview["mode"] = "read_only_demo"
     return preview
