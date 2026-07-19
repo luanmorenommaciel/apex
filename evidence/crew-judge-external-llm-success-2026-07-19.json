@@ -1,0 +1,84 @@
+[CrewAIEventsBus] Warning: Event pairing mismatch. 'llm_call_failed' closed 'flow_started' (expected 
+'llm_call_started')
+[CrewAIEventsBus] Warning: Event pairing mismatch. 'llm_call_failed' closed 'flow_started' (expected 
+'llm_call_started')
+[CrewAIEventsBus] Warning: Event pairing mismatch. 'llm_call_failed' closed 'flow_started' (expected 
+'llm_call_started')
+[CrewAIEventsBus] Warning: Event pairing mismatch. 'task_failed' closed 'agent_execution_started' (expected 
+'task_started')
+[CrewAIEventsBus] Warning: Event pairing mismatch. 'crew_kickoff_failed' closed 'agent_execution_started' (expected 
+'crew_kickoff_started')
+{
+  "crew_ai": {
+    "cited_evidence": [
+      "finding.evidence.app_id=app-crew-smoke"
+    ],
+    "decision": "manual_review",
+    "guardrails": [
+      "must_cite_existing_evidence",
+      "must_not_invent_metrics",
+      "must_not_invent_root_cause",
+      "must_mark_unknown_when_evidence_is_missing",
+      "must_not_apply_changes_directly"
+    ],
+    "human_review_required": true,
+    "provider": "noop",
+    "rationale": "Crew/Judge provider is unavailable: crew_ai_runtime_failed:RateLimitError.",
+    "raw_provider_status": "not_configured",
+    "recommended_next_action": "manual_review",
+    "rule_set": "apex.commander.judge_contract.v1",
+    "status": "not_configured"
+  },
+  "crewai_installed": true,
+  "deterministic": {
+    "cited_evidence": [
+      "finding.evidence.app_id=app-crew-smoke",
+      "finding.evidence.stage_id=2",
+      "finding.evidence.ratio=29.5"
+    ],
+    "decision": "confirm_finding",
+    "guardrails": [
+      "must_cite_existing_evidence",
+      "must_not_invent_metrics",
+      "must_not_invent_root_cause",
+      "must_mark_unknown_when_evidence_is_missing",
+      "must_not_apply_changes_directly"
+    ],
+    "human_review_required": false,
+    "provider": "deterministic",
+    "rationale": "Finding shuffle_skew_candidate is supported by validated evidence.",
+    "raw_provider_status": "judged",
+    "recommended_next_action": "recommend_fix",
+    "rule_set": "apex.commander.judge_contract.v1",
+    "status": "judged"
+  },
+  "environment": {
+    "ANTHROPIC_API_KEY_set": false,
+    "APEX_CREW_JUDGE_ENABLED": "1",
+    "AZURE_API_KEY_set": false,
+    "GEMINI_API_KEY_set": false,
+    "GOOGLE_API_KEY_set": false,
+    "OPENAI_API_KEY_set": true
+  },
+  "noop": {
+    "cited_evidence": [
+      "finding.evidence.app_id=app-crew-smoke"
+    ],
+    "decision": "manual_review",
+    "guardrails": [
+      "must_cite_existing_evidence",
+      "must_not_invent_metrics",
+      "must_not_invent_root_cause",
+      "must_mark_unknown_when_evidence_is_missing",
+      "must_not_apply_changes_directly"
+    ],
+    "human_review_required": true,
+    "provider": "noop",
+    "rationale": "Crew/Judge provider is unavailable: smoke.",
+    "raw_provider_status": "not_configured",
+    "recommended_next_action": "manual_review",
+    "rule_set": "apex.commander.judge_contract.v1",
+    "status": "not_configured"
+  },
+  "status": "checked"
+}
