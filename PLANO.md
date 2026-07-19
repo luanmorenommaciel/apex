@@ -37,8 +37,8 @@ atual cobre uma parte do requisito, o status fica como `parcial`.
 | G4 T1 < 1s sem LLM; LLM so confidence < 0.6 | Parcial | `evidence/g4-t1.log` mede o caminho T1 deterministico contra `app-20260712053414-0001`: 226.991 ms, com `EvidenceValidator` aceitando o finding e grep sem referencias a LLM/API no caminho medido. | A latencia T1 esta abaixo de 1s; a parte de escalonamento para Crew.ai/Judge quando confidence < 0.6 ainda e decisao de design sem implementacao real. |
 | G5 IDE: finding -> apply_fix -> rerun limpo | Cumpre | `evidence/g5-ciclo.log` valida o ciclo funcional real no `spv0-spark-master`; `evidence/g5-autonomous-ciclo.log` valida o mesmo ciclo na stack autonoma: finding 1 -> 0, shuffle 1.157.481 -> 0; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` valida `apply_fix` via cliente subprocesso JSON-RPC; `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` valida `apex-commander` em Claude Code GUI real. | Verde funcionalmente e validado em IDE GUI real para o contrato MCP/apply guardado. |
 | G6 oraculo agendado sintetico vs real drift | Fechado | `tools/g6_oracle_drift_smoke.py` gera sintetico oficial, roda `oracle/compare.py` contra `real_log.ndjson` e salva resumo JSON; `.github/workflows/scenario-gate.yml` tem `workflow_dispatch`, cron semanal e job `g6-oracle-drift`; evidencias locais em `evidence/g6-oracle-drift-smoke.log` e `evidence/g6-oracle-drift-summary.json`; execucao remota atual em `evidence/g6-remote-workflow-latest-summary.json`. | O workflow remoto `Apex Scenario Gate` passou inteiro no campeonato em `9510d12`: jobs `gate` e `g6-oracle-drift` verdes. A falha anterior ficou registrada em CODEX-033 como incidente corrigido. |
-| G7 local MCP/compose/listener/judge | Parcial | `evidence/g6-mcp-ide-subprocess-smoke.jsonl`, `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log`, `evidence/g7-autonomous-spark-pi-v2.log`, `evidence/g3-autonomous-diagnosis.json`, `evidence/g5-autonomous-ciclo.log`, `evidence/g9-listener-jvm-spark-submit.log`, `evidence/g9-listener-jvm-failsafe-spark-submit.log`. | Fecha contrato local, compose autonomo com G3/G5, listener runtime/fail-safe, MCP GUI real e politica Judge local; ainda falta Crew.ai real. |
-| G8 loop agentico local | Parcial | `apex/commander/agentic_loop.py` e `tools/agentic_validation_loop.py` executam um loop deterministico com agentes locais `EvidenceCollector`, `DeterministicJudge` e `NextActionPlanner`; evidencia em `evidence/agentic-validation-loop-report.json`. | Sem LLM e sem mutacao; apos observar o G6 remoto, a proxima acao restante e aprovacao GUI MCP. |
+| G7 local MCP/compose/listener/judge | Parcial | `evidence/g6-mcp-ide-subprocess-smoke.jsonl`, `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log`, `evidence/g7-autonomous-spark-pi-v2.log`, `evidence/g3-autonomous-diagnosis.json`, `evidence/g5-autonomous-ciclo.log`, `evidence/g9-listener-jvm-spark-submit.log`, `evidence/g9-listener-jvm-failsafe-spark-submit.log`, `evidence/f7-remote-real-stack-run-29671461366-loop.log`. | Fecha contrato local, compose autonomo com G3/G5, listener runtime/fail-safe, MCP GUI real, loop remoto real-stack e politica Judge local; ainda falta Crew.ai real. |
+| G8 loop agentico local | Parcial | `apex/commander/agentic_loop.py` e `tools/agentic_validation_loop.py` executam um loop deterministico com agentes locais `EvidenceCollector`, `DeterministicJudge` e `NextActionPlanner`; evidencia em `evidence/agentic-validation-loop-report.json`. | Sem LLM e sem mutacao; smoke GUI MCP e real-stack remoto ja foram observados. A pendencia restante e evoluir para Crew.ai/Judge real ou UI de produto, se o Commander priorizar. |
 
 ## Mapeamento Do Gate 14 Interno
 
@@ -77,8 +77,8 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
    - Fechado localmente com `docker-compose.autonomous.yml`.
    - Loop automatizado construido em `scripts/f7_autonomous_stack_loop.py`.
    - Execucao real local do runner fechada em `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`.
-   - Workflow `Apex Autonomous Stack Loop` valida contrato/dry-run em CI comum.
-   - Proximo passo: executar o job real `real-stack` em runner self-hosted preparado com Docker e imagem/base Spark 4.1.2.
+   - Execucao real remota fechada no `Apex Scenario Gate` com `run_real_stack=true` em `evidence/f7-remote-real-stack-run-29671461366-loop.log`.
+   - Proximo passo: decidir se o runner self-hosted permanece ativo para avaliacao ou deve ser removido apos o julgamento.
 
 2. **Etapa 2 — Schema ClickHouse canonico**
    - Fechado localmente com `docs/specs/apex_telemetry_v1.sql`.
@@ -101,7 +101,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
    - Ciclo funcional real concluido em `evidence/g5-ciclo.log` usando `apply_recommendation`.
    - Contrato local `apply_fix` concluido em `evidence/g6-apply-fix-mcp-smoke.log`, mantendo `apply_recommendation` como compatibilidade.
    - Preservar backup, diff revisavel, token/confirmacao e verificacao.
-   - Proximo passo: validar em IDE real.
+   - Validado em IDE real no Claude Code GUI com `tools/list`, `recommend_fix`, `preview_recommendation`, `apply_fix` e `compare_job_telemetry`.
 
 7. **Etapa 7 — Crew.ai**
    - Entrar apenas quando T1 + EvidenceValidator + schema canonico estiverem estaveis.
@@ -124,7 +124,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 - DDL ClickHouse canonico `apex_telemetry_v1.sql`: reaproveitar como contrato imutavel, ja alinhado ao pacote comum.
 - Listener real fail-safe: ja existe runtime smoke; alinhar ao job template oficial e manter teste de fail-safe.
 - Crew.ai: implementar camada nova, sem substituir T1 deterministico.
-- Tool `apply_fix`: contrato local ja adaptado; falta validar em IDE real e, se necessario, ajustar formato ao cliente MCP escolhido.
+- Tool `apply_fix`: contrato local ja adaptado e validado em Claude Code GUI; ajustar formato apenas se outro cliente MCP escolhido pelo Commander exigir.
 - ADRs formais: criadas em `docs/adr/ADR-*.md`; falta revisao do Commander para decisoes finais de produto.
 
 ## Observacoes F0

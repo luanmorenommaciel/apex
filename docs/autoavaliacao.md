@@ -87,10 +87,12 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
 
 ### Precisa Do Commander
 
-- O runner de regressão G3/G5 Spark 4.1.2 já foi criado e executado localmente
-  com sucesso em `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`.
-  Falta acionar o job real `real-stack` do workflow `Apex Autonomous Stack Loop`
-  em runner self-hosted preparado com Docker/Compose e imagem base Spark 4.1.2.
+- O runner de regressão G3/G5 Spark 4.1.2 já foi criado, executado localmente
+  com sucesso em `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`
+  e executado remotamente no GitHub Actions/self-hosted em
+  `evidence/f7-remote-real-stack-run-29671461366-loop.log`.
+- Decidir se o runner self-hosted `apex-local-GUSTUS` deve permanecer ativo
+  durante a avaliação ou ser removido após o julgamento.
 - Decidir se o próximo fechamento deve priorizar Crew.ai/Judge real ou UI de
   produto. A IDE GUI real já tem evidência no Claude Code.
 - Validar se broadcast do lado `customers` é a correção canônica aceitável para
@@ -106,8 +108,8 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
   comparação antes/depois.
 - A parte mais fraca agora é produto/agência: Crew.ai real e UI de produto ainda
   faltam. A plataforma autônoma local, o listener real e o runner de regressão
-  G3/G5 já têm evidência real; a execução remota real do novo loop ainda precisa
-  de runner preparado.
+  G3/G5 já têm evidência real local e remota; o runner self-hosted continua
+  sendo dependência operacional para repetir o F7.
 - A proveniência não é limpa: CODEX-001 e CODEX-007 precisam acompanhar a
   avaliação. O fix guardado foi adoção consciente de conceito visto na Cowork,
   depois implementado, testado e validado pela Codex.

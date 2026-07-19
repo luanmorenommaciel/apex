@@ -2,7 +2,7 @@
 
 Branch: `codex-round2`
 
-Estado: solucao local de diagnostico Spark com gates G0-G6 validados, stack autonoma exercitada, workflow remoto verde, loop autonomo G3/G5 construido e evidencias em `evidence/`.
+Estado: solucao de diagnostico Spark com gates G0-G6 validados, stack autonoma exercitada, workflow remoto verde, loop autonomo G3/G5 em Spark 4.1.2 validado localmente e tambem em GitHub Actions self-hosted, com evidencias em `evidence/`.
 
 ## O Que Tem Nesta Branch
 
@@ -13,7 +13,7 @@ event log -> detector deterministico -> EvidenceValidator -> finding
 -> recomendacao -> preview de diff -> apply guardado -> rerun -> compare
 ```
 
-Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loop funcional com evidencia: detectar um problema real, gerar uma correcao revisavel, aplicar com seguranca, reexecutar e provar que o finding sumiu. A rodada de 14/07 provou a mesma logica em stack autonoma da propria branch, sem depender das imagens `spark-plat-v0-*`; em 15/07, o G6 remoto tambem ficou verde no campeonato. Em 18/07, o Commander definiu Spark 4.1.2 como alvo e o SparkListener JVM foi promovido para caminho oficial dos jobs.
+Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loop funcional com evidencia: detectar um problema real, gerar uma correcao revisavel, aplicar com seguranca, reexecutar e provar que o finding sumiu. A rodada de 14/07 provou a mesma logica em stack autonoma da propria branch; em 15/07, o G6 remoto ficou verde no campeonato. Em 18/07, o Commander definiu Spark 4.1.2 como alvo e o SparkListener JVM foi promovido para caminho oficial dos jobs. Em 19/07, o loop G3/G5 autonomo rodou verde no GitHub Actions self-hosted.
 
 ## Resumo Executivo
 
@@ -29,7 +29,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Docker autonomo paralelo | Fechado localmente | `docker-compose.autonomous.yml`; `evidence/g3-autonomous-diagnosis.json`; `evidence/g5-autonomous-ciclo.log` |
 | SparkListener JVM real | Fechado localmente/runtime smoke | `listener-jvm/`; `evidence/g9-listener-jvm-spark-submit.log`; `evidence/g9-listener-jvm-failsafe-spark-submit.log` |
 | Spark 4.1.2 + listener oficial | Fechado localmente com G3/G5 real | `docker-compose.yml`; `docker-compose.autonomous.yml`; `docker/spark/spark-defaults.conf`; `docker/autonomous/spark/spark-defaults.conf`; `evidence/f7-spark412-g5-compare-memory-2026-07-18.log`; `evidence/f7-spark412-final-focused-tests-2026-07-18.log`; `ISSUES.md` CODEX-041 a CODEX-044 |
-| Loop CI stack autonoma | Fechado localmente com execução real; contrato integrado ao `Apex Scenario Gate`; dispatch remoto aceito, mas bloqueado antes de alocar runner | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/scenario-gate.yml`; `.github/workflows/autonomous-stack-loop.yml`; `tests/test_f7_autonomous_stack_loop.py`; `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/f7-scenario-gate-remote-run-29664707350-summary.json`; `ISSUES.md` CODEX-045/CODEX-049 |
+| Loop CI stack autonoma | Fechado local e remotamente: `Apex Scenario Gate` executou `real-stack` verde no runner self-hosted | `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/scenario-gate.yml`; `tests/test_f7_autonomous_stack_loop.py`; `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/f7-remote-real-stack-run-29671461366-loop.log`; `ISSUES.md` CODEX-045/CODEX-046/CODEX-062 |
 | Crew/Judge policy local | Fechado localmente | `apex/commander/judge_policy.py`; `evidence/g8-agentic-loop-python.log` |
 | MCP/IDE subprocess smoke | Fechado localmente | `tools/mcp_ide_subprocess_smoke.py`; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` |
 | Claude Code project MCP | Fechado em IDE GUI real | `.mcp.json`; `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
@@ -227,7 +227,7 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 | SparkListener JVM real fail-safe | Fechado no smoke runtime: JAR carregado via `spark-submit --jars`, NDJSON emitido e falha interna nao derruba job |
 | `docker compose up` autonomo da branch | Fechado localmente: compose autonomo sobe, grava event log em S3A/MinIO e repetiu G3/G5 sem plat-v0 |
 | Crew.ai/Judge | Politica local de escalonamento existe; Crew.ai/LLM real segue futuro e opcional |
-| IDE real | MCP stdio subprocess estilo cliente externo passa com transcript; `.mcp.json` project-scoped e reconhecido pelo Claude Code; ainda precisa aprovacao interativa/GUI em Cursor/VS Code/Claude Code |
+| IDE real | Fechado no Claude Code GUI: `.mcp.json` project-scoped reconhecido; `tools/list`, `recommend_fix`, `preview_recommendation`, `apply_fix` e `compare_job_telemetry` validados |
 | G6 oraculo/drift | Smoke local verde contra `real_log.ndjson`; workflow semanal/manual definido; execucao remota observada no campeonato com workflow inteiro verde, incluindo `gate` e `g6-oracle-drift` |
 | Loop agentico | Orquestrador deterministico local criado: coleta evidencia, julga status e recomenda proxima acao sem LLM/mutacao; apos smoke GUI, status local do loop ficou `pass` sem proximas acoes |
 
@@ -250,12 +250,11 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 
 ## Proximos Passos Recomendados
 
-1. Fazer smoke GUI real em Cursor/VS Code/Claude Code usando a tool `apply_fix`.
-2. Promover o G3/G5 autonomo para regressao automatizada.
-3. Executar o playbook `docs/playbooks/f7-remote-real-stack-self-hosted.md` para registrar runner temporário com labels `apex,docker,spark412` e disparar `Apex Scenario Gate` com `run_real_stack=true`.
-4. Revisar com o Commander as ADRs formais criadas em `docs/adr/`.
-5. Monitorar proximas execucoes agendadas do G6 e manter o job legado `gate` verde no CI remoto.
-6. So depois expandir camada Crew.ai/Judge.
+1. Decidir se o runner self-hosted `apex-local-GUSTUS` fica ativo para novas rodadas ou se deve ser removido apos a avaliacao.
+2. Monitorar proximas execucoes agendadas do G6 e manter o job legado `gate` verde no CI remoto.
+3. Revisar com o Commander as ADRs formais criadas em `docs/adr/`.
+4. Decidir se a proxima entrega de produto sera UI/dashboards ou Crew.ai/Judge real.
+5. So depois expandir camada Crew.ai/Judge, mantendo T1 deterministico e EvidenceValidator como base.
 
 ## Estado De Publicacao
 
