@@ -46,7 +46,9 @@ def test_build_listener_jar_command_compiles_with_spark_image():
     assert "spark-plat-v0-spark:4.1.2" in command
     assert "/work" in command
     assert "javac -cp '/opt/spark/jars/*'" in command[-1]
-    assert "rm -f build/libs/apex-spark-listener-0.1.0.jar" in command[-1]
+    assert "/tmp/apex-listener-build/classes" in command[-1]
+    assert "rm -rf build/libs/apex-spark-listener-0.1.0.jar" in command[-1]
+    assert "cp /tmp/apex-listener-build/apex-spark-listener-0.1.0.jar" in command[-1]
     assert "apex-spark-listener-0.1.0.jar" in command[-1]
 
 

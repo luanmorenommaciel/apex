@@ -138,12 +138,15 @@ def build_listener_jar_command() -> list[str]:
         "/bin/sh",
         "-lc",
         (
-            "mkdir -p build/classes/java/main build/libs && "
-            "javac -cp '/opt/spark/jars/*' -d build/classes/java/main "
+            "rm -rf /tmp/apex-listener-build && "
+            "mkdir -p /tmp/apex-listener-build/classes build/libs && "
+            "javac -cp '/opt/spark/jars/*' -d /tmp/apex-listener-build/classes "
             "$(find src/main/java -name '*.java') && "
-            "rm -f build/libs/apex-spark-listener-0.1.0.jar && "
-            "jar cf build/libs/apex-spark-listener-0.1.0.jar "
-            "-C build/classes/java/main ."
+            "jar cf /tmp/apex-listener-build/apex-spark-listener-0.1.0.jar "
+            "-C /tmp/apex-listener-build/classes . && "
+            "rm -rf build/libs/apex-spark-listener-0.1.0.jar && "
+            "cp /tmp/apex-listener-build/apex-spark-listener-0.1.0.jar "
+            "build/libs/apex-spark-listener-0.1.0.jar"
         ),
     ]
 
