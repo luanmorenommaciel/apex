@@ -37,6 +37,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Telemetria via MCP GUI | Fechada em read-only | `evidence/g6-mcp-ide-gui-telemetry-compare-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-local-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-tests-2026-07-18.log` |
 | G6 oracle/drift smoke | Fechado remoto | `tools/g6_oracle_drift_smoke.py`; `.github/workflows/scenario-gate.yml`; `evidence/g6-oracle-drift-smoke.log`; `evidence/g6-oracle-drift-summary.json`; `evidence/g6-remote-workflow-latest-summary.json` |
 | Loop agentico local | Fechado para checks locais, sem LLM e sem mutacao | `apex/commander/agentic_loop.py`; `tools/agentic_validation_loop.py`; `evidence/agentic-validation-loop-report.json` |
+| Product readiness UI + Judge local | Fechado localmente | `docs/presentations/apex-product-readiness-2026-07-19.html`; `evidence/apex-product-readiness-2026-07-19-summary.json`; `apex/commander/product_report.py`; `tools/generate_product_report.py`; `ISSUES.md` CODEX-063 |
 | Especificacao tecnica 15/07 | Atualizada para juiz | `docs/specs/apex-codex-technical-spec-2026-07-15.md` |
 | Comparacao campeonato 15/07 | Atualizada para juiz | `docs/architecture/llm-solution-validation-framework-2026-07-15.md`; `docs/presentations/llm-solution-validation-2026-07-15.html` |
 | Apresentacao Codex 15/07 | Atualizada para juiz | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html` |
@@ -169,6 +170,7 @@ O apply nao e uma edicao livre feita por agente. Ele passa por controles:
 | `docs/specs/apex-codex-technical-spec-2026-07-15.md` | Especificacao tecnica reprodutivel da branch Codex |
 | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html` | Apresentacao end-to-end da nossa solucao |
 | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html` | Apresentacao final da nossa solucao para o juiz |
+| `docs/presentations/apex-product-readiness-2026-07-19.html` | Relatorio HTML de prontidao produto/Judge local com score 90/100, before/after remoto, MCP GUI, T1 e gaps conhecidos |
 | `docs/presentations/apex-codex-projeto-luan-2026-07-14.html` | Apresentacao executiva para o Luan |
 | `docs/presentations/llm-solution-validation-2026-07-14.html` | Apresentacao comparativa atualizada das solucoes |
 | `docs/presentations/llm-solution-validation-2026-07-15.html` | Apresentacao comparativa final para o juiz |
@@ -180,6 +182,7 @@ Principais arquivos para apresentar:
 ```text
 docs/presentations/apex-codex-solucao-end-to-end-2026-07-14.html
 docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html
+docs/presentations/apex-product-readiness-2026-07-19.html
 docs/presentations/apex-codex-projeto-luan-2026-07-14.html
 docs/presentations/llm-solution-validation-2026-07-14.html
 docs/presentations/llm-solution-validation-2026-07-15.html
@@ -188,8 +191,9 @@ docs/presentations/llm-solution-validation-2026-07-15.html
 Sugestao:
 
 1. Para falar so da nossa solucao no estado final: use `apex-codex-solucao-end-to-end-2026-07-15.html`.
-2. Para explicar ao Luan em formato executivo: use `apex-codex-projeto-luan-2026-07-14.html`.
-3. Para comparar LLMs/DataFlint no estado final: use `llm-solution-validation-2026-07-15.html`.
+2. Para mostrar prontidao de produto/Judge local com gaps honestos: use `apex-product-readiness-2026-07-19.html`.
+3. Para explicar ao Luan em formato executivo: use `apex-codex-projeto-luan-2026-07-14.html`.
+4. Para comparar LLMs/DataFlint no estado final: use `llm-solution-validation-2026-07-15.html`.
 
 ## Como Validar A Branch
 

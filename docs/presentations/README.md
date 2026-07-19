@@ -1,5 +1,16 @@
 # Apresentacoes
 
+## `apex-product-readiness-2026-07-19.html`
+
+Relatorio HTML de prontidao produto/Judge local da branch Codex Round2. Consolida
+F7 remoto real-stack verde, MCP GUI real, T1 deterministico abaixo de 1s,
+score `90/100`, before/after remoto e gaps conhecidos: Crew.ai/Judge real ainda
+futuro e dependencia operacional de runner self-hosted preparado.
+
+Use este artefato quando o juiz ou o Commander quiser uma leitura objetiva de
+produto: o que ja esta provado, o que ainda falta, e quais evidencias sustentam
+essa conclusao.
+
 ## `apex-codex-solucao-end-to-end-2026-07-15.html`
 
 Apresentacao final da solucao Codex Round2 para o juiz e para o Commander:

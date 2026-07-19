@@ -1,0 +1,93 @@
+{
+  "f7": {
+    "after_app_id": "app-20260719032439-0001",
+    "before_app_id": "app-20260719032011-0000",
+    "comparisons": [
+      {
+        "after": 0,
+        "before": 1,
+        "delta": -1,
+        "direction": "lower_is_better",
+        "metric": "finding_count",
+        "status": "improved"
+      },
+      {
+        "after": 0.0,
+        "before": 29.4,
+        "delta": -29.4,
+        "direction": "lower_is_better",
+        "metric": "max_skew_ratio",
+        "status": "improved"
+      },
+      {
+        "after": 0,
+        "before": 0,
+        "delta": 0,
+        "direction": "lower_is_better",
+        "metric": "total_spilled_bytes",
+        "status": "unchanged"
+      },
+      {
+        "after": 0.032758620689655175,
+        "before": 0.09662122110254891,
+        "delta": -0.06386260041289374,
+        "direction": "lower_is_better",
+        "metric": "max_gc_ratio",
+        "status": "improved"
+      },
+      {
+        "after": 0,
+        "before": 0,
+        "delta": 0,
+        "direction": "lower_is_better",
+        "metric": "oom_failure_count",
+        "status": "unchanged"
+      },
+      {
+        "after": 0,
+        "before": 0,
+        "delta": 0,
+        "direction": "lower_is_better",
+        "metric": "adaptive_execution_updates",
+        "status": "unchanged"
+      }
+    ],
+    "status": "improved",
+    "summary": {
+      "improved_metric_count": 3,
+      "new_findings": [],
+      "regressed_metric_count": 0,
+      "resolved_findings": [
+        "shuffle_skew_candidate"
+      ]
+    }
+  },
+  "gaps": [
+    "Crew.ai/Judge real ainda nao implementado; existe politica local e contrato futuro.",
+    "F7 remoto depende de runner self-hosted preparado com Docker/Spark 4.1.2."
+  ],
+  "issues": {
+    "closed": 53,
+    "open_or_draft": 26
+  },
+  "latency_ms": 226.991,
+  "next_actions": [
+    "Decidir ciclo de vida do runner self-hosted apos avaliacao.",
+    "Escolher entre UI de produto ou Crew.ai/Judge real como proximo investimento.",
+    "Manter T1 deterministico e EvidenceValidator como caminho obrigatorio antes de qualquer LLM."
+  ],
+  "score": 90,
+  "signals": {
+    "crew_judge_real_missing": true,
+    "mcp_gui_green": true,
+    "remote_real_stack_green": true,
+    "runner_operational_dependency": true,
+    "t1_under_1s": true
+  },
+  "status": "ready_for_judge_with_known_gaps",
+  "strengths": [
+    "F7 remoto real-stack verde com Spark 4.1.2 e loop G3/G5 completo.",
+    "MCP GUI real validado com tools/list, recommend, preview e apply_fix.",
+    "T1 deterministico abaixo de 1s, sem LLM obrigatorio."
+  ]
+}
