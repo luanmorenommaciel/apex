@@ -1,5 +1,14 @@
 # Apresentacoes
 
+## `apex-commander-ui-mvp.html`
+
+Interface navegavel local do Apex Commander para demonstracao e teste do time.
+Mostra telemetria, findings, Crew/Judge, before/after e Fix Center read-only;
+nao chama `apply_fix`, nao exibe tokens e nao depende de servidor externo.
+
+Para abrir como aplicacao local, execute `python tools/run_commander_ui.py` e
+consulte `docs/guides/apex-commander-ui-demo.md`.
+
 ## `apex-product-readiness-2026-07-19.html`
 
 Relatorio HTML de prontidao produto/Judge local da branch Codex Round2. Consolida

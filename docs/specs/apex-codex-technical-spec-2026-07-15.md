@@ -26,6 +26,14 @@ Provar uma versao local-first do Apex que captura telemetria Spark, detecta anom
 
 Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e auditavel de gates G0-G6, agora com `apex-commander` aprovado e validado em Claude Code GUI real. Em 18/07, Spark 4.1.2 foi definido como alvo oficial, o SparkListener JVM foi promovido para caminho padrao dos jobs, G3/G5 foram reexecutados com sucesso na stack autonoma Spark 4.1.2 e o loop de regressao autonoma foi transformado em runner + workflow. O runner tambem foi executado localmente com sucesso em `20260718-real-local-6`. Em 19/07, a branch ganhou `crew_judge_diagnose` como camada Judge read-only e plugavel, com provider Crew.ai opcional. Depois da liberacao operacional de credenciais/quota, a execucao Crew.ai com LLM externo real foi observada com `provider=crew_ai`, `status=judged`, citacoes de evidencia existentes e decisao conservadora `manual_review`. A pendencia restante mais visivel e evoluir UI de produto navegavel e ampliar a matriz de casos do Judge.
 
+Complemento de produto em 19/07: a UI local navegavel foi adicionada como MVP
+read-only em `apex/commander/ui_server.py` e
+`docs/presentations/apex-commander-ui-mvp.html`. Ela e vinculada somente a
+loopback, expoe apenas `GET /`, `GET /api/health` e `GET /api/snapshot`, e usa
+as evidencias locais sanitizadas. O fluxo mutavel continua exclusivamente no
+MCP guardado; a proxima evolucao real e ampliar a matriz de casos do Judge e
+decidir se uma UI autenticada/multiusuario e desejada.
+
 ## Componentes
 
 | Componente | Caminho | Estado |
