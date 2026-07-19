@@ -33,9 +33,22 @@ if (-not (Test-Path $zipPath)) {
     gh release download $release.tag_name --repo actions/runner --pattern $asset.name --dir $runnerRootPath --clobber
 }
 
-if (-not (Test-Path (Join-Path $runnerRootPath "config.cmd"))) {
+$coreLibPath = Join-Path $runnerRootPath "bin\System.Private.CoreLib.dll"
+$configPath = Join-Path $runnerRootPath "config.cmd"
+if ((-not (Test-Path $configPath)) -or (-not (Test-Path $coreLibPath))) {
     Write-Host "Extracting runner to $runnerRootPath..."
-    Expand-Archive -Path $zipPath -DestinationPath $runnerRootPath -Force
+    if (Get-Command tar -ErrorAction SilentlyContinue) {
+        & tar -xf $zipPath -C $runnerRootPath
+        if ($LASTEXITCODE -ne 0) {
+            throw "tar extraction failed with exit code $LASTEXITCODE"
+        }
+    } else {
+        Expand-Archive -Path $zipPath -DestinationPath $runnerRootPath -Force
+    }
+}
+
+if (-not (Test-Path $coreLibPath)) {
+    throw "Runner extraction incomplete: missing $coreLibPath"
 }
 
 $tokenResponse = gh api "repos/$Repo/actions/runners/registration-token" --method POST | ConvertFrom-Json

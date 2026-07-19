@@ -1,0 +1,59 @@
+GitHub Actions self-hosted runner diagnostic excerpt for run 29667995091 / job 88141819027
+Source: local runner _diag Worker_20260719-010415-utc.log
+
+3566: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper] Starting process:
+3567: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper]   File name: 'C:\Users\Guest\actions-runner-apex-workspace\externals\node24\bin\node.exe'
+3568: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper]   Arguments: '"C:\Users\Guest\actions-runner-apex-workspace\_work\_actions\actions\setup-python\v5\dist/setup/index.js"'
+3569: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper]   Working directory: 'C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace'
+3570: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper]   Require exit code zero: 'False'
+3571: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper]   Encoding web name: utf-8 ; code page: '65001'
+3572: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper]   Force kill process on cancellation: 'False'
+3573: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper]   Redirected STDIN: 'False'
+3574: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper]   Persist current code page: 'True'
+3575: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper]   Keep redirected STDIN open: 'False'
+3576: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper]   High priority process: 'False'
+3577: [2026-07-19 01:05:47Z INFO JobServerQueue] Try to append 1 batches web console lines for record '1e98cf64-9392-42b8-bd4c-170045789ecd', success rate: 1/1.
+3578: [2026-07-19 01:05:47Z INFO ProcessInvokerWrapper] Process started with process id 13240, waiting for process exit.
+3579: [2026-07-19 01:05:47Z INFO JobServerQueue] Try to upload 1 log files or attachments, success rate: 1/1.
+3580: [2026-07-19 01:05:52Z INFO JobServerQueue] Try to append 1 batches web console lines for record '1e98cf64-9392-42b8-bd4c-170045789ecd', success rate: 1/1.
+3581: [2026-07-19 01:05:53Z INFO JobServerQueue] Try to append 1 batches web console lines for record '1e98cf64-9392-42b8-bd4c-170045789ecd', success rate: 1/1.
+3582: [2026-07-19 01:05:57Z INFO HostContext] Well known directory 'Bin': 'C:\Users\Guest\actions-runner-apex-workspace\bin'
+3583: [2026-07-19 01:05:57Z INFO HostContext] Well known directory 'Root': 'C:\Users\Guest\actions-runner-apex-workspace'
+3584: [2026-07-19 01:05:57Z INFO HostContext] Well known directory 'Work': 'C:\Users\Guest\actions-runner-apex-workspace\_work'
+3585: [2026-07-19 01:05:58Z INFO JobServerQueue] Try to append 1 batches web console lines for record '1e98cf64-9392-42b8-bd4c-170045789ecd', success rate: 1/1.
+3586: [2026-07-19 01:05:59Z INFO JobServerQueue] Try to append 1 batches web console lines for record '1e98cf64-9392-42b8-bd4c-170045789ecd', success rate: 1/1.
+3587: [2026-07-19 01:06:01Z INFO JobServerQueue] Try to append 1 batches web console lines for record '1e98cf64-9392-42b8-bd4c-170045789ecd', success rate: 1/1.
+3588: [2026-07-19 01:06:05Z INFO JobServerQueue] Try to append 1 batches web console lines for record '1e98cf64-9392-42b8-bd4c-170045789ecd', success rate: 1/1.
+3589: [2026-07-19 01:06:07Z INFO HostContext] Well known directory 'Bin': 'C:\Users\Guest\actions-runner-apex-workspace\bin'
+3590: [2026-07-19 01:06:07Z INFO HostContext] Well known directory 'Root': 'C:\Users\Guest\actions-runner-apex-workspace'
+3591: [2026-07-19 01:06:07Z INFO HostContext] Well known directory 'Work': 'C:\Users\Guest\actions-runner-apex-workspace\_work'
+3592: [2026-07-19 01:06:15Z INFO JobServerQueue] Try to append 1 batches web console lines for record '1e98cf64-9392-42b8-bd4c-170045789ecd', success rate: 1/1.
+3593: [2026-07-19 01:06:17Z INFO HostContext] Well known directory 'Bin': 'C:\Users\Guest\actions-runner-apex-workspace\bin'
+3594: [2026-07-19 01:06:17Z INFO HostContext] Well known directory 'Root': 'C:\Users\Guest\actions-runner-apex-workspace'
+3595: [2026-07-19 01:06:17Z INFO HostContext] Well known directory 'Work': 'C:\Users\Guest\actions-runner-apex-workspace\_work'
+3596: [2026-07-19 01:06:22Z INFO JobServerQueue] Try to append 1 batches web console lines for record '1e98cf64-9392-42b8-bd4c-170045789ecd', success rate: 1/1.
+3597: [2026-07-19 01:06:22Z INFO JobServerQueue] Try to append 1 batches web console lines for record '1e98cf64-9392-42b8-bd4c-170045789ecd', success rate: 1/1.
+3598: [2026-07-19 01:06:22Z INFO ProcessInvokerWrapper] STDOUT/STDERR stream read finished.
+3599: [2026-07-19 01:06:22Z INFO ProcessInvokerWrapper] STDOUT/STDERR stream read finished.
+3600: [2026-07-19 01:06:22Z INFO ProcessInvokerWrapper] Finished process 13240 with exit code 1, and elapsed time 00:00:35.4839447.
+3601: [2026-07-19 01:06:22Z INFO CreateStepSummaryCommand] Step Summary file (C:\Users\Guest\actions-runner-apex-workspace\_work\_temp\_runner_file_commands\step_summary_5f712d5a-a7a2-47e4-86ac-2a970803f9d5) is empty; skipping attachment upload
+3602: [2026-07-19 01:06:22Z INFO StepsRunner] Step result: Failed
+3603: [2026-07-19 01:06:22Z INFO ExecutionContext] Publish step telemetry for current step {
+3604:   "action": "actions/setup-python",
+3605:   "ref": "v5",
+3606:   "type": "node24",
+3607:   "stage": "Main",
+3608:   "stepId": "1e98cf64-9392-42b8-bd4c-170045789ecd",
+3609:   "stepContextName": "__actions_setup-python",
+3610:   "hasPreStep": false,
+3611:   "hasPostStep": true,
+3612:   "result": "failed",
+3613:   "errorMessages": [
+3614:     "./setup.ps1 : O arquivo",
+3615:     "C:\\Users\\Guest\\actions-runner-apex-workspace\\_work\\_temp\\8dd74799-0278-4e45-90f9-9e669f911076\\setup.ps1 não pode ser",
+3616:     "carregado. O arquivo"
+3617:   ],
+3618:   "executionTimeInSeconds": 37,
+3619:   "startTime": "2026-07-19T01:05:46.9212377Z",
+3620:   "finishTime": "2026-07-19T01:06:22.9480704Z"
+3621: }.
