@@ -15,6 +15,7 @@ on:
 jobs:
   contract:
     name: Contract and dry-run
+    if: github.event_name != 'workflow_dispatch' || inputs.run_real_stack != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -12,6 +12,7 @@ on:
     - cron: "17 6 * * 1"
 jobs:
   gate:
+    if: github.event_name != 'workflow_dispatch' || inputs.run_real_stack != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +29,7 @@ jobs:
             python3 watchers/skew_watcher.py "$s" log.ndjson
           done
   g6-oracle-drift:
+    if: github.event_name != 'workflow_dispatch' || inputs.run_real_stack != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +50,7 @@ jobs:
             evidence/g6-oracle-drift-summary.json
             evidence/generated/g6-oracle-drift/synthetic.ndjson
   autonomous-loop-contract:
+    if: github.event_name != 'workflow_dispatch' || inputs.run_real_stack != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
