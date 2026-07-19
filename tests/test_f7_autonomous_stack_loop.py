@@ -33,6 +33,8 @@ def test_build_listener_jar_command_builds_gradle_project_from_checkout():
     command = loop.build_listener_jar_command()
 
     assert command[:3] == ["docker", "run", "--rm"]
+    assert "--user" in command
+    assert "root" in command
     assert "gradle:8.10.2-jdk17" in command
     assert "/home/gradle/project" in command
     assert "jar" in command

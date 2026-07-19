@@ -1,0 +1,33 @@
+apex autonomous stack loop
+run_id=github-real-stack
+spark_target=4.1.2
+compose_file=C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\docker-compose.autonomous.yml
+
+## generate before job
+$ C:\Program Files\Python311\python.exe C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\pacote-comum\generators\code_generator.py C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\pacote-comum\scenarios\skew_on_join_30x.yaml C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.py
+âœ… C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.py gerado. Anti-pattern na linha 20. Manifesto: C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.meta.json (hash sha256:288c6f65d4f11e93)
+exit_code=0
+
+## build listener jar
+$ docker run --rm -v C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\listener-jvm:/home/gradle/project -w /home/gradle/project gradle:8.10.2-jdk17 gradle --no-daemon clean jar
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :clean UP-TO-DATE
+> Task :compileJava
+> Task :compileJava FAILED
+2 actionable tasks: 1 executed, 1 up-to-date
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Failed to create parent directory '/home/gradle/project/build' when creating directory '/home/gradle/project/build/classes/java/main'
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 13m 46s
+exit_code=1

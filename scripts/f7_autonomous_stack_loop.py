@@ -127,6 +127,8 @@ def build_listener_jar_command() -> list[str]:
         "docker",
         "run",
         "--rm",
+        "--user",
+        "root",
         "-v",
         f"{str((ROOT / 'listener-jvm').resolve())}:/home/gradle/project",
         "-w",
