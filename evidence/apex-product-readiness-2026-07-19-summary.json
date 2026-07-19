@@ -63,17 +63,17 @@
     }
   },
   "gaps": [
-    "Crew.ai/Judge real ainda nao implementado; existe politica local e contrato futuro.",
+    "Crew.ai/Judge provider existe como caminho opcional; execucao com LLM externo real ainda nao foi observada.",
     "F7 remoto depende de runner self-hosted preparado com Docker/Spark 4.1.2."
   ],
   "issues": {
-    "closed": 53,
+    "closed": 55,
     "open_or_draft": 26
   },
   "latency_ms": 226.991,
   "next_actions": [
     "Decidir ciclo de vida do runner self-hosted apos avaliacao.",
-    "Escolher entre UI de produto ou Crew.ai/Judge real como proximo investimento.",
+    "Escolher entre UI de produto navegavel ou execucao Crew.ai com LLM externo configurado.",
     "Manter T1 deterministico e EvidenceValidator como caminho obrigatorio antes de qualquer LLM."
   ],
   "score": 90,

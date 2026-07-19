@@ -98,7 +98,9 @@ def test_render_product_report_contains_key_sections():
                 ],
             },
             "strengths": ["F7 remoto verde"],
-            "gaps": ["Crew.ai/Judge real ainda nao implementado"],
+            "gaps": [
+                "Crew.ai/Judge provider existe; execucao externa ainda nao observada"
+            ],
             "next_actions": ["Decidir ciclo de vida do runner"],
         }
     )

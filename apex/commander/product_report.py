@@ -236,7 +236,9 @@ def _strengths(signals: dict[str, bool]) -> list[str]:
 def _gaps(signals: dict[str, bool]) -> list[str]:
     items = []
     if signals["crew_judge_real_missing"]:
-        items.append("Crew.ai/Judge real ainda nao implementado; existe politica local e contrato futuro.")
+        items.append(
+            "Crew.ai/Judge provider existe como caminho opcional; execucao com LLM externo real ainda nao foi observada."
+        )
     if signals["runner_operational_dependency"]:
         items.append("F7 remoto depende de runner self-hosted preparado com Docker/Spark 4.1.2.")
     return items or ["Nenhum gap critico detectado no pacote de evidencias lido."]
@@ -245,7 +247,9 @@ def _gaps(signals: dict[str, bool]) -> list[str]:
 def _next_actions(signals: dict[str, bool]) -> list[str]:
     actions = ["Decidir ciclo de vida do runner self-hosted apos avaliacao."]
     if signals["crew_judge_real_missing"]:
-        actions.append("Escolher entre UI de produto ou Crew.ai/Judge real como proximo investimento.")
+        actions.append(
+            "Escolher entre UI de produto navegavel ou execucao Crew.ai com LLM externo configurado."
+        )
     actions.append("Manter T1 deterministico e EvidenceValidator como caminho obrigatorio antes de qualquer LLM.")
     return actions
 

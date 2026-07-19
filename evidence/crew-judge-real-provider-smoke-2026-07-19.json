@@ -1,0 +1,85 @@
+{
+  "contract_validation": {
+    "accepted": true,
+    "issues": [],
+    "rule_set": "apex.commander.judge_contract.v1",
+    "status": "valid"
+  },
+  "decision": {
+    "cited_evidence": [
+      "finding.evidence.app_id=app-judge-smoke",
+      "finding.evidence.stage_id=2",
+      "finding.evidence.ratio=29.5"
+    ],
+    "decision": "confirm_finding",
+    "guardrails": [
+      "must_cite_existing_evidence",
+      "must_not_invent_metrics",
+      "must_not_invent_root_cause",
+      "must_mark_unknown_when_evidence_is_missing",
+      "must_not_apply_changes_directly"
+    ],
+    "human_review_required": false,
+    "provider": "deterministic",
+    "rationale": "Finding shuffle_skew_candidate is supported by validated evidence.",
+    "raw_provider_status": "judged",
+    "recommended_next_action": "recommend_fix",
+    "rule_set": "apex.commander.judge_contract.v1",
+    "status": "judged"
+  },
+  "job_id": "job-judge-smoke",
+  "mutation_allowed": false,
+  "policy": {
+    "confidence": "medium",
+    "confidence_score": 0.6,
+    "finding_kind": "shuffle_skew_candidate",
+    "future_contract": {
+      "allowed_decisions": [
+        "confirm_finding",
+        "reject_finding",
+        "request_more_evidence",
+        "manual_review"
+      ],
+      "anti_hallucination_constraints": [
+        "must_cite_existing_evidence",
+        "must_not_invent_metrics",
+        "must_not_invent_root_cause",
+        "must_mark_unknown_when_evidence_is_missing",
+        "must_not_apply_changes_directly"
+      ],
+      "guardrail": "judge_must_cite_existing_evidence",
+      "must_return": [
+        "decision",
+        "rationale",
+        "cited_evidence",
+        "recommended_next_action",
+        "human_review_required"
+      ],
+      "optional_inputs": [
+        "telemetry_window",
+        "candidate_recommendations",
+        "rerun_compare"
+      ],
+      "required_inputs": [
+        "job_id",
+        "finding_kind",
+        "confidence_score",
+        "evidence",
+        "validation"
+      ],
+      "stage": "future_optional_after_evidence_validator",
+      "tool": "crew_judge_diagnose"
+    },
+    "job_id": "job-judge-smoke",
+    "reasons": [],
+    "route": "deterministic_t1",
+    "should_escalate": false,
+    "status": "keep_deterministic",
+    "threshold": 0.6
+  },
+  "provider_requested": "deterministic",
+  "provider_used": "deterministic",
+  "read_only": true,
+  "rule_set": "apex.commander.crew_judge.v1",
+  "status": "judged"
+}

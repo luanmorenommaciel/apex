@@ -8,6 +8,7 @@ from apex.commander.apply_verify import (
     verify_recommendation_apply,
 )
 from apex.commander.baselines import evaluate_negative_baseline
+from apex.commander.crew_judge import crew_judge_diagnose
 from apex.commander.fix_preview import build_fix_preview
 from apex.commander.mcp_contract import (
     debug_job,
@@ -88,6 +89,22 @@ TOOL_SPECS = [
             "type": "object",
             "required": ["job_id"],
             "properties": {"job_id": {"type": "string"}},
+        },
+    },
+    {
+        "name": "crew_judge_diagnose",
+        "description": "Run optional Crew/Judge diagnosis over validated evidence.",
+        "safety": "read_only",
+        "input_schema": {
+            "type": "object",
+            "required": ["job_id"],
+            "properties": {
+                "job_id": {"type": "string"},
+                "provider": {
+                    "type": "string",
+                    "enum": ["auto", "deterministic", "crew_ai", "noop"],
+                },
+            },
         },
     },
     {
@@ -322,6 +339,13 @@ class CommanderToolContract:
             )
         if name == "recommend_fix":
             return recommend_fix(self.finding_store, _required(args, "job_id"))
+        if name == "crew_judge_diagnose":
+            return crew_judge_diagnose(
+                self.store,
+                self.finding_store,
+                _required(args, "job_id"),
+                provider=args.get("provider", "auto"),
+            )
         if name == "preview_recommendation":
             return preview_recommendation(
                 self.finding_store,

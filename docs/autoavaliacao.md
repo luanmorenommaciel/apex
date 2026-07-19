@@ -13,19 +13,19 @@ Escala: 0 a 5.
 
 | Critério | Nota | Evidência por célula |
 | --- | ---: | --- |
-| C1 Arquitetura V1 (L1-L9) | 4/5 | `PLANO.md` classifica L2/L3/L6/L7 como cumpridas localmente e L1/L5/L9 como parciais: há compose autônomo Spark 4.1.2, listener JVM promovido para caminho oficial dos jobs, G3/G5 reexecutados em Spark 4.1.2, MCP validado em Claude Code GUI real, `apply_fix` local e política Judge local. Não é 5/5 porque ainda falta Crew.ai/LLM real. |
+| C1 Arquitetura V1 (L1-L9) | 4/5 | `PLANO.md` classifica L2/L3/L6/L7 como cumpridas localmente e L1/L5/L9 como parciais avançadas: há compose autônomo Spark 4.1.2, listener JVM promovido para caminho oficial dos jobs, G3/G5 reexecutados em Spark 4.1.2, MCP validado em Claude Code GUI real, `apply_fix` local e `crew_judge_diagnose` read-only com provider Crew.ai opcional. Não é 5/5 porque execução com LLM externo real ainda não foi observada. |
 | C2 Cobertura de detecção | 5/5 | G2 passou nos 6 cenários oficiais de `pacote-comum/scenarios/`: baseline sem finding (`no_skew_baseline.yaml`) e 5 detectores com severidade esperada: skew high, GC critical, shuffle spill critical, OOM critical, cartesian product critical. Evidências: `evidence/g1-baseline.log`, `evidence/g2-cenarios.log`, `evidence/generated/official-scenarios/*.ndjson`, CODEX-009 a CODEX-014. |
 | C3 Confiabilidade | 5/5 | Baseline negativo oficial ficou limpo em G1 (`evidence/g1-baseline.log`, CODEX-009). Findings passam por `EvidenceValidator` (`apex/commander/evidence_validator.py`) e G4/G5 validaram finding real com `accepted=true`. G5 corrigiu bug real no token de apply guardado (CODEX-021). Em F6, o listener JVM provou fail-safe com `spark.apex.listener.failMode=true` e job Spark terminando com exit 0 (`evidence/g9-listener-jvm-failsafe-spark-submit.log`). Em 15/07, o workflow remoto `Apex Scenario Gate` passou inteiro no campeonato em `6ba5238`, incluindo `gate` e `g6-oracle-drift` (`evidence/g6-remote-workflow-latest-summary.json`). |
 | C4 Loop no IDE | 5/5 | O ciclo funcional detectar -> preview -> apply guardado -> verify -> rerun -> limpo foi provado em G5 contra Spark real e repetido na stack autônoma em `evidence/g5-autonomous-ciclo.log`. Em F6/F7, `apply_fix` foi validado via MCP stdio, por harness de cliente subprocesso em `evidence/g6-mcp-ide-subprocess-smoke.jsonl` e dentro do Claude Code GUI real em `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log`: `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` com mutação guardada no `apply_root`. |
 | C5 Qualidade de engenharia | 5/5 | A suíte final registrada em `evidence/ci-remote-gate-fix-tests.log` fechou com `163 passed, 2 skipped`; G0 registrou suíte ampla em `evidence/g0-testes.log`; G5 adicionou teste focado; F7 adicionou smoke MCP/Judge; o listener JVM registra `ApexSparkListenerSelfTest passed` e `BUILD SUCCESSFUL`; G3/G5 autônomos têm evidência crua própria. Em 18/07, o loop G3/G5 autônomo virou runner testado e workflow; em 19/07, o run remoto `29671461366` do GitHub Actions/self-hosted fechou verde com `loop_status=success`, before `app-20260719032011-0000`, after `app-20260719032439-0001`, finding_count `1 -> 0` e max_skew_ratio `29.4 -> 0.0`. O trabalho registrou issues formais CODEX-001 a CODEX-062 e não escondeu bugs/gaps encontrados. Os achados de proveniência continuam declarados, mas não impediram reprodutibilidade/testabilidade do pacote. |
-| C6 Custo/latência | 5/5 | G4 mediu o caminho T1 determinístico completo contra event log real `app-20260712053414-0001` em 226.991 ms, sem LLM. Evidência: `evidence/g4-t1.log`, `tools/g4_t1_latency.py`, CODEX-017. O grep do caminho medido não encontrou referências a LLM/API. A política de escalonamento para Crew.ai quando confiança < 0.6 segue como gap honesto, não custo oculto (CODEX-018). |
+| C6 Custo/latência | 5/5 | G4 mediu o caminho T1 determinístico completo contra event log real `app-20260712053414-0001` em 226.991 ms, sem LLM. Evidência: `evidence/g4-t1.log`, `tools/g4_t1_latency.py`, CODEX-017. O grep do caminho medido não encontrou referências a LLM/API. `crew_judge_diagnose` é read-only e opcional; Crew.ai externo só roda com `APEX_CREW_JUDGE_ENABLED=1`, evitando custo oculto. |
 
 Nota total: 29/30.
 
 Leitura curta: a engine está forte em prova empírica local, detecção, stack
 autônoma, listener real fail-safe, ciclo fechado funcional, MCP GUI real, G6
-remoto verde e F7 real-stack remoto verde. Ainda não deve ser vendida como V1 completa porque falta
-Crew.ai/Judge real.
+remoto verde e F7 real-stack remoto verde. Ainda não deve ser vendida como V1 completa porque a execução
+Crew.ai com LLM externo real ainda não foi observada.
 
 ## Honestidade De Proveniência
 
@@ -76,8 +76,10 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
 - SparkListener JVM real fail-safe foi carregado em Spark real via
   `spark-submit --jars`, emitiu NDJSON e não derrubou o job quando falhou
   internamente.
-- Não há Crew.ai/Judge implementado. O escalonamento para LLM quando confiança
-  < 0.6 é decisão de design registrada, não funcionalidade entregue.
+- Crew/Judge plugável agora existe como `crew_judge_diagnose`, com contrato
+  anti-alucinação, provider determinístico, fallback `noop` e provider Crew.ai
+  opcional. A execução com LLM externo real ainda depende de ambiente e
+  credenciais aprovadas.
 - O contrato local `apply_fix` foi adicionado em F6, com `apply_recommendation`
   preservado como compatibilidade. CODEX-019 foi fechado com evidência em
   `evidence/g6-apply-fix-mcp-smoke.log`.
@@ -93,8 +95,9 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
   `evidence/f7-remote-real-stack-run-29671461366-loop.log`.
 - Decidir se o runner self-hosted `apex-local-GUSTUS` deve permanecer ativo
   durante a avaliação ou ser removido após o julgamento.
-- Decidir se o próximo fechamento deve priorizar Crew.ai/Judge real ou UI de
-  produto. A IDE GUI real já tem evidência no Claude Code.
+- Decidir se o próximo fechamento deve priorizar execução Crew.ai com LLM
+  externo configurado ou UI de produto navegável. A IDE GUI real já tem
+  evidência no Claude Code.
 - Validar se broadcast do lado `customers` é a correção canônica aceitável para
   o cenário `skew_on_join_30x`, ou se a próxima versão deve exigir salting para
   casos em que o lado pequeno não caiba em broadcast.
@@ -106,8 +109,8 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
   detector, validação, latência, apply guardado e rerun real.
 - A parte mais forte é empírica: logs reais, app ids novos, evidência crua e
   comparação antes/depois.
-- A parte mais fraca agora é produto/agência: Crew.ai real e UI de produto ainda
-  faltam. A plataforma autônoma local, o listener real e o runner de regressão
+- A parte mais fraca agora é produto/agência: execução Crew.ai com LLM externo
+  real e UI de produto navegável ainda faltam. A plataforma autônoma local, o listener real e o runner de regressão
   G3/G5 já têm evidência real local e remota; o runner self-hosted continua
   sendo dependência operacional para repetir o F7.
 - A proveniência não é limpa: CODEX-001 e CODEX-007 precisam acompanhar a

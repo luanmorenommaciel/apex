@@ -79,6 +79,7 @@ def test_tools_list_returns_mcp_tool_metadata(tmp_path):
         "evaluate_negative_baseline",
         "query_persisted_findings",
         "recommend_fix",
+        "crew_judge_diagnose",
         "preview_recommendation",
         "apply_recommendation",
         "apply_fix",

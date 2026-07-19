@@ -24,7 +24,7 @@ Commit avaliado:
 
 Provar uma versao local-first do Apex que captura telemetria Spark, detecta anomalias deterministicas, gera recomendacao, aplica fix guardado e reexecuta o job para comparar evidencia antes/depois.
 
-Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e auditavel de gates G0-G6, agora com `apex-commander` aprovado e validado em Claude Code GUI real. Em 18/07, Spark 4.1.2 foi definido como alvo oficial, o SparkListener JVM foi promovido para caminho padrao dos jobs, G3/G5 foram reexecutados com sucesso na stack autonoma Spark 4.1.2 e o loop de regressao autonoma foi transformado em runner + workflow. O runner tambem foi executado localmente com sucesso em `20260718-real-local-6`. A pendencia restante de arquitetura e Crew.ai/Judge real; a execucao real remota do novo loop ainda exige runner preparado.
+Esta branch nao declara V1 produto completo. Ela declara um pacote executavel e auditavel de gates G0-G6, agora com `apex-commander` aprovado e validado em Claude Code GUI real. Em 18/07, Spark 4.1.2 foi definido como alvo oficial, o SparkListener JVM foi promovido para caminho padrao dos jobs, G3/G5 foram reexecutados com sucesso na stack autonoma Spark 4.1.2 e o loop de regressao autonoma foi transformado em runner + workflow. O runner tambem foi executado localmente com sucesso em `20260718-real-local-6`. Em 19/07, a branch ganhou `crew_judge_diagnose` como camada Judge read-only e plugavel, com provider Crew.ai opcional. A pendencia restante de arquitetura e observar execucao Crew.ai com LLM externo real e/ou evoluir UI de produto.
 
 ## Componentes
 
@@ -103,7 +103,7 @@ flowchart LR
 | Pendencia | Por que ainda existe | Proxima acao |
 |---|---|---|
 | IDE GUI real | Fechado no Claude Code com `apex-commander` conectado, `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` guardado | Manter transcript em `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
-| Crew.ai/Judge real | Decidido como camada futura para nao comprometer T1 deterministico | Implementar depois de preservar G0-G6 verdes |
+| Crew.ai/Judge real | `crew_judge_diagnose` implementado como tool read-only; provider Crew.ai opcional via `APEX_CREW_JUDGE_ENABLED=1`, fallback seguro quando nao configurado | Observar execucao com LLM externo real apenas com dependencia/credenciais aprovadas |
 | Versao Spark alvo | Spark 4.1.2 definido como alvo oficial; compose raiz e autonomo alinhados; G3/G5 reexecutados; runner de loop autonomo construido e executado localmente | Acionar job `real-stack` em runner self-hosted preparado e anexar evidencia remota |
 
 ## Honestidade De Proveniencia

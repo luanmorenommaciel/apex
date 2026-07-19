@@ -46,6 +46,7 @@ def test_list_tools_exposes_only_read_only_commander_tools():
         "evaluate_negative_baseline",
         "query_persisted_findings",
         "recommend_fix",
+        "crew_judge_diagnose",
         "preview_recommendation",
         "apply_recommendation",
         "apply_fix",
@@ -216,6 +217,26 @@ def test_call_tool_recommend_fix_returns_structured_recommendation(tmp_path):
         "job-42:shuffle_skew_candidate:stage-2:0"
     )
     assert result["recommendations"][0]["preview"]["tool"] == "preview_recommendation"
+
+
+def test_call_tool_crew_judge_diagnose_returns_read_only_decision(tmp_path):
+    store = tmp_path / "store.ndjson"
+    append_envelope(store, telemetry_envelope())
+    finding_store = FakeFindingStore({"job-42": [persisted_skew_record()]})
+    contract = CommanderToolContract(store, finding_store=finding_store)
+
+    result = contract.call_tool(
+        "crew_judge_diagnose",
+        {"job_id": "job-42", "provider": "deterministic"},
+    )
+
+    assert result["status"] == "judged"
+    assert result["provider_used"] == "deterministic"
+    assert result["read_only"] is True
+    assert result["mutation_allowed"] is False
+    assert result["decision"]["decision"] == "confirm_finding"
+    assert result["decision"]["recommended_next_action"] == "recommend_fix"
+    assert result["contract_validation"]["accepted"] is True
 
 
 def test_call_tool_preview_recommendation_returns_diff_without_modifying_file(tmp_path):
