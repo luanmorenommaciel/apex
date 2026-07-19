@@ -147,6 +147,27 @@ def build_listener_jar_command() -> list[str]:
     ]
 
 
+def prepare_listener_build_dir(
+    logger: EvidenceLogger,
+    *,
+    build_dir: Path = ROOT / "listener-jvm" / "build",
+    workspace_root: Path = ROOT,
+) -> None:
+    resolved_build = build_dir.resolve()
+    resolved_workspace = workspace_root.resolve()
+    if resolved_build != resolved_workspace and resolved_workspace not in resolved_build.parents:
+        raise RuntimeError(f"refusing to clean listener build dir outside workspace: {resolved_build}")
+
+    if build_dir.exists():
+        if build_dir.is_dir():
+            shutil.rmtree(build_dir)
+        else:
+            build_dir.unlink()
+    (build_dir / "classes" / "java" / "main").mkdir(parents=True, exist_ok=True)
+    (build_dir / "libs").mkdir(parents=True, exist_ok=True)
+    logger.line(f"listener_build_dir_prepared={build_dir}")
+
+
 def build_spark_submit_command(container_job_path: str) -> list[str]:
     return [
         "docker",
@@ -321,6 +342,7 @@ def run_loop(args: argparse.Namespace) -> int:
 
     logger.section("build listener jar")
     if not args.skip_build:
+        prepare_listener_build_dir(logger)
         run_command(build_listener_jar_command(), logger, timeout_seconds=1800)
     if not LISTENER_JAR.exists():
         raise RuntimeError(f"listener jar missing after build: {LISTENER_JAR}")

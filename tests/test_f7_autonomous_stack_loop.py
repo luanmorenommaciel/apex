@@ -29,7 +29,15 @@ def test_build_fetch_eventlog_command_uses_minio_bucket_and_network():
     assert "/out/before_eventlog.zstd" in command[-1]
 
 
-def test_build_listener_jar_command_builds_gradle_project_from_checkout():
+class _MemoryLogger:
+    def __init__(self):
+        self.lines = []
+
+    def line(self, text: str) -> None:
+        self.lines.append(text)
+
+
+def test_build_listener_jar_command_compiles_with_spark_image():
     command = loop.build_listener_jar_command()
 
     assert command[:3] == ["docker", "run", "--rm"]
@@ -39,6 +47,38 @@ def test_build_listener_jar_command_builds_gradle_project_from_checkout():
     assert "/work" in command
     assert "javac -cp '/opt/spark/jars/*'" in command[-1]
     assert "apex-spark-listener-0.1.0.jar" in command[-1]
+
+
+def test_prepare_listener_build_dir_recreates_clean_host_paths(tmp_path):
+    build_dir = tmp_path / "listener-jvm" / "build"
+    (build_dir / "libs").mkdir(parents=True)
+    (build_dir / "libs" / "stale.jar").write_text("old", encoding="utf-8")
+    logger = _MemoryLogger()
+
+    loop.prepare_listener_build_dir(logger, build_dir=build_dir, workspace_root=tmp_path)
+
+    assert (build_dir / "classes" / "java" / "main").is_dir()
+    assert (build_dir / "libs").is_dir()
+    assert not (build_dir / "libs" / "stale.jar").exists()
+    assert logger.lines == [f"listener_build_dir_prepared={build_dir}"]
+
+
+def test_prepare_listener_build_dir_replaces_file_at_build_path(tmp_path):
+    build_dir = tmp_path / "listener-jvm" / "build"
+    build_dir.parent.mkdir(parents=True)
+    build_dir.write_text("not a directory", encoding="utf-8")
+
+    loop.prepare_listener_build_dir(_MemoryLogger(), build_dir=build_dir, workspace_root=tmp_path)
+
+    assert (build_dir / "classes" / "java" / "main").is_dir()
+    assert (build_dir / "libs").is_dir()
+
+
+def test_prepare_listener_build_dir_rejects_path_outside_workspace(tmp_path):
+    outside = tmp_path.parent / f"{tmp_path.name}-outside" / "build"
+
+    with pytest.raises(RuntimeError, match="outside workspace"):
+        loop.prepare_listener_build_dir(_MemoryLogger(), build_dir=outside, workspace_root=tmp_path)
 
 
 def test_write_after_job_applies_official_skew_safe_join(tmp_path):

@@ -1,0 +1,15 @@
+apex autonomous stack loop
+run_id=github-real-stack
+spark_target=4.1.2
+compose_file=C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\docker-compose.autonomous.yml
+
+## generate before job
+$ C:\Program Files\Python311\python.exe C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\pacote-comum\generators\code_generator.py C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\pacote-comum\scenarios\skew_on_join_30x.yaml C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.py
+âœ… C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.py gerado. Anti-pattern na linha 20. Manifesto: C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\evidence\generated\f7-autonomous-loop\github-real-stack\skew_on_join_30x_before.meta.json (hash sha256:288c6f65d4f11e93)
+exit_code=0
+
+## build listener jar
+$ docker run --rm --user root -v C:\Users\Guest\actions-runner-apex-workspace\_work\apex-workspace\apex-workspace\listener-jvm:/work -w /work spark-plat-v0-spark:4.1.2 /bin/sh -lc mkdir -p build/classes/java/main build/libs && javac -cp '/opt/spark/jars/*' -d build/classes/java/main $(find src/main/java -name '*.java') && jar cf build/libs/apex-spark-listener-0.1.0.jar -C build/classes/java/main .
+mkdir: cannot create directory ‘build/classes’: No such file or directory
+mkdir: cannot create directory ‘build/libs’: File exists
+exit_code=1
