@@ -78,9 +78,10 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
   internamente.
 - Crew/Judge plugável agora existe como `crew_judge_diagnose`, com contrato
   anti-alucinação, provider determinístico, fallback `noop` e provider Crew.ai
-  opcional. O smoke de ambiente confirmou `crewai_installed=true`, mas sem
-  `APEX_CREW_JUDGE_ENABLED` e sem chaves; a execução com LLM externo real ainda
-  depende de ambiente e credenciais aprovadas.
+  opcional. O smoke de ambiente confirmou `crewai_installed=true`; a tentativa
+  com `APEX_CREW_JUDGE_ENABLED=1` retornou `llm_credentials_missing`, sem
+  chamada externa ruidosa. A execução com LLM externo real ainda depende de
+  credenciais aprovadas.
 - O contrato local `apply_fix` foi adicionado em F6, com `apply_recommendation`
   preservado como compatibilidade. CODEX-019 foi fechado com evidência em
   `evidence/g6-apply-fix-mcp-smoke.log`.

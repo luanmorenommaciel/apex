@@ -93,6 +93,8 @@ class CrewAIJudgeProvider:
     def diagnose(self, envelope: dict[str, Any]) -> dict[str, Any]:
         if not self.enabled:
             return NoopJudgeProvider("APEX_CREW_JUDGE_ENABLED_not_1").diagnose(envelope)
+        if not _has_llm_credentials():
+            return NoopJudgeProvider("llm_credentials_missing").diagnose(envelope)
 
         try:
             from crewai import Agent, Crew, Task
@@ -142,6 +144,19 @@ def select_judge_provider(name: str = "auto"):
     if provider == "auto" and os.environ.get("APEX_CREW_JUDGE_ENABLED") == "1":
         return CrewAIJudgeProvider()
     return DeterministicJudgeProvider()
+
+
+def _has_llm_credentials() -> bool:
+    return any(
+        os.environ.get(name)
+        for name in (
+            "OPENAI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "AZURE_API_KEY",
+            "GEMINI_API_KEY",
+            "GOOGLE_API_KEY",
+        )
+    )
 
 
 def _crew_task_description(envelope: dict[str, Any]) -> str:

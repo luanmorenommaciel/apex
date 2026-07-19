@@ -119,6 +119,23 @@ def test_crew_ai_provider_without_enable_flag_degrades_safely(monkeypatch):
     assert "APEX_CREW_JUDGE_ENABLED_not_1" in result["rationale"]
 
 
+def test_crew_ai_provider_with_enable_flag_but_no_credentials_degrades_safely(
+    monkeypatch,
+):
+    monkeypatch.setenv("APEX_CREW_JUDGE_ENABLED", "1")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("AZURE_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+
+    result = CrewAIJudgeProvider().diagnose(envelope())
+
+    assert result["status"] == "not_configured"
+    assert result["provider"] == "noop"
+    assert "llm_credentials_missing" in result["rationale"]
+
+
 def test_contract_rejects_hallucinated_citation_and_direct_apply():
     env = envelope()
     decision = normalize_judge_decision(

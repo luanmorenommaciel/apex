@@ -106,8 +106,9 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 7. **Etapa 7 — Crew.ai**
    - Provider opcional criado em `apex/commander/judge_providers.py`.
    - Tool read-only criada como `crew_judge_diagnose`.
-   - Smoke de ambiente criado em `tools/crew_judge_provider_smoke.py`: `crewai_installed=true`, mas sem flag/chaves para LLM externo.
-   - Proximo passo: executar com Crew.ai/LLM externo apenas com `APEX_CREW_JUDGE_ENABLED=1`, `--allow-external-llm` e credenciais aprovadas.
+   - Smoke de ambiente criado em `tools/crew_judge_provider_smoke.py`: `crewai_installed=true`.
+   - Tentativa com `APEX_CREW_JUDGE_ENABLED=1` e `--allow-external-llm` retornou `llm_credentials_missing`, sem chamada externa ruidosa.
+   - Proximo passo: executar com Crew.ai/LLM externo apenas quando houver credenciais aprovadas.
 
 ## Reaproveitar Versus Refazer
 
