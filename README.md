@@ -196,6 +196,20 @@ Sugestao:
 3. Para explicar ao Luan em formato executivo: use `apex-codex-projeto-luan-2026-07-14.html`.
 4. Para comparar LLMs/DataFlint no estado final: use `llm-solution-validation-2026-07-15.html`.
 
+## Produto Visual Local
+
+O MVP navegavel do **Apex Commander UI** esta em
+`docs/presentations/apex-commander-ui-mvp.html`. Para usa-lo como aplicacao
+local, sem depender de rede ou de credenciais, execute:
+
+```powershell
+python tools/run_commander_ui.py
+```
+
+Abra `http://127.0.0.1:8765/`. A UI e apenas de leitura e mostra evidencia,
+findings, Crew/Judge, before/after e Fix Center. O roteiro completo esta em
+`docs/guides/apex-commander-ui-demo.md`.
+
 ## Como Validar A Branch
 
 Os logs crus ja estao em `evidence/`. Para nova validacao completa, use os gates do pacote comum e os scripts locais.
