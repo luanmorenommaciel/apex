@@ -64,11 +64,9 @@ val otelDeps = Seq(
 // NoSuchMethodError deep inside Spark (sparkMeasure marks jackson-module-scala Provided).
 def sparkCell(sparkVersion: String, jacksonVersion: String): Seq[Setting[_]] = Seq(
   libraryDependencies ++= Seq(
-    // "provided,test": provided in the published POM (the cluster supplies Spark),
-    // but also on the forked test classpath so the fingerprint test can run Spark.
-    "org.apache.spark"             %% "spark-core"          % sparkVersion   % "provided,test",
-    "org.apache.spark"             %% "spark-sql"           % sparkVersion   % "provided,test",
-    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion % "provided,test",
+    "org.apache.spark"             %% "spark-core"          % sparkVersion   % Provided,
+    "org.apache.spark"             %% "spark-sql"           % sparkVersion   % Provided,
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion % Provided,
     "org.scalatest"                %% "scalatest"           % "3.2.19"       % Test
   ) ++ otelDeps,
   dependencyOverrides ++= Seq(
@@ -81,7 +79,10 @@ def sparkCell(sparkVersion: String, jacksonVersion: String): Seq[Setting[_]] = S
   Compile / scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked"),
   // Tests spin up a real local SparkSession → fork with the JDK 17 module opens.
   Test / fork := true,
-  Test / javaOptions ++= sparkJdk17Opens
+  Test / javaOptions ++= sparkJdk17Opens,
+  // Keep Spark/Jackson `Provided` in the PUBLISHED POM, but put them on the TEST
+  // classpath (the compile classpath includes provided deps) so tests can run Spark.
+  Test / dependencyClasspath := (Test / dependencyClasspath).value ++ (Compile / dependencyClasspath).value
 )
 
 // Derived per-row from the SparkAxis in scope (used to suffix the module name).
