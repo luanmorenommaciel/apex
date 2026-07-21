@@ -1,0 +1,38 @@
+{
+  "_comment": "Apex infra · Skew dashboard build-spec. HyperDX v2 stores dashboards in MongoDB with an internal shape, so this is a REPRODUCIBLE SPEC (source + query + viz per tile), not a raw import blob. Recreate in HyperDX: Dashboards -> New, add one tile per entry below against the 'Spark Events' source. Every tile's query matches sql/005 for the same job_id/window, so a tile and the raw SQL agree. See HYPERDX_SETUP.md.",
+  "name": "Apex — Spark Skew",
+  "source": "Spark Events",
+  "time_default": "Last 6 hours",
+  "tiles": [
+    {
+      "title": "Skewed stages (p99/p50 > 5)",
+      "viz": "table",
+      "description": "The core skew signal — mirrors sql/005 query (A).",
+      "sql": "SELECT job_id, stage_id, argMax(task_duration_p50_ms, ts) AS p50_ms, argMax(task_duration_p99_ms, ts) AS p99_ms, round(argMax(task_duration_p99_ms, ts)/nullIf(argMax(task_duration_p50_ms, ts),0),2) AS skew_ratio, sum(spill_disk_bytes) AS spill_disk_bytes FROM apex.spark_events WHERE ts >= now() - INTERVAL 6 HOUR GROUP BY job_id, stage_id HAVING skew_ratio > 5 ORDER BY skew_ratio DESC LIMIT 50"
+    },
+    {
+      "title": "Max skew ratio over time (per job)",
+      "viz": "line",
+      "description": "Time series; group by job_id. Uses the rollup for auto-acceleration (register spark_jobs_1m, 1-min granularity).",
+      "series": {"aggFn": "max", "field": "task_duration_p99_ms", "groupBy": ["job_id"], "granularity": "1 minute"},
+      "sql_equivalent": "SELECT toStartOfMinute(ts) AS t, job_id, max(task_duration_p99_ms/nullIf(task_duration_p50_ms,0)) AS max_skew FROM apex.spark_events GROUP BY t, job_id"
+    },
+    {
+      "title": "Disk spill by job (bytes)",
+      "viz": "bar",
+      "description": "Skew's downstream symptom. sum__spill_disk_bytes accelerates off spark_jobs_1m.",
+      "series": {"aggFn": "sum", "field": "spill_disk_bytes", "groupBy": ["job_id"]}
+    },
+    {
+      "title": "Shuffle read by job (bytes)",
+      "viz": "bar",
+      "series": {"aggFn": "sum", "field": "shuffle_read_bytes", "groupBy": ["job_id"]}
+    },
+    {
+      "title": "Rollup skew (p99/p50 from stored sketch)",
+      "viz": "table",
+      "description": "Mirrors sql/005 query (B) — recomputes percentiles from the quantile STATE in spark_jobs_1m.",
+      "sql": "SELECT bucket, job_id, quantilesMerge(0.5, 0.99)(quantiles__task_duration_p99_ms) AS q, round(q[2] / nullIf(q[1], 0), 2) AS p99_over_p50 FROM apex.spark_jobs_1m WHERE bucket >= now() - INTERVAL 24 HOUR GROUP BY bucket, job_id HAVING p99_over_p50 > 4 ORDER BY p99_over_p50 DESC"
+    }
+  ]
+}
