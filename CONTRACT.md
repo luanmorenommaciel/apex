@@ -91,6 +91,31 @@ Pydantic model whose field names match the `findings` table exactly: `job_id`, `
 
 Plan/query text carries PII → **redact in-JVM before egress** (`jar/`, primary) with the collector as a second net (`collect/`): hash `query_text`, drop `file_path`/`email`, strip `plan_json` literals. `plan_fingerprint` is computed upstream and passed as an opaque value — redaction never recomputes it.
 
+## Port Map (all lanes share one dev host — reserve these, no collisions)
+
+Every lane's `docker-compose` runs on the **same developer host**. To avoid the collisions we've already hit (dev MinIO ↔ ClickHouse :9000; HyperDX would collide with Spark master :8080), each lane owns a distinct **host-port band**. Container-internal ports stay standard; only the **host** mapping is reserved here. Parametrize host ports via `.env` so they can be overridden, but default to these.
+
+| Lane | Service | Host port | Notes |
+|---|---|---|---|
+| **dev** | Spark master UI | **8080** | already assigned |
+| dev | Spark master RPC | **7077** | |
+| dev | Spark worker UI | **8081** | |
+| dev | Spark History | **18080** | |
+| dev | MinIO S3 API | **9010** | shifted off 9000 to avoid ClickHouse |
+| dev | MinIO console | **9001** | |
+| **collect** | OTLP/HTTP receiver | **4318** | jar → collect transport (contract §transport) |
+| collect | OTLP/gRPC (optional) | **4317** | |
+| collect | health_check | **13133** | |
+| **infra** | ClickHouse HTTP | **8123** | |
+| infra | ClickHouse native | **9000** | dev's MinIO is on 9010 precisely to leave this free |
+| infra | HyperDX UI | **8090** | ⚠️ NOT 8080 (dev Spark master owns it) |
+| infra | HyperDX OpAMP | **4320** | |
+| infra | MongoDB | **27017** | HyperDX app state |
+| **serve** | MCP is **stdio** | — | no host port; spawned as a subprocess |
+| **engine** | (library; no server) | — | reads ClickHouse on infra's ports |
+
+**Rule:** a lane binds only its own band. If you need a port not listed, add it here first (a new host-port reservation is an additive contract change). `collect` and `infra` connect to ClickHouse via the **internal** docker network (`clickhouse:8123`/`:9000`), not the host ports — the host ports are only for a human/tool reaching in.
+
 ## Activation (how a job turns Apex on)
 
 ```python
