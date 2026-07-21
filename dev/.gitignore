@@ -1,0 +1,6 @@
+# Runtime artifacts (listener output, Spark local scratch)
+out/*.jsonl
+out/*.log
+.ivy2/
+*.pyc
+__pycache__/
