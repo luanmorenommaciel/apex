@@ -57,7 +57,7 @@ One event **per completed stage**. Emitted via **OTLP/HTTP** (protobuf or JSON) 
 
 | Field | Type | Notes |
 |---|---|---|
-| `plan_fingerprint` | string (hex) | **SHA-256 of the NORMALIZED LOGICAL plan** (`queryExecution.optimizedPlan`, canonicalized). **NOT the physical plan** — physical is unstable across AQE / Spark versions / data volume, which would break run-over-run comparison. |
+| `plan_fingerprint` | string (hex, 64) | **SHA-256 of the NORMALIZED LOGICAL plan.** **NOT physical** — physical is unstable across AQE / Spark versions / data volume. ⚠️ **`optimizedPlan.canonicalized` alone is INSUFFICIENT** (verified empirically, jar T7): it does NOT normalize literal *values*, so `id > 100` vs `id > 900` hash differently. Every listener (jar Scala **and** dev Python) MUST apply a **literal-normalization pass** on top of the canonicalized logical plan before hashing — else `compare_runs` regression detection breaks. Verified cross-version stable (Spark 3.5 ↔ 4.0 → identical 64-hex value). |
 | `plan_json` | string (JSON) | the logical plan tree with **redacted** `node.desc` (see §4) |
 
 ### 1.4 Canonical event (JSON fixture — build against this)
