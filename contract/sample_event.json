@@ -1,0 +1,21 @@
+{
+  "job_id": "ax151sasadds114",
+  "app_id": "application_1718553600000_0042",
+  "app_name": "daily_revenue",
+  "stage_id": 7,
+  "stage_attempt": 0,
+  "ts": 1718553999000,
+  "shuffle_read_bytes": 50465865728,
+  "shuffle_write_bytes": 12123000000,
+  "spill_disk_bytes": 8100000000,
+  "spill_mem_bytes": 0,
+  "gc_time_ms": 41200,
+  "input_bytes": 88000000,
+  "output_bytes": 240000000,
+  "peak_execution_mem_bytes": 17179869184,
+  "task_count": 200,
+  "task_duration_p50_ms": 47000,
+  "task_duration_p99_ms": 2478000,
+  "plan_fingerprint": "2de5e5760399189a81ab5500a216db0bae5c67f72cf42c08bd9f62689b404cf0",
+  "plan_json": "{\"class\":\"org.apache.spark.sql.catalyst.plans.logical.Join\",\"joinType\":\"Inner\",\"condition\":\"(customer_id = customer_id)\",\"children\":[{\"class\":\"org.apache.spark.sql.catalyst.plans.logical.Project\",\"projectList\":[\"customer_id\",\"order_amount\",\"order_ts\"],\"children\":[{\"class\":\"org.apache.spark.sql.catalyst.plans.logical.Filter\",\"condition\":\"(order_ts >= ?)\",\"children\":[{\"class\":\"org.apache.spark.sql.catalyst.plans.logical.LogicalRelation\",\"relation\":\"parquet\",\"output\":[\"customer_id\",\"order_amount\",\"order_ts\"]}]}]},{\"class\":\"org.apache.spark.sql.catalyst.plans.logical.Project\",\"projectList\":[\"customer_id\",\"segment\"],\"children\":[{\"class\":\"org.apache.spark.sql.catalyst.plans.logical.LogicalRelation\",\"relation\":\"parquet\",\"output\":[\"customer_id\",\"segment\"]}]}]}"
+}
