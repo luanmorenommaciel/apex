@@ -76,16 +76,71 @@ Leitura: o mesmo ciclo G3/G5 foi repetido na stack autonoma da branch, com event
 
 ## Fluxo Didatico Em Macro Passos
 
-```text
-1. Job Spark -> 2. Listener/event log -> 3. Telemetria por job/stage
--> 4. T1 + EvidenceValidator -> 5. Finding e recomendacao
--> 6. Preview revisavel -> 7. Apply guardado + rerun
--> 8. Compare e proxima decisao
+```mermaid
+flowchart LR
+    A["1. Job Spark"] --> B["2. Listener e event log"]
+    B --> C["3. Telemetria por job e stage"]
+    C --> D["4. T1 + EvidenceValidator"]
+    D --> E["5. Finding e recomendacao"]
+    E --> F["6. Preview revisavel"]
+    F --> G["7. Apply guardado + rerun"]
+    G --> H["8. Compare e proxima decisao"]
+
+    D -. "evidencia insuficiente" .-> M["manual_review"]
+    H -. "sem melhoria" .-> I["Issue ou nova recomendacao"]
 ```
 
 Para uma explicacao curta, use
 `docs/guides/apex-commander-macro-flow-2026-07-22.md`. Para uma demonstracao
 controlada, use `docs/playbooks/apex-operator-judge-2026-07-22.md`.
+
+### Estado De Um Finding
+
+```mermaid
+stateDiagram-v2
+    [*] --> Collected: event log ou listener
+    Collected --> Validated: T1 + EvidenceValidator aceita
+    Collected --> ManualReview: evidencia incompleta
+    Validated --> Recommended: recommend_fix
+    Recommended --> Previewed: preview_fix sem mutacao
+    Previewed --> Applied: token + hash + apply_root validos
+    Previewed --> Rejected: humano nao aprova
+    Applied --> Rerun: verify confirma o hash final
+    Rerun --> Resolved: findings = 0 e metrica melhora
+    Rerun --> FollowUp: finding persiste ou piora
+    ManualReview --> FollowUp
+    Rejected --> FollowUp
+    Resolved --> [*]
+    FollowUp --> Recommended
+```
+
+O estado `Applied` nao pode ser alcançado pela UI local. Ele exige o contrato
+MCP, uma aprovacao humana e a verificacao de token, hash e raiz permitida.
+
+### Sequencia Operacional
+
+```mermaid
+sequenceDiagram
+    participant Eng as Engenheiro
+    participant Spark as Spark + Listener
+    participant Store as Event log / Store
+    participant T1 as T1 + Validator
+    participant MCP as MCP / IDE
+    participant Guard as Preview + apply_fix
+    participant Compare as Rerun + Compare
+
+    Eng->>Spark: submete job
+    Spark->>Store: emite event log e telemetria
+    Store->>T1: entrega job_id, stages e metricas
+    T1->>MCP: finding validado + recomendacao
+    MCP->>Guard: solicita preview (somente leitura)
+    Guard-->>Eng: diff e escopo da mudanca
+    Eng->>Guard: aprova com token
+    Guard->>Guard: aplica, verifica hash e apply_root
+    Guard->>Spark: reexecuta job corrigido
+    Spark->>Compare: publica nova telemetria
+    Compare-->>Eng: before/after e decisao
+```
 
 ## Arquitetura Da Solucao
 
