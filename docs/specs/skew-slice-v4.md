@@ -196,28 +196,26 @@ Em relacao a ferramentas como DataFlint, o diferencial pretendido nao e ter
 mais UI no curto prazo. O diferencial e ser local-first, auditavel, extensivel e
 capaz de registrar cada decisao por evidencia, diff e resultado antes/depois.
 
-## O Que Ainda Nao Esta Pronto
+## Estado Atual Em 2026-07-22
 
-| Gap | Impacto |
+| Item | Estado atual |
 |---|---|
-| SparkListener JVM real fail-safe | Hoje a prova usa event logs e templates; listener real ainda precisa ser implementado |
-| `docker compose up` autonomo da branch | G3/G5 validaram contra `plat-v0`/`spv0-*`; a branch ainda nao e plataforma completa independente |
-| Crew.ai/Judge | Escalonamento LLM e decisao de baixa confianca continuam como design, nao entrega funcional |
-| IDE real | MCP stdio e `apply_fix` passam em smoke local, mas o ciclo nao foi validado dentro de Cursor/VS Code/Claude Code |
-| Oraculo agendado G6 | Existe comparacao manual; falta drift/CI recorrente |
+| SparkListener JVM fail-safe | Fechado: listener oficial, JAR carregavel, NDJSON e fail-safe em Spark 4.1.2. |
+| Compose autonomo | Fechado para a stack da branch, com G3/G5 e loop self-hosted evidenciados. |
+| Crew.ai/Judge | Fechado como camada opcional/read-only, com provider externo real observado; nao pode aplicar mudanca. |
+| IDE real | Fechado em Claude Code GUI para tools/list, recomendacao, preview e `apply_fix` guardado. |
+| Oraculo agendado G6 | Fechado em workflow remoto; o runner self-hosted continua dependencia operacional. |
+
+Limites de produto ainda abertos: UI local single-user com dados versionados,
+ausencia de RBAC/frota/custo em tempo real e ausencia de agente de cluster ou
+revisao de PR. Consulte `docs/architecture/apex-codex-vs-dataflint-2026-07-22.md`.
 
 ## Proximos Passos Recomendados Para O Commander
 
-1. Decidir se a proxima fase prioriza plataforma propria (`docker compose` +
-   SparkListener real) ou UX IDE (`apply_fix` MCP real).
-2. Se a prioridade for V1 fundacao, integrar a plataforma Spike/plat-v0 de forma
-   controlada, mantendo G0-G5 como gates obrigatorios.
-3. Se a prioridade for produto, validar `apply_fix` com cliente MCP/IDE real.
-4. Promover ADRs formais sobre:
-   - origem do apply guardado;
-   - papel do `plat-v0`;
-   - politica de LLM opcional;
-   - contrato de seguranca para auto-edicao.
+1. Consolidar a UI como consulta de dados vivos, multi-job e multiusuario.
+2. Definir dono operacional do runner self-hosted e da retencao de evidencias.
+3. Ampliar o Judge com matriz de incerteza, mantendo T1/validator obrigatorios.
+4. Priorizar backlog de produto a partir da matriz Codex x DataFlint atual.
 
 ## Artefatos De Referencia
 
@@ -231,4 +229,4 @@ capaz de registrar cada decisao por evidencia, diff e resultado antes/depois.
 | Evidencia G3 | `evidence/g3-real.log` |
 | Evidencia G4 | `evidence/g4-t1.log` |
 | Evidencia G5 | `evidence/g5-ciclo.log` |
-| Comparacao LLM/DataFlint | `docs/architecture/llm-solution-validation-framework-2026-07-13.md` |
+| Comparacao Codex/DataFlint atual | `docs/architecture/apex-codex-vs-dataflint-2026-07-22.md` |

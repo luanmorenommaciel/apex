@@ -41,7 +41,7 @@ Ela nao deve ser apresentada como V1 completa ainda. O que ela prova bem e o loo
 | Product readiness UI + Judge local | Fechado localmente | `docs/presentations/apex-product-readiness-2026-07-19.html`; `evidence/apex-product-readiness-2026-07-19-summary.json`; `apex/commander/product_report.py`; `tools/generate_product_report.py`; `ISSUES.md` CODEX-063 |
 | Apex Commander UI local + demo MCP segura | Fechado localmente | `tools/run_commander_ui.py`; `docs/presentations/apex-commander-ui-mvp.html`; `docs/guides/apex-commander-ui-demo.md`; `apex/commander/ui_server.py` |
 | Especificacao tecnica 15/07 | Atualizada para juiz | `docs/specs/apex-codex-technical-spec-2026-07-15.md` |
-| Comparacao campeonato 15/07 | Atualizada para juiz | `docs/architecture/llm-solution-validation-framework-2026-07-15.md`; `docs/presentations/llm-solution-validation-2026-07-15.html` |
+| Comparacao de produto atual | Atualizada em 22/07 | `docs/architecture/apex-codex-vs-dataflint-2026-07-22.md` |
 | Apresentacao Codex 15/07 | Atualizada para juiz | `docs/presentations/apex-codex-solucao-end-to-end-2026-07-15.html` |
 | Autoavaliacao | Fechada | `docs/autoavaliacao.md` |
 | Catalogo de issues | Fechado/aberto conforme item | `ISSUES.md` |
@@ -73,6 +73,19 @@ Rodada autonoma 14/07:
 | Shuffle read bytes | 1.157.481 | 0 |
 
 Leitura: o mesmo ciclo G3/G5 foi repetido na stack autonoma da branch, com event log novo e sem dependencia da stack historica `plat-v0`.
+
+## Fluxo Didatico Em Macro Passos
+
+```text
+1. Job Spark -> 2. Listener/event log -> 3. Telemetria por job/stage
+-> 4. T1 + EvidenceValidator -> 5. Finding e recomendacao
+-> 6. Preview revisavel -> 7. Apply guardado + rerun
+-> 8. Compare e proxima decisao
+```
+
+Para uma explicacao curta, use
+`docs/guides/apex-commander-macro-flow-2026-07-22.md`. Para uma demonstracao
+controlada, use `docs/playbooks/apex-operator-judge-2026-07-22.md`.
 
 ## Arquitetura Da Solucao
 
@@ -167,8 +180,9 @@ O apply nao e uma edicao livre feita por agente. Ele passa por controles:
 | `ISSUES.md` | Catalogo formal CODEX-001 em diante |
 | `docs/autoavaliacao.md` | Scorecard C1-C6 e Captain's Report |
 | `docs/specs/skew-slice-v4.md` | Especificacao tecnica atualizada da solucao Codex Round2 |
-| `docs/architecture/llm-solution-validation-framework-2026-07-14.md` | Comparacao atualizada entre Codex, Cowork, Kimi, Spike, Codex antiga e DataFlint |
-| `docs/architecture/llm-solution-validation-framework-2026-07-15.md` | Comparacao final para juiz, com G6 remoto verde |
+| `docs/architecture/apex-codex-vs-dataflint-2026-07-22.md` | Comparacao atual Codex × DataFlint, com fontes oficiais e limites declarados |
+| `docs/guides/apex-commander-macro-flow-2026-07-22.md` | Fluxo didatico de oito passos para apresentar a solucao |
+| `docs/playbooks/apex-operator-judge-2026-07-22.md` | Passo a passo do operador e criterios verificaveis do juiz |
 | `docs/specs/apex-codex-technical-spec-2026-07-15.md` | Especificacao tecnica reprodutivel da branch Codex |
 | `docs/presentations/apex-codex-luan-3min-2026-07-19.pptx` | Deck executivo atual de quatro slides para o Luan |
 | `docs/presentations/apex-commander-one-slide-2026-07-19.html` | Resumo visual de uma pagina para abertura da demonstracao |
@@ -180,8 +194,7 @@ O apply nao e uma edicao livre feita por agente. Ele passa por controles:
 | `docs/guides/apex-commander-ui-demo.md` | Roteiro de 10 minutos para testar a UI com o time |
 | `docs/superpowers/specs/2026-07-19-apex-commander-ui-local-app-design.md` | Decisoes, rotas e limites de seguranca da UI local |
 | `docs/presentations/apex-codex-projeto-luan-2026-07-14.html` | Apresentacao executiva para o Luan |
-| `docs/presentations/llm-solution-validation-2026-07-14.html` | Apresentacao comparativa atualizada das solucoes |
-| `docs/presentations/llm-solution-validation-2026-07-15.html` | Apresentacao comparativa final para o juiz |
+| `docs/architecture/llm-solution-validation-framework-2026-07-09.md` a `2026-07-15.md` | Historico do campeonato; nao usar como fotografia atual da branch |
 
 ## Apresentacoes
 
@@ -200,7 +213,8 @@ Sugestao:
 1. Abra o deck de tres minutos e use o roteiro correspondente.
 2. Demonstre o produto atual com `python tools/run_commander_ui.py` e `apex-commander-ui-mvp.html`.
 3. Para perguntas sobre prontidao e evidencias, abra `apex-product-readiness-2026-07-19.html`.
-4. Os materiais de 14/07 e 15/07 permanecem como historico. Os comparativos de LLMs/DataFlint nao fazem parte desta apresentacao da nossa solucao.
+4. Para uma comparacao de produto atual, use apenas `apex-codex-vs-dataflint-2026-07-22.md`.
+5. Os frameworks comparativos de 09/07 a 15/07 permanecem como historico e nao devem ser usados como fotografia atual.
 
 ## Produto Visual Local
 
@@ -239,7 +253,7 @@ evidence/g5-ciclo.log
 evidence/g6-apply-fix-mcp-smoke.log
 evidence/agentic-validation-loop-report.json
 docs/specs/apex-codex-technical-spec-2026-07-15.md
-docs/architecture/llm-solution-validation-framework-2026-07-15.md
+docs/architecture/apex-codex-vs-dataflint-2026-07-22.md
 evidence/g7-autonomous-compose-config.log
 evidence/g8-agentic-loop-python.log
 evidence/g9-listener-jvm-environment.log
@@ -282,11 +296,11 @@ Observacao: em Windows, alguns comandos antigos podem precisar de basetemp local
 
 ## Proximos Passos Recomendados
 
-1. Decidir se o runner self-hosted `apex-local-GUSTUS` fica ativo para novas rodadas ou se deve ser removido apos a avaliacao.
-2. Monitorar proximas execucoes agendadas do G6 e manter o job legado `gate` verde no CI remoto.
-3. Revisar com o Commander as ADRs formais criadas em `docs/adr/`.
-4. Rodar um smoke em clone limpo da UI local antes da apresentacao ao Luan.
-5. Endurecer o Judge com mais casos reais, mantendo-o sempre depois de T1 e do EvidenceValidator, sem permitir apply direto pelo agente.
+1. Definir dono operacional do runner self-hosted `apex-local-GUSTUS` e da retencao de evidencias.
+2. Monitorar o G6 agendado e manter o job legado `gate` verde no CI remoto.
+3. Evoluir a UI de demonstracao para consulta multi-job com dados vivos, autenticacao e RBAC.
+4. Expandir a matriz do Judge para incerteza, evidencia incompleta e rejeicao pelo validator, mantendo-o depois de T1.
+5. Priorizar agente de cluster, revisao de PR ou observabilidade de frota somente apos definir o proximo caso real.
 
 ## Estado De Publicacao
 

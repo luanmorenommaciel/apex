@@ -1,5 +1,10 @@
 # Framework de Validacao das Solucoes LLM - 2026-07-15
 
+> **Historico de campeonato.** Este snapshot compara varias branches no estado
+> de 15/07. Para a fotografia atual da branch Codex e uma comparacao de produto
+> restrita ao benchmark externo, use
+> `docs/architecture/apex-codex-vs-dataflint-2026-07-22.md`.
+
 Status: comparacao read-only das branches atualizadas em 2026-07-15, com DataFlint como benchmark externo e com a branch Codex publicada para julgamento.
 
 ## Resumo Executivo

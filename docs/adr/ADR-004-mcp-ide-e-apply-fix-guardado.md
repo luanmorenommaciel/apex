@@ -12,7 +12,9 @@ O loop funcional provado pela branch Codex e:
 finding -> recommend -> preview -> apply_fix guardado -> rerun -> compare
 ```
 
-Esse loop ja passou por MCP stdio/subprocesso, mas ainda falta aprovacao interativa em IDE GUI real.
+Esse loop passou por MCP stdio/subprocesso e por aprovacao interativa em Claude
+Code GUI real. A regressao deve ser repetida sempre que `.mcp.json` ou o
+contrato MCP mudar.
 
 ## Decisao
 
@@ -36,4 +38,3 @@ Esse loop ja passou por MCP stdio/subprocesso, mas ainda falta aprovacao interat
 - `apex/commander/apply_verify.py`
 - `evidence/g6-mcp-ide-subprocess-smoke.jsonl`
 - `.mcp.json`
-

@@ -1,5 +1,10 @@
 # Guia de Validacao para a Crew A
 
+> Nota de historico: este guia explica o slice v4 original. Para demonstrar o
+> produto atual, use `docs/guides/apex-commander-macro-flow-2026-07-22.md` e
+> `docs/playbooks/apex-operator-judge-2026-07-22.md`; Listener JVM, IDE GUI,
+> stack autonoma e Crew/Judge evoluiram depois deste material.
+
 Este guia ajuda o time a revisar o slice `skew_on_join_30x` v4 corrigido sem depender de leitura profunda do codigo. Ele organiza a conversa em quatro perguntas:
 
 1. O que foi feito?

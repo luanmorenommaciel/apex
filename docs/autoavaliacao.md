@@ -95,9 +95,9 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
   `evidence/f7-remote-real-stack-run-29671461366-loop.log`.
 - Decidir se o runner self-hosted `apex-local-GUSTUS` deve permanecer ativo
   durante a avaliação ou ser removido após o julgamento.
-- Decidir se o próximo fechamento deve priorizar execução Crew.ai com LLM
-  externo configurado ou UI de produto navegável. A IDE GUI real já tem
-  evidência no Claude Code.
+- O Judge externo e a UI local navegavel ja foram observados. Decidir se o
+  proximo fechamento prioriza UI multiusuario/dados vivos, mais casos de Judge
+  ou observabilidade de frota.
 - Validar se broadcast do lado `customers` é a correção canônica aceitável para
   o cenário `skew_on_join_30x`, ou se a próxima versão deve exigir salting para
   casos em que o lado pequeno não caiba em broadcast.
@@ -109,10 +109,11 @@ proveniência conceitual precisa acompanhar qualquer julgamento comparativo.
   detector, validação, latência, apply guardado e rerun real.
 - A parte mais forte é empírica: logs reais, app ids novos, evidência crua e
   comparação antes/depois.
-- A parte mais fraca agora é produto/UX: UI de produto navegável ainda falta.
-  A plataforma autônoma local, o listener real, Crew.ai real e o runner de regressão
-  G3/G5 já têm evidência real local e remota; o runner self-hosted continua
-  sendo dependência operacional para repetir o F7.
+- A parte mais fraca agora é produto/UX: a UI existe, mas ainda e local,
+  single-user e baseada em dados versionados. A plataforma autônoma local, o
+  listener real, Crew.ai real e o runner de regressão G3/G5 já têm evidência
+  real local e remota; o runner self-hosted continua sendo dependência
+  operacional para repetir o F7.
 - A proveniência não é limpa: CODEX-001 e CODEX-007 precisam acompanhar a
   avaliação. O fix guardado foi adoção consciente de conceito visto na Cowork,
   depois implementado, testado e validado pela Codex.

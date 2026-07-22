@@ -12,6 +12,8 @@ Ele trata apenas da nossa entrega atual; nao faz comparacao com outras branches.
 | `apex-codex-luan-3min-2026-07-19.md` | Roteiro falado, com tempo por slide. |
 | `apex-commander-ui-mvp.html` | Produto local navegavel para demonstrar o caso `job-42`. |
 | `apex-product-readiness-2026-07-19.html` | Relatorio objetivo de prontidao e limites declarados. |
+| `../architecture/apex-codex-vs-dataflint-2026-07-22.md` | Matriz atual para perguntas de posicionamento frente ao DataFlint. |
+| `../guides/apex-commander-macro-flow-2026-07-22.md` | Fluxo didatico que conecta os slides a demonstracao. |
 
 Sequencia sugerida: apresente o deck, abra a UI no caso `job-42` e use o
 relatorio de prontidao apenas para perguntas de evidencia e operacao.
@@ -58,15 +60,15 @@ Use esta apresentacao para explicar somente a nossa branch no estado final
 do pacote de 15/07. Ela e uma apresentacao historica; para o estado atual use
 tambem `apex-commander-ui-mvp.html` e o README da branch.
 
-## `llm-solution-validation-2026-07-15.html`
+### `llm-solution-validation-2026-07-15.html`
 
 Apresentacao comparativa final do campeonato depois do G6 remoto verde:
 Codex Round2, Cowork, Kimi, Agmar/Spike e DataFlint. Inclui pacote para o juiz,
 scorecard C1-C6 atualizado e recomendacao de composicao da V1.
 
-Use esta apresentacao para debate de escolha/composicao entre engines.
+Use esta apresentacao apenas como registro do campeonato de 15/07.
 
-## `apex-codex-solucao-end-to-end-2026-07-14.html`
+### `apex-codex-solucao-end-to-end-2026-07-14.html`
 
 Apresentacao da solucao Codex Round2 para o Commander: exemplo de skew real,
 fluxo detectar -> preview -> apply_fix -> rerun -> limpo, stack autonoma,
@@ -74,15 +76,15 @@ SparkListener JVM, MCP subprocess smoke, aderencia L1-L9 e proximos passos.
 
 Use esta apresentacao para explicar somente a nossa branch.
 
-## `llm-solution-validation-2026-07-14.html`
+### `llm-solution-validation-2026-07-14.html`
 
 Apresentacao comparativa do campeonato depois das rodadas novas: Codex Round2,
 Cowork, Kimi, Codex antiga, Agmar/Spike e DataFlint. Mostra scorecard C1-C6,
 matriz de evidencia, fluxos, riscos e recomendacao de composicao da V1.
 
-Use esta apresentacao para debate de escolha/composicao entre engines.
+Use esta apresentacao apenas como registro do campeonato de 14/07.
 
-## `llm-solution-validation-2026-07-13.html`
+### `llm-solution-validation-2026-07-13.html`
 
 Versao historica do comparativo antes da rodada autonoma 14/07.
 

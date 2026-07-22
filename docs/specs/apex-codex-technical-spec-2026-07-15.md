@@ -73,7 +73,7 @@ comparacao continue auditavel.
 | G6 drift remoto | `evidence/g6-remote-workflow-latest-summary.json` | Workflow remoto verde |
 | Telemetria MCP GUI | `evidence/g6-mcp-ide-gui-telemetry-compare-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-local-2026-07-18.log`; `evidence/f6-mcp-gui-telemetry-compare-tests-2026-07-18.log` | `compare_job_telemetry` read-only retornou `status=improved`; validacao focada fechou com 24 testes |
 | Spark 4.1.2 + listener oficial | `evidence/f7-spark412-official-listener-docker-build-2026-07-18.log`; `evidence/f7-spark412-autonomous-ps-2026-07-18.log`; `evidence/f7-spark412-g3-before-diagnosis-2026-07-18.log`; `evidence/f7-spark412-g5-compare-memory-2026-07-18.log`; `evidence/f7-spark412-final-focused-tests-2026-07-18.log` | Stack autonoma Spark 4.1.2 sobe; G3 detecta skew high ratio 29.4; G5 after-memory fecha finding_count 1 -> 0; suite focada 59 passed |
-| Loop CI autonoma | `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/generated/f7-autonomous-loop/20260718-real-local-6/`; `evidence/f7-autonomous-stack-loop-real-local-tests-2026-07-18.log`; `evidence/f7-autonomous-stack-loop-scenario-gate-contract-tests-2026-07-18.log`; `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/scenario-gate.yml` | Runner executou G3/G5 real local: before `app-20260718211145-0005` findings 2/skew 29.4; after `app-20260718211552-0006` finding_count 0/skew 0.0; contrato entrou no workflow reconhecido; execucao real remota pendente |
+| Loop CI autonoma | `evidence/f7-autonomous-stack-loop-20260718-real-local-6.log`; `evidence/generated/f7-autonomous-loop/20260718-real-local-6/`; `evidence/f7-autonomous-stack-loop-real-local-tests-2026-07-18.log`; `evidence/f7-autonomous-stack-loop-scenario-gate-contract-tests-2026-07-18.log`; `evidence/f7-remote-real-stack-run-29671461366-loop.log`; `scripts/f7_autonomous_stack_loop.py`; `.github/workflows/scenario-gate.yml` | Runner executou G3/G5 real local: before `app-20260718211145-0005` findings 2/skew 29.4; after `app-20260718211552-0006` finding_count 0/skew 0.0. A execucao remota self-hosted tambem fechou verde: before `app-20260719032011-0000`, after `app-20260719032439-0001`, finding_count `1 -> 0` e skew `29.4 -> 0.0`. |
 
 Workflow remoto:
 
@@ -122,7 +122,7 @@ flowchart LR
 |---|---|---|
 | IDE GUI real | Fechado no Claude Code com `apex-commander` conectado, `tools/list`, `recommend_fix`, `preview_recommendation` e `apply_fix` guardado | Manter transcript em `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` |
 | Crew.ai/Judge real | `crew_judge_diagnose` implementado como tool read-only; provider Crew.ai opcional via `APEX_CREW_JUDGE_ENABLED=1`, fallback seguro quando nao configurado; execucao externa real observada em 19/07 | Ampliar casos de baixa confianca, evidencia incompleta e rejeicao pelo validator |
-| Versao Spark alvo | Spark 4.1.2 definido como alvo oficial; compose raiz e autonomo alinhados; G3/G5 reexecutados; runner de loop autonomo construido e executado localmente | Acionar job `real-stack` em runner self-hosted preparado e anexar evidencia remota |
+| Versao Spark alvo | Spark 4.1.2 definido como alvo oficial; compose raiz e autonomo alinhados; G3/G5 reexecutados; runner de loop autonomo executado localmente e remotamente | Definir dono operacional do runner self-hosted e repetir a regressao quando a imagem Spark, listener ou contrato mudar |
 
 ## Honestidade De Proveniencia
 

@@ -1,5 +1,9 @@
 # Framework de Validacao das Solucoes LLM - 2026-07-14
 
+> **Historico de campeonato.** Este snapshot antecede a validacao de IDE GUI,
+> Crew/Judge externo, UI local e as atualizacoes de 19/07. Nao o use como
+> fotografia atual; consulte `apex-codex-vs-dataflint-2026-07-22.md`.
+
 Status: comparacao read-only das branches atualizadas em 2026-07-14, com DataFlint como benchmark externo.
 
 ## Resumo Executivo

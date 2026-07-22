@@ -38,7 +38,7 @@ atual cobre uma parte do requisito, o status fica como `parcial`.
 | G5 IDE: finding -> apply_fix -> rerun limpo | Cumpre | `evidence/g5-ciclo.log` valida o ciclo funcional real no `spv0-spark-master`; `evidence/g5-autonomous-ciclo.log` valida o mesmo ciclo na stack autonoma: finding 1 -> 0, shuffle 1.157.481 -> 0; `evidence/g6-mcp-ide-subprocess-smoke.jsonl` valida `apply_fix` via cliente subprocesso JSON-RPC; `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log` valida `apex-commander` em Claude Code GUI real. | Verde funcionalmente e validado em IDE GUI real para o contrato MCP/apply guardado. |
 | G6 oraculo agendado sintetico vs real drift | Fechado | `tools/g6_oracle_drift_smoke.py` gera sintetico oficial, roda `oracle/compare.py` contra `real_log.ndjson` e salva resumo JSON; `.github/workflows/scenario-gate.yml` tem `workflow_dispatch`, cron semanal e job `g6-oracle-drift`; evidencias locais em `evidence/g6-oracle-drift-smoke.log` e `evidence/g6-oracle-drift-summary.json`; execucao remota atual em `evidence/g6-remote-workflow-latest-summary.json`. | O workflow remoto `Apex Scenario Gate` passou inteiro no campeonato em `9510d12`: jobs `gate` e `g6-oracle-drift` verdes. A falha anterior ficou registrada em CODEX-033 como incidente corrigido. |
 | G7 local MCP/compose/listener/judge | Cumpre localmente | `evidence/g6-mcp-ide-subprocess-smoke.jsonl`, `evidence/g6-mcp-ide-gui-smoke-2026-07-18.log`, `evidence/g7-autonomous-spark-pi-v2.log`, `evidence/g3-autonomous-diagnosis.json`, `evidence/g5-autonomous-ciclo.log`, `evidence/g9-listener-jvm-spark-submit.log`, `evidence/g9-listener-jvm-failsafe-spark-submit.log`, `evidence/f7-remote-real-stack-run-29671461366-loop.log`, `evidence/crew-judge-external-llm-success-final-2026-07-19.json`. | Fecha contrato local, compose autonomo com G3/G5, listener runtime/fail-safe, MCP GUI real, loop remoto real-stack e Judge plugável read-only com LLM externo observado. |
-| G8 loop agentico local | Parcial | `apex/commander/agentic_loop.py` e `tools/agentic_validation_loop.py` executam um loop deterministico com agentes locais `EvidenceCollector`, `DeterministicJudge` e `NextActionPlanner`; evidencia em `evidence/agentic-validation-loop-report.json`. | Sem LLM e sem mutacao; smoke GUI MCP e real-stack remoto ja foram observados. A pendencia restante e evoluir para Crew.ai/Judge real ou UI de produto, se o Commander priorizar. |
+| G8 loop agentico local | Parcial | `apex/commander/agentic_loop.py` e `tools/agentic_validation_loop.py` executam um loop deterministico com agentes locais `EvidenceCollector`, `DeterministicJudge` e `NextActionPlanner`; evidencia em `evidence/agentic-validation-loop-report.json`. O provider Crew.ai opcional e read-only teve execucao externa observada em `evidence/crew-judge-external-llm-success-final-2026-07-19.json`. | O loop local permanece sem mutacao. O gap mudou de "Crew.ai inexistente" para maturidade de produto: mais casos de incerteza, UI multiusuario e operacao de frota. |
 
 ## Mapeamento Do Gate 14 Interno
 
@@ -52,9 +52,9 @@ Ele nao corresponde 1:1 a um gate comum. O melhor encaixe e:
 
 | Gate 14 interno | Gate comum relacionado | Encaixe |
 | --- | --- | --- |
-| Spark submit template | L3 / parte de L1 | Prepara o comando, mas nao implementa o listener real. |
+| Spark submit template | L3 / parte de L1 | Hoje carrega o listener JVM real; manter o template como contrato de submissao oficial. |
 | Telemetry polling | L4 / G5 | Ajuda a esperar evidencia antes/depois, mas nao substitui ClickHouse schema canonico nem IDE. |
-| Rerun + compare local | G5 | Aproxima o ciclo "aplicar -> reexecutar -> provar", mas ainda com runner/fakes ou comando local configuravel, nao Spark real completo. |
+| Rerun + compare local | G5 | Foi complementado por G5 real e pelo loop autonomo/self-hosted; manter como base configuravel do ciclo. |
 
 Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 
@@ -64,7 +64,7 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 | --- | --- | --- |
 | L1 | Fechado localmente | Manter T1 deterministico como nucleo; provider Crew.ai existe como opcional e read-only. |
 | L2 | Fechado localmente em Spark 4.1.2 | Manter regressao G3/G5 autonoma com `spark.executor.memory=3g` e `spark.driver.memory=2g`. |
-| L3 | Fechado no smoke runtime e usado no G3/G5 autonomo | Promover o JAR para template oficial dos jobs. |
+| L3 | Fechado no smoke runtime e usado no G3/G5 autonomo | JAR ja foi promovido para template oficial; manter regressao de fail-safe. |
 | L4 | Fechado localmente com DDL canonico e adapters por `app_id`/`job_id`; ainda falta consolidar como schema de producao na V1 composta | Manter o DDL do pacote comum como contrato imutavel e validar qualquer migracao ClickHouse contra ele. |
 | L5 | Fechado localmente; precisa endurecer casos reais | Ampliar casos de Judge, validar decisões para baixa confiança e manter citações obrigatórias. |
 | L6 | Fechado em Claude Code GUI | Manter regressao do transcript MCP GUI e repetir quando mudar `.mcp.json`/`tool_contract.py`. |
@@ -124,10 +124,10 @@ Conclusao: Gate 14 e uma base util para G5, mas nao torna G5 verde sozinho.
 
 ### Refazer Ou Alinhar Ao Pacote Comum
 
-- Docker/Spark Envy: stack autonoma Spark 4.1.2 existe, sobe e fechou G3/G5 real; proximo passo e transformar em regressao oficial.
+- Docker/Spark Envy: stack autonoma Spark 4.1.2 existe, sobe, fechou G3/G5 real e possui loop self-hosted; proximo passo e manter o runner operado.
 - DDL ClickHouse canonico `apex_telemetry_v1.sql`: reaproveitar como contrato imutavel, ja alinhado ao pacote comum.
 - Listener real fail-safe: ja existe runtime smoke; alinhar ao job template oficial e manter teste de fail-safe.
-- Crew.ai: camada plugavel implementada; alinhar execucao externa real somente apos aprovacao de ambiente/segredos.
+- Crew.ai: camada plugavel e execucao externa real observada; ampliar casos e preservar segredos fora do repo.
 - Tool `apply_fix`: contrato local ja adaptado e validado em Claude Code GUI; ajustar formato apenas se outro cliente MCP escolhido pelo Commander exigir.
 - ADRs formais: criadas em `docs/adr/ADR-*.md`; falta revisao do Commander para decisoes finais de produto.
 

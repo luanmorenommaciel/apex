@@ -2,12 +2,16 @@
 
 Este documento apresenta o Apex do contexto de negocio ate a evidencia emitida
 por uma task Spark. Ele nasceu no slice `skew_on_join_30x` v4 e continua util
-como explicacao de fronteira de observabilidade. Para a fotografia atual da
-branch Codex Round2, use tambem `README.md`, `PLANO.md`,
-`docs/autoavaliacao.md` e
-`docs/architecture/llm-solution-validation-framework-2026-07-15.md`.
+como drill-down tecnico e fronteira de observabilidade.
 
-## Atualizacao Round2 - 2026-07-15
+> Atualizacao 2026-07-22: a secao Round2 abaixo e historica (15/07). Para a
+> fotografia atual, comece por `README.md`, use
+> `docs/guides/apex-commander-macro-flow-2026-07-22.md` e consulte
+> `docs/architecture/apex-codex-vs-dataflint-2026-07-22.md` para o benchmark
+> externo. IDE GUI, Listener JVM oficial e Crew/Judge externo ja foram
+> observados depois daquele snapshot.
+
+## Snapshot Round2 - 2026-07-15 (historico)
 
 O slice inicial foi expandido para uma esteira local com:
 

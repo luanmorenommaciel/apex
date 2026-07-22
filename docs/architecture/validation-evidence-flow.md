@@ -3,8 +3,8 @@
 ## Status
 
 ```text
-implementacao parcial nesta branch
-arquitetura alvo ainda nao entregue de ponta a ponta
+snapshot historico do slice v4
+o fluxo atual da branch esta em README.md e no macro-flow de 2026-07-22
 ```
 
 Este documento consolida a proposta visual para evoluir o slice de skew sem
@@ -21,8 +21,10 @@ Implementado nesta branch:
 - Oracle com particao quente, tipo de task e metodo de correlacao;
 - saida ASCII portavel nos CLIs.
 
-Ainda proposto: `Evidence Validator` separado, processamento incremental no
-Watcher e Oracle, isolamento por aplicacao, baseline sem skew e descoberta cega.
+Ainda proposto neste desenho historico: processamento incremental no Watcher e
+Oracle, isolamento por aplicacao e descoberta cega. O `EvidenceValidator`
+separado, baseline sem skew, MCP guardado e rerun/compare foram implementados
+na Round2; consulte `PLANO.md` e as evidencias G1-G5 para o estado atual.
 
 Referencias de governanca:
 
