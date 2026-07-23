@@ -7,14 +7,18 @@ name: apex-dev
 x-spark-common: &spark-common
   image: ${APEX_IMAGE:-apex-spark:local}
   build:
-    context: .
-    dockerfile: Dockerfile
+    # The plugin is built from ../jar in a first Docker stage, then baked into
+    # the same Spark image used by master, workers and History Server.
+    context: ..
+    dockerfile: dev/Dockerfile
     args:
       SPARK_IMAGE: ${SPARK_IMAGE}
       HADOOP_AWS_VERSION: ${HADOOP_AWS_VERSION}
       AWS_SDK_BUNDLE_VERSION: ${AWS_SDK_BUNDLE_VERSION}
       DELTA_VERSION: ${DELTA_VERSION}
+      DELTA_ARTIFACT: ${DELTA_ARTIFACT:-delta-spark_2.13}
       SCALA_BIN: ${SCALA_BIN}
+      APEX_JAR_TARGET: ${APEX_JAR_TARGET:-apex_40}
   entrypoint: [""]            # clear base entrypoint; run spark-class directly in foreground
   init: true                  # tini reaps children / forwards signals
   environment: &spark-env
@@ -29,8 +33,7 @@ x-spark-common: &spark-common
     - ./jobs:/opt/apex/jobs:ro
     - ./common:/opt/apex/common:ro
     - ./scripts:/opt/apex/scripts:ro   # smoke / verify helpers
-    - ./tests:/opt/apex/tests:ro       # fingerprint + listener probes
-    - ./out:/opt/apex/out          # listener writes spark_events.jsonl here (host-visible)
+    - ./tests:/opt/apex/tests:ro       # fingerprint probes
 
 services:
   # ── Object store (S3-compatible) ──────────────────────────────────────────

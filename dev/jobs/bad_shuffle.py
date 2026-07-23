@@ -10,7 +10,6 @@ import sys
 sys.path.insert(0, "/opt/apex")
 
 from common.session import build_session          # noqa: E402
-from common.listener import attach, set_plan      # noqa: E402
 from common.data import ensure_data, FACT_PATH     # noqa: E402
 
 
@@ -22,14 +21,12 @@ def main() -> int:
     }
     spark, job_id, app_id, app_name = build_session(
         f"apex-bad_shuffle{'-fix' if fix else ''}", conf)
-    listener = attach(spark, job_id, app_id, app_name)
     ensure_data(spark)
 
     fact = spark.read.format("delta").load(FACT_PATH)
     # High-cardinality shuffle: repartition all rows by id across only 2 partitions.
     agg = fact.groupBy("id").agg({"amount": "sum"})
 
-    set_plan(listener, agg)
     agg.write.format("noop").mode("overwrite").save()
     print(f"APEX_JOB bad_shuffle fix={fix} app_id={app_id}", flush=True)
 

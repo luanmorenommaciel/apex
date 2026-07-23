@@ -5,11 +5,10 @@ JVM heap is fixed when spark-submit launches it, so setting it in-code is too la
 `make run-pathology JOB=driver_oom` passes it automatically.
 
 Pre-collect telemetry survives: a real shuffle stage runs and COMPLETES before the
-fatal collect(), and the JVM StageListener writes each stage record to
-out/spark_events.jsonl the instant the stage completes — so the OOM never loses the
-telemetry for stages that already ran. spark.stop() never runs (driver crashes), so
-the event log stays `.inprogress` and the History Server entry is INCOMPLETE — that
-is the correct, expected outcome for a driver OOM.
+fatal collect(), and ApexPlugin exports its stage event through OTLP before the
+failure. The canonical gate checks the persisted ClickHouse rows; spark.stop() never
+runs (driver crashes), so the event log stays `.inprogress` and the History Server
+entry is INCOMPLETE — that is the correct, expected outcome for a driver OOM.
 
   APEX_SAFE=on → collect only a small sample instead of OOMing.
                  (make run-pathology JOB=driver_oom SAFE=on)
@@ -20,7 +19,6 @@ import sys
 sys.path.insert(0, "/opt/apex")
 
 from common.session import build_session          # noqa: E402
-from common.listener import attach, set_plan      # noqa: E402
 from common.data import ensure_data, FACT_PATH     # noqa: E402
 
 
@@ -32,15 +30,13 @@ def main() -> int:
     spark, job_id, app_id, app_name = build_session(
         f"apex-driver_oom{'-safe' if safe else ''}",
         {"spark.sql.adaptive.enabled": "false", "spark.driver.maxResultSize": "0"})
-    listener = attach(spark, job_id, app_id, app_name)
     ensure_data(spark)
 
     fact = spark.read.format("delta").load(FACT_PATH)
 
-    # (1) A real shuffle stage that COMPLETES before the fatal collect — its listener
-    #     record is flushed to disk, proving pre-OOM telemetry is not lost.
+    # (1) A real shuffle stage that COMPLETES before the fatal collect, proving
+    #     canonical pre-OOM telemetry is not lost.
     pre = fact.groupBy("join_key").count()
-    set_plan(listener, pre)
     ngroups = len(pre.collect())               # small result (~10k keys) — safe
     print(f"APEX_JOB driver_oom precollect_stage_done groups={ngroups}", flush=True)
 
