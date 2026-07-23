@@ -27,18 +27,21 @@ Essa evidência informa o reaproveitamento, mas não substitui o gate deste PR.
 
 ```powershell
 docker run --rm -v "${PWD}:/workspace" -w /workspace/jar `
-  -e COURSIER_REPOSITORIES=https://repo.maven.apache.org/maven2 `
   sbtscala/scala-sbt:eclipse-temurin-jammy-17.0.10_7_1.10.4_3.5.2 `
   sbt -batch "apex_41/test" "apex_41/assembly"
 ```
 
 ## Estado atual
 
-**Pendente no ambiente local.** Em 2026-07-23, a tentativa chegou ao
-carregamento do build, mas ficou bloqueada antes da compilação ao resolver
-`sbt-projectmatrix` pelo Coursier. Não houve resultado de teste ou assembly
-nesta branch limpa. O PR não deve declarar o gate Spark 4.1.2 verde até esta
-execução concluir.
+**Pendente no ambiente local.** Uma tentativa inicial ficou bloqueada antes da
+compilação porque o sbt/Coursier tentou resolver plugins por uma entrada
+histórica de `repo1.maven.org`. O projeto agora fixa Maven Central em
+`project/repositories`, carregado por `.jvmopts`.
+
+Em 2026-07-23, a nova tentativa carregou o projeto com essa configuração e
+baixou dependências, mas `apex_41/test` e `apex_41/assembly` não começaram
+dentro do limite de dez minutos. Não existe resultado de teste nem assembly
+nesta branch limpa; o gate não deve ser declarado verde até concluir.
 
 ## Rollback
 
