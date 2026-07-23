@@ -3,13 +3,15 @@
 // per-stage TaskMetrics + a normalized LOGICAL plan fingerprint and ships each
 // completed stage as one OTLP span through a BOUNDED BatchSpanProcessor.
 //
-// Cross-build via sbt-projectmatrix (3 cells). A single crossScalaVersions can't
+// Cross-build via sbt-projectmatrix (4 cells). A single crossScalaVersions can't
 // vary the Spark dependency per Scala version, but Spark 4.0 dropped Scala 2.12
 // and requires Java 17 — so each (Spark, Scala) pair needs its own row:
-//   apex_3.5_2.12  · apex_3.5_2.13  · apex_4.0_2.13
+//   apex_3.5_2.12  · apex_3.5_2.13  · apex_4.0_2.13  · apex_4.1_2.13
 // ─────────────────────────────────────────────────────────────────────────────
 
 import sbt.VirtualAxis
+import sbtassembly.AssemblyPlugin.autoImport._
+import sbtassembly.MergeStrategy
 
 // The implicit build-root project shares this baseDirectory and would otherwise
 // compile src/main/scala WITHOUT any cell's Spark/OTel classpath (failing on the
@@ -30,6 +32,7 @@ ThisBuild / description  := "Apex Spark plugin: per-stage metrics + logical-plan
 // (set per-cell below), while the axis carries an ID-safe token.
 val Spark35 = SparkAxis("_35", "spark35")
 val Spark40 = SparkAxis("_40", "spark40")
+val Spark41 = SparkAxis("_41", "spark41")
 
 // Spark on JDK 17 requires these module opens or it throws InaccessibleObjectException
 // (Tungsten/unsafe, Kryo, network). Applied to forked test JVMs only.
@@ -62,7 +65,11 @@ val otelDeps = Seq(
 // Spark + Jackson are Provided (the host cluster supplies them). Jackson is pinned
 // and overridden to the version Spark ships — bundling a mismatched Jackson causes
 // NoSuchMethodError deep inside Spark (sparkMeasure marks jackson-module-scala Provided).
-def sparkCell(sparkVersion: String, jacksonVersion: String): Seq[Setting[_]] = Seq(
+def sparkCell(
+  sparkVersion: String,
+  jacksonVersion: String,
+  jacksonAnnotationsVersion: String,
+): Seq[Setting[_]] = Seq(
   libraryDependencies ++= Seq(
     "org.apache.spark"             %% "spark-core"          % sparkVersion   % Provided,
     "org.apache.spark"             %% "spark-sql"           % sparkVersion   % Provided,
@@ -72,7 +79,7 @@ def sparkCell(sparkVersion: String, jacksonVersion: String): Seq[Setting[_]] = S
   dependencyOverrides ++= Seq(
     "com.fasterxml.jackson.core" % "jackson-core"        % jacksonVersion,
     "com.fasterxml.jackson.core" % "jackson-databind"    % jacksonVersion,
-    "com.fasterxml.jackson.core" % "jackson-annotations" % jacksonVersion
+    "com.fasterxml.jackson.core" % "jackson-annotations" % jacksonAnnotationsVersion
   ),
   // Carry the Spark version into the published artifact so a cluster picks the right cell.
   moduleName := s"apex${sparkSuffix.value}",
@@ -82,7 +89,19 @@ def sparkCell(sparkVersion: String, jacksonVersion: String): Seq[Setting[_]] = S
   Test / javaOptions ++= sparkJdk17Opens,
   // Keep Spark/Jackson `Provided` in the PUBLISHED POM, but put them on the TEST
   // classpath (the compile classpath includes provided deps) so tests can run Spark.
-  Test / dependencyClasspath := (Test / dependencyClasspath).value ++ (Compile / dependencyClasspath).value
+  Test / dependencyClasspath := (Test / dependencyClasspath).value ++ (Compile / dependencyClasspath).value,
+  // Spark already supplies its Scala runtime. The assembly bundles the OTel SDK and
+  // project classes only, preventing a Scala version from being injected into Spark.
+  assembly / assemblyOption ~= { _.withIncludeScala(false) },
+  assembly / assemblyJarName := s"${moduleName.value}-${version.value}-assembly.jar",
+  // Kotlin/Okio ship duplicate module metadata. It is not bytecode used by the
+  // plugin, so discard only that metadata and keep strict deduplication elsewhere.
+  assembly / assemblyMergeStrategy := {
+    case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+    case PathList("META-INF", _ @ "okio.kotlin_module") => MergeStrategy.discard
+    case PathList("META-INF", "versions", "9", "module-info.class") => MergeStrategy.discard
+    case path => MergeStrategy.deduplicate
+  }
 )
 
 // Derived per-row from the SparkAxis in scope (used to suffix the module name).
@@ -97,17 +116,23 @@ lazy val apex = (projectMatrix in file("."))
   .customRow(
     scalaVersions = Seq("2.12.18"),
     axisValues    = Seq(Spark35, VirtualAxis.jvm),
-    _.settings(sparkSuffix := "_3.5").settings(sparkCell("3.5.3", "2.15.2"))
+    _.settings(sparkSuffix := "_3.5").settings(sparkCell("3.5.3", "2.15.2", "2.15.2"))
   )
   // Spark 3.5 · Scala 2.13  (Java 8/11/17) — Jackson 2.15.x
   .customRow(
     scalaVersions = Seq("2.13.14"),
     axisValues    = Seq(Spark35, VirtualAxis.jvm),
-    _.settings(sparkSuffix := "_3.5").settings(sparkCell("3.5.3", "2.15.2"))
+    _.settings(sparkSuffix := "_3.5").settings(sparkCell("3.5.3", "2.15.2", "2.15.2"))
   )
   // Spark 4.0 · Scala 2.13  (Java 17/21) — Jackson 2.18.x
   .customRow(
     scalaVersions = Seq("2.13.14"),
     axisValues    = Seq(Spark40, VirtualAxis.jvm),
-    _.settings(sparkSuffix := "_4.0").settings(sparkCell("4.0.0", "2.18.2"))
+    _.settings(sparkSuffix := "_4.0").settings(sparkCell("4.0.0", "2.18.2", "2.18.2"))
+  )
+  // Spark 4.1 · Scala 2.13 (Java 17/21) — additive compatibility cell.
+  .customRow(
+    scalaVersions = Seq("2.13.17"),
+    axisValues    = Seq(Spark41, VirtualAxis.jvm),
+    _.settings(sparkSuffix := "_4.1").settings(sparkCell("4.1.2", "2.21.2", "2.21"))
   )
