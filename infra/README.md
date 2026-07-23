@@ -10,6 +10,9 @@ adds partitioning/TTL, a job-level rollup, the reshape MVs, and skew detection.
 **Exit criterion (proven):** a `curl`'d OTLP/HTTP span → `apex.spark_events` (via MV) → a HyperDX
 tile **and** the skew query both return it, all threaded by `job_id`.
 
+Os gates locais desta branch e a referência da evidência integrada estão em
+[`VALIDATION.md`](VALIDATION.md).
+
 ```
   jar / collect ──OTLP:4318──▶ otel-collector ──native:9000──▶ ClickHouse ◀──HTTP:8123── HyperDX ──state──▶ MongoDB
                                                               apex.otel_traces                (UI :8090)      (:27017)
@@ -36,6 +39,11 @@ tile **and** the skew query both return it, all threaded by `job_id`.
 `001` db · `002` spark_events *(contract)* · `003` findings *(contract)* · `004` rollup +
 incremental MV · `005` skew queries · `010` otel_traces landing table · `011` plan_transitions
 *(contract v0.2)* · `020` reshape MVs (`mv_spark_events`, `mv_plan_transitions`).
+
+`012_otel_logs.sql` is the exporter-owned OTLP logs landing table. It is needed
+when the canonical `collect/` pipeline is connected to infra, because that
+pipeline declares both trace and log exporters even though the current Spark
+plugin emits spans only.
 
 > **Schema authority:** `002/003/011` are the contract tables applied **verbatim** — never
 > rename/repurpose a column. `010` + `020` **mirror `collect/ddl/`** so a span landing in
