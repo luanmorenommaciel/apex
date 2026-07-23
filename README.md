@@ -22,6 +22,8 @@ dev  →  jar  →  collect  →  infra  →  engine  →  serve
 1. **[CONTRACT.md](CONTRACT.md)** — the frozen interface every stage obeys. Read it first.
 2. **[PIPELINE.md](PIPELINE.md)** — the stage map, dependency graph, and build order.
 3. **[docs/lanes/](docs/lanes/)** — the detailed, research-backed build brief for each stage.
+4. **[APEX V1 swimlanes](docs/architecture/APEX-V1-SWIMLANES.md)** — the approved product flow, decisions, gates, and security boundaries.
+5. **[V1 PR plan](docs/architecture/APEX-V1-PR-PLAN.md)** — the lane-by-lane delivery and merge order.
 
 ## Quick start (once built)
 
