@@ -36,3 +36,6 @@ otel-queue/
 .idea/
 .vscode/
 *.swp
+
+# transient browser-automation screenshots
+.playwright-mcp/
