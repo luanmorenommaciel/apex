@@ -67,14 +67,14 @@ class CrewAIJudge:
             role="APEX evidence correlator",
             goal="Correlate only the supplied deterministic evidence.",
             backstory="You never invent metrics or root causes.",
-            llm=LLM(model=self._correlator_model, temperature=0.0),
+            llm=LLM(model=self._correlator_model),
             allow_delegation=False,
         )
         judger = Agent(
             role="APEX adversarial finding judge",
             goal="Reject candidates whose supplied evidence is insufficient.",
             backstory="You are skeptical and must cite the supplied evidence.",
-            llm=LLM(model=self._judge_model, temperature=0.0),
+            llm=LLM(model=self._judge_model),
             allow_delegation=False,
         )
         correlate_task = Task(
