@@ -1,0 +1,9 @@
+ENGINE_C5_CREW_PROVIDER_SMOKE=passed
+{
+  "decision": "reject",
+  "rationale": "The supplied evidence is insufficient to confirm a critical SKEW_ON_JOIN finding. While the ratio 'p99/p50=29.5x' suggests tail-heavy task durations, it is derived from only 'task_count=8', a sample too small for statistically reliable p99/p50 computation. Critically, no hot_key was provided (field empty), so the root cause of the alleged join skew cannot be attributed or confirmed from the evidence alone. With no corroborating metrics, logs, or upstream/downstream evidence, and a stated LOW confidence, the evidence does not meet the bar to confirm a critical-severity finding.",
+  "cited_evidence": [
+    "p99/p50=29.5x",
+    "task_count=8"
+  ]
+}

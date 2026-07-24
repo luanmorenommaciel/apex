@@ -1,0 +1,174 @@
+{
+  "comparison": {
+    "baseline_job_id": "codex-mcp-before-39d3b0148bb34af2a6b17376a50eae98",
+    "comparisons": [
+      {
+        "after": 0.0,
+        "before": 1.0,
+        "delta": -1.0,
+        "direction": "lower_is_better",
+        "metric": "finding_count",
+        "status": "improved"
+      },
+      {
+        "after": 1.0,
+        "before": 29.5,
+        "delta": -28.5,
+        "direction": "lower_is_better",
+        "metric": "max_p99_p50_ratio",
+        "status": "improved"
+      },
+      {
+        "after": 0.0,
+        "before": 2097152.0,
+        "delta": -2097152.0,
+        "direction": "lower_is_better",
+        "metric": "total_spilled_bytes",
+        "status": "improved"
+      }
+    ],
+    "current_job_id": "codex-mcp-after-39d3b0148bb34af2a6b17376a50eae98",
+    "missing_job_ids": [],
+    "status": "improved"
+  },
+  "diagnosis": {
+    "app_id": "app-codex-mcp-before",
+    "findings": [
+      {
+        "confidence": "HIGH",
+        "detected_by": "skew_watcher",
+        "evidence": "p99/p50=29.5x run=39d3b0148bb34af2a6b17376a50eae98",
+        "finding_id": "codex-mcp-finding-39d3b0148bb34af2a6b17376a50eae98",
+        "fix": "enable AQE skew join 39d3b0148bb34af2a6b17376a50eae98",
+        "impact": "high tail latency",
+        "job_id": "codex-mcp-before-39d3b0148bb34af2a6b17376a50eae98",
+        "severity": "critical",
+        "stage_id": 2,
+        "type": "SKEW_ON_JOIN"
+      }
+    ],
+    "job_id": "codex-mcp-before-39d3b0148bb34af2a6b17376a50eae98",
+    "stages": [
+      {
+        "p50_ms": 100.0,
+        "p99_ms": 2950.0,
+        "p99_p50_ratio": 29.5,
+        "shuffle_read_bytes": 1000000,
+        "spilled_bytes": 2097152,
+        "stage_id": 2
+      }
+    ],
+    "status": "findings",
+    "summary": "1 persisted finding(s) across 1 stage(s)."
+  },
+  "external_llm_calls": 0,
+  "gate": "C2-C4",
+  "knowledge": {
+    "hits": [
+      {
+        "confidence": "HIGH",
+        "detected_by": "skew_watcher",
+        "evidence": "p99/p50=29.5x run=39d3b0148bb34af2a6b17376a50eae98",
+        "finding_id": "codex-mcp-finding-39d3b0148bb34af2a6b17376a50eae98",
+        "fix": "enable AQE skew join 39d3b0148bb34af2a6b17376a50eae98",
+        "job_id": "codex-mcp-before-39d3b0148bb34af2a6b17376a50eae98",
+        "stage_id": 2,
+        "type": "SKEW_ON_JOIN"
+      }
+    ],
+    "query": "39d3b0148bb34af2a6b17376a50eae98"
+  },
+  "mcp_tools": [
+    "analyze_run",
+    "compare_runs",
+    "search_kb",
+    "suggest_fix"
+  ],
+  "run_id": "39d3b0148bb34af2a6b17376a50eae98",
+  "status": "passed",
+  "suggestion": {
+    "applied": false,
+    "confidence": 0.9,
+    "diff": "--- a/<operator-selected-spark-job.py>\n+++ b/<operator-selected-spark-job.py>\n@@ review-required APEX suggestion @@\n+# APEX finding: codex-mcp-finding-39d3b0148bb34af2a6b17376a50eae98\n+# Suggested remediation: enable AQE skew join 39d3b0148bb34af2a6b17376a50eae98\n+# Review the data shape and Spark configuration before making a manual change.",
+    "finding_id": "codex-mcp-finding-39d3b0148bb34af2a6b17376a50eae98",
+    "job_id": "codex-mcp-before-39d3b0148bb34af2a6b17376a50eae98",
+    "min_confidence": 0.75,
+    "pr_body": "## APEX suggested remediation\n- Status: proposed; human approval is required.\n- Finding: `codex-mcp-finding-39d3b0148bb34af2a6b17376a50eae98` (SKEW_ON_JOIN) on stage 2\n- Confidence: 0.90\n- Evidence: p99/p50=29.5x run=39d3b0148bb34af2a6b17376a50eae98\n- Proposed action: enable AQE skew join 39d3b0148bb34af2a6b17376a50eae98\n- This MCP tool did not change files, Git state, or a running Spark job.",
+    "rationale": "A deterministic persisted finding supports a reviewable proposal.",
+    "requires_human_approval": true,
+    "status": "proposed"
+  }
+}
+[07/23/26 23:46:36] INFO     Processing request of type           server.py:733
+                             ListToolsRequest                                  
+                    INFO     Processing request of type           server.py:733
+                             CallToolRequest                                   
+[07/23/26 23:46:37] INFO     Processing request of type           server.py:733
+                             CallToolRequest                                   
+[07/23/26 23:46:38] INFO     Processing request of type           server.py:733
+                             CallToolRequest                                   
+                    INFO     Processing request of type           server.py:733
+                             CallToolRequest                                   
+{
+  "analyze_run": [
+    {
+      "annotations": null,
+      "meta": null,
+      "text": "{\n  \"job_id\": \"codex-mcp-before-39d3b0148bb34af2a6b17376a50eae98\",\n  \"app_id\": \"app-codex-mcp-before\",\n  \"status\": \"findings\",\n  \"stages\": [\n    {\n      \"stage_id\": 2,\n      \"shuffle_read_bytes\": 1000000,\n      \"spilled_bytes\": 2097152,\n      \"p50_ms\": 100.0,\n      \"p99_ms\": 2950.0,\n      \"p99_p50_ratio\": 29.5\n    }\n  ],\n  \"findings\": [\n    {\n      \"finding_id\": \"codex-mcp-finding-39d3b0148bb34af2a6b17376a50eae98\",\n      \"job_id\": \"codex-mcp-before-39d3b0148bb34af2a6b17376a50eae98\",\n      \"stage_id\": 2,\n      \"type\": \"SKEW_ON_JOIN\",\n      \"severity\": \"critical\",\n      \"evidence\": \"p99/p50=29.5x run=39d3b0148bb34af2a6b17376a50eae98\",\n      \"impact\": \"high tail latency\",\n      \"fix\": \"enable AQE skew join 39d3b0148bb34af2a6b17376a50eae98\",\n      \"confidence\": \"HIGH\",\n      \"detected_by\": \"skew_watcher\"\n    }\n  ],\n  \"summary\": \"1 persisted finding(s) across 1 stage(s).\"\n}",
+      "type": "text"
+    }
+  ],
+  "compare_runs": [
+    {
+      "annotations": null,
+      "meta": null,
+      "text": "{\n  \"baseline_job_id\": \"codex-mcp-before-39d3b0148bb34af2a6b17376a50eae98\",\n  \"current_job_id\": \"codex-mcp-after-39d3b0148bb34af2a6b17376a50eae98\",\n  \"status\": \"improved\",\n  \"comparisons\": [\n    {\n      \"metric\": \"finding_count\",\n      \"before\": 1.0,\n      \"after\": 0.0,\n      \"delta\": -1.0,\n      \"direction\": \"lower_is_better\",\n      \"status\": \"improved\"\n    },\n    {\n      \"metric\": \"max_p99_p50_ratio\",\n      \"before\": 29.5,\n      \"after\": 1.0,\n      \"delta\": -28.5,\n      \"direction\": \"lower_is_better\",\n      \"status\": \"improved\"\n    },\n    {\n      \"metric\": \"total_spilled_bytes\",\n      \"before\": 2097152.0,\n      \"after\": 0.0,\n      \"delta\": -2097152.0,\n      \"direction\": \"lower_is_better\",\n      \"status\": \"improved\"\n    }\n  ],\n  \"missing_job_ids\": []\n}",
+      "type": "text"
+    }
+  ],
+  "gate": "C2-C4-stdio",
+  "run_id": "39d3b0148bb34af2a6b17376a50eae98",
+  "search_kb": [
+    {
+      "annotations": null,
+      "meta": null,
+      "text": "{\n  \"query\": \"39d3b0148bb34af2a6b17376a50eae98\",\n  \"hits\": [\n    {\n      \"finding_id\": \"codex-mcp-finding-39d3b0148bb34af2a6b17376a50eae98\",\n      \"job_id\": \"codex-mcp-before-39d3b0148bb34af2a6b17376a50eae98\",\n      \"stage_id\": 2,\n      \"type\": \"SKEW_ON_JOIN\",\n      \"evidence\": \"p99/p50=29.5x run=39d3b0148bb34af2a6b17376a50eae98\",\n      \"fix\": \"enable AQE skew join 39d3b0148bb34af2a6b17376a50eae98\",\n      \"confidence\": \"HIGH\",\n      \"detected_by\": \"skew_watcher\"\n    }\n  ]\n}",
+      "type": "text"
+    }
+  ],
+  "status": "passed",
+  "suggest_fix": [
+    {
+      "annotations": null,
+      "meta": null,
+      "text": "{\n  \"job_id\": \"codex-mcp-before-39d3b0148bb34af2a6b17376a50eae98\",\n  \"finding_id\": \"codex-mcp-finding-39d3b0148bb34af2a6b17376a50eae98\",\n  \"status\": \"proposed\",\n  \"applied\": false,\n  \"requires_human_approval\": true,\n  \"confidence\": 0.9,\n  \"min_confidence\": 0.75,\n  \"diff\": \"--- a/<operator-selected-spark-job.py>\\n+++ b/<operator-selected-spark-job.py>\\n@@ review-required APEX suggestion @@\\n+# APEX finding: codex-mcp-finding-39d3b0148bb34af2a6b17376a50eae98\\n+# Suggested remediation: enable AQE skew join 39d3b0148bb34af2a6b17376a50eae98\\n+# Review the data shape and Spark configuration before making a manual change.\",\n  \"pr_body\": \"## APEX suggested remediation\\n- Status: proposed; human approval is required.\\n- Finding: `codex-mcp-finding-39d3b0148bb34af2a6b17376a50eae98` (SKEW_ON_JOIN) on stage 2\\n- Confidence: 0.90\\n- Evidence: p99/p50=29.5x run=39d3b0148bb34af2a6b17376a50eae98\\n- Proposed action: enable AQE skew join 39d3b0148bb34af2a6b17376a50eae98\\n- This MCP tool did not change files, Git state, or a running Spark job.\",\n  \"rationale\": \"A deterministic persisted finding supports a reviewable proposal.\"\n}",
+      "type": "text"
+    }
+  ],
+  "tools": [
+    {
+      "destructiveHint": null,
+      "name": "analyze_run",
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    {
+      "destructiveHint": null,
+      "name": "compare_runs",
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    {
+      "destructiveHint": null,
+      "name": "search_kb",
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    {
+      "destructiveHint": false,
+      "name": "suggest_fix",
+      "openWorldHint": false,
+      "readOnlyHint": false
+    }
+  ]
+}
