@@ -54,6 +54,7 @@ services:
       REDACTION_SECRET_KEY: ${REDACTION_SECRET_KEY:?set REDACTION_SECRET_KEY in .env}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-apex_local_dev}
+      CLICKHOUSE_ENDPOINT: ${CLICKHOUSE_ENDPOINT:-tcp://clickhouse:9000?compress=lz4&async_insert=1}
     volumes:
       - ./config.yaml:/etc/otelcol-contrib/config.yaml:ro
       - otel-queue:/var/lib/otelcol/queue           # crash-safe sending queue (file_storage)

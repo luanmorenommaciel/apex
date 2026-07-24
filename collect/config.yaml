@@ -60,7 +60,7 @@ processors:
 exporters:
   clickhouse:
     # tcp:// selects the native protocol (9000). NEVER mix tcp:// with the 8123 HTTP port.
-    endpoint: tcp://clickhouse:9000?compress=lz4&async_insert=1
+    endpoint: ${env:CLICKHOUSE_ENDPOINT}
     database: apex
     username: ${env:CLICKHOUSE_USER}
     password: ${env:CLICKHOUSE_PASSWORD}

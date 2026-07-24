@@ -5,6 +5,9 @@ OTLP `:4318` → `memory_limiter` → PII scrub → ClickHouse `apex`.
 **Obeys:** [`../CONTRACT.md`](../CONTRACT.md) (v0.2) · **Full brief:** [`../docs/lanes/COLLECT.md`](../docs/lanes/COLLECT.md)
 **Exit criterion (met):** ingests Spark telemetry on `:4318`, hashes/drops the named PII fields, and lands rows queryable by `job_id` end-to-end.
 
+O comando de reprodução e os gates desta branch estão em
+[`VALIDATION.md`](VALIDATION.md).
+
 ```
  jar ──OTLP/HTTP :4318──► otel-collector ──native tcp:9000──► ClickHouse apex
                           memory_limiter                     otel_traces (exporter-owned)
@@ -93,6 +96,23 @@ docker run --rm -e REDACTION_SECRET_KEY=$(openssl rand -hex 32) \
   -v "$PWD/config.yaml:/c.yaml:ro" \
   otel/opentelemetry-collector-contrib:0.156.0 validate --config /c.yaml
 ```
+
+## C3 canonical integration
+
+For the local six-lane tracer bullet, keep this lane's isolated ClickHouse for
+its own smoke test but start the collector with the explicit C3 overlay. It
+attaches the collector to `apex-infra-net` and changes only its exporter
+endpoint to `apex-infra-clickhouse:9000`:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.c3-infra.yml `
+  --env-file .env.example --env-file .env.c3-infra.example up -d
+```
+
+`infra/sql/012_otel_logs.sql` must be present before this overlay starts. The
+sample C3 secret is intentionally a local smoke-only value; a real deployment
+must provide `REDACTION_SECRET_KEY` through its secret manager or local `.env`,
+never commit one.
 
 ## Lane boundaries & notes
 
