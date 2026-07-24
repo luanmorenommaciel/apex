@@ -1,4 +1,4 @@
-"""FastMCP stdio server exposing read-only APEX diagnosis."""
+"""FastMCP stdio server exposing APEX diagnosis and non-applying proposals."""
 
 from __future__ import annotations
 
@@ -24,6 +24,16 @@ def create_server(service: ApexReadService) -> FastMCP:
     def compare_runs(baseline_job_id: str, current_job_id: str) -> dict:
         """Compare two telemetry runs; lower findings, skew and spill are better."""
         return service.compare_runs(baseline_job_id, current_job_id).model_dump(mode="json")
+
+    @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False))
+    def search_kb(query: str, top_k: int = 5) -> dict:
+        """Search persisted, redacted finding evidence and remediation notes."""
+        return service.search_kb(query, top_k).model_dump(mode="json")
+
+    @mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False))
+    def suggest_fix(job_id: str, finding_id: str | None = None, min_confidence: float = 0.75) -> dict:
+        """Return a review-only diff and PR body; never writes files, Git, or Spark."""
+        return service.suggest_fix(job_id, finding_id, min_confidence).model_dump(mode="json")
 
     return mcp
 

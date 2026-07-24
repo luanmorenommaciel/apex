@@ -53,3 +53,32 @@ class RunComparison(BaseModel):
     status: Literal["improved", "regressed", "unchanged", "not_comparable"]
     comparisons: list[MetricComparison] = Field(default_factory=list)
     missing_job_ids: list[str] = Field(default_factory=list)
+
+
+class KnowledgeHit(BaseModel):
+    finding_id: str
+    job_id: str
+    stage_id: int
+    type: str
+    evidence: str
+    fix: str
+    confidence: str
+    detected_by: str
+
+
+class KnowledgeSearch(BaseModel):
+    query: str
+    hits: list[KnowledgeHit] = Field(default_factory=list)
+
+
+class FixSuggestion(BaseModel):
+    job_id: str
+    finding_id: str | None = None
+    status: Literal["proposed", "advisory", "not_found"]
+    applied: Literal[False] = False
+    requires_human_approval: Literal[True] = True
+    confidence: float = Field(ge=0.0, le=1.0)
+    min_confidence: float = Field(ge=0.0, le=1.0)
+    diff: str = ""
+    pr_body: str = ""
+    rationale: str

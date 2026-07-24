@@ -27,13 +27,21 @@ WHERE job_id = {job_id:String}
 ORDER BY ts ASC
 """
 
+KB_SEARCH_SQL = """
+SELECT finding_id, job_id, stage_id, type, evidence, fix, confidence, detected_by
+FROM apex.findings
+WHERE lowerUTF8(concat(evidence, ' ', impact, ' ', fix, ' ', type)) LIKE lowerUTF8({pattern:String})
+ORDER BY ts DESC
+LIMIT {top_k:UInt8}
+"""
+
 
 class QueryResult(Protocol):
     def named_results(self) -> Iterable[dict[str, Any]]: ...
 
 
 class ClickHouseClient(Protocol):
-    def query(self, query: str, parameters: dict[str, str]) -> QueryResult: ...
+    def query(self, query: str, parameters: dict[str, Any]) -> QueryResult: ...
 
 
 class ReadStore:
@@ -45,6 +53,20 @@ class ReadStore:
 
     def findings(self, job_id: str) -> list[dict[str, Any]]:
         return self._query(FINDINGS_SQL, job_id)
+
+    def search_kb(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
+        cleaned = " ".join(query.split())
+        if not cleaned:
+            raise ValueError("query_required")
+        if len(cleaned) > 200:
+            raise ValueError("query_too_long")
+        if not 1 <= top_k <= 20:
+            raise ValueError("top_k_out_of_range")
+        result = self._client.query(
+            KB_SEARCH_SQL,
+            parameters={"pattern": f"%{cleaned}%", "top_k": top_k},
+        )
+        return [dict(row) for row in result.named_results()]
 
     def _query(self, query: str, job_id: str) -> list[dict[str, Any]]:
         if not job_id:
