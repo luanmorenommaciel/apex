@@ -11,7 +11,6 @@ import sys
 sys.path.insert(0, "/opt/apex")
 
 from common.session import build_session          # noqa: E402
-from common.listener import attach, set_plan      # noqa: E402
 from common.data import ensure_data, FACT_PATH     # noqa: E402
 
 
@@ -25,14 +24,12 @@ def main() -> int:
     }
     spark, job_id, app_id, app_name = build_session(
         f"apex-spill{'-fix' if fix else ''}", conf)
-    listener = attach(spark, job_id, app_id, app_name)
     ensure_data(spark)
 
     fact = spark.read.format("delta").load(FACT_PATH)
     # Global sort forces a shuffle + external sort; the constrained pool spills to disk.
     sorted_df = fact.orderBy("amount")
 
-    set_plan(listener, sorted_df)
     sorted_df.write.format("noop").mode("overwrite").save()   # materialize the full sort
     print(f"APEX_JOB spill fix={fix} app_id={app_id}", flush=True)
 

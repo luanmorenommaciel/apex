@@ -1,16 +1,20 @@
 # Apex dev-env — Makefile (T13).  `make help` lists targets.
 SHELL   := /usr/bin/env bash
 COMPOSE := docker compose
+C3_COMPOSE := $(COMPOSE) -f docker-compose.yml -f docker-compose.c3-otlp.yml
 
 .DEFAULT_GOAL := help
-.PHONY: help env build up down clean ps verify doctor gen-data run-pathology logs-check scale
+.PHONY: help env env-spark41 build up down clean ps verify doctor gen-data run-pathology scale c3-up c3-plugin-skew c4-aqe-skew c4-aqe-skewsplit c4-aqe-probe e2e e2e-canonical
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n",$$1,$$2}'
 
 env: ## Create .env from .env.example if it doesn't exist yet
-	@[ -f .env ] || { cp .env.example .env && echo "created .env from .env.example"; }
+	@python scripts/ensure_env.py .env.example .env
+
+env-spark41: ## Create .env from the baseline plus the Spark 4.1.2 overlay
+	@python scripts/ensure_env.py .env.example .env.spark41.example .env
 
 build: env ## Build the Spark image (S3A + Delta jars baked in)
 	$(COMPOSE) build
@@ -53,11 +57,6 @@ fp-crosscheck: ## T7 integration: dev fingerprint == jar's Scala fingerprint (cr
 	  --conf spark.eventLog.enabled=false /opt/apex/tests/test_fingerprint.py
 
 APEX_IMAGE ?= apex-spark:local
-listener-probe: up ## T6: run the listener probe and show emitted contract records
-	$(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
-	  --master spark://spark-master:7077 /opt/apex/tests/listener_probe.py
-	@echo "--- out/spark_events.jsonl ---"; cat out/spark_events.jsonl
-
 gen-data: up ## Generate deterministic ~50% hot-key Delta tables (T8)
 	$(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
 	  --master spark://spark-master:7077 /opt/apex/jobs/generate_data.py
@@ -73,11 +72,48 @@ run-pathology: up ## Run a pathology: JOB=skew_join|spill|bad_shuffle|driver_oom
 	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
 	  $${dm:+--driver-memory $$dm} /opt/apex/jobs/$(JOB).py
 
-e2e: env ## Lane exit proof: run ALL 4 pathologies and assert each signal (build→up→run→teardown)
-	./scripts/e2e.sh
+c3-up: env ## Join infra's OTLP network and wait for the Spark driver service
+	$(C3_COMPOSE) up -d --wait
 
-logs-check: ## Show the listener's contract rows (out/spark_events.jsonl)
-	@tail -n 20 out/spark_events.jsonl 2>/dev/null || echo "no rows yet — run a pathology job first"
+c3-plugin-skew: c3-up ## C3: ApexPlugin -> infra OTLP collector
+	$(C3_COMPOSE) exec -T -e APEX_AQE=off -e APEX_FIX=off -e APEX_SAFE=off spark-master \
+	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+	  --conf spark.plugins=apex.ApexPlugin \
+	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
+	  --conf spark.apex.aqe.enabled=false \
+	  /opt/apex/jobs/skew_join.py
+
+c4-aqe-skew: c3-up ## C4: AQE skew split + ApexPlugin plan_transition -> infra OTLP collector
+	$(C3_COMPOSE) exec -T -e APEX_AQE=on -e APEX_FIX=off -e APEX_SAFE=off spark-master \
+	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+	  --conf spark.plugins=apex.ApexPlugin \
+	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
+	  --conf spark.apex.aqe.enabled=true \
+	  /opt/apex/jobs/skew_join.py
+
+c4-aqe-skewsplit: c3-up ## C4 calibration: force a real AQE skew_split without changing the default cell
+	$(C3_COMPOSE) exec -T -e APEX_AQE=on -e APEX_FIX=off -e APEX_SAFE=off \
+	  -e APEX_AQE_SKEW_THRESHOLD=1m -e APEX_AQE_ADVISORY_PARTITION=512k \
+	  -e APEX_AQE_SKEW_FACTOR=2 -e APEX_AQE_COALESCE=false \
+	  -e APEX_AQE_FORCE_OPTIMIZE_SKEW=true spark-master \
+	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+	  --conf spark.plugins=apex.ApexPlugin \
+	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
+	  --conf spark.apex.aqe.enabled=true \
+	  /opt/apex/jobs/skew_join.py
+
+c4-aqe-probe: c3-up ## C4 calibration probe: mirror the JAR AQE transition test at runtime
+	$(C3_COMPOSE) exec -T spark-master \
+	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+	  --conf spark.plugins=apex.ApexPlugin \
+	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
+	  --conf spark.apex.aqe.enabled=true \
+	  /opt/apex/jobs/aqe_skew_split_probe.py
+
+e2e: e2e-canonical ## Official pathology gate: 4 jobs asserted through canonical ClickHouse
+
+e2e-canonical: env ## Canonical proof: 4 pathologies via OTLP/ClickHouse; requires running collect+infra and password env
+	./scripts/e2e_canonical.sh $(E2E_ARGS)
 
 WORKERS ?= 2
 scale: env ## Scale workers, e.g. make scale WORKERS=3
