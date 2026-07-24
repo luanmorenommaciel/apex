@@ -1,6 +1,6 @@
 from apex_mcp.models import Diagnosis
 from apex_mcp.service import ApexReadService
-from apex_mcp.store import FINDINGS_SQL, STAGES_SQL, ReadStore
+from apex_mcp.store import FINDINGS_SQL, KB_SEARCH_SQL, STAGES_SQL, ReadStore
 
 
 class FakeResult:
@@ -73,9 +73,39 @@ def test_compare_runs_reports_improvement():
 def test_mcp_server_exposes_only_read_only_diagnosis_tools():
     mcp = create_server(ApexReadService(ReadStore(FakeClient([], []))))
     tools = asyncio.run(mcp.list_tools())
-    assert [tool.name for tool in tools] == ["analyze_run", "compare_runs"]
-    assert all(tool.annotations and tool.annotations.readOnlyHint is True for tool in tools)
+    assert [tool.name for tool in tools] == ["analyze_run", "compare_runs", "search_kb", "suggest_fix"]
+    by_name = {tool.name: tool for tool in tools}
+    assert all(by_name[name].annotations.readOnlyHint is True for name in ("analyze_run", "compare_runs", "search_kb"))
+    assert by_name["suggest_fix"].annotations.readOnlyHint is False
+    assert by_name["suggest_fix"].annotations.destructiveHint is False
     assert all(tool.annotations and tool.annotations.openWorldHint is False for tool in tools)
+
+
+def test_search_kb_is_parameterized_and_returns_persisted_remediation():
+    client = FakeClient([], [{**finding(), "fix": "review shuffle spill"}])
+    result = ApexReadService(ReadStore(client)).search_kb("shuffle spill")
+    assert result.hits[0].fix == "review shuffle spill"
+    query, parameters = client.calls[0]
+    assert query == KB_SEARCH_SQL
+    assert "shuffle spill" not in KB_SEARCH_SQL
+    assert parameters == {"pattern": "%shuffle spill%", "top_k": 5}
+
+
+def test_suggest_fix_never_applies_and_returns_a_reviewable_proposal():
+    service = ApexReadService(ReadStore(FakeClient([], [finding()])))
+    result = service.suggest_fix("before", min_confidence=0.75)
+    assert result.status == "proposed"
+    assert result.applied is False
+    assert result.requires_human_approval is True
+    assert "--- a/<operator-selected-spark-job.py>" in result.diff
+    assert "did not change files, Git state, or a running Spark job" in result.pr_body
+
+
+def test_low_confidence_suggestion_is_advisory_only():
+    low = {**finding(), "confidence": "LOW"}
+    result = ApexReadService(ReadStore(FakeClient([], [low]))).suggest_fix("before")
+    assert result.status == "advisory"
+    assert result.applied is False
 import asyncio
 
 from apex_mcp.server import create_server
