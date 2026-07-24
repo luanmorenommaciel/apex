@@ -23,7 +23,7 @@ for source_dir in (ROOT / "engine" / "src", ROOT / "serve" / "src"):
     if source not in sys.path:
         sys.path.insert(0, source)
 
-from apex_engine import analyze_events  # noqa: E402
+from apex_engine import analyze, analyze_events  # noqa: E402
 from apex_engine.clickhouse import EngineStore  # noqa: E402
 
 
@@ -119,13 +119,21 @@ async def run_gate(*, job_id: str, client: Any, mcp_probe: McpProbe, analyzer: C
     if len(app_ids) != 1:
         raise GateFailure(f"app_id_cardinality_invalid:{app_ids!r}")
 
+    # Determinism check runs on the stage-events path (analyzer).
     engine_result = analyzer(events)
     if engine_result.get("mode") != "deterministic" or engine_result.get("llm_calls") != 0:
         raise GateFailure("engine_path_is_not_deterministic")
     rejected = list(engine_result.get("rejected", []))
     if rejected:
         raise GateFailure(f"evidence_validator_rejected:{len(rejected)}")
-    findings = list(engine_result.get("findings", []))
+    # Expected findings must come from the AQE-INCLUSIVE analysis (reads plan_transitions),
+    # which is what engine actually persists. analyze_events sees stage rows only and omits
+    # the aqe_watcher's AQE_REPLAN finding — using it here caused persisted_finding_mismatch.
+    # persist=False + use_crew=False keeps this deterministic and side-effect-free.
+    full_result = analyze(job_id, store, persist=False, use_crew=False)
+    if full_result.get("llm_calls") != 0:
+        raise GateFailure("engine_full_path_is_not_deterministic")
+    findings = list(full_result.get("findings", []))
     persistence = ensure_idempotent_findings(client=client, store=store, job_id=job_id, findings=findings)
     mcp_result = _validate_mcp(await mcp_probe(job_id), job_id=job_id, stage_count=len(events), findings=findings)
     fingerprint_count = sum(bool(event.plan_fingerprint) for event in events)
