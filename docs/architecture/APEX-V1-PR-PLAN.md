@@ -1,8 +1,30 @@
 # Plano de entrega por PR
 
-**Base de todos os PRs:** `origin/feat/base-project-e2e` (`9d51aca`)
+**Base de todos os PRs:** `origin/feat/base-project-e2e`
 
-Os nomes abaixo são propostas. Nenhuma branch remota ou PR foi criado.
+## Estado da entrega em 24/07/2026
+
+O plano abaixo foi a sequência de construção. As PRs fundamentais já foram
+mergeadas; as extensões ENGINE/SERVE estão abertas para revisão. Esta tabela é
+a fonte rápida para distinguir plano histórico de estado atual.
+
+| Raia/onda | Entrega | Estado | PR |
+|---|---|---|---|
+| 0 | contratos e raias | mergeada | [#45](https://github.com/luanmorenommaciel/apex/pull/45) |
+| 1 | DEV | mergeada | [#47](https://github.com/luanmorenommaciel/apex/pull/47) |
+| 1 | JAR | mergeada | [#50](https://github.com/luanmorenommaciel/apex/pull/50) |
+| 1 | COLLECT | mergeada | [#49](https://github.com/luanmorenommaciel/apex/pull/49) |
+| 1 | INFRA | mergeada | [#48](https://github.com/luanmorenommaciel/apex/pull/48) |
+| 1 | ENGINE determinístico | mergeada | [#46](https://github.com/luanmorenommaciel/apex/pull/46) |
+| 1 | SERVE read-only | mergeada | [#44](https://github.com/luanmorenommaciel/apex/pull/44) |
+| 2 | E2E canônico das seis raias | mergeada | [#51](https://github.com/luanmorenommaciel/apex/pull/51) |
+| 3 | ENGINE Crew/Judge com gate | aberta | [#52](https://github.com/luanmorenommaciel/apex/pull/52) |
+| 3 | SERVE KB e proposta segura | aberta | [#53](https://github.com/luanmorenommaciel/apex/pull/53) |
+| acompanhamento | evidência e ordem de integração | aberta | [#54](https://github.com/luanmorenommaciel/apex/pull/54) |
+
+Após o merge de #52 e #53, a única pendência da V1 é repetir o gate integrado
+C9 na base resultante. As ondas 4 e seguintes permanecem propostas de produto,
+não compromissos desta entrega.
 
 ## Ondas
 

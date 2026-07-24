@@ -77,4 +77,21 @@ and deterministic assertions. Details and the latest sanitized result are in
 
 ## Status
 
-Scaffold. Stages are empty dirs with briefs in [docs/lanes/](docs/lanes/). First commit target: freeze the contract, then a tracer bullet through all six.
+The V1 backbone is no longer a scaffold. DEV, JAR, COLLECT, INFRA, the
+deterministic ENGINE, read-only SERVE and the canonical six-lane E2E gate are
+merged into `feat/base-project-e2e`. The two remaining review items are the
+gated Crew/Judge extension and the safe MCP knowledge/proposal extension.
+
+| Status | Delivery | Reference |
+|---|---|---|
+| Merged | V1 architecture and contracts | [#45](https://github.com/luanmorenommaciel/apex/pull/45) |
+| Merged | DEV, JAR, COLLECT and INFRA | [#47](https://github.com/luanmorenommaciel/apex/pull/47), [#50](https://github.com/luanmorenommaciel/apex/pull/50), [#49](https://github.com/luanmorenommaciel/apex/pull/49), [#48](https://github.com/luanmorenommaciel/apex/pull/48) |
+| Merged | Deterministic ENGINE and read-only SERVE | [#46](https://github.com/luanmorenommaciel/apex/pull/46), [#44](https://github.com/luanmorenommaciel/apex/pull/44) |
+| Merged | Canonical six-lane E2E | [#51](https://github.com/luanmorenommaciel/apex/pull/51) |
+| Open | Gated Crew/Judge | [#52](https://github.com/luanmorenommaciel/apex/pull/52) |
+| Open | MCP knowledge search and safe fix proposal | [#53](https://github.com/luanmorenommaciel/apex/pull/53) |
+| Open | Delivery status and sanitized evidence | [#54](https://github.com/luanmorenommaciel/apex/pull/54) |
+
+Read the [C9 delivery checkpoint](docs/convergence/C9-ENGINE-SERVE-DELIVERY-STATUS-2026-07-24.md)
+for accepted behavior, evidence, safety boundaries and the required final
+integration gate after #52 and #53 are merged.
