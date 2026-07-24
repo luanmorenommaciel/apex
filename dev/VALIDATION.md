@@ -32,13 +32,17 @@ Resultado em 2026-07-23:
 - Compose Spark 4.1.2 validado sem avisos quando baseline e overlay são usados
   juntos.
 
-## Evidência de referência e limite
+## Evidência canônica integrada
 
-A execução anterior com Spark 4.1.2, Delta/S3A, worker real, eventos OTLP e
-transições AQE está resumida em
-`docs/convergence/C5-SPARK-4.1.2-VALIDATION-2026-07-22.md` na branch de
-convergência. O gate completo com Collector e ClickHouse será repetido no PR7,
-depois que JAR, COLLECT e INFRA estiverem integrados.
+Em 2026-07-24, com Spark 4.1.2, Delta/S3A, plugin Scala, Collector e
+ClickHouse reais, os quatro cenários canônicos passaram: skew (`47.07x`), spill
+(`104076355` bytes), bad shuffle (estágio de duas tasks com shuffle grande) e
+OOM (16 estágios pré-falha persistidos). O gate entre as seis raias também
+passou para `app-20260724014653-0000`: 17 eventos/fingerprints, 3 findings
+determinísticos e MCP read-only.
+
+Consulte [`../docs/e2e/CANONICAL_GATE.md`](../docs/e2e/CANONICAL_GATE.md) para
+os `job_id`s, comandos de reprodução e limites da evidência.
 
 ## Rollback
 

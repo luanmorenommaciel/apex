@@ -39,6 +39,33 @@ cd dev && make up && make run-pathology JOB=skew_join
 #   dev → jar → collect → infra → engine → serve
 ```
 
+## Canonical E2E gate
+
+The cross-lane gate validates an already-submitted real Spark application. It
+does not start infrastructure, delete telemetry, call an LLM, or print secrets.
+It proves that the persisted events, deterministic ENGINE findings, and
+read-only SERVE response agree for one `job_id`.
+
+```powershell
+# Start COLLECT + INFRA, then export operator-provided local credentials.
+$env:CLICKHOUSE_HOST = "127.0.0.1"
+$env:CLICKHOUSE_PORT = "8123"
+$env:CLICKHOUSE_USER = "apex"
+$env:CLICKHOUSE_PASSWORD = "<local-secret>"
+uv run --project serve --extra dev python scripts/e2e_six_lanes.py --job-id <spark-app-id>
+```
+
+On Windows, run the four Spark pathologies with Docker native (not WSL Bash):
+
+```powershell
+$env:APEX_CANONICAL_CH_PASSWORD = "<local-secret>"
+.\dev\scripts\e2e_canonical.ps1 -StartDev
+```
+
+The command uses the plugin path, OTLP Collector, canonical ClickHouse tables
+and deterministic assertions. Details and the latest sanitized result are in
+[`docs/e2e/CANONICAL_GATE.md`](docs/e2e/CANONICAL_GATE.md).
+
 ## Repo conventions
 
 - **Monorepo, directory-per-stage.** Each dir has its own build file (`build.sbt`, `pyproject.toml`, `docker-compose.yml`).
