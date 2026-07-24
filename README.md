@@ -91,10 +91,9 @@ extensions and their C9 evidence without merging them into the Luan-owned base.
 | Merged | DEV, JAR, COLLECT and INFRA | [#47](https://github.com/luanmorenommaciel/apex/pull/47), [#50](https://github.com/luanmorenommaciel/apex/pull/50), [#49](https://github.com/luanmorenommaciel/apex/pull/49), [#48](https://github.com/luanmorenommaciel/apex/pull/48) |
 | Merged | Deterministic ENGINE and read-only SERVE | [#46](https://github.com/luanmorenommaciel/apex/pull/46), [#44](https://github.com/luanmorenommaciel/apex/pull/44) |
 | Merged | Canonical six-lane E2E | [#51](https://github.com/luanmorenommaciel/apex/pull/51) |
-| Open | Gated Crew/Judge | [#52](https://github.com/luanmorenommaciel/apex/pull/52) |
-| Open | MCP knowledge search and safe fix proposal | [#53](https://github.com/luanmorenommaciel/apex/pull/53) |
-| Open | Delivery status and sanitized evidence | [#54](https://github.com/luanmorenommaciel/apex/pull/54) |
+| Consolidated review branch | Gated Crew/Judge, safe MCP proposal and C9 evidence | [`base-project-e2e-augusto`](https://github.com/luanmorenommaciel/apex/tree/base-project-e2e-augusto) |
+| Closed without merge | Original ENGINE, SERVE and C9 review PRs | [#52](https://github.com/luanmorenommaciel/apex/pull/52), [#53](https://github.com/luanmorenommaciel/apex/pull/53), [#54](https://github.com/luanmorenommaciel/apex/pull/54) |
 
 Read the [C9 delivery checkpoint](docs/convergence/C9-ENGINE-SERVE-DELIVERY-STATUS-2026-07-24.md)
 for accepted behavior, evidence, safety boundaries and the required final
-integration gate after #52 and #53 are merged.
+integration gate after Commander-approved integration.

@@ -9,8 +9,9 @@ the changes below are already merged into `feat/base-project-e2e`.
 `base-project-e2e-augusto` is the Augusto-owned review branch. It starts from
 the current `feat/base-project-e2e` and includes the ENGINE/C5, SERVE/C4 and
 C9 documentation commits as one inspectable package. It must not be merged
-into the Luan-owned base without Commander review. PRs #52, #53 and #54 remain
-the original review records; this branch is the consolidated delivery view.
+into the Luan-owned base without Commander review. PRs #52, #53 and #54 were
+closed without merge and remain as the original review records; this branch is
+the consolidated delivery view.
 
 ## What is already in the base
 
@@ -23,8 +24,8 @@ extensions to that substrate, not an alternative architecture.
 
 | Lane | Pull request | State at this checkpoint | Verified scope |
 |---|---|---|---|
-| ENGINE / C5 | [#52](https://github.com/luanmorenommaciel/apex/pull/52) | Open, clean | Gated CrewAI correlation and adversarial Judge |
-| SERVE / C4 | [#53](https://github.com/luanmorenommaciel/apex/pull/53) | Open, clean | Knowledge search and human-approved fix proposal |
+| ENGINE / C5 | [`base-project-e2e-augusto`](https://github.com/luanmorenommaciel/apex/tree/base-project-e2e-augusto) | Consolidated, awaiting Commander | Gated CrewAI correlation and adversarial Judge |
+| SERVE / C4 | [`base-project-e2e-augusto`](https://github.com/luanmorenommaciel/apex/tree/base-project-e2e-augusto) | Consolidated, awaiting Commander | Knowledge search and human-approved fix proposal |
 
 ## Review questions for the Commander
 
@@ -33,7 +34,7 @@ extensions to that substrate, not an alternative architecture.
    triage step be added literally?
 2. Does `suggest_fix` remain a pure proposal with human approval, as required,
    rather than becoming an automatic apply operation?
-3. Can #52 and #53 enter the base before the C9 integration rerun?
+3. Which parts of this consolidated branch may enter the base before the C9 integration rerun?
 
 ## ENGINE / C5 evidence
 
@@ -63,8 +64,9 @@ extensions to that substrate, not an alternative architecture.
 
 ## Required merge order
 
-1. Review and merge #52 (ENGINE/C5).
-2. Review and merge #53 (SERVE/C4).
+1. Review `base-project-e2e-augusto` as the single Augusto-owned package.
+2. Create a Commander-approved integration path without modifying the
+   Luan-owned base directly.
 3. Rebase the integration gate on the updated base and run the four-tool MCP
    validation again. That result becomes the follow-up C9 integration PR.
 
