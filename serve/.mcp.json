@@ -1,0 +1,26 @@
+{
+  "_comment": [
+    "Project-scope MCP config for apex-mcp. Copy (or symlink) this file to the",
+    "repository root as .mcp.json to activate it for everyone working in the repo;",
+    "it lives here because serve/ owns it. Cursor and Codex read the same schema.",
+    "${VAR} expands from the developer's environment when the client starts —",
+    "commit the config, never the secret. A required var with no value and no",
+    "${VAR:-default} fails to parse, so the password carries a dev default.",
+    "Replace 'uvx --from ./serve apex-mcp' with plain 'uvx apex-mcp' once the",
+    "package is published to PyPI."
+  ],
+  "mcpServers": {
+    "apex": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--from", "./serve", "apex-mcp"],
+      "env": {
+        "CLICKHOUSE_HOST": "${CLICKHOUSE_HOST:-127.0.0.1}",
+        "CLICKHOUSE_PORT": "${CLICKHOUSE_PORT:-8123}",
+        "CLICKHOUSE_USER": "${CLICKHOUSE_USER:-apex}",
+        "CLICKHOUSE_PASSWORD": "${CLICKHOUSE_PASSWORD:-apex_local_dev}",
+        "CLICKHOUSE_DATABASE": "${CLICKHOUSE_DATABASE:-apex}"
+      }
+    }
+  }
+}
