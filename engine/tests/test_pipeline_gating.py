@@ -1,0 +1,221 @@
+"""analyze() end to end with a mocked crew: does the gate actually hold?
+
+The claim under test is the economic one — 95%+ of findings emit from Tier 1 at
+$0, and an LLM is touched only for a candidate that is BOTH unsure AND severe.
+These tests count crew invocations to prove it.
+
+The escalating case here is the ONE Tier-1 path that can produce that
+combination: a GC ratio high enough to be critical, measured against a PROXY
+denominator (`task_count x p50`) because `executor_run_time_ms` is absent from
+the contract. Severe symptom, weak evidence — exactly what a judge is for.
+Every other rule is either confident when severe, or not severe when unsure.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from apex_engine import Confidence, FindingType, Severity, analyze
+from apex_engine.gate import should_escalate
+from apex_engine.schema import Finding, PlanTransition, StageAggregate
+
+CLEAN = {"task_duration_p50_ms": 100, "task_duration_p99_ms": 110, "task_count": 50}
+SEVERE_SKEW = {"task_duration_p50_ms": 21, "task_duration_p99_ms": 454, "task_count": 50}
+AMBIGUOUS_SKEW = {"task_duration_p50_ms": 100, "task_duration_p99_ms": 710, "task_count": 50}
+# critical GC ratio on an estimated denominator -> severity critical, confidence 0.45
+ESCALATING = {"gc_time_ms": 3_000, "task_count": 10, "task_duration_p50_ms": 100}
+
+
+class FakeStore:
+    """Serves aggregates/transitions and records what would be written."""
+
+    def __init__(self, stages: list[dict], transitions=None):
+        self.aggregates = [
+            StageAggregate(job_id="job-1", app_id="app-1", stage_id=i, **s)
+            for i, s in enumerate(stages)
+        ]
+        self.transitions = transitions or []
+        self.persisted: list[Finding] = []
+
+    def stage_aggregates(self, job_id):
+        return self.aggregates
+
+    def plan_transitions(self, job_id):
+        return self.transitions
+
+    def persist_new_findings(self, job_id, findings):
+        findings = list(findings)
+        self.persisted.extend(findings)
+        return {"mode": "inserted" if findings else "no_findings",
+                "written_rows": len(findings), "skipped_existing": 0}
+
+
+class SpyCrew:
+    """Counts kickoffs and returns a scripted verdict."""
+
+    invocations = 0
+
+    def __init__(self, verdict: Finding | None):
+        self.verdict = verdict
+
+    def kickoff(self, inputs=None):
+        type(self).invocations += 1
+        return type("Out", (), {"pydantic": self.verdict})()
+
+
+def spy_factory(verdict_builder):
+    SpyCrew.invocations = 0
+
+    def factory(candidate, store=None):
+        return SpyCrew(verdict_builder(candidate))
+
+    return factory
+
+
+def confident_verdict(candidate: Finding) -> Finding:
+    return candidate.model_copy(update={"confidence_score": 0.85, "confidence": Confidence.HIGH})
+
+
+def rejecting_verdict(candidate: Finding) -> Finding:
+    return candidate.model_copy(update={"confidence_score": 0.05, "confidence": Confidence.LOW})
+
+
+# --- the exit criterion ----------------------------------------------------
+
+def test_clean_job_writes_nothing_and_never_touches_an_llm():
+    store = FakeStore([CLEAN, CLEAN, CLEAN])
+    result = analyze("job-1", store, crew_factory=spy_factory(confident_verdict))
+
+    assert result["findings"] == []
+    assert result["written_rows"] == 0
+    assert result["llm_calls"] == 0
+    assert SpyCrew.invocations == 0
+    assert result["crew"] == "not_needed"
+
+
+def test_a_confident_severe_finding_emits_free():
+    """21.62x is unambiguous — paying a model to confirm it would be waste."""
+    store = FakeStore([SEVERE_SKEW])
+    result = analyze("job-1", store, crew_factory=spy_factory(confident_verdict))
+
+    assert len(result["findings"]) == 1
+    assert result["findings"][0].confidence is Confidence.HIGH
+    assert result["llm_calls"] == 0
+    assert SpyCrew.invocations == 0
+    assert result["escalated"] == []
+
+
+def test_an_unsure_but_non_severe_finding_also_emits_free():
+    """The gate needs BOTH conditions: a 7x skew is only a warning."""
+    store = FakeStore([AMBIGUOUS_SKEW])
+    result = analyze("job-1", store, crew_factory=spy_factory(confident_verdict))
+
+    finding = result["findings"][0]
+    assert finding.confidence_score < 0.6          # unsure
+    assert finding.severity is Severity.WARNING    # but not severe
+    assert SpyCrew.invocations == 0
+    assert result["llm_calls"] == 0
+
+
+def test_only_the_unsure_and_severe_candidate_reaches_the_crew():
+    store = FakeStore([SEVERE_SKEW, ESCALATING, CLEAN, AMBIGUOUS_SKEW])
+    result = analyze("job-1", store, crew_factory=spy_factory(confident_verdict))
+
+    escalated = result["escalated"]
+    assert len(escalated) == 1, "exactly one candidate satisfies both conditions"
+    assert escalated[0].type is FindingType.MEMORY
+    assert all(f.confidence_score < 0.6 for f in escalated)
+    assert all(f.severity.at_least(Severity.CRITICAL) for f in escalated)
+
+    assert SpyCrew.invocations == 1
+    assert result["llm_calls"] == 2                # correlate + judge, once
+    # ...while the other findings in the same job cost nothing
+    assert len(result["findings"]) > 1
+
+
+def test_a_judged_finding_is_persisted_with_the_recalibrated_confidence():
+    store = FakeStore([ESCALATING])
+    result = analyze("job-1", store, crew_factory=spy_factory(confident_verdict))
+
+    judged = [f for f in result["findings"] if "judger" in f.detected_by]
+    assert len(judged) == 1
+    assert judged[0].confidence_score == pytest.approx(0.85)
+    assert judged[0].confidence is Confidence.HIGH
+    assert judged[0].details["tier1_confidence_score"] == pytest.approx(0.45)
+    assert judged[0] in store.persisted
+
+
+def test_a_rejected_finding_is_never_persisted():
+    store = FakeStore([ESCALATING])
+    result = analyze("job-1", store, crew_factory=spy_factory(rejecting_verdict))
+
+    assert SpyCrew.invocations == 1   # it cost a crew run to find out
+    assert store.persisted == []      # but nothing reached the user
+    assert result["written_rows"] == 0
+    assert result["judge_rejected"] == 1
+
+
+def test_use_crew_false_never_calls_out_even_when_the_gate_would():
+    store = FakeStore([ESCALATING])
+    result = analyze("job-1", store, use_crew=False, crew_factory=spy_factory(confident_verdict))
+
+    assert result["escalated"], "this fixture must produce an escalation candidate"
+    assert SpyCrew.invocations == 0
+    assert result["llm_calls"] == 0
+    assert result["crew"] == "disabled"
+    # kept at the Tier-1 confidence rather than dropped
+    assert any(f.confidence_score == pytest.approx(0.45) for f in result["findings"])
+
+
+def test_a_severe_finding_the_judge_cannot_reach_is_still_reported(monkeypatch):
+    """No API key in CI: the measured finding must survive, flagged as unjudged."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    store = FakeStore([ESCALATING])
+    result = analyze("job-1", store, use_crew=True, crew_factory=None)
+
+    assert result["crew"] == "unavailable:no_anthropic_api_key"
+    assert result["llm_calls"] == 0
+    assert len(result["findings"]) == 1
+    assert result["findings"][0].confidence_score == pytest.approx(0.45)
+
+
+# --- AQE ground truth changes the economics --------------------------------
+
+def test_aqe_ground_truth_makes_an_ambiguous_skew_free():
+    """Spark's own skew_split replaces what would otherwise need a model."""
+    skew_split = PlanTransition(job_id="job-1", execution_id=10, transition_type="skew_split",
+                                detail="split x3", confidence="HIGH")
+    store = FakeStore([AMBIGUOUS_SKEW], transitions=[skew_split])
+    result = analyze("job-1", store, crew_factory=spy_factory(confident_verdict))
+
+    heuristic = [f for f in result["findings"] if f.detected_by.startswith("skew_watcher")]
+    assert heuristic[0].confidence is Confidence.HIGH        # upgraded from LOW
+    assert heuristic[0].details["aqe_corroborated"] is True
+    assert should_escalate(heuristic[0]) is False
+    assert result["llm_calls"] == 0
+    assert SpyCrew.invocations == 0
+
+
+def test_engine_runs_the_full_deterministic_tier_without_crewai_installed(monkeypatch):
+    """Tier 1 must not depend on Tier 2 being present at all."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def blocked(name, *args, **kwargs):
+        if name == "crewai" or name.startswith("crewai."):
+            raise ImportError("No module named 'crewai'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", blocked)
+
+    from apex_engine.crew import is_available
+
+    assert is_available() == (False, "crewai_not_installed")
+
+    store = FakeStore([SEVERE_SKEW, ESCALATING])
+    result = analyze("job-1", store, use_crew=True, crew_factory=None)
+
+    assert result["llm_calls"] == 0
+    assert result["crew"] == "unavailable:crewai_not_installed"
+    assert len(result["findings"]) == 2  # nothing lost
