@@ -1,0 +1,27 @@
+[project]
+name = "apex-mcp"
+version = "0.1.0"
+description = "Read-only APEX MCP server over the frozen v0.2 contract."
+requires-python = ">=3.11"
+dependencies = [
+  "clickhouse-connect>=0.8,<1",
+  "mcp[cli]>=1.27,<2",
+  "pydantic>=2.12,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+apex-mcp = "apex_mcp.server:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/apex_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
