@@ -46,11 +46,14 @@ def _finding_signature(finding: Any) -> FindingSignature:
     read = lambda name: getattr(finding, name, None) if not isinstance(finding, dict) else finding.get(name)
     finding_type = read("type")
     severity = read("severity")
+    # Engine enums, persisted ClickHouse rows and MCP JSON have used both
+    # upper- and lower-case spellings across additive contract revisions.
+    # The gate compares the semantic identity, not its transport casing.
     return (
         str(read("job_id")),
         int(read("stage_id")),
-        str(getattr(finding_type, "value", finding_type)),
-        str(getattr(severity, "value", severity)),
+        str(getattr(finding_type, "value", finding_type)).casefold(),
+        str(getattr(severity, "value", severity)).casefold(),
         str(read("detected_by")),
     )
 
@@ -107,7 +110,14 @@ def _validate_mcp(payload: dict[str, Any], *, job_id: str, stage_count: int, fin
     }
 
 
-async def run_gate(*, job_id: str, client: Any, mcp_probe: McpProbe, analyzer: Callable[[list[Any]], dict[str, Any]] = analyze_events) -> dict[str, Any]:
+async def run_gate(
+    *,
+    job_id: str,
+    client: Any,
+    mcp_probe: McpProbe,
+    analyzer: Callable[[list[Any]], dict[str, Any]] = analyze_events,
+    full_analyzer: Callable[..., dict[str, Any]] = analyze,
+) -> dict[str, Any]:
     if not job_id:
         raise GateFailure("job_id_required")
 
@@ -130,7 +140,7 @@ async def run_gate(*, job_id: str, client: Any, mcp_probe: McpProbe, analyzer: C
     # which is what engine actually persists. analyze_events sees stage rows only and omits
     # the aqe_watcher's AQE_REPLAN finding — using it here caused persisted_finding_mismatch.
     # persist=False + use_crew=False keeps this deterministic and side-effect-free.
-    full_result = analyze(job_id, store, persist=False, use_crew=False)
+    full_result = full_analyzer(job_id, store, persist=False, use_crew=False)
     if full_result.get("llm_calls") != 0:
         raise GateFailure("engine_full_path_is_not_deterministic")
     findings = list(full_result.get("findings", []))

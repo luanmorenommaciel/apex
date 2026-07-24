@@ -70,6 +70,12 @@ def analyzer(_events):
     return {"mode": "deterministic", "llm_calls": 0, "findings": [finding()], "rejected": []}
 
 
+def full_analyzer(_job_id, _store, *, persist, use_crew):
+    assert persist is False
+    assert use_crew is False
+    return {"mode": "deterministic", "llm_calls": 0, "findings": [finding()]}
+
+
 def probe(findings):
     async def call(job_id):
         return {
@@ -87,7 +93,7 @@ def probe(findings):
 
 def test_gate_persists_once_and_validates_mcp():
     client = FakeClient([event()])
-    result = asyncio.run(run_gate(job_id="job-1", client=client, mcp_probe=probe([finding().model_dump(mode="json")]), analyzer=analyzer))
+    result = asyncio.run(run_gate(job_id="job-1", client=client, mcp_probe=probe([finding().model_dump(mode="json")]), analyzer=analyzer, full_analyzer=full_analyzer))
     assert result["status"] == "passed"
     assert result["lanes"]["engine"]["persistence"]["mode"] == "inserted"
     assert client.insert_calls == 1
@@ -96,7 +102,7 @@ def test_gate_persists_once_and_validates_mcp():
 def test_gate_is_idempotent_when_matching_findings_exist():
     persisted = finding().to_clickhouse_row()
     client = FakeClient([event()], [persisted])
-    result = asyncio.run(run_gate(job_id="job-1", client=client, mcp_probe=probe([persisted]), analyzer=analyzer))
+    result = asyncio.run(run_gate(job_id="job-1", client=client, mcp_probe=probe([persisted]), analyzer=analyzer, full_analyzer=full_analyzer))
     assert result["lanes"]["engine"]["persistence"]["mode"] == "already_present"
     assert client.insert_calls == 0
 
@@ -104,7 +110,7 @@ def test_gate_is_idempotent_when_matching_findings_exist():
 def test_gate_fails_without_canonical_telemetry():
     client = FakeClient([])
     try:
-        asyncio.run(run_gate(job_id="job-1", client=client, mcp_probe=probe([]), analyzer=analyzer))
+        asyncio.run(run_gate(job_id="job-1", client=client, mcp_probe=probe([]), analyzer=analyzer, full_analyzer=full_analyzer))
     except GateFailure as exc:
         assert str(exc) == "canonical_telemetry_not_found"
     else:
@@ -114,7 +120,7 @@ def test_gate_fails_without_canonical_telemetry():
 def test_gate_fails_on_mcp_finding_divergence():
     client = FakeClient([event()])
     try:
-        asyncio.run(run_gate(job_id="job-1", client=client, mcp_probe=probe([]), analyzer=analyzer))
+        asyncio.run(run_gate(job_id="job-1", client=client, mcp_probe=probe([]), analyzer=analyzer, full_analyzer=full_analyzer))
     except GateFailure as exc:
         assert str(exc).startswith("mcp_finding_mismatch:")
     else:
