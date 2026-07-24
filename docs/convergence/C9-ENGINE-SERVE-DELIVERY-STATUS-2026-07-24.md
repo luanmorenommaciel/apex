@@ -70,6 +70,21 @@ extensions to that substrate, not an alternative architecture.
 3. Rebase the integration gate on the updated base and run the four-tool MCP
    validation again. That result becomes the follow-up C9 integration PR.
 
+## Post-consolidation verification
+
+The Augusto-owned branch has one local follow-up commit,
+`52a36da` (`fix(e2e): normalize finding signatures across lanes`). It makes
+the canonical gate compare semantic finding identities consistently when the
+ENGINE enum, ClickHouse row, and MCP JSON differ only by case. It also makes
+the AQE-inclusive analysis injectable in tests without changing production
+behavior.
+
+Local verification after that fix passed: six-lane gate unit suite `4 passed`,
+SERVE suite `87 passed`, ENGINE suite excluding its environment-dependent
+ClickHouse integration test `75 passed`, and DEV canonical assertions
+`7 passed`. A new live Docker rerun remains operational work, not a completed
+claim; see [C10 readiness](C10-AUGUSTO-E2E-READINESS-2026-07-24.md).
+
 ## Deliberate scope boundary
 
 No automatic remediation, rerun orchestration, product UI, installer or remote

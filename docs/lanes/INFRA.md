@@ -3,6 +3,10 @@
 > **Branch:** `feat/apex-infra` · **Language:** SQL / Docker Compose · **Depends on:** [`CONTRACT.md`](../../CONTRACT.md)
 > **Hand this whole file to a coding agent.** Self-contained; the only external dependency is the frozen contract.
 
+> **Status note (2026-07-24):** This is the original build brief; its task
+> checkboxes are intentionally historical. Delivery status and current E2E
+> evidence are tracked in [`../convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md`](../convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md).
+
 ## Mission & exit criterion
 
 Stand up **ClickStack (ClickHouse + HyperDX + OTel Collector + MongoDB)** as the storage + visualization backend. Ship the `apex` DDL: `spark_events` (MergeTree, monthly partitions, `Map` attributes, TTL), `findings`, an `AggregatingMergeTree` rollup `spark_jobs_1m` + incremental MV to roll stage rows up to job-level summaries, and canonical skew-detection SQL (p99/p50 via quantile sketches). Point HyperDX at the custom tables via a **custom Source**.

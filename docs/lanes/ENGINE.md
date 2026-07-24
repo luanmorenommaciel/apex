@@ -4,6 +4,10 @@
 > **Hand this whole file to a coding agent.** Self-contained; the only external dependency is the frozen contract.
 > **This is the lane you can build FIRST against synthetic rows** — load `fixtures/sample_event.json` into ClickHouse and the whole brain is unblocked before the JAR/collector are real.
 
+> **Status note (2026-07-24):** This is the original build brief; its task
+> checkboxes are intentionally historical. Delivery status and current E2E
+> evidence are tracked in [`../convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md`](../convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md).
+
 ## Mission & exit criterion
 
 Build a Python analysis service that reads `apex.spark_events` from ClickHouse and produces validated `Finding` rows in `apex.findings`. **The core architectural discipline:**

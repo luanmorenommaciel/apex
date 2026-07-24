@@ -3,6 +3,10 @@
 > **Branch:** `feat/apex-jar` · **Language:** Scala (sbt) · **Depends on:** [`CONTRACT.md`](../../CONTRACT.md)
 > **Hand this whole file to a coding agent.** Self-contained; the only external dependency is the frozen contract.
 
+> **Status note (2026-07-24):** This is the original build brief; its task
+> checkboxes are intentionally historical. Delivery status and current E2E
+> evidence are tracked in [`../convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md`](../convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md).
+
 ## Mission & exit criterion
 
 Build a self-contained **Scala Spark plugin JAR** (modeled on sparkMeasure + DataFlint) that registers a `SparkListener` on the driver, aggregates per-stage `TaskMetrics` on `onStageCompleted`, captures a **SHA-256 fingerprint of the normalized LOGICAL plan** (`optimizedPlan.canonicalized` — not physical, to survive AQE re-optimization), and ships each event as an **OTLP span** via the OpenTelemetry Java SDK through a **bounded** `BatchSpanProcessor` queue so a slow/down collector never stalls the driver — every path wrapped in `Try/recover`.

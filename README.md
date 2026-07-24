@@ -25,6 +25,7 @@ dev  →  jar  →  collect  →  infra  →  engine  →  serve
 4. **[APEX V1 swimlanes](docs/architecture/APEX-V1-SWIMLANES.md)** — the approved product flow, decisions, gates, and security boundaries.
 5. **[V1 PR plan](docs/architecture/APEX-V1-PR-PLAN.md)** — the lane-by-lane delivery and merge order.
 6. **[ENGINE/SERVE delivery status](docs/convergence/C9-ENGINE-SERVE-DELIVERY-STATUS-2026-07-24.md)** — current PRs, verified evidence, and integration order.
+7. **[Augusto E2E readiness](docs/convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md)** — current local verification, the cross-lane fix, and the remaining operational rerun.
 
 ## Quick start (once built)
 
@@ -84,6 +85,8 @@ gated Crew/Judge extension and the safe MCP knowledge/proposal extension.
 
 **Review branch:** `base-project-e2e-augusto` consolidates the two pending
 extensions and their C9 evidence without merging them into the Luan-owned base.
+It also contains the local cross-lane compatibility fix `52a36da`; this is
+validated by tests but still needs one fresh Docker-backed canonical rerun.
 
 | Status | Delivery | Reference |
 |---|---|---|
@@ -97,3 +100,7 @@ extensions and their C9 evidence without merging them into the Luan-owned base.
 Read the [C9 delivery checkpoint](docs/convergence/C9-ENGINE-SERVE-DELIVERY-STATUS-2026-07-24.md)
 for accepted behavior, evidence, safety boundaries and the required final
 integration gate after Commander-approved integration.
+
+For the exact state of this Augusto-owned branch, including what is verified
+locally versus what still depends on Docker and Commander review, read the
+[C10 readiness checkpoint](docs/convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md).

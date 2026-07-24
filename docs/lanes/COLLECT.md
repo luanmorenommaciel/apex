@@ -3,6 +3,10 @@
 > **Branch:** `feat/apex-collect` · **Language:** YAML config (no custom Go build) · **Depends on:** [`CONTRACT.md`](../../CONTRACT.md)
 > **Hand this whole file to a coding agent.** Self-contained; the only external dependency is the frozen contract.
 
+> **Status note (2026-07-24):** This is the original build brief; its task
+> checkboxes are intentionally historical. Delivery status and current E2E
+> evidence are tracked in [`../convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md`](../convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md).
+
 ## Mission & exit criterion
 
 Build a **config-only** OpenTelemetry Collector (`otelcol-contrib` v0.156.0 — no custom build) that receives OTLP/HTTP on `:4318`, applies `memory_limiter` for backpressure, scrubs PII (SHA-256 `query_text`, delete `file_path`/`email`, redact plan `node.desc`), and exports to ClickHouse database `apex`.

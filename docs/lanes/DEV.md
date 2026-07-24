@@ -3,6 +3,10 @@
 > **Branch:** `feat/apex-dev` · **Language:** Python + Docker · **Depends on:** [`CONTRACT.md`](../../CONTRACT.md)
 > **Hand this whole file to a coding agent.** It is self-contained; the only external dependency is the frozen contract.
 
+> **Status note (2026-07-24):** This is the original build brief; its task
+> checkboxes are intentionally historical. Delivery status and current E2E
+> evidence are tracked in [`../convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md`](../convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md).
+
 ## Mission & exit criterion
 
 Build a fully local, reproducible **Spark performance-pathology lab** via Docker Compose: standalone Spark master + N workers + Spark History Server + MinIO (S3). On top sits (a) a **deterministic skewed-data generator** (one hot join key = ~50% of rows, seeded → byte-identical across runs) and (b) four **parametrized pathology jobs** — `skew_join.py`, `spill.py`, `bad_shuffle.py`, `driver_oom.py` — each reliably triggering its named failure with AQE disabled so it isn't silently auto-healed.
