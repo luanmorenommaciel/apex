@@ -107,7 +107,20 @@ def _validate_mcp(payload: dict[str, Any], *, job_id: str, stage_count: int, fin
     }
 
 
-async def run_gate(*, job_id: str, client: Any, mcp_probe: McpProbe, analyzer: Callable[[list[Any]], dict[str, Any]] = analyze_events) -> dict[str, Any]:
+def _default_full_analyzer(job_id: str, store: EngineStore) -> dict[str, Any]:
+    """AQE-inclusive, side-effect-free analysis — the same path engine persists.
+    Reads plan_transitions so the aqe_watcher's finding is included; persist/crew off."""
+    return analyze(job_id, store, persist=False, use_crew=False)
+
+
+async def run_gate(
+    *,
+    job_id: str,
+    client: Any,
+    mcp_probe: McpProbe,
+    analyzer: Callable[[list[Any]], dict[str, Any]] = analyze_events,
+    full_analyzer: Callable[[str, EngineStore], dict[str, Any]] = _default_full_analyzer,
+) -> dict[str, Any]:
     if not job_id:
         raise GateFailure("job_id_required")
 
@@ -126,11 +139,12 @@ async def run_gate(*, job_id: str, client: Any, mcp_probe: McpProbe, analyzer: C
     rejected = list(engine_result.get("rejected", []))
     if rejected:
         raise GateFailure(f"evidence_validator_rejected:{len(rejected)}")
-    # Expected findings must come from the AQE-INCLUSIVE analysis (reads plan_transitions),
-    # which is what engine actually persists. analyze_events sees stage rows only and omits
-    # the aqe_watcher's AQE_REPLAN finding — using it here caused persisted_finding_mismatch.
-    # persist=False + use_crew=False keeps this deterministic and side-effect-free.
-    full_result = analyze(job_id, store, persist=False, use_crew=False)
+    # Expected findings come from the AQE-INCLUSIVE analysis (reads plan_transitions),
+    # which is what engine actually persists — analyze_events sees stage rows only and
+    # omits the aqe_watcher's AQE_REPLAN finding (that caused persisted_finding_mismatch).
+    # full_analyzer is a separate injectable seam so unit tests can control BOTH the
+    # determinism-check analyzer AND the expected-findings source (they diverge otherwise).
+    full_result = full_analyzer(job_id, store)
     if full_result.get("llm_calls") != 0:
         raise GateFailure("engine_full_path_is_not_deterministic")
     findings = list(full_result.get("findings", []))
