@@ -4,6 +4,14 @@ This document is the review checkpoint for the two remaining APEX V1 lanes.
 It records verified behavior and the dependency order; it does not claim that
 the changes below are already merged into `feat/base-project-e2e`.
 
+## Consolidation branch
+
+`base-project-e2e-augusto` is the Augusto-owned review branch. It starts from
+the current `feat/base-project-e2e` and includes the ENGINE/C5, SERVE/C4 and
+C9 documentation commits as one inspectable package. It must not be merged
+into the Luan-owned base without Commander review. PRs #52, #53 and #54 remain
+the original review records; this branch is the consolidated delivery view.
+
 ## What is already in the base
 
 The V1 substrate is merged: the Spark 4.1.2 DEV environment, listener JAR,

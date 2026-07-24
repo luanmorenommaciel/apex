@@ -82,6 +82,9 @@ deterministic ENGINE, read-only SERVE and the canonical six-lane E2E gate are
 merged into `feat/base-project-e2e`. The two remaining review items are the
 gated Crew/Judge extension and the safe MCP knowledge/proposal extension.
 
+**Review branch:** `base-project-e2e-augusto` consolidates the two pending
+extensions and their C9 evidence without merging them into the Luan-owned base.
+
 | Status | Delivery | Reference |
 |---|---|---|
 | Merged | V1 architecture and contracts | [#45](https://github.com/luanmorenommaciel/apex/pull/45) |
