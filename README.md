@@ -24,6 +24,7 @@ dev  →  jar  →  collect  →  infra  →  engine  →  serve
 3. **[docs/lanes/](docs/lanes/)** — the detailed, research-backed build brief for each stage.
 4. **[APEX V1 swimlanes](docs/architecture/APEX-V1-SWIMLANES.md)** — the approved product flow, decisions, gates, and security boundaries.
 5. **[V1 PR plan](docs/architecture/APEX-V1-PR-PLAN.md)** — the lane-by-lane delivery and merge order.
+6. **[ENGINE/SERVE delivery status](docs/convergence/C9-ENGINE-SERVE-DELIVERY-STATUS-2026-07-24.md)** — current PRs, verified evidence, and integration order.
 
 ## Quick start (once built)
 
