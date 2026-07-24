@@ -60,6 +60,8 @@ Database `apex`. Canonical DDL in [`contract/`](contract/):
 
 **Detection tiers (honesty on reliability):** join-strategy switch (`SortMergeJoinExec`/`ShuffledHashJoinExec` → `BroadcastHashJoinExec`) and skew/coalesce (`AQEShuffleReadExec.hasSkewedPartition`/`hasCoalescedPartition`) = **HIGH** confidence (structural). Exact before/after partition counts = **BEST_EFFORT** (parsed from `simpleString`/metrics).
 
+> ⚠️ **Interpreting transition_type (verified on real data, engine T-Tier1):** `skew_split` **is** a ground-truth SKEW finding — it upgrades an ambiguous 5–10× p99/p50 heuristic to HIGH so it emits free. But `coalesce` is **NOT skew** — it means over-provisioned `spark.sql.shuffle.partitions` (Spark merged too-small partitions), so consumers (`engine`) must report it as a *partition-sizing* finding, not skew. Calling `coalesce` skew is a false positive. `join_switch` = a broadcast-eligibility finding. Only `skew_split` corroborates the skew watcher.
+
 **Stage linkage:** keyed by `(job_id, execution_id)` first cut. Linking a transition to specific `stage_id`s needs an `execution_id→job→stage` map (from `spark.sql.execution.id` in `onJobStart` properties) — a later enhancement, not blocking.
 
 **Redaction:** `physicalPlanDescription` is full plan text with literals — **never shipped raw.** Only structured descriptors are emitted; redact like `plan_json` (§ Redaction).
@@ -85,7 +87,7 @@ ORDER BY (job_id, execution_id, update_seq);
 
 ## The Finding (engine → serve)
 
-Pydantic model whose field names match the `findings` table exactly: `job_id`, `app_id`, `type` (skew|spill|shuffle|memory|cost|code), `severity` (info|warning|critical|blocker), `stage_id`, `evidence`, `impact`, `fix`, `confidence` (0–1).
+Pydantic model whose field names match the `findings` table (see [`contract/findings.ddl.sql`](contract/findings.ddl.sql) — the DDL is authoritative if prose disagrees): `finding_id`, `job_id`, `app_id`, `stage_id`, `type`, `severity` (`info|warning|critical|blocker`), `evidence`, `hot_key`, `impact`, `fix`, `detected_by`, `ts`, and **two** confidence fields — `confidence` = the human tier `Enum8('LOW','MEDIUM','HIGH')` (drives display) and `confidence_score` = the raw `Float32` 0–1 (drives engine's escalation gate + serve's `compare_runs`). *(v0.2: `app_id` + `confidence_score` are additive columns; engine follows the DDL.)*
 
 ## Redaction (enforced in two places)
 
@@ -119,11 +121,19 @@ Every lane's `docker-compose` runs on the **same developer host**. To avoid the 
 ## Activation (how a job turns Apex on)
 
 ```python
+# Real coordinates as published by the jar lane (sbt +publishLocal → ~/.ivy2/local):
+#   apex_3.5_2.12 · apex_3.5_2.13 · apex_4.0_2.13  (version 0.1.0)
+# Pick the cell matching your Spark/Scala. Example for Spark 4.0 / Scala 2.13:
 SparkSession.builder \
-  .config("spark.jars.packages",  "io.dataship:apex_2.12:0.1.0") \
-  .config("spark.extraListeners", "io.dataship.apex.ApexSparkListener") \
-  .config("spark.apex.endpoint",  "http://collect:4318")
+  .config("spark.jars.packages",   "io.dataship:apex_4.0_2.13:0.1.0") \
+  .config("spark.plugins",         "apex.ApexPlugin") \
+  .config("spark.apex.otlp.endpoint", "http://collect:4318") \
+  .config("spark.apex.aqe.enabled", "true")   # captures AQE plan_transitions
+# Fallback (stage events only, no AQE, no clean-shutdown flush):
+#   .config("spark.extraListeners", "apex.ApexStageListener")
 ```
+
+> **Config keys (verified against the built jar):** `spark.plugins=apex.ApexPlugin` (primary) or `spark.extraListeners=apex.ApexStageListener` (fallback) · `spark.apex.otlp.endpoint` (base URL; Apex appends `/v1/traces`) · `spark.apex.service.name` · `spark.apex.aqe.enabled` · `spark.apex.job_id`. See [`jar/README.md`](jar/README.md) for the full table.
 
 ---
 

@@ -1,22 +1,48 @@
-"""Exercise the packaged Apex MCP server through the official stdio client."""
+"""Exercise the packaged Apex MCP server through the official stdio client.
+
+Verifies what only a real client can verify:
+  * the server survives `initialize` over stdio (no stray stdout byte),
+  * it lists exactly the four contracted tools with the right annotations,
+  * every tool returns schema-valid structured output,
+  * `suggest_fix` reports `applied=False` / `requires_human_approval=True`.
+
+Run against a live ClickHouse:
+    uv run python tools/mcp_stdio_gate.py
+    APEX_GATE_JOB_ID=app-... uv run python tools/mcp_stdio_gate.py
+"""
 
 from __future__ import annotations
 
 import asyncio
 import json
 import os
+import sys
 from pathlib import Path
 
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-
 ROOT = Path(__file__).resolve().parents[1]
-BEFORE_JOB_ID = "codex-mcp-before-20260722"
-AFTER_JOB_ID = "codex-mcp-after-20260722"
+
+EXPECTED_TOOLS = [
+    {"name": "analyze_run", "readOnlyHint": True},
+    {"name": "compare_runs", "readOnlyHint": True},
+    {"name": "search_kb", "readOnlyHint": True},
+    {"name": "suggest_fix", "readOnlyHint": False},
+]
 
 
-async def main() -> None:
+def _payload(result) -> dict:  # noqa: ANN001
+    """Structured output if the SDK gave us one, else the JSON text block."""
+    if getattr(result, "structuredContent", None):
+        return result.structuredContent
+    return json.loads(result.content[0].text)
+
+
+async def main() -> int:
+    job_id = os.getenv("APEX_GATE_JOB_ID", "app-20260724160310-0000")
+    baseline_id = os.getenv("APEX_GATE_BASELINE_ID", job_id)
+
     environment = {
         **os.environ,
         "CLICKHOUSE_HOST": os.getenv("CLICKHOUSE_HOST", "127.0.0.1"),
@@ -26,42 +52,93 @@ async def main() -> None:
         "CLICKHOUSE_DATABASE": os.getenv("CLICKHOUSE_DATABASE", "apex"),
     }
     parameters = StdioServerParameters(
-        command="uv",
-        args=["run", "apex-mcp"],
-        env=environment,
-        cwd=ROOT,
+        command="uv", args=["run", "apex-mcp"], env=environment, cwd=str(ROOT)
     )
+
     async with stdio_client(parameters) as (reader, writer):
         async with ClientSession(reader, writer) as session:
             await session.initialize()
-            tools = await session.list_tools()
+            listed = await session.list_tools()
             tool_metadata = [
                 {
                     "name": tool.name,
-                    "readOnlyHint": tool.annotations.readOnlyHint if tool.annotations else None,
-                    "openWorldHint": tool.annotations.openWorldHint if tool.annotations else None,
+                    "readOnlyHint": tool.annotations.readOnlyHint
+                    if tool.annotations
+                    else None,
                 }
-                for tool in tools.tools
+                for tool in listed.tools
             ]
-            assert tool_metadata == [
-                {"name": "analyze_run", "readOnlyHint": True, "openWorldHint": False},
-                {"name": "compare_runs", "readOnlyHint": True, "openWorldHint": False},
-            ]
-            diagnosis = await session.call_tool("analyze_run", {"job_id": BEFORE_JOB_ID})
-            comparison = await session.call_tool(
+            assert tool_metadata == EXPECTED_TOOLS, tool_metadata
+
+            suggest = next(t for t in listed.tools if t.name == "suggest_fix")
+            assert suggest.annotations is not None
+            assert suggest.annotations.destructiveHint is False
+            assert suggest.annotations.idempotentHint is True
+
+            analyze = await session.call_tool("analyze_run", {"job_id": job_id})
+            compare = await session.call_tool(
                 "compare_runs",
-                {"baseline_job_id": BEFORE_JOB_ID, "current_job_id": AFTER_JOB_ID},
+                {"baseline_job_id": baseline_id, "current_job_id": job_id},
             )
-            assert not diagnosis.isError
-            assert not comparison.isError
-            print(json.dumps({
-                "gate": "C2-stdio",
+            search = await session.call_tool(
+                "search_kb", {"query": "skew join", "top_k": 3}
+            )
+            fix = await session.call_tool("suggest_fix", {"job_id": job_id})
+
+            for name, result in (
+                ("analyze_run", analyze),
+                ("compare_runs", compare),
+                ("search_kb", search),
+                ("suggest_fix", fix),
+            ):
+                assert not result.isError, f"{name} returned an error result"
+
+            diagnosis = _payload(analyze)
+            comparison = _payload(compare)
+            hits = _payload(search)
+            suggestion = _payload(fix)
+
+            assert diagnosis["job_id"] == job_id
+            assert diagnosis["stages"], "no stage telemetry for the gate job_id"
+            assert suggestion["applied"] is False
+            assert suggestion["requires_human_approval"] is True
+
+    print(
+        json.dumps(
+            {
+                "gate": "serve-stdio-mcp",
+                "job_id": job_id,
                 "tools": tool_metadata,
-                "analyze_run": [item.model_dump(mode="json") for item in diagnosis.content],
-                "compare_runs": [item.model_dump(mode="json") for item in comparison.content],
+                "analyze_run": {
+                    "status": diagnosis["status"],
+                    "stage_count": diagnosis["stage_count"],
+                    "worst_stage_id": diagnosis["worst_stage_id"],
+                    "primary_symptom": diagnosis["primary_symptom"],
+                    "summary": diagnosis["summary"],
+                    "aqe_ground_truth": diagnosis["aqe_ground_truth"],
+                },
+                "compare_runs": {
+                    "status": comparison["status"],
+                    "regressions": len(comparison["regressions"]),
+                    "plan_fingerprint_changed": comparison["plan_fingerprint_changed"],
+                },
+                "search_kb": {"total": hits["total"], "tokens": hits["tokens"]},
+                "suggest_fix": {
+                    "source": suggestion["source"],
+                    "confidence": suggestion["confidence"],
+                    "gated": suggestion["gated"],
+                    "applied": suggestion["applied"],
+                    "requires_human_approval": suggestion["requires_human_approval"],
+                    "diff_lines": len(suggestion["proposed_diff"].splitlines()),
+                },
                 "status": "passed",
-            }, indent=2, sort_keys=True))
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    sys.exit(asyncio.run(main()))

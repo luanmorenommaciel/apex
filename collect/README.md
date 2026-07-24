@@ -121,11 +121,12 @@ never commit one.
   isolation. When the **infra/** lane lands, delete that service and point the collector at
   infra's `clickhouse:9000` over the shared docker network (`endpoint` in `config.yaml` already
   uses the internal DNS name `clickhouse`, not a host port).
-- **Ports (CONTRACT.md Port Map):** container-internal ports are the reserved ones — OTLP/HTTP
-  `4318`, OTLP/gRPC `4317`, health `13133`. The `.env` **host**-port variables let you shift the
-  host bindings to dodge collisions (this box already had another stack squatting on
-  `4318`/`8123`/`9000`, so the committed `.env.example` maps them into a high band). The
-  collector↔ClickHouse link is internal and unaffected by host remapping.
+- **Ports (CONTRACT.md Port Map):** `.env.example` ships the **canonical** reserved host ports —
+  OTLP/HTTP `4318`, OTLP/gRPC `4317`, health `13133` (+ ClickHouse `8123`/`9000` for the throwaway).
+  So `cp .env.example .env` uses the contract ports directly. **If another stack squats on them**,
+  shift the host ports in your local `.env` (e.g. `14318`) — container-internal ports and the
+  collector↔ClickHouse internal link are unaffected. (A stray `oteru-collector` held these during
+  early builds; it is now cleared.)
 - **`create_schema: false`** — we own partitioning/TTL; the collector issues **no DDL** at
   startup. The `otel_traces`/`otel_logs` DDL in `ddl/` was captured from an empirical probe run
   of the exporter (`create_schema:true` → `SHOW CREATE TABLE`) so it matches the v0.156.0 INSERT
