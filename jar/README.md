@@ -119,21 +119,22 @@ inference**, and the causal *why* behind the stage metrics.
 
 ## Build & publish locally
 
-Cross-built with `sbt-projectmatrix` — three cells (Spark 4.0 dropped Scala 2.12):
+Cross-built with `sbt-projectmatrix` — four cells (Spark 4.x requires Scala 2.13):
 
 | Artifact | Spark | Scala | JDK to build |
 |---|---|---|---|
 | `io.dataship:apex_3.5_2.12:0.1.0` | 3.5.x | 2.12 | 8 / 11 / 17 |
 | `io.dataship:apex_3.5_2.13:0.1.0` | 3.5.x | 2.13 | 8 / 11 / 17 |
 | `io.dataship:apex_4.0_2.13:0.1.0` | 4.0.x | 2.13 | **17** / 21 |
+| `io.dataship:apex_4.1_2.13:0.1.0` | 4.1.2 | 2.13.17 | **17** / 21 |
 
 ```bash
-# One JDK 17 builds all three cells (3.5 supports 8/11/17; 4.0 needs 17/21).
+# One JDK 17 builds all four cells (3.5 supports 8/11/17; Spark 4.x needs 17/21).
 export JAVA_HOME=<path-to-jdk-17>
 
-sbt "+compile"       # build all three cells
+sbt "+compile"       # build all four cells
 sbt "+test"          # run the test suite on every cell (spins up a local Spark)
-sbt "+publishLocal"  # publish all three to ~/.ivy2/local for local consumers (dev/, e2e)
+sbt "+publishLocal"  # publish all four to ~/.ivy2/local for local consumers (dev/, e2e)
 ```
 
 Spark and Jackson are `provided` (the cluster supplies them); the OTel SDK is bundled. A user
@@ -149,7 +150,7 @@ above.
 
 ```
 jar/
-├── build.sbt                         # projectmatrix: 3 cells, Spark/Jackson provided, OTel bundled
+├── build.sbt                         # projectmatrix: 4 cells, Spark/Jackson provided, OTel bundled
 ├── project/                          # sbt + projectmatrix plugin + SparkAxis
 └── src/
     ├── main/scala/apex/

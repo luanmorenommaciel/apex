@@ -74,17 +74,21 @@ class DriverActivationSpec extends AnyFunSuite {
     info(s"extraListeners: ${render(viaExtra)}")
   }
 
-  test("T9: collector DOWN — ~100-stage job completes, wall-clock not inflated (bounded drop)") {
+  private def deadCollectorWorkload(enablePlugin: Boolean): Long = {
     resetSessions()
-    val spark = SparkSession.builder()
+    val builder = SparkSession.builder()
       .master("local[2]")
       .appName("apex-safety")
-      .config("spark.plugins", "apex.ApexPlugin")
-      .config("spark.apex.otlp.endpoint", "http://127.0.0.1:1") // DEAD collector
       .config("spark.sql.adaptive.enabled", "false")
       .config("spark.ui.enabled", "false")
       .config("spark.sql.shuffle.partitions", "2")
-      .getOrCreate()
+
+    if (enablePlugin)
+      builder
+        .config("spark.plugins", "apex.ApexPlugin")
+        .config("spark.apex.otlp.endpoint", "http://127.0.0.1:1") // DEAD collector
+
+    val spark = builder.getOrCreate()
 
     try {
       val t0 = System.nanoTime()
@@ -93,13 +97,26 @@ class DriverActivationSpec extends AnyFunSuite {
         spark.range(0, 2000).selectExpr("id", "id % 50 as k").groupBy("k").count().collect()
         i += 1
       }
-      val elapsedMs = (System.nanoTime() - t0) / 1000000
-      info(s"50 shuffle jobs (~100 stages) with a DEAD collector completed in ${elapsedMs} ms")
-      // A blocking sink (SimpleSpanProcessor, 5s timeout/export) would take >>60s for 100 stages.
-      assert(elapsedMs < 60000, s"wall-clock inflated to ${elapsedMs} ms — the sink appears to be blocking")
+      (System.nanoTime() - t0) / 1000000
     } finally {
       spark.stop()
       resetSessions()
     }
+  }
+
+  test("T9: collector DOWN — ~100-stage job adds bounded overhead versus the same workload") {
+    // Spark 4.1 on a Docker/WSL host can legitimately take more than 60 seconds
+    // for this workload. Compare against an uninstrumented baseline instead:
+    // a synchronous 5s exporter would add hundreds of seconds for ~100 stages.
+    val baselineMs = deadCollectorWorkload(enablePlugin = false)
+    val instrumentedMs = deadCollectorWorkload(enablePlugin = true)
+    val allowedOverheadMs = 30000L
+
+    info(s"baseline=${baselineMs} ms, dead-collector instrumented=${instrumentedMs} ms")
+    assert(
+      instrumentedMs <= baselineMs + allowedOverheadMs,
+      s"instrumentation added ${instrumentedMs - baselineMs} ms over baseline " +
+        s"(limit ${allowedOverheadMs} ms) — the sink appears to be blocking"
+    )
   }
 }
