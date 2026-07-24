@@ -119,11 +119,19 @@ Every lane's `docker-compose` runs on the **same developer host**. To avoid the 
 ## Activation (how a job turns Apex on)
 
 ```python
+# Real coordinates as published by the jar lane (sbt +publishLocal → ~/.ivy2/local):
+#   apex_3.5_2.12 · apex_3.5_2.13 · apex_4.0_2.13  (version 0.1.0)
+# Pick the cell matching your Spark/Scala. Example for Spark 4.0 / Scala 2.13:
 SparkSession.builder \
-  .config("spark.jars.packages",  "io.dataship:apex_2.12:0.1.0") \
-  .config("spark.extraListeners", "io.dataship.apex.ApexSparkListener") \
-  .config("spark.apex.endpoint",  "http://collect:4318")
+  .config("spark.jars.packages",   "io.dataship:apex_4.0_2.13:0.1.0") \
+  .config("spark.plugins",         "apex.ApexPlugin") \
+  .config("spark.apex.otlp.endpoint", "http://collect:4318") \
+  .config("spark.apex.aqe.enabled", "true")   # captures AQE plan_transitions
+# Fallback (stage events only, no AQE, no clean-shutdown flush):
+#   .config("spark.extraListeners", "apex.ApexStageListener")
 ```
+
+> **Config keys (verified against the built jar):** `spark.plugins=apex.ApexPlugin` (primary) or `spark.extraListeners=apex.ApexStageListener` (fallback) · `spark.apex.otlp.endpoint` (base URL; Apex appends `/v1/traces`) · `spark.apex.service.name` · `spark.apex.aqe.enabled` · `spark.apex.job_id`. See [`jar/README.md`](jar/README.md) for the full table.
 
 ---
 
