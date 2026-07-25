@@ -33,8 +33,10 @@ The Docker-backed pathology rerun and fresh six-lane gate were completed on
 [`C11`](C11-AUGUSTO-CANONICAL-RERUN-2026-07-25.md). Remaining optional
 product validation is intentionally broader than that gate:
 
-1. Re-run the real MCP client for `compare_runs`, `search_kb`, and
-   `suggest_fix`; confirm the proposal remains non-mutating.
+1. The real MCP client loop is now closed: `analyze_run`, `compare_runs`,
+   `search_kb`, and `suggest_fix` were exercised against persisted real-path
+   telemetry without a working-tree mutation. See
+   [`C11`](C11-AUGUSTO-CANONICAL-RERUN-2026-07-25.md).
 2. Run the external Crew/Judge smoke only with an operator-provided Anthropic
    key; never persist a key, token, or environment dump.
 

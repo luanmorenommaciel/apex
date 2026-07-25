@@ -56,3 +56,23 @@ The initial six-lane attempt exposed an old local `apex.findings` schema
 without v0.2 additive columns. `infra/sql/021_findings_v02_additive.sql` and
 `infra/scripts/apply_schema_migrations.ps1` now make that upgrade explicit and
 idempotent for retained ClickHouse volumes. The rerun passed after migration.
+
+## Full MCP stdio loop
+
+The real MCP client gate was rerun against the persisted telemetry for fresh
+skew app `app-20260725020700-0002`. It completed successfully using the four
+published tools:
+
+| Tool | Observed result | Mutation boundary |
+|---|---|---|
+| `analyze_run` | `degraded`; 17 stages; critical skew at stage 1 | read-only |
+| `compare_runs` | self-comparison returned `unchanged`, 0 regressions | read-only |
+| `search_kb` | `skew join` returned 3 knowledge-base matches | read-only |
+| `suggest_fix` | confidence `0.88`, 9 proposed diff lines, `applied=false` | proposal only; human approval required |
+
+The gate checked the Git working tree before and after all tool calls. It did
+not change. This was a read-only validation of the persisted ClickHouse data:
+Spark was not restarted and no pathology workload was rerun for this check.
+
+Raw local transcript: `dev/out/mcp-stdio-gate-2026-07-25.log` (ignored
+runtime output, containing no credentials).
