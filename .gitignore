@@ -2,6 +2,8 @@
 .env
 *.env
 !.env.example
+# Locally composed reproducibility environment; generated from tracked examples.
+dev/.env.e2e
 
 # --- data volumes (infra ClickStack, dev MinIO) ---
 .volumes/

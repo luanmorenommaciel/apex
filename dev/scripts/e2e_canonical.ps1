@@ -3,7 +3,8 @@ param(
     [ValidateSet('skew_join', 'spill', 'bad_shuffle', 'driver_oom')]
     [string[]]$Scenario = @('skew_join', 'spill', 'bad_shuffle', 'driver_oom'),
     [switch]$StartDev,
-    [switch]$SkipGenerate
+    [switch]$SkipGenerate,
+    [string]$EnvFile = '.env'
 )
 
 # Native Windows entry point for the canonical Spark -> OTLP -> ClickHouse gate.
@@ -13,14 +14,14 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-if (-not (Test-Path '.env')) {
-    throw 'Missing dev/.env. Run: make env-spark41'
+if (-not (Test-Path $EnvFile)) {
+    throw "Missing dev environment file: $EnvFile. Run: make env-spark41"
 }
 if ([string]::IsNullOrWhiteSpace($env:APEX_CANONICAL_CH_PASSWORD)) {
     throw 'APEX_CANONICAL_CH_PASSWORD is required for canonical ClickHouse assertions.'
 }
 
-$compose = @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.c3-otlp.yml', '--env-file', '.env')
+$compose = @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.c3-otlp.yml', '--env-file', $EnvFile)
 $outDir = Join-Path $root 'out'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
@@ -90,7 +91,7 @@ if ($StartDev) {
 
 if (-not $SkipGenerate) {
     $generateLog = Join-Path $outDir 'e2e-canonical-generate-data.log'
-    & docker @compose exec -T spark-master /opt/spark/bin/spark-submit --master spark://spark-master:7077 `
+    & docker @compose exec -T -e 'APEX_AQE=off' -e 'APEX_FIX=off' -e 'APEX_SAFE=off' spark-master /opt/spark/bin/spark-submit --master spark://spark-master:7077 `
         --conf spark.plugins=apex.ApexPlugin `
         --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 `
         --conf spark.driver.host=spark-master `

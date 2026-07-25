@@ -26,19 +26,17 @@ Spark 4.1.2 pathology runs from 2026-07-24: `skew_join`, `spill`,
 `bad_shuffle`, and `driver_oom`. The six-lane gate was observed for the skew
 run with deterministic ENGINE and read-only SERVE.
 
-## Remaining operational validation
+## Follow-up validation
 
-1. Restore a responsive Docker daemon.
-2. Run `dev/scripts/e2e_canonical.ps1 -StartDev` with the local ClickHouse
-   password supplied by the operator.
-3. Run `scripts/e2e_six_lanes.py` for each emitted `job_id`.
-4. Re-run the real MCP client for `analyze_run`, `compare_runs`, `search_kb`,
-   and `suggest_fix`; confirm the proposal remains non-mutating.
-5. Run the external Crew/Judge smoke only with an operator-provided Anthropic
+The Docker-backed pathology rerun and fresh six-lane gate were completed on
+2026-07-25; see
+[`C11`](C11-AUGUSTO-CANONICAL-RERUN-2026-07-25.md). Remaining optional
+product validation is intentionally broader than that gate:
+
+1. Re-run the real MCP client for `compare_runs`, `search_kb`, and
+   `suggest_fix`; confirm the proposal remains non-mutating.
+2. Run the external Crew/Judge smoke only with an operator-provided Anthropic
    key; never persist a key, token, or environment dump.
-
-The Docker daemon was not responsive during the latest local attempt. This is
-an environment blocker for a fresh run, not a claim that the code path failed.
 
 ## Commander decisions still required
 

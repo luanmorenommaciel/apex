@@ -30,6 +30,7 @@ Os gates locais desta branch e a referência da evidência integrada estão em
 | `.env.example` / `.env` | host ports + creds (`.env` is gitignored; canonical Port Map in `.env.example`) |
 | `otel-collector-config.yaml` | contrib collector → `apex.otel_traces` (interop-identical to collect) |
 | `sql/001..020` | DDL, auto-applied on first ClickHouse init (see below) |
+| `scripts/apply_schema_migrations.ps1` | applies idempotent additive migrations to an existing Windows/Docker volume |
 | `scripts/seed.sh` | ~50 stage spans via the real OTLP path (ts=now, TTL-safe) + stand-in findings |
 | `scripts/verify.sh` | exit-criterion healthcheck; exits 0 when a job_id threads all 3 tables |
 | `dashboards/skew_dashboard.json` | per-tile skew dashboard build-spec |
@@ -44,6 +45,20 @@ incremental MV · `005` skew queries · `010` otel_traces landing table · `011`
 when the canonical `collect/` pipeline is connected to infra, because that
 pipeline declares both trace and log exporters even though the current Spark
 plugin emits spans only.
+
+### Existing local volumes
+
+ClickHouse runs `docker-entrypoint-initdb.d` only on a fresh data volume.
+After pulling a contract revision with additive columns, keep the data and run:
+
+```powershell
+cd infra
+.\scripts\apply_schema_migrations.ps1
+```
+
+The migration is idempotent and currently adds the v0.2 `findings.app_id` and
+`findings.confidence_score` columns required by ENGINE/SERVE. It uses the
+container's configured credentials and never writes them to disk or output.
 
 > **Schema authority:** `002/003/011` are the contract tables applied **verbatim** — never
 > rename/repurpose a column. `010` + `020` **mirror `collect/ddl/`** so a span landing in

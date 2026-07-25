@@ -31,6 +31,18 @@ raias porque a ingestão OTLP é assíncrona. O gate exige consistência do conj
 persistido no instante em que executa; ele não depende de uma contagem fixa de
 estágios.
 
+## Nova rodada de patologias - 2026-07-25
+
+Uma nova rodada local Spark 4.1.2 aprovou as quatro asserções de patologia:
+`skew_join` (`39.946x`), `spill` (`103708706` bytes), `bad_shuffle` (stage
+`15` com duas tasks) e `driver_oom` (nove stages pré-falha e
+`OutOfMemoryError` esperado). Os app ids, a tentativa interrompida que não é
+contabilizada e a melhoria feita no preflight Delta estão registrados em
+[`../convergence/C11-AUGUSTO-CANONICAL-RERUN-2026-07-25.md`](../convergence/C11-AUGUSTO-CANONICAL-RERUN-2026-07-25.md).
+
+Essa seção não substitui o gate das seis raias: ENGINE e SERVE precisam ser
+executados contra um desses novos app ids para renovar aquela prova específica.
+
 ## Reprodução
 
 Pré-requisitos: Docker Desktop, COLLECT e INFRA ativos, rede

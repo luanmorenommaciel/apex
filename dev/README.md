@@ -46,6 +46,10 @@ make up
 does not overwrite an existing `.env`. Remove or rename `.env` before
 switching between the default and Spark 4.1.2 cells.
 
+When the deterministic Delta inputs already exist, pathology jobs check for a
+committed transaction in their `_delta_log` through S3A. This avoids launching
+a distributed `collect()` merely to decide whether generation is needed.
+
 ```bash
 cd dev
 cp .env.example .env         # pinned version quartet + image digests
@@ -53,6 +57,30 @@ make verify                  # proves the platform end-to-end, then tears down
 # with collect + infra already running and APEX_CANONICAL_CH_PASSWORD set:
 make e2e                     # canonical ClickHouse gate for all four pathologies
 ```
+
+### Windows: rodada canônica de longa duração
+
+`scripts/e2e_canonical.ps1` accepts `-EnvFile` and keeps `.env` as its
+default. This permits an operator to compose the tracked baseline and Spark
+4.1.2 overlay into a local ignored file without committing credentials:
+
+```powershell
+python scripts/ensure_env.py .env.example .env.spark41.example .env.e2e
+$env:APEX_CANONICAL_CH_PASSWORD = '<local ClickHouse password>'
+.\scripts\e2e_canonical.ps1 -EnvFile .env.e2e
+```
+
+For the initial 5M-row generation, when an interactive terminal has a short
+timeout, start it separately and inspect the generated log. The run is valid
+only after the explicit `APEX_GEN hot_key_~50pct=PASS` marker appears:
+
+```powershell
+.\scripts\start_generate_data_background.ps1 -EnvFile .env.e2e
+Get-Content out/e2e-canonical-generate-data-background.log -Wait
+```
+
+`.env.e2e` and runtime logs are ignored by Git. Do not copy real secret values
+into README files, evidence, or commits.
 
 Interactive:
 ```bash
