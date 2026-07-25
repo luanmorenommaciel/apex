@@ -26,8 +26,8 @@ dev  →  jar  →  collect  →  infra  →  engine  →  serve
 5. **[V1 PR plan](docs/architecture/APEX-V1-PR-PLAN.md)** — the lane-by-lane delivery and merge order.
 6. **[ENGINE/SERVE delivery status](docs/convergence/C9-ENGINE-SERVE-DELIVERY-STATUS-2026-07-24.md)** — current PRs, verified evidence, and integration order.
 7. **[Augusto E2E readiness](docs/convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md)** — current local verification, the cross-lane fix, and the remaining operational rerun.
-8. **[Augusto canonical rerun](docs/convergence/C11-AUGUSTO-CANONICAL-RERUN-2026-07-25.md)** — fresh Spark 4.1.2 pathology evidence and the remaining six-lane renewal step.
-9. **[Study guide by lane](docs/study/README.md)** — visual macro flow, distributed states, payload sequence, architecture, guided study and sanitized evidence.
+8. **[Augusto canonical rerun](docs/convergence/C11-AUGUSTO-CANONICAL-RERUN-2026-07-25.md)** — fresh Spark 4.1.2 pathology and full MCP stdio evidence.
+9. **[Study guide by lane](docs/study/README.md)** — visual macro flow, states, payloads, decisions, architecture, guided study and sanitized evidence.
 
 ## Quick start (once built)
 
@@ -87,10 +87,9 @@ gated Crew/Judge extension and the safe MCP knowledge/proposal extension.
 
 **Review branch:** `base-project-e2e-augusto` consolidates the two pending
 extensions and their C9 evidence without merging them into the Luan-owned base.
-It also contains the local cross-lane compatibility fix `52a36da`. A fresh
-Docker-backed canonical pathology rerun is documented in C11; the final
-remaining renewal is the six-lane gate against one of its fresh application
-ids.
+It also contains the local cross-lane compatibility fix `52a36da`. The fresh
+Docker-backed canonical pathology rerun, six-lane gate and full MCP stdio loop
+are documented in C11.
 
 | Status | Delivery | Reference |
 |---|---|---|

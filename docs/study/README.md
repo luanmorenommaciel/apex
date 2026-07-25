@@ -12,6 +12,7 @@ definem o trabalho; estes explicam como estudar, operar e revisar o que existe.
 4. [Arquitetura global](04-arquitetura-global.md)
 5. [Guia por raia](05-guia-por-raia.md)
 6. [Matriz de testes e evidencias](06-testes-e-evidencias.md)
+7. [Decisoes por raia e visao global](07-decisoes-por-raia.md)
 
 ## Leitura rapida
 
@@ -35,7 +36,8 @@ flowchart LR
 
 - Os testes locais e a evidencia de execucao real estao em
   [06-testes-e-evidencias.md](06-testes-e-evidencias.md).
-- Uma nova rodada Docker-backed ainda depende de um daemon Docker responsivo.
+- A rodada Docker-backed e o gate das seis raias foram renovados em 2026-07-25;
+  os resultados sanitizados estao em [C11](../convergence/C11-AUGUSTO-CANONICAL-RERUN-2026-07-25.md).
 - Esta branch nao modifica nem se auto-integra em `feat/base-project-e2e`.
 - Nenhuma chave, senha, token ou dump de ambiente e documentado aqui.
 
