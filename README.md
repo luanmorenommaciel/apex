@@ -26,6 +26,7 @@ dev  →  jar  →  collect  →  infra  →  engine  →  serve
 5. **[V1 PR plan](docs/architecture/APEX-V1-PR-PLAN.md)** — the lane-by-lane delivery and merge order.
 6. **[ENGINE/SERVE delivery status](docs/convergence/C9-ENGINE-SERVE-DELIVERY-STATUS-2026-07-24.md)** — current PRs, verified evidence, and integration order.
 7. **[Augusto E2E readiness](docs/convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md)** — current local verification, the cross-lane fix, and the remaining operational rerun.
+8. **[Study guide by lane](docs/study/README.md)** — visual macro flow, distributed states, payload sequence, architecture, guided study and sanitized evidence.
 
 ## Quick start (once built)
 
