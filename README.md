@@ -30,6 +30,7 @@ dev  →  jar  →  collect  →  infra  →  engine  →  serve
 9. **[Initial package validation](docs/convergence/C12-INITIAL-PACKAGE-VALIDATION-2026-07-25.md)** — one-command bootstrap and fresh real smoke evidence.
 10. **[Clean pilot readiness](docs/convergence/C13-CLEAN-PILOT-READINESS-2026-07-25.md)** — fail-closed clean-machine command, safety proof and pending external run.
 11. **[Study guide by lane](docs/study/README.md)** — visual macro flow, states, payloads, decisions, architecture, guided study and sanitized evidence.
+12. **[P1 tail-outlier skew plan](docs/convergence/ISSUE-P1-TAIL-OUTLIER-SKEW.md)** — approved additive plan for high-parallelism skew coverage.
 
 ## Quick start (once built)
 
