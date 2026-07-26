@@ -68,6 +68,13 @@ jobs:
           ./scripts/apex.ps1 bootstrap
           ./scripts/apex.ps1 doctor
           ./scripts/apex.ps1 e2e
+      - if: ${{ !inputs.full_e2e && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-clean-pilot-summary
+          path: evidence/clean-pilot-summary.json
+          if-no-files-found: warn
+          retention-days: 14
       - if: always()
         shell: pwsh
         run: ./scripts/apex.ps1 status

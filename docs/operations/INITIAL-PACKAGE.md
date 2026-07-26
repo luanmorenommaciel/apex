@@ -58,6 +58,9 @@ Do not try to make an occupied workstation pass by manually deleting package
 resources. Use another machine, an ephemeral self-hosted runner or an
 explicitly disposable Docker runtime.
 
+For GitHub Actions preparation and artifact handling, see
+[the clean runner guide](SELF-HOSTED-CLEAN-PILOT.md).
+
 ## First product proof
 
 ```powershell

@@ -9,6 +9,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "apex.ps1"
+WORKFLOW = ROOT / ".github" / "workflows" / "initial-package.yml"
 
 
 def _powershell() -> str:
@@ -71,3 +72,13 @@ def test_clean_pilot_is_fail_closed_and_sanitized() -> None:
     assert "secret_values_in_report = $false" in source
     assert "external_llm_called = $false" in source
     assert "automatic_fix_applied = $false" in source
+
+
+def test_clean_pilot_workflow_uploads_only_the_sanitized_summary() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    assert "actions/upload-artifact@v4" in workflow
+    assert "name: apex-clean-pilot-summary" in workflow
+    assert "path: evidence/clean-pilot-summary.json" in workflow
+    assert "retention-days: 14" in workflow
+    assert ".apex/" not in workflow
