@@ -31,6 +31,7 @@ SELECT
   toInt32OrZero(SpanAttributes['task_count'])                   AS task_count,
   toInt64OrZero(SpanAttributes['task_duration_p50_ms'])         AS task_duration_p50_ms,
   toInt64OrZero(SpanAttributes['task_duration_p99_ms'])         AS task_duration_p99_ms,
+  toInt64OrZero(SpanAttributes['task_duration_max_ms'])         AS task_duration_max_ms,
   toFixedString(SpanAttributes['plan_fingerprint'], 64)         AS plan_fingerprint,
   SpanAttributes['plan_json']                                   AS plan_json,
   CAST(SpanAttributes, 'Map(String, String)')                   AS attributes

@@ -1,0 +1,26 @@
+[info] [launcher] getting org.scala-sbt sbt 1.10.7  (this may take some time)...
+[info] welcome to sbt 1.10.7 (Eclipse Adoptium Java 17.0.10)
+[info] loading settings for project jar-build from plugins.sbt...
+[info] loading project definition from /workspace/jar/project
+[info] compiling 1 Scala source to /workspace/jar/project/target/scala-2.12/sbt-1.0/classes ...
+[info] Non-compiled module 'compiler-bridge_2.12' for Scala 2.12.20. Compiling...
+[info]   Compilation completed in 242.458s.
+[info] done compiling
+[info] loading settings for project jar from build.sbt...
+[info] set current project to jar (in build file:/workspace/jar/)
+[info] compiling 9 Scala sources to /workspace/jar/target/spark41-jvm-2.13/classes ...
+[info] done compiling
+[info] compiling 5 Scala sources to /workspace/jar/target/spark41-jvm-2.13/test-classes ...
+[info] done compiling
+[info] StageDurationStatsSpec:
+[info] - nearest-rank p99 stops representing a single maximum at 100 tasks
+[info] - two outliers remain invisible to p99 at 200 and 400 tasks
+[info] - healthy stages keep p50 p99 and max aligned
+[info] - empty stages emit zero duration metrics
+[info] Run completed in 52 seconds, 510 milliseconds.
+[info] Total number of tests run: 4
+[info] Suites: completed 1, aborted 0
+[info] Tests: succeeded 4, failed 0, canceled 0, ignored 0, pending 0
+[info] All tests passed.
+[warn] In the last 427 seconds, 5.037 (1.2%) were spent in GC. [Heap: 0.89GB free of 1.00GB, max 1.00GB] Consider increasing the JVM heap using `-Xmx` or try a different collector, e.g. `-XX:+UseG1GC`, for better performance.
+[success] Total time: 425 s (07:05), completed Jul 26, 2026, 4:17:24 AM

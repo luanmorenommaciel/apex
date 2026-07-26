@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('bootstrap', 'doctor', 'smoke', 'e2e', 'pilot-clean', 'status', 'down', 'help')]
+    [ValidateSet('bootstrap', 'doctor', 'smoke', 'e2e', 'tail-outlier', 'pilot-clean', 'status', 'down', 'help')]
     [string]$Action = 'help',
     [switch]$DryRun,
     [switch]$SkipBuild
@@ -618,6 +618,43 @@ function Stop-Package {
     Write-Host 'APEX_DOWN=complete volumes=preserved' -ForegroundColor Green
 }
 
+function Invoke-TailOutlierGate {
+    Assert-RuntimeConfiguration
+    Invoke-Doctor
+    Set-CanonicalProcessEnvironment
+
+    $canonicalScript = Join-Path $script:Root 'dev/scripts/e2e_canonical.ps1'
+    $packageOverlay = Join-Path $script:Root 'dev/docker-compose.package.yml'
+    Invoke-Checked -FilePath $script:PowerShellExe -Arguments @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $canonicalScript,
+        '-Scenario', 'tail_outlier',
+        '-SkipGenerate',
+        '-EnvFile', $script:DevEnv,
+        '-AdditionalComposeFile', $packageOverlay
+    )
+
+    $scenarioLog = Join-Path $script:Root 'dev/out/e2e-canonical-tail_outlier.log'
+    $jobMatch = Select-String -Path $scenarioLog -Pattern 'APEX_SESSION job_id=([^ ]+)' |
+        Select-Object -Last 1
+    if (-not $jobMatch) {
+        throw "Tail-outlier job_id missing from $scenarioLog"
+    }
+    $jobId = $jobMatch.Matches[0].Groups[1].Value
+
+    $engineOutput = & uv run --project (Join-Path $script:Root 'engine') `
+        --extra clickhouse python -m apex_engine $jobId --dry-run --no-crew 2>&1
+    $engineExitCode = $LASTEXITCODE
+    $engineOutput | Write-Output
+    if ($engineExitCode -ne 0) {
+        throw "Tail-outlier ENGINE analysis failed with exit code $engineExitCode"
+    }
+    if (-not ($engineOutput -match 'tail_outlier_watcher')) {
+        throw "Tail-outlier telemetry arrived, but ENGINE did not emit tail_outlier_watcher"
+    }
+
+    Write-Host "APEX_TAIL_OUTLIER_GATE=passed job_id=$jobId llm_calls=0" -ForegroundColor Green
+}
+
 function Show-Help {
     @'
 Apex initial package
@@ -626,6 +663,7 @@ Apex initial package
   .\scripts\apex.ps1 doctor
   .\scripts\apex.ps1 smoke
   .\scripts\apex.ps1 e2e
+  .\scripts\apex.ps1 tail-outlier
   .\scripts\apex.ps1 pilot-clean
   .\scripts\apex.ps1 status
   .\scripts\apex.ps1 down
@@ -664,6 +702,7 @@ switch ($Action) {
     'doctor' { Assert-Prerequisites; Invoke-Doctor }
     'smoke' { Assert-Prerequisites; Invoke-ProductGate }
     'e2e' { Assert-Prerequisites; Invoke-ProductGate -Full }
+    'tail-outlier' { Assert-Prerequisites; Invoke-TailOutlierGate }
     'pilot-clean' { Invoke-CleanPilot }
     'status' { Show-Status }
     'down' { Stop-Package }

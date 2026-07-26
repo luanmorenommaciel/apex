@@ -1,0 +1,26 @@
+
+Name                     Status  Health  ExitCode
+----                     ------  ------  --------
+apex-infra-clickhouse    running healthy        0
+apex-infra-mongodb       running healthy        0
+apex-infra-hyperdx       running healthy        0
+apex-otel-collector      running -              0
+apex-dev-minio-1         running healthy        0
+apex-dev-spark-master-1  running healthy        0
+apex-dev-spark-worker-1  running healthy        0
+apex-dev-spark-history-1 running healthy        0
+
+APEX_DOCTOR=ready spark=4.1.2 schema=3/3 secrets=local
+{"job_id": "app-20260726045648-0001", "max_p50_ratio": 31.631, "p99_p50_ratio": 3.988, "scenario": "tail_outlier", "stage_count": 1, "stage_id": 0, "status": "passed", "task_count": 200}
+OK E2E CANONICAL PASSED - requested pathologies reached ClickHouse
+job_id         : app-20260726045648-0001
+stages analyzed: 1  (plan_transitions: 0)
+mode           : deterministic   crew: not_needed   llm_calls: 0
+findings       : 1  rejected: 0
+written_rows   : 0  (dry_run, skipped_existing=0)
+
+-- findings ------------------------------------------------------------
+[ warning] SKEW_ON_JOIN       stage 0    conf=MEDIUM(0.72) via tail_outlier_watcher
+           evidence: max/p50 = 31.63x with p99/p50 = 3.99x on stage 0 (max=38874ms, p99=4901ms, p50=1229ms, 200 tasks)
+           fix     : Inspect the slow task, executor and join-key distribution; correlate with AQE skew_split before applying salting or repartitioning.
+APEX_TAIL_OUTLIER_GATE=passed job_id=app-20260726045648-0001 llm_calls=0

@@ -14,16 +14,16 @@ cannot disagree.
 from __future__ import annotations
 
 from ..schema import Finding, PlanTransition, StageAggregate
-from . import aqe, code, cost, memory, shuffle, skew
+from . import aqe, code, cost, memory, shuffle, skew, tail_outlier
 
-# The five contract watchers. Order is the order findings are emitted in.
-STAGE_WATCHERS = (skew, shuffle, memory, cost, code)
+# Contract watchers plus the additive sparse-tail rule. Order is emitted order.
+STAGE_WATCHERS = (skew, tail_outlier, shuffle, memory, cost, code)
 WATCHER_NAMES = tuple(module.NAME for module in STAGE_WATCHERS) + (aqe.NAME,)
 
 __all__ = [
     "STAGE_WATCHERS",
     "WATCHER_NAMES",
-    "aqe", "code", "cost", "memory", "shuffle", "skew",
+    "aqe", "code", "cost", "memory", "shuffle", "skew", "tail_outlier",
     "run_all", "run_all_offline",
 ]
 

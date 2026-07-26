@@ -53,6 +53,7 @@ read -r -d '' PAYLOAD <<JSON || true
             { "key": "task_count",               "value": { "stringValue": "200" } },
             { "key": "task_duration_p50_ms",     "value": { "stringValue": "47000" } },
             { "key": "task_duration_p99_ms",     "value": { "stringValue": "2478000" } },
+            { "key": "task_duration_max_ms",     "value": { "stringValue": "2478000" } },
             { "key": "plan_fingerprint",         "value": { "stringValue": "2de5e5760399189a81ab5500a216db0bae5c67f72cf42c08bd9f62689b404cf0" } },
             { "key": "plan_json",                "value": { "stringValue": "Join Inner, (customer_id#0L = customer_id#10L) {\"desc\":\"leaked literal x=42\"}" } },
             { "key": "query_text",               "value": { "stringValue": "SELECT * FROM orders WHERE customer_id = 12847" } },

@@ -102,7 +102,9 @@ class ApexStageListener private (
     ensureIds()
     val si  = e.stageInfo
     val key = (si.stageId, si.attemptNumber())
-    val durs = taskDur.remove(key).map(_.sorted.toIndexedSeq).getOrElse(IndexedSeq.empty[Long])
+    val durationStats = StageDurationStats.summarize(
+      taskDur.remove(key).map(_.toSeq).getOrElse(Seq.empty[Long])
+    )
     val livePeak = stagePeakMem.remove(key).getOrElse(0L)
     val tm = Option(si.taskMetrics) // null for stages with no tasks
 
@@ -122,8 +124,9 @@ class ApexStageListener private (
       output_bytes             = tm.map(_.outputMetrics.bytesWritten).getOrElse(0L),
       peak_execution_mem_bytes = math.max(tm.map(_.peakExecutionMemory).getOrElse(0L), livePeak),
       task_count               = si.numTasks,
-      task_duration_p50_ms     = percentile(durs, 0.50),
-      task_duration_p99_ms     = percentile(durs, 0.99),
+      task_duration_p50_ms     = durationStats.p50Ms,
+      task_duration_p99_ms     = durationStats.p99Ms,
+      task_duration_max_ms     = durationStats.maxMs,
       plan_fingerprint         = "", // attached at flush, keyed by execution_id
       plan_json                = ""
     )
@@ -179,12 +182,4 @@ class ApexStageListener private (
       overflowed += oldest
     }
   }
-
-  /** Nearest-rank percentile over a pre-sorted ascending sequence; 0 if empty. */
-  private def percentile(sorted: IndexedSeq[Long], q: Double): Long =
-    if (sorted.isEmpty) 0L
-    else {
-      val rank = math.ceil(q * sorted.length).toInt
-      sorted(math.min(sorted.length - 1, math.max(0, rank - 1)))
-    }
 }

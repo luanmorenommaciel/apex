@@ -21,6 +21,7 @@ def row(**overrides):
         "task_count": 8,
         "task_duration_p50_ms": 10,
         "task_duration_p99_ms": 10,
+        "task_duration_max_ms": 10,
     }
     base.update(overrides)
     return base
@@ -34,6 +35,27 @@ class CanonicalE2EAssertionTests(unittest.TestCase):
     def test_spill_requires_disk_spill(self):
         result = MODULE.evaluate("spill", [row(spill_disk_bytes=42)])
         self.assertEqual(42, result["spill_disk_bytes"])
+
+    def test_tail_outlier_requires_100_tasks_healthy_p99_and_extreme_max(self):
+        result = MODULE.evaluate("tail_outlier", [row(
+            stage_id=7,
+            task_count=200,
+            task_duration_p50_ms=100,
+            task_duration_p99_ms=100,
+            task_duration_max_ms=3000,
+        )])
+        self.assertEqual(7, result["stage_id"])
+        self.assertEqual(1.0, result["p99_p50_ratio"])
+        self.assertEqual(30.0, result["max_p50_ratio"])
+
+    def test_tail_outlier_rejects_a_healthy_maximum(self):
+        with self.assertRaisesRegex(MODULE.AssertionFailure, "sparse_tail_candidate_missing"):
+            MODULE.evaluate("tail_outlier", [row(
+                task_count=200,
+                task_duration_p50_ms=100,
+                task_duration_p99_ms=100,
+                task_duration_max_ms=120,
+            )])
 
     def test_bad_shuffle_requires_two_large_reduce_tasks(self):
         result = MODULE.evaluate("bad_shuffle", [row(stage_id=9, task_count=2, shuffle_read_bytes=1_000_001)])

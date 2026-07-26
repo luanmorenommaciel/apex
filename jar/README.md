@@ -75,6 +75,7 @@ landing in `apex.spark_events`:
 `shuffle_read_bytes`, `shuffle_write_bytes`, `spill_disk_bytes`, `spill_mem_bytes`,
 `gc_time_ms`, `input_bytes`, `output_bytes`, `peak_execution_mem_bytes`,
 `task_count`, `task_duration_p50_ms`, `task_duration_p99_ms`,
+`task_duration_max_ms`,
 `plan_fingerprint`, `plan_json`.
 
 - **`plan_fingerprint`** — SHA-256 (64 hex → `FixedString(64)`) of the **normalized LOGICAL**

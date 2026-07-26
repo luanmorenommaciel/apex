@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS apex.spark_events (
   task_count                Int32,
   task_duration_p50_ms      Int64,
   task_duration_p99_ms      Int64,
+  task_duration_max_ms      Int64,
   plan_fingerprint          FixedString(64),      -- SHA-256 of normalized logical plan (64 hex chars)
   plan_json                 String,
   attributes                Map(String, String)   -- extensibility escape hatch

@@ -155,6 +155,7 @@ SELECT
   toInt64OrZero(SpanAttributes['spill_disk_bytes'])         AS spill_disk_bytes,
   toInt64OrZero(SpanAttributes['gc_time_ms'])               AS gc_time_ms,
   toInt64OrZero(SpanAttributes['task_duration_p99_ms'])     AS task_duration_p99_ms,
+  toInt64OrZero(SpanAttributes['task_duration_max_ms'])     AS task_duration_max_ms,
   toFixedString(SpanAttributes['plan_fingerprint'], 64)     AS plan_fingerprint,
   SpanAttributes['plan_json']                               AS plan_json
   /* ...remaining contract fields... */

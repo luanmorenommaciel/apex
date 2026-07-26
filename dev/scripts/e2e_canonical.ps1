@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('skew_join', 'spill', 'bad_shuffle', 'driver_oom')]
+    [ValidateSet('skew_join', 'tail_outlier', 'spill', 'bad_shuffle', 'driver_oom')]
     [string[]]$Scenario = @('skew_join', 'spill', 'bad_shuffle', 'driver_oom'),
     [switch]$StartDev,
     [switch]$SkipGenerate,
@@ -114,7 +114,12 @@ foreach ($name in $Scenario) {
             throw "driver_oom unexpectedly completed (see $($result.Log))."
         }
     } else {
-        $jobs = @{ skew_join = 'skew_join.py'; spill = 'spill.py'; bad_shuffle = 'bad_shuffle.py' }
+        $jobs = @{
+            skew_join = 'skew_join.py'
+            tail_outlier = 'tail_outlier.py'
+            spill = 'spill.py'
+            bad_shuffle = 'bad_shuffle.py'
+        }
         $result = Invoke-SparkJob -Name $name -Job $jobs[$name] -Aqe 'off'
         if ($result.ExitCode -ne 0) {
             throw "$name Spark job failed (see $($result.Log))."

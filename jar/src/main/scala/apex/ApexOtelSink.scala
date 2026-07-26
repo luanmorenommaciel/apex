@@ -84,6 +84,7 @@ class ApexOtelSink(endpoint: String, service: String) extends ApexSink {
         .setAttribute(ApexAttributes.TaskCount, Long.box(ev.task_count.toLong))
         .setAttribute(ApexAttributes.TaskDurationP50Ms, Long.box(ev.task_duration_p50_ms))
         .setAttribute(ApexAttributes.TaskDurationP99Ms, Long.box(ev.task_duration_p99_ms))
+        .setAttribute(ApexAttributes.TaskDurationMaxMs, Long.box(ev.task_duration_max_ms))
         .setAttribute(ApexAttributes.PlanFingerprint, ev.plan_fingerprint)
         .setAttribute(ApexAttributes.PlanJson, ev.plan_json)
     } finally span.end()

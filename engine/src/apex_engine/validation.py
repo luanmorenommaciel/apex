@@ -56,6 +56,11 @@ def _measurement_issues(finding: Finding, details: dict[str, object]) -> list[st
         # needs no p99/p50 ratio to stand behind it.
         if details.get("ground_truth"):
             return []
+        if details.get("tail_outlier_candidate"):
+            return (
+                _floor(details, "tail_ratio", 10.0, "missing_tail_ratio")
+                + _floor(details, "task_count", 100.0, "missing_task_count")
+            )
         return (
             _floor(details, "skew_ratio", 5.0, "missing_skew_ratio")
             + _floor(details, "task_count", 2.0, "missing_task_count")

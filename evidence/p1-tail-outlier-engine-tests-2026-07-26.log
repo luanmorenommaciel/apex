@@ -1,0 +1,84 @@
+...................................................ss................... [ 80%]
+.................                                                        [100%]
+============================== warnings summary ===============================
+tests/test_crew_gated.py: 12 warnings
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\agent\core.py:358: DeprecationWarning: function_calling_llm is deprecated and will be removed in a future release.
+    if self.function_calling_llm and not isinstance(
+
+tests/test_crew_gated.py: 12 warnings
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\agent\core.py:366: DeprecationWarning: deprecated
+    if self.allow_code_execution:
+
+tests/test_crew_gated.py: 12 warnings
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\agent\core.py:377: DeprecationWarning: deprecated
+    if self.reasoning and self.planning_config is None:
+
+tests/test_crew_gated.py: 18 warnings
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\crew.py:633: DeprecationWarning: function_calling_llm is deprecated and will be removed in a future release.
+    if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
+
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\telemetry\telemetry.py:431: DeprecationWarning: function_calling_llm is deprecated and will be removed in a future release.
+    if getattr(agent, "function_calling_llm", None)
+
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\telemetry\telemetry.py:438: DeprecationWarning: deprecated
+    "allow_code_execution?": getattr(
+
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\crews\utils.py:373: DeprecationWarning: function_calling_llm is deprecated and will be removed in a future release.
+    crew.function_calling_llm,
+
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\crews\utils.py:93: DeprecationWarning: function_calling_llm is deprecated and will be removed in a future release.
+    if not agent.function_calling_llm:  # type: ignore[attr-defined]
+
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\agent\core.py:1089: DeprecationWarning: function_calling_llm is deprecated and will be removed in a future release.
+    function_calling_llm=self.function_calling_llm,
+
+tests/test_crew_gated.py: 12 warnings
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\crew.py:1640: DeprecationWarning: deprecated
+    if hasattr(agent, "allow_code_execution") and getattr(
+
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\crew.py:1647: DeprecationWarning: deprecated
+    and hasattr(agent, "multimodal")
+
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_judged_verdict_flows_back_into_the_finding
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_the_judge_can_kill_a_false_positive
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+tests/test_crew_gated.py::test_measured_identity_and_evidence_survive_a_hallucinating_judge
+  C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\engine\.venv\Lib\site-packages\crewai\crew.py:1648: DeprecationWarning: deprecated
+    and getattr(agent, "multimodal", False)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html

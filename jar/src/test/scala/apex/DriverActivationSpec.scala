@@ -53,6 +53,10 @@ class DriverActivationSpec extends AnyFunSuite {
     assert(viaPlugin.exists(_.shuffle_read_bytes > 0),  "plugin path: expected a stage with shuffle_read_bytes > 0")
     assert(viaExtra.exists(_.shuffle_read_bytes > 0),   "extraListeners path: expected shuffle_read_bytes > 0")
     assert(viaPlugin.forall(e => e.job_id.nonEmpty && e.app_id.nonEmpty), "job_id/app_id must be populated")
+    assert(viaPlugin.forall(e =>
+      e.task_duration_max_ms >= e.task_duration_p99_ms &&
+        e.task_duration_p99_ms >= e.task_duration_p50_ms),
+      "duration metrics must satisfy max >= p99 >= p50")
 
     // Ordering fix: every stage row of the one query carries the SAME correct 64-hex
     // fingerprint (attached via execution_id buffer flushed at SQL execution end).

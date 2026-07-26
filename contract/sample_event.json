@@ -16,6 +16,7 @@
   "task_count": 200,
   "task_duration_p50_ms": 47000,
   "task_duration_p99_ms": 2478000,
+  "task_duration_max_ms": 2478000,
   "plan_fingerprint": "2de5e5760399189a81ab5500a216db0bae5c67f72cf42c08bd9f62689b404cf0",
   "plan_json": "Join Inner, (customer_id#0L = customer_id#10L)\n:- Project [customer_id#0L, order_amount#1, order_ts#2]\n:  +- Filter (order_ts#2 >= null)\n:     +- Relation [customer_id#0L, order_amount#1, order_ts#2] parquet\n+- Project [customer_id#10L, segment#11]\n   +- Relation [customer_id#10L, segment#11] parquet"
 }

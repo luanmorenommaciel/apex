@@ -26,7 +26,8 @@ SELECT
   job_id, app_id, app_name, stage_id, stage_attempt, ts,
   shuffle_read_bytes, shuffle_write_bytes, spill_disk_bytes, spill_mem_bytes,
   gc_time_ms, input_bytes, output_bytes, peak_execution_mem_bytes, task_count,
-  task_duration_p50_ms, task_duration_p99_ms, plan_fingerprint, plan_json
+  task_duration_p50_ms, task_duration_p99_ms, task_duration_max_ms,
+  plan_fingerprint, plan_json
 FROM apex.spark_events
 WHERE job_id = {job_id:String}
 ORDER BY stage_id, stage_attempt, ts
@@ -49,6 +50,7 @@ SELECT
   max(stage_attempt)                                   AS attempt,
   argMax(task_duration_p50_ms, ts)                     AS task_duration_p50_ms,
   argMax(task_duration_p99_ms, ts)                     AS task_duration_p99_ms,
+  argMax(task_duration_max_ms, ts)                     AS task_duration_max_ms,
   argMax(shuffle_read_bytes, ts)                       AS shuffle_read_bytes,
   argMax(shuffle_write_bytes, ts)                      AS shuffle_write_bytes,
   argMax(spill_disk_bytes, ts)                         AS spill_disk_bytes,
@@ -213,6 +215,7 @@ def aggregate_events(events: Iterable[StageEvent]) -> list[StageAggregate]:
             attempt=event.stage_attempt,
             task_duration_p50_ms=event.task_duration_p50_ms,
             task_duration_p99_ms=event.task_duration_p99_ms,
+            task_duration_max_ms=event.task_duration_max_ms,
             shuffle_read_bytes=event.shuffle_read_bytes,
             shuffle_write_bytes=event.shuffle_write_bytes,
             spill_disk_bytes=event.spill_disk_bytes,

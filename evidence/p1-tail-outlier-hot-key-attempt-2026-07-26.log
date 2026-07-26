@@ -1,0 +1,30 @@
+
+Name                     Status  Health  ExitCode
+----                     ------  ------  --------
+apex-infra-clickhouse    running healthy        0
+apex-infra-mongodb       running healthy        0
+apex-infra-hyperdx       running healthy        0
+apex-otel-collector      running -              0
+apex-dev-minio-1         running healthy        0
+apex-dev-spark-master-1  running healthy        0
+apex-dev-spark-worker-1  running healthy        0
+apex-dev-spark-history-1 running healthy        0
+
+APEX_DOCTOR=ready spark=4.1.2 schema=3/3 secrets=local
+{"job_id": "app-20260726044042-0000", "scenario": "tail_outlier", "status": "failed", "error": "AssertionFailure:canonical_evidence_timeout:120s:sparse_tail_candidate_missing"}
+Exception: C:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\dev\scripts\e2e_canonical.ps1:85
+Line |
+  85 |          throw "Canonical ClickHouse assertion failed for $Name ($JobI .
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Canonical ClickHouse assertion failed for tail_outlier (app-20260726044042-0000).
+--- RAW CLICKHOUSE METRICS FOR THE REJECTED HOT-KEY ATTEMPT ---
+stage_id	task_count	task_duration_p50_ms	task_duration_p99_ms	task_duration_max_ms	p99_ratio	max_ratio
+0	2	45512	45762	45762	1.01	1.01
+1	50	1535	15574	15574	10.15	10.15
+2	2	6507	6794	6794	1.04	1.04
+3	50	881	2662	2662	3.02	3.02
+4	2	29023	30055	30055	1.04	1.04
+5	2	6721	9966	9966	1.48	1.48
+6	200	572	7932	28102	13.87	49.13
+7	200	365	1462	2303	4.01	6.31
+8	1	594	594	594	1	1

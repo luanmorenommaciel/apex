@@ -1,6 +1,6 @@
 # ADR-001: sinal de cauda extrema para skew com alta paralelizacao
 
-**Status:** aprovado para planejamento e implementacao posterior
+**Status:** implementado e validado localmente
 **Data:** 2026-07-26
 
 ## Contexto
@@ -43,3 +43,10 @@ corroboracao por AQE ou outro sinal deterministico.
 A hipotese foi reavaliada com Terra Medio em 2026-07-26. Essa revisao confirma
 a aritmetica e o fluxo de dados no codigo, mas nao substitui a prova Spark real
 com `spark.sql.shuffle.partitions=200`.
+
+## Validacao
+
+Em 2026-07-26, um probe Spark 4.1.2 com 200 tasks produziu
+`p99/p50=3,988x` e `max/p50=31,631x`. O watcher canonico permaneceu silencioso
+e `tail_outlier_watcher` emitiu um candidato `warning/MEDIUM`, sem Crew/LLM.
+Veja `docs/convergence/C14-TAIL-OUTLIER-VALIDATION-2026-07-26.md`.

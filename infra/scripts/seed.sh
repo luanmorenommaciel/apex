@@ -56,6 +56,7 @@ for ji, (job, app, name) in enumerate(JOBS):
             "peak_execution_mem_bytes": str(random.randint(10**9, 2*10**10)),
             "task_count": str(random.choice([8, 50, 200])),
             "task_duration_p50_ms": str(p50), "task_duration_p99_ms": str(p99),
+            "task_duration_max_ms": str(p99),
             "plan_fingerprint": ("%064x" % (ji*10000 + stage))[:64],
             "plan_json": "Join Inner, (customer_id = customer_id)" if skewed else "Scan parquet",
         }

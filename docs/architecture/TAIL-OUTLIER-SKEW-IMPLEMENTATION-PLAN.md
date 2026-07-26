@@ -1,5 +1,7 @@
 # Plano: cobertura de skew por cauda extrema
 
+**Status:** executado localmente em 2026-07-26
+
 ## Ordem de implementacao
 
 1. **Contrato e JAR**
@@ -38,6 +40,14 @@
 O produto diferencia distribuicao degradada (`p99/p50`) de cauda extrema
 (`max/p50`), preserva compatibilidade e deixa claro quando o diagnostico e
 heuristico ou confirmado pelo proprio Spark.
+
+## Resultado observado
+
+O probe real Spark 4.1.2 com 200 tasks confirmou a lacuna:
+`p99/p50=3,988x` e `max/p50=31,631x`. O ENGINE produziu o candidato
+`tail_outlier_watcher` sem persistencia e sem LLM. A tentativa anterior com
+join de hot key permaneceu visivel no p99 e foi registrada como experimento
+negativo, sem ajuste de threshold.
 
 ## Modelos sugeridos
 

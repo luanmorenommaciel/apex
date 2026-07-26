@@ -1,0 +1,135 @@
+ Image apex-spark:4.1.2-local Building
+#1 [internal] load local bake definitions
+#1 reading from stdin 980B 0.8s done
+#1 DONE 0.9s
+
+#2 [internal] load build definition from Dockerfile
+#2 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 4.23kB 0.5s done
+#2 DONE 1.5s
+
+#3 [internal] load metadata for docker.io/sbtscala/scala-sbt:eclipse-temurin-jammy-17.0.10_7_1.10.4_3.5.2
+#3 DONE 1.1s
+
+#4 [internal] load metadata for docker.io/apache/spark:4.1.2-scala2.13-java17-python3-ubuntu
+#4 DONE 1.1s
+
+#5 [internal] load .dockerignore
+#5 transferring context:
+#5 transferring context: 2B 0.1s done
+#5 DONE 0.4s
+
+#6 [internal] load build context
+#6 DONE 0.0s
+
+#7 [stage-1 1/8] FROM docker.io/apache/spark:4.1.2-scala2.13-java17-python3-ubuntu@sha256:7f44fcdd38baa7bb6fdf97f84bc12d282655d8258001a9f60287a70fb9e5033e
+#7 resolve docker.io/apache/spark:4.1.2-scala2.13-java17-python3-ubuntu@sha256:7f44fcdd38baa7bb6fdf97f84bc12d282655d8258001a9f60287a70fb9e5033e
+#7 resolve docker.io/apache/spark:4.1.2-scala2.13-java17-python3-ubuntu@sha256:7f44fcdd38baa7bb6fdf97f84bc12d282655d8258001a9f60287a70fb9e5033e 1.1s done
+#7 DONE 1.3s
+
+#8 [apex-plugin-build 1/6] FROM docker.io/sbtscala/scala-sbt:eclipse-temurin-jammy-17.0.10_7_1.10.4_3.5.2@sha256:2bfd3a7cf4325030c05d0d0ac687f52b2d71c2612921813c071a8fcc0be3f4ea
+#8 resolve docker.io/sbtscala/scala-sbt:eclipse-temurin-jammy-17.0.10_7_1.10.4_3.5.2@sha256:2bfd3a7cf4325030c05d0d0ac687f52b2d71c2612921813c071a8fcc0be3f4ea
+#8 resolve docker.io/sbtscala/scala-sbt:eclipse-temurin-jammy-17.0.10_7_1.10.4_3.5.2@sha256:2bfd3a7cf4325030c05d0d0ac687f52b2d71c2612921813c071a8fcc0be3f4ea 1.0s done
+#8 DONE 1.3s
+
+#6 [internal] load build context
+#6 transferring context: 23B 0.1s
+#6 transferring context: 309.77kB 1.4s done
+#6 DONE 1.8s
+
+#9 [apex-plugin-build 2/6] WORKDIR /workspace
+#9 CACHED
+
+#10 [apex-plugin-build 3/6] COPY jar/build.sbt ./
+#10 CACHED
+
+#11 [apex-plugin-build 4/6] COPY jar/project ./project
+#11 DONE 2.2s
+
+#12 [apex-plugin-build 5/6] COPY jar/src ./src
+#12 DONE 2.0s
+
+#13 [apex-plugin-build 6/6] RUN set -eux;     sbt -batch "apex_41/assembly";     artifact="$(find target -type f -name 'apex_*-*-assembly.jar' | head -n 1)";     test -n "$artifact";     install -D "$artifact" /out/apex-plugin.jar;     jar tf /out/apex-plugin.jar | grep -q '^apex/ApexPlugin.class$';     jar tf /out/apex-plugin.jar | grep -q '^io/opentelemetry/api/trace/Tracer.class$'
+#13 6.138 + sbt -batch apex_41/assembly
+#13 11.42 [info] [launcher] getting org.scala-sbt sbt 1.10.7  (this may take some time)...
+#13 87.40 [info] welcome to sbt 1.10.7 (Eclipse Adoptium Java 17.0.10)
+#13 137.0 [info] loading settings for project workspace-build from plugins.sbt...
+#13 148.3 [info] loading project definition from /workspace/project
+#13 203.8 [info] loading settings for project workspace from build.sbt...
+#13 209.4 [info] set current project to workspace (in build file:/workspace/)
+#13 371.1 [info] compiling 9 Scala sources to /workspace/target/spark41-jvm-2.13/classes ...
+#13 415.9 [info] done compiling
+#13 422.6 [info] 26 file(s) merged using strategy 'Discard' (Run the task at debug level to see the details)
+#13 426.5 [info] Built: /workspace/./target/spark41-jvm-2.13/apex_4.1-0.1.0-assembly.jar
+#13 426.5 [info] Jar hash: 0e732b9412296782a5093cfa5457d28967abd41e
+#13 426.7 [success] Total time: 214 s (03:34), completed Jul 26, 2026, 4:26:28 AM
+#13 427.5 + find target -type f -name apex_*-*-assembly.jar
+#13 427.5 + head -n 1
+#13 427.5 + artifact=target/spark41-jvm-2.13/apex_4.1-0.1.0-assembly.jar
+#13 427.5 + test -n target/spark41-jvm-2.13/apex_4.1-0.1.0-assembly.jar
+#13 427.5 + install -D target/spark41-jvm-2.13/apex_4.1-0.1.0-assembly.jar /out/apex-plugin.jar
+#13 427.5 + jar tf /out/apex-plugin.jar
+#13 427.5 + grep -q ^apex/ApexPlugin.class$
+#13 428.2 + jar tf /out/apex-plugin.jar
+#13 428.2 + grep -q ^io/opentelemetry/api/trace/Tracer.class$
+#13 DONE 429.2s
+
+#14 [stage-1 3/8] RUN set -eux;     cd "/opt/spark/jars";     MAVEN="https://repo.maven.apache.org/maven2";     curl -fSL -o "hadoop-aws-3.4.2.jar"       "${MAVEN}/org/apache/hadoop/hadoop-aws/3.4.2/hadoop-aws-3.4.2.jar";     curl -fSL -o "aws-sdk-bundle-2.24.6.jar"       "${MAVEN}/software/amazon/awssdk/bundle/2.24.6/bundle-2.24.6.jar";     curl -fSL -o "delta-spark_4.1_2.13-4.1.0.jar"       "${MAVEN}/io/delta/delta-spark_4.1_2.13/4.1.0/delta-spark_4.1_2.13-4.1.0.jar";     curl -fSL -o "delta-storage-4.1.0.jar"       "${MAVEN}/io/delta/delta-storage/4.1.0/delta-storage-4.1.0.jar";     ls -1 hadoop-aws-*.jar aws-sdk-bundle-*.jar delta-spark_*.jar delta-storage-*.jar
+#14 CACHED
+
+#15 [stage-1 2/8] RUN set -eux;     apt-get update;     apt-get install -y --no-install-recommends curl ca-certificates;     rm -rf /var/lib/apt/lists/*
+#15 CACHED
+
+#16 [stage-1 4/8] RUN python3 -m pip install --no-cache-dir requests==2.32.3
+#16 CACHED
+
+#17 [stage-1 5/8] COPY --from=apex-plugin-build /out/apex-plugin.jar /opt/apex/lib/apex-plugin.jar
+#17 DONE 0.5s
+
+#18 [stage-1 6/8] COPY dev/jvm/PlanFingerprint.java /tmp/apexdev/apexdev/PlanFingerprint.java
+#18 DONE 0.9s
+
+#19 [stage-1 7/8] RUN set -eux;     mkdir -p /opt/apex/lib;     javac -cp "/opt/spark/jars/*"       -d /tmp/apexdev/out /tmp/apexdev/apexdev/PlanFingerprint.java;     (cd /tmp/apexdev/out && jar cf /opt/apex/lib/apex-devfp.jar apexdev);     jar tf /opt/apex/lib/apex-devfp.jar | grep -q '^apexdev/PlanFingerprint.class$';     ! jar tf /opt/apex/lib/apex-devfp.jar | grep -q 'StageListener';     rm -rf /tmp/apexdev;     ls -l /opt/apex/lib/apex-devfp.jar
+#19 1.950 + mkdir -p /opt/apex/lib
+#19 2.023 + javac -cp /opt/spark/jars/* -d /tmp/apexdev/out /tmp/apexdev/apexdev/PlanFingerprint.java
+#19 22.96 + cd /tmp/apexdev/out
+#19 22.96 + jar cf /opt/apex/lib/apex-devfp.jar apexdev
+#19 24.43 + jar tf /opt/apex/lib/apex-devfp.jar
+#19 24.44 + grep -q ^apexdev/PlanFingerprint.class$
+#19 25.21 + jar tf /opt/apex/lib/apex-devfp.jar
+#19 25.22 + grep -q StageListener
+#19 25.62 + rm -rf /tmp/apexdev
+#19 25.65 + ls -l /opt/apex/lib/apex-devfp.jar
+#19 25.66 -rw-r--r-- 1 root root 2516 Jul 26 04:26 /opt/apex/lib/apex-devfp.jar
+#19 DONE 25.9s
+
+#20 [stage-1 8/8] RUN jar tf /opt/apex/lib/apex-plugin.jar | grep -E 'apex/ApexPlugin|io/opentelemetry/api/trace/Tracer'     && ls -lh /opt/apex/lib/apex-plugin.jar
+#20 1.431 apex/ApexPlugin.class
+#20 1.431 io/opentelemetry/api/trace/Tracer.class
+#20 1.431 io/opentelemetry/api/trace/TracerBuilder.class
+#20 1.431 io/opentelemetry/api/trace/TracerProvider.class
+#20 1.443 -rwxr-xr-x 1 root root 4.4M Jul 26 04:26 /opt/apex/lib/apex-plugin.jar
+#20 DONE 1.6s
+
+#21 exporting to image
+#21 exporting layers
+#21 exporting layers 3.0s done
+#21 exporting manifest sha256:3dcc7fde83647ed8664e0503a5ace955713e787c45d63e09ddee1a63b28d0b87
+#21 exporting manifest sha256:3dcc7fde83647ed8664e0503a5ace955713e787c45d63e09ddee1a63b28d0b87 0.2s done
+#21 exporting config sha256:e3cc7fb216855d2c2a5b4f6887c2d37eb984fa5527c8920fa237684e6ce282e3
+#21 exporting config sha256:e3cc7fb216855d2c2a5b4f6887c2d37eb984fa5527c8920fa237684e6ce282e3 0.3s done
+#21 exporting attestation manifest sha256:acb24c1bc5a807414d93bfde94dfd8470ffa448a2ec4a96fb32fd03f22e09905
+#21 exporting attestation manifest sha256:acb24c1bc5a807414d93bfde94dfd8470ffa448a2ec4a96fb32fd03f22e09905 0.3s done
+#21 exporting manifest list sha256:536988df426ed2fd11d1cb28f30e33e9a7e6c2d3e641866c91d6314e52ae7df6
+#21 exporting manifest list sha256:536988df426ed2fd11d1cb28f30e33e9a7e6c2d3e641866c91d6314e52ae7df6 0.1s done
+#21 naming to docker.io/library/apex-spark:4.1.2-local 0.0s done
+#21 unpacking to docker.io/library/apex-spark:4.1.2-local
+#21 unpacking to docker.io/library/apex-spark:4.1.2-local 1.1s done
+#21 DONE 5.4s
+
+#22 resolving provenance for metadata file
+#22 DONE 0.3s
+ Image apex-spark:4.1.2-local Built

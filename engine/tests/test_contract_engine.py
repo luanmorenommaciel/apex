@@ -43,6 +43,7 @@ def clean_event(**overrides):
         "gc_time_ms": 0, "input_bytes": 1_000_000, "output_bytes": 1_000_000,
         "peak_execution_mem_bytes": 0, "task_count": 8,
         "task_duration_p50_ms": 100, "task_duration_p99_ms": 120,
+        "task_duration_max_ms": 120,
         "plan_fingerprint": "f" * 64, "plan_json": "Project [id]",
     }
     payload.update(overrides)
@@ -53,6 +54,28 @@ def test_contract_fixture_becomes_valid_stage_event():
     event = fixture_event()
     assert event.job_id == "ax151sasadds114"
     assert event.p99_p50_ratio > 10
+    assert event.max_p50_ratio >= event.p99_p50_ratio
+
+
+def test_pre_tail_metric_event_remains_compatible():
+    payload = clean_event().model_dump()
+    payload.pop("task_duration_max_ms")
+    event = StageEvent.model_validate(payload)
+    assert event.task_duration_max_ms == 0
+    assert event.max_p50_ratio == 0
+
+
+def test_tail_outlier_candidate_passes_evidence_validation():
+    event = clean_event(
+        task_count=200,
+        task_duration_p50_ms=100,
+        task_duration_p99_ms=100,
+        task_duration_max_ms=3_000,
+    )
+    findings = run_all_offline(aggregate_events([event]))
+    tail = [f for f in findings if f.detected_by == "tail_outlier_watcher"]
+    assert len(tail) == 1
+    assert validate_finding(tail[0])["accepted"] is True
 
 
 def test_fixture_detections_are_valid_and_rows_match_ddl_exactly():
@@ -138,9 +161,16 @@ def test_enum_values_are_writable_to_the_enum8_columns():
 
 def test_latest_attempt_wins_when_a_stage_is_retried():
     """aggregate_events must reduce like argMax(col, ts), not max(col)."""
-    slow = clean_event(stage_id=3, stage_attempt=0, ts=1, task_duration_p50_ms=10, task_duration_p99_ms=900)
-    retry = clean_event(stage_id=3, stage_attempt=1, ts=2, task_duration_p50_ms=100, task_duration_p99_ms=120)
+    slow = clean_event(
+        stage_id=3, stage_attempt=0, ts=1,
+        task_duration_p50_ms=10, task_duration_p99_ms=900, task_duration_max_ms=1_000,
+    )
+    retry = clean_event(
+        stage_id=3, stage_attempt=1, ts=2,
+        task_duration_p50_ms=100, task_duration_p99_ms=120, task_duration_max_ms=130,
+    )
     aggregates = aggregate_events([slow, retry])
     assert len(aggregates) == 1
     assert aggregates[0].task_duration_p99_ms == 120  # the retry, not the max
+    assert aggregates[0].task_duration_max_ms == 130
     assert aggregates[0].skew_ratio < 5

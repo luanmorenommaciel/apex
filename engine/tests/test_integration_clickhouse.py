@@ -32,7 +32,7 @@ EVENT_COLUMNS = [
     "job_id", "app_id", "app_name", "stage_id", "stage_attempt", "ts",
     "shuffle_read_bytes", "shuffle_write_bytes", "spill_disk_bytes", "spill_mem_bytes",
     "gc_time_ms", "input_bytes", "output_bytes", "peak_execution_mem_bytes",
-    "task_count", "task_duration_p50_ms", "task_duration_p99_ms",
+    "task_count", "task_duration_p50_ms", "task_duration_p99_ms", "task_duration_max_ms",
     "plan_fingerprint", "plan_json",
 ]
 
@@ -84,6 +84,7 @@ def seeded(store):
 
 
 HEALTHY = {"task_duration_p50_ms": 100, "task_duration_p99_ms": 110,
+           "task_duration_max_ms": 120,
            "shuffle_read_bytes": 1_000, "shuffle_write_bytes": 1_000,
            "spill_disk_bytes": 0, "spill_mem_bytes": 0, "gc_time_ms": 5,
            "input_bytes": 1_000_000, "output_bytes": 900_000,
@@ -91,6 +92,13 @@ HEALTHY = {"task_duration_p50_ms": 100, "task_duration_p99_ms": 110,
            "plan_json": "Project [id]\n+- Relation parquet"}
 
 SKEWED = {**HEALTHY, "task_duration_p50_ms": 21, "task_duration_p99_ms": 454}
+TAIL_OUTLIER = {
+    **HEALTHY,
+    "task_duration_p50_ms": 100,
+    "task_duration_p99_ms": 100,
+    "task_duration_max_ms": 3_000,
+    "task_count": 200,
+}
 
 
 def test_fixture_ts_would_be_ttl_expired(seeded, store):
@@ -135,6 +143,19 @@ def test_skewed_job_writes_a_finding_no_llm_needed(seeded, store):
         "WHERE job_id = {j:String} AND type = 'SKEW_ON_JOIN'",
         parameters={"j": job_id}).result_rows[0]
     assert row == ("SKEW_ON_JOIN", "critical", "HIGH", "skew_watcher")
+
+
+def test_sparse_tail_job_writes_a_conservative_candidate(seeded, store):
+    job_id = seeded([HEALTHY, TAIL_OUTLIER])
+    result = analyze(job_id, store, persist=False, use_crew=False)
+
+    tail = [f for f in result["findings"] if f.detected_by == "tail_outlier_watcher"]
+    assert len(tail) == 1
+    assert tail[0].stage_id == 1
+    assert tail[0].severity.value == "warning"
+    assert tail[0].confidence.value == "MEDIUM"
+    assert tail[0].details["tail_ratio"] == 30
+    assert result["rejected"] == []
 
 
 def test_re_analysis_converges_instead_of_duplicating(seeded, store):

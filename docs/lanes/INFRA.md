@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS apex.spark_events (
     shuffle_read_bytes UInt64, shuffle_write_bytes UInt64,
     spill_disk_bytes UInt64, spill_mem_bytes UInt64, gc_time_ms UInt64,
     task_count UInt32, task_duration_p50_ms UInt64, task_duration_p99_ms UInt64,
+    task_duration_max_ms UInt64,
     peak_execution_mem_bytes UInt64, input_bytes UInt64, output_bytes UInt64,
     plan_fingerprint FixedString(64),          -- SHA-256 hex of NORMALIZED LOGICAL plan
     plan_json String CODEC(ZSTD(3)),
@@ -136,6 +137,7 @@ FROM apex.spark_events GROUP BY bucket, job_id, app_id;
 SELECT job_id, stage_id, max(attempt) AS attempt,
     argMax(task_duration_p50_ms, ts) AS p50_ms,
     argMax(task_duration_p99_ms, ts) AS p99_ms,
+    argMax(task_duration_max_ms, ts) AS max_ms,
     round(argMax(task_duration_p99_ms, ts) / nullIf(argMax(task_duration_p50_ms, ts), 0), 2) AS skew_ratio,
     sum(spill_disk_bytes) AS spill_disk_bytes
 FROM apex.spark_events

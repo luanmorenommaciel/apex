@@ -50,6 +50,7 @@ One event **per completed stage**. Emitted via **OTLP/HTTP** (protobuf or JSON) 
 | `task_count` | int32 | number of tasks in the stage |
 | `task_duration_p50_ms` | int64 | computed from per-task durations |
 | `task_duration_p99_ms` | int64 | computed from per-task durations |
+| `task_duration_max_ms` | int64 | maximum task duration; additive sparse-tail signal |
 
 > **p50/p99 are the skew signal.** `p99/p50 > 10` = straggler/skew. The JAR computes these from the per-task durations it sees on `onTaskEnd`, or the watcher computes them in SQL — **decision recorded in Lane 2**; default = JAR computes, so the wire already carries them.
 
@@ -83,6 +84,7 @@ One event **per completed stage**. Emitted via **OTLP/HTTP** (protobuf or JSON) 
   "task_count": 200,
   "task_duration_p50_ms": 47000,
   "task_duration_p99_ms": 2478000,
+  "task_duration_max_ms": 2478000,
   "plan_fingerprint": "2de5e5760399189a81ab5500a216db0bae5c67f72cf42c08bd9f62689b404cf0",
   "plan_json": "{\"class\":\"Join\",\"joinType\":\"Inner\",\"condition\":\"customer_id\",\"children\":[...]}"
 }
@@ -115,6 +117,7 @@ CREATE TABLE apex.spark_events (
   task_count                Int32,
   task_duration_p50_ms      Int64,
   task_duration_p99_ms      Int64,
+  task_duration_max_ms      Int64,
   plan_fingerprint          FixedString(64),
   plan_json                 String,
   attributes                Map(String, String)   -- extensibility escape hatch

@@ -1,7 +1,7 @@
 """Tier-1 watcher rules. Every case here is deterministic and LLM-free."""
 
 from apex_engine import FindingType, Severity, StageAggregate
-from apex_engine.watchers import code, cost, memory, shuffle, skew
+from apex_engine.watchers import code, cost, memory, shuffle, skew, tail_outlier
 from apex_engine.watchers.base import GIB, MIB
 
 
@@ -9,6 +9,7 @@ def stage(**overrides) -> StageAggregate:
     payload = {
         "job_id": "job-1", "app_id": "app-1", "stage_id": 4,
         "task_duration_p50_ms": 100.0, "task_duration_p99_ms": 120.0,
+        "task_duration_max_ms": 120.0,
         "task_count": 50, "input_bytes": 0, "output_bytes": 0,
     }
     payload.update(overrides)
@@ -54,6 +55,56 @@ def test_skew_never_divides_by_zero():
 def test_skew_ignores_a_ratio_from_too_few_tasks():
     """A p99 over 2 tasks is not a distribution."""
     assert skew.evaluate(stage(task_duration_p50_ms=10, task_duration_p99_ms=900, task_count=2)) is None
+
+
+# --- sparse tail outlier: max/p50 complements p99/p50 at 100+ tasks -------
+
+def test_tail_outlier_detects_one_30x_task_hidden_from_p99():
+    finding = tail_outlier.evaluate(stage(
+        task_count=200,
+        task_duration_p50_ms=100,
+        task_duration_p99_ms=100,
+        task_duration_max_ms=3_000,
+    ))
+    assert finding is not None
+    assert finding.type is FindingType.SKEW_ON_JOIN
+    assert finding.severity is Severity.WARNING
+    assert finding.detected_by == "tail_outlier_watcher"
+    assert finding.details["tail_outlier_candidate"] is True
+    assert finding.details["tail_ratio"] == 30
+    assert "p99/p50 = 1.00x" in finding.evidence
+
+
+def test_tail_outlier_keeps_healthy_100_200_400_task_baselines_clean():
+    for task_count in (100, 200, 400):
+        assert tail_outlier.evaluate(stage(
+            task_count=task_count,
+            task_duration_p50_ms=100,
+            task_duration_p99_ms=100,
+            task_duration_max_ms=100,
+        )) is None
+
+
+def test_tail_outlier_requires_100_tasks_and_strictly_more_than_10x():
+    assert tail_outlier.evaluate(stage(
+        task_count=99, task_duration_p50_ms=100,
+        task_duration_p99_ms=100, task_duration_max_ms=3_000,
+    )) is None
+    assert tail_outlier.evaluate(stage(
+        task_count=200, task_duration_p50_ms=100,
+        task_duration_p99_ms=100, task_duration_max_ms=1_000,
+    )) is None
+
+
+def test_tail_outlier_defers_when_the_canonical_p99_watcher_already_fires():
+    candidate = stage(
+        task_count=200,
+        task_duration_p50_ms=100,
+        task_duration_p99_ms=700,
+        task_duration_max_ms=3_000,
+    )
+    assert skew.evaluate(candidate) is not None
+    assert tail_outlier.evaluate(candidate) is None
 
 
 # --- T5 shuffle ------------------------------------------------------------

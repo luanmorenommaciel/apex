@@ -30,7 +30,7 @@ dev  →  jar  →  collect  →  infra  →  engine  →  serve
 9. **[Initial package validation](docs/convergence/C12-INITIAL-PACKAGE-VALIDATION-2026-07-25.md)** — one-command bootstrap and fresh real smoke evidence.
 10. **[Clean pilot readiness](docs/convergence/C13-CLEAN-PILOT-READINESS-2026-07-25.md)** — fail-closed clean-machine command, safety proof and pending external run.
 11. **[Study guide by lane](docs/study/README.md)** — visual macro flow, states, payloads, decisions, architecture, guided study and sanitized evidence.
-12. **[P1 tail-outlier skew plan](docs/convergence/ISSUE-P1-TAIL-OUTLIER-SKEW.md)** — approved additive plan for high-parallelism skew coverage.
+12. **[P1 tail-outlier validation](docs/convergence/C14-TAIL-OUTLIER-VALIDATION-2026-07-26.md)** — real Spark 4.1.2 proof for sparse outliers hidden from p99.
 
 ## Quick start (once built)
 
@@ -56,6 +56,7 @@ Additional commands:
 ```powershell
 .\scripts\apex.ps1 doctor
 .\scripts\apex.ps1 e2e       # all four real pathologies
+.\scripts\apex.ps1 tail-outlier # 200-task sparse-tail regression
 .\scripts\apex.ps1 pilot-clean # fresh dedicated runtime only
 .\scripts\apex.ps1 status
 .\scripts\apex.ps1 down      # preserves named volumes
@@ -102,6 +103,16 @@ On Windows, run the four Spark pathologies with Docker native (not WSL Bash):
 $env:APEX_CANONICAL_CH_PASSWORD = "<local-secret>"
 .\dev\scripts\e2e_canonical.ps1 -StartDev
 ```
+
+After bootstrap, the high-parallelism regression is one command:
+
+```powershell
+.\scripts\apex.ps1 tail-outlier
+```
+
+It requires 200 real Spark tasks, checks `p99/p50` versus `max/p50`, runs the
+deterministic ENGINE in dry-run mode and refuses success unless
+`tail_outlier_watcher` is present. It never calls Crew/LLM or writes a finding.
 
 The command uses the plugin path, OTLP Collector, canonical ClickHouse tables
 and deterministic assertions. Details and the latest sanitized result are in

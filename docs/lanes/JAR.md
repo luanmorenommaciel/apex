@@ -60,7 +60,7 @@ flowchart TD
 - [ ] **T2** — `ApexStageEvent` case class with **exactly** the contract fields. *Accept:* names match contract §1 verbatim; each maps to an OTel `AttributeKey`.
 - [ ] **T3** — `onJobStart` stage→job mapping + capture `job_id`/`app_id`. *Accept:* 2-stage job populates the map; each stage resolves its `job_id`.
 - [ ] **T4** — Aggregate stage metrics in `onStageCompleted`. *Accept:* shuffle+spill query → `shuffle_read_bytes>0`, `spill_mem_bytes>0`, `task_count==numTasks`.
-- [ ] **T5** — p50/p99 from `onTaskEnd` buffer keyed by `(stageId,attempt)`; clear after. *Accept:* known set → correct percentiles; buffer emptied.
+- [ ] **T5** — p50/p99/max from `onTaskEnd` buffer keyed by `(stageId,attempt)`; clear after. *Accept:* known set → correct percentiles/max; buffer emptied.
 - [ ] **T6** — Live peak memory via `onExecutorMetricsUpdate` (NOT `onStageExecutorMetrics`). *Accept:* memory-heavy stage → `peak_execution_mem_bytes>0` in a **live** run.
 - [ ] **T7** — Normalized logical plan fingerprint + redacted `plan_json`. *Accept:* same query diff literals + AQE → identical; diff query → different.
 - [ ] **T8** — Build OTel SDK + `OtlpHttpSpanExporter` (`/v1/traces`, `service.name`). *Accept:* local OTLP endpoint receives a span with resource `service.name`.
@@ -116,6 +116,7 @@ override def onStageCompleted(e: SparkListenerStageCompleted): Unit = {
     spill_disk_bytes = tm.diskBytesSpilled, spill_mem_bytes = tm.memoryBytesSpilled,
     gc_time_ms = tm.jvmGCTime, task_count = si.numTasks,
     task_duration_p50_ms = pct(durs, 0.50), task_duration_p99_ms = pct(durs, 0.99),
+    task_duration_max_ms = durs.lastOption.getOrElse(0L),
     peak_execution_mem_bytes = math.max(tm.peakExecutionMemory, stagePeakMem.getOrElse(key, 0L)),
     input_bytes = tm.inputMetrics.bytesRead, output_bytes = tm.outputMetrics.bytesWritten,
     plan_fingerprint = planForStage.getOrElse(si.stageId, ""),

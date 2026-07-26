@@ -43,7 +43,7 @@ O span transporta campos de contrato, incluindo:
 | Correlacao | `job_id`, `app_id`, `app_name`, `stage_id`, `stage_attempt`, `ts` | une todas as raias |
 | Custo/movimento | `shuffle_read_bytes`, `shuffle_write_bytes`, `input_bytes`, `output_bytes` | watchers shuffle e cost |
 | Memoria | `spill_disk_bytes`, `spill_mem_bytes`, `gc_time_ms`, `peak_execution_mem_bytes` | watcher memory |
-| Tempo | `task_count`, `task_duration_p50_ms`, `task_duration_p99_ms` | watcher skew |
+| Tempo | `task_count`, `task_duration_p50_ms`, `task_duration_p99_ms`, `task_duration_max_ms` | watchers skew e cauda extrema |
 | Plano | `plan_fingerprint`, `plan_json` | compara execucoes; texto e tratado como nao confiavel |
 
 `plan_json` e texto de plano redigido, apesar do nome. Ele nao deve ser

@@ -101,6 +101,7 @@ class StageEvent(BaseModel):
     task_count: int = Field(ge=0)
     task_duration_p50_ms: float = Field(ge=0)
     task_duration_p99_ms: float = Field(ge=0)
+    task_duration_max_ms: float = Field(default=0.0, ge=0)
     plan_fingerprint: str = ""
     plan_json: str = ""
     executor_run_time_ms: int = Field(default=0, ge=0)
@@ -109,6 +110,10 @@ class StageEvent(BaseModel):
     @property
     def p99_p50_ratio(self) -> float:
         return self.task_duration_p99_ms / self.task_duration_p50_ms if self.task_duration_p50_ms else 0.0
+
+    @property
+    def max_p50_ratio(self) -> float:
+        return self.task_duration_max_ms / self.task_duration_p50_ms if self.task_duration_p50_ms else 0.0
 
     @property
     def gc_ratio(self) -> float:
@@ -132,6 +137,7 @@ class StageAggregate(BaseModel):
     attempt: int = Field(default=0, ge=0)
     task_duration_p50_ms: float = Field(default=0.0, ge=0)
     task_duration_p99_ms: float = Field(default=0.0, ge=0)
+    task_duration_max_ms: float = Field(default=0.0, ge=0)
     shuffle_read_bytes: int = Field(default=0, ge=0)
     shuffle_write_bytes: int = Field(default=0, ge=0)
     spill_disk_bytes: int = Field(default=0, ge=0)
@@ -150,6 +156,11 @@ class StageAggregate(BaseModel):
     def skew_ratio(self) -> float:
         """p99/p50, guarded exactly like `nullIf(p50, 0)` in 005_skew.sql."""
         return self.task_duration_p99_ms / self.task_duration_p50_ms if self.task_duration_p50_ms else 0.0
+
+    @property
+    def tail_ratio(self) -> float:
+        """max/p50, complementary to p99/p50 for sparse extreme outliers."""
+        return self.task_duration_max_ms / self.task_duration_p50_ms if self.task_duration_p50_ms else 0.0
 
     @property
     def spilled_bytes(self) -> int:

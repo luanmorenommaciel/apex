@@ -101,7 +101,8 @@ class Severity(str, Enum):
         order=["low","medium","high","critical"]; return order.index(self.value) >= order.index(other.value)
 class Evidence(BaseModel):
     stage_id: int; shuffle_read_bytes: int = 0; spill_disk_bytes: int = 0; gc_time_ms: int = 0
-    task_duration_p50_ms: float = 0.0; task_duration_p99_ms: float = 0.0; plan_fingerprint: str | None = None
+    task_duration_p50_ms: float = 0.0; task_duration_p99_ms: float = 0.0
+    task_duration_max_ms: float = 0.0; plan_fingerprint: str | None = None
 class Finding(BaseModel):
     job_id: str; app_id: str; type: FindingType; severity: Severity; evidence: Evidence
     impact: str; fix: str; confidence: float = Field(..., ge=0.0, le=1.0)
@@ -118,7 +119,8 @@ SKEW_SQL = """
 SELECT stage_id, app_id,
        max(shuffle_read_bytes) AS shuffle_read_bytes, max(spill_disk_bytes) AS spill_disk_bytes,
        max(gc_time_ms) AS gc_time_ms, max(task_duration_p50_ms) AS p50,
-       max(task_duration_p99_ms) AS p99, any(plan_fingerprint) AS plan_fingerprint
+       max(task_duration_p99_ms) AS p99, max(task_duration_max_ms) AS max_ms,
+       any(plan_fingerprint) AS plan_fingerprint
 FROM apex.spark_events WHERE job_id = {jid:String}
 GROUP BY stage_id, app_id
 HAVING p99 / nullIf(p50, 0) > 5        -- deterministic skew rule
@@ -134,6 +136,7 @@ def run(job_id: str, client) -> list[Finding]:
             evidence=Evidence(stage_id=r["stage_id"], shuffle_read_bytes=r["shuffle_read_bytes"],
                 spill_disk_bytes=r["spill_disk_bytes"], gc_time_ms=r["gc_time_ms"],
                 task_duration_p50_ms=r["p50"], task_duration_p99_ms=r["p99"],
+                task_duration_max_ms=r["max_ms"],
                 plan_fingerprint=r["plan_fingerprint"]),
             impact=f"Stage {r['stage_id']} p99/p50={ratio:.1f}x — stragglers dominate runtime",
             fix="Salt the skewed key or enable AQE skew join (spark.sql.adaptive.skewJoin.enabled)",

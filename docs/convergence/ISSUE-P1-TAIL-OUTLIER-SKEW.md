@@ -1,6 +1,6 @@
 # P1: cobertura de skew para 100+ tasks
 
-**Status:** planejada, ainda sem implementacao
+**Status:** implementada e validada localmente
 **Prioridade:** P1 - cobertura de deteccao
 **Owner inicial:** Augusto / raia JAR + ENGINE
 
@@ -40,3 +40,5 @@ extrema existir.
 - Watcher: `engine/src/apex_engine/watchers/skew.py`.
 - AQE independente: `engine/src/apex_engine/watchers/aqe.py`.
 - Revisao de raciocinio: [ADR-001](../architecture/ADR-001-TAIL-OUTLIER-SKEW-SIGNAL.md).
+- Prova Spark 4.1.2 e ENGINE:
+  [C14](C14-TAIL-OUTLIER-VALIDATION-2026-07-26.md).

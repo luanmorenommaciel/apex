@@ -16,11 +16,11 @@ from urllib.request import Request, urlopen
 
 
 APP_ID_PATTERN = re.compile(r"^app-\d{14}-\d{4}$")
-SCENARIOS = ("skew_join", "spill", "bad_shuffle", "driver_oom")
+SCENARIOS = ("skew_join", "tail_outlier", "spill", "bad_shuffle", "driver_oom")
 STAGES_SQL = """
 SELECT
   stage_id, stage_attempt, shuffle_read_bytes, spill_disk_bytes,
-  task_count, task_duration_p50_ms, task_duration_p99_ms
+  task_count, task_duration_p50_ms, task_duration_p99_ms, task_duration_max_ms
 FROM apex.spark_events
 WHERE job_id = {job_id:String}
 ORDER BY stage_id, stage_attempt, ts
@@ -57,6 +57,27 @@ def evaluate(scenario: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
         if maximum <= 10:
             raise AssertionFailure(f"skew_ratio_not_above_10:{maximum:.3f}")
         return {"max_p99_p50_ratio": round(maximum, 3), "stage_count": len(rows)}
+
+    if scenario == "tail_outlier":
+        candidates = []
+        for row in rows:
+            p50 = _number(row, "task_duration_p50_ms")
+            if p50 <= 0 or _number(row, "task_count") < 100:
+                continue
+            p99_ratio = _number(row, "task_duration_p99_ms") / p50
+            tail_ratio = _number(row, "task_duration_max_ms") / p50
+            if p99_ratio <= 5 and tail_ratio > 10:
+                candidates.append((row, p99_ratio, tail_ratio))
+        if not candidates:
+            raise AssertionFailure("sparse_tail_candidate_missing")
+        row, p99_ratio, tail_ratio = max(candidates, key=lambda item: item[2])
+        return {
+            "stage_id": int(_number(row, "stage_id")),
+            "task_count": int(_number(row, "task_count")),
+            "p99_p50_ratio": round(p99_ratio, 3),
+            "max_p50_ratio": round(tail_ratio, 3),
+            "stage_count": len(rows),
+        }
 
     if scenario == "spill":
         total = sum(_number(row, "spill_disk_bytes") for row in rows)

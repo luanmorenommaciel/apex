@@ -21,7 +21,7 @@ def _powershell() -> str:
 
 @pytest.mark.parametrize(
     "action",
-    ["bootstrap", "doctor", "smoke", "e2e", "pilot-clean", "status", "down"],
+    ["bootstrap", "doctor", "smoke", "e2e", "tail-outlier", "pilot-clean", "status", "down"],
 )
 def test_every_command_has_a_non_mutating_dry_run(action: str) -> None:
     completed = subprocess.run(
@@ -82,3 +82,14 @@ def test_clean_pilot_workflow_uploads_only_the_sanitized_summary() -> None:
     assert "path: evidence/clean-pilot-summary.json" in workflow
     assert "retention-days: 14" in workflow
     assert ".apex/" not in workflow
+
+
+def test_tail_outlier_schema_upgrade_is_wired_into_the_package() -> None:
+    migration = ROOT / "infra" / "sql" / "022_stage_duration_max_additive.sql"
+    migration_runner = ROOT / "infra" / "scripts" / "apply_schema_migrations.ps1"
+    reshape = ROOT / "infra" / "sql" / "020_mv_reshape.sql"
+
+    assert "ADD COLUMN IF NOT EXISTS task_duration_max_ms" in migration.read_text(encoding="utf-8")
+    assert "DROP VIEW IF EXISTS apex.mv_spark_events" in migration.read_text(encoding="utf-8")
+    assert "022_stage_duration_max_additive.sql" in migration_runner.read_text(encoding="utf-8")
+    assert "task_duration_max_ms" in reshape.read_text(encoding="utf-8")

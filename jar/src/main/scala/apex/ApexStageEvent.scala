@@ -31,6 +31,7 @@ final case class ApexStageEvent(
   task_count: Int,
   task_duration_p50_ms: Long,
   task_duration_p99_ms: Long,
+  task_duration_max_ms: Long,
   plan_fingerprint: String,
   plan_json: String
 )
@@ -59,6 +60,7 @@ object ApexAttributes {
   val TaskCount: AttributeKey[java.lang.Long]         = AttributeKey.longKey("task_count")
   val TaskDurationP50Ms: AttributeKey[java.lang.Long] = AttributeKey.longKey("task_duration_p50_ms")
   val TaskDurationP99Ms: AttributeKey[java.lang.Long] = AttributeKey.longKey("task_duration_p99_ms")
+  val TaskDurationMaxMs: AttributeKey[java.lang.Long] = AttributeKey.longKey("task_duration_max_ms")
   val PlanFingerprint: AttributeKey[String]  = AttributeKey.stringKey("plan_fingerprint")
   val PlanJson: AttributeKey[String]         = AttributeKey.stringKey("plan_json")
 

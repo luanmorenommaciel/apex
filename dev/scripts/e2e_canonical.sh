@@ -24,7 +24,7 @@ step() { printf '\n\033[1m== %s ==\033[0m\n' "$1"; }
 [ -n "${APEX_CANONICAL_CH_PASSWORD:-}" ] || { echo "APEX_CANONICAL_CH_PASSWORD is required"; exit 2; }
 command -v python3 >/dev/null || { echo "python3 is required"; exit 2; }
 for requested in "${REQUESTED_SCENARIOS[@]}"; do
-  case "$requested" in skew_join|spill|bad_shuffle|driver_oom) ;; *) echo "unknown scenario: $requested"; exit 2;; esac
+  case "$requested" in skew_join|tail_outlier|spill|bad_shuffle|driver_oom) ;; *) echo "unknown scenario: $requested"; exit 2;; esac
 done
 
 # The collector is owned by collect; the persistent store is owned by infra.
@@ -137,6 +137,7 @@ fi
 
 step "4/6 skew_join and spill against canonical telemetry"
 should_run skew_join && run_success skew_join skew_join.py off off
+should_run tail_outlier && run_success tail_outlier tail_outlier.py off off
 should_run spill && run_success spill spill.py off off
 
 step "5/6 bad_shuffle against canonical telemetry"
