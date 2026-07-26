@@ -59,16 +59,15 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - shell: pwsh
-        run: ./scripts/apex.ps1 bootstrap
-      - shell: pwsh
-        run: ./scripts/apex.ps1 doctor
       - if: ${{ !inputs.full_e2e }}
         shell: pwsh
-        run: ./scripts/apex.ps1 smoke
+        run: ./scripts/apex.ps1 pilot-clean
       - if: ${{ inputs.full_e2e }}
         shell: pwsh
-        run: ./scripts/apex.ps1 e2e
+        run: |
+          ./scripts/apex.ps1 bootstrap
+          ./scripts/apex.ps1 doctor
+          ./scripts/apex.ps1 e2e
       - if: always()
         shell: pwsh
         run: ./scripts/apex.ps1 status

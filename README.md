@@ -28,7 +28,8 @@ dev  →  jar  →  collect  →  infra  →  engine  →  serve
 7. **[Augusto E2E readiness](docs/convergence/C10-AUGUSTO-E2E-READINESS-2026-07-24.md)** — current local verification, the cross-lane fix, and the remaining operational rerun.
 8. **[Augusto canonical rerun](docs/convergence/C11-AUGUSTO-CANONICAL-RERUN-2026-07-25.md)** — fresh Spark 4.1.2 pathology and full MCP stdio evidence.
 9. **[Initial package validation](docs/convergence/C12-INITIAL-PACKAGE-VALIDATION-2026-07-25.md)** — one-command bootstrap and fresh real smoke evidence.
-10. **[Study guide by lane](docs/study/README.md)** — visual macro flow, states, payloads, decisions, architecture, guided study and sanitized evidence.
+10. **[Clean pilot readiness](docs/convergence/C13-CLEAN-PILOT-READINESS-2026-07-25.md)** — fail-closed clean-machine command, safety proof and pending external run.
+11. **[Study guide by lane](docs/study/README.md)** — visual macro flow, states, payloads, decisions, architecture, guided study and sanitized evidence.
 
 ## Quick start (once built)
 
@@ -54,6 +55,7 @@ Additional commands:
 ```powershell
 .\scripts\apex.ps1 doctor
 .\scripts\apex.ps1 e2e       # all four real pathologies
+.\scripts\apex.ps1 pilot-clean # fresh dedicated runtime only
 .\scripts\apex.ps1 status
 .\scripts\apex.ps1 down      # preserves named volumes
 ```

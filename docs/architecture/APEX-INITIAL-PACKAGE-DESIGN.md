@@ -13,6 +13,7 @@ six lanes without replacing their Compose files or contracts.
 | `doctor` | verify containers, endpoints, schema and Spark 4.1.2 configuration |
 | `smoke` | run `skew_join`, the six-lane gate and all four MCP tools |
 | `e2e` | run all four real pathologies, then the six-lane and MCP gates |
+| `pilot-clean` | prove first installation on a clean, dedicated runtime and emit a sanitized report |
 | `status` | show component state without changing it |
 | `down` | stop the package while preserving persistent volumes |
 
@@ -48,6 +49,8 @@ generated MinIO account; committed Spark defaults never receive a secret.
 - `suggest_fix` remains a proposal with `applied=false`.
 - `bootstrap` and `doctor` never call an external LLM.
 - Full Docker CI is manual and requires an operator-owned self-hosted runner.
+- `pilot-clean` refuses existing package containers, networks, volumes,
+  `.apex/` configuration or tracked worktree changes. It never cleans them.
 
 ## Acceptance
 
@@ -56,3 +59,6 @@ generated MinIO account; committed Spark defaults never receive a secret.
 - `smoke` produces one fresh `job_id`, deterministic findings and a passing
   real MCP stdio gate.
 - Tests verify the command contract and secret-handling invariants.
+- A clean pilot reaches `APEX_CLEAN_PILOT=passed` and writes only operational
+  status, commit, fresh `job_id` and boolean security boundaries to
+  `evidence/clean-pilot-summary.json`.

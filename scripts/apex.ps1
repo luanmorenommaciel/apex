@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('bootstrap', 'doctor', 'smoke', 'e2e', 'status', 'down', 'help')]
+    [ValidateSet('bootstrap', 'doctor', 'smoke', 'e2e', 'pilot-clean', 'status', 'down', 'help')]
     [string]$Action = 'help',
     [switch]$DryRun,
     [switch]$SkipBuild
@@ -217,6 +217,152 @@ function Assert-Prerequisites {
     if ($LASTEXITCODE -ne 0) {
         throw 'Docker Compose is not available.'
     }
+}
+
+function Get-CleanPilotResidues {
+    $residues = [Collections.Generic.List[string]]::new()
+    if (Test-Path -LiteralPath $script:RuntimeDir) {
+        $residues.Add('.apex/')
+    }
+
+    $containerPatterns = @(
+        'apex-infra-*',
+        'apex-dev-*',
+        'apex-otel-collector',
+        'apex-queue-init',
+        'apex-clickhouse'
+    )
+    $containerNames = @(& docker ps -a --format '{{.Names}}')
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to inventory Docker containers for the clean pilot.'
+    }
+    foreach ($name in $containerNames) {
+        if ($containerPatterns | Where-Object { $name -like $_ }) {
+            $residues.Add("container:$name")
+        }
+    }
+
+    $networkNames = @(& docker network ls --format '{{.Name}}')
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to inventory Docker networks for the clean pilot.'
+    }
+    foreach ($name in @('apex-infra-net', 'apex-collect-net', 'apex-dev_default')) {
+        if ($networkNames -contains $name) {
+            $residues.Add("network:$name")
+        }
+    }
+
+    $volumeNames = @(& docker volume ls --format '{{.Name}}')
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to inventory Docker volumes for the clean pilot.'
+    }
+    foreach ($name in @(
+        'apex-infra_ch-data',
+        'apex-infra_mongo-data',
+        'apex-collect_clickhouse-data',
+        'apex-collect_otel-queue',
+        'apex-dev_minio-data'
+    )) {
+        if ($volumeNames -contains $name) {
+            $residues.Add("volume:$name")
+        }
+    }
+    return @($residues | Sort-Object -Unique)
+}
+
+function Assert-CleanPilotEnvironment {
+    $residues = @(Get-CleanPilotResidues)
+    if ($residues.Count -gt 0) {
+        $summary = $residues -join ','
+        Write-Host "APEX_CLEAN_PILOT=refused residues=$summary" -ForegroundColor Yellow
+        throw 'Clean pilot requires a fresh clone/runtime and dedicated Docker resources. No resources were removed.'
+    }
+
+    $trackedChanges = @(& git status --porcelain --untracked-files=no)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to verify the Git worktree for the clean pilot.'
+    }
+    if ($trackedChanges.Count -gt 0) {
+        Write-Host 'APEX_CLEAN_PILOT=refused residues=tracked-worktree-changes' -ForegroundColor Yellow
+        throw 'Clean pilot requires a clean tracked worktree. No files were changed.'
+    }
+}
+
+function Write-CleanPilotReport {
+    param(
+        [datetime]$StartedAtUtc,
+        [string]$JobId
+    )
+
+    $reportPath = Join-Path $script:Root 'evidence/clean-pilot-summary.json'
+    $branch = (& git branch --show-current).Trim()
+    $commit = (& git rev-parse HEAD).Trim()
+    $components = @(
+        'apex-infra-clickhouse',
+        'apex-infra-mongodb',
+        'apex-infra-hyperdx',
+        'apex-otel-collector',
+        'apex-dev-minio-1',
+        'apex-dev-spark-master-1',
+        'apex-dev-spark-worker-1',
+        'apex-dev-spark-history-1'
+    ) | ForEach-Object {
+        $state = Get-ContainerState $_
+        [ordered]@{
+            name = $state.Name
+            status = $state.Status
+            health = $state.Health
+        }
+    }
+
+    $report = [ordered]@{
+        schema = 'apex.clean_pilot.v1'
+        status = 'passed'
+        started_at_utc = $StartedAtUtc.ToString('o')
+        completed_at_utc = [datetime]::UtcNow.ToString('o')
+        source = [ordered]@{
+            branch = $branch
+            commit = $commit
+            tracked_worktree_clean_at_start = $true
+        }
+        runtime = [ordered]@{
+            spark_version = '4.1.2'
+            job_id = $JobId
+            components = $components
+        }
+        gates = [ordered]@{
+            bootstrap = 'passed'
+            doctor = 'passed'
+            smoke = 'passed'
+            product_gate = 'passed'
+        }
+        security = [ordered]@{
+            generated_service_secrets = 'local-only'
+            secret_values_in_report = $false
+            external_llm_called = $false
+            automatic_fix_applied = $false
+        }
+    }
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $reportPath) | Out-Null
+    $report | ConvertTo-Json -Depth 8 |
+        Set-Content -LiteralPath $reportPath -Encoding utf8
+    return $reportPath
+}
+
+function Invoke-CleanPilot {
+    Assert-Prerequisites
+    Assert-CleanPilotEnvironment
+    $startedAtUtc = [datetime]::UtcNow
+
+    Write-Step 'Clean pilot accepted; running bootstrap, doctor and smoke'
+    Start-Package
+    Invoke-Doctor
+    Invoke-ProductGate
+
+    $jobId = Get-SkewJobId
+    $reportPath = Write-CleanPilotReport -StartedAtUtc $startedAtUtc -JobId $jobId
+    $relativeReport = [IO.Path]::GetRelativePath($script:Root, $reportPath)
+    Write-Host "APEX_CLEAN_PILOT=passed job_id=$jobId evidence=$relativeReport" -ForegroundColor Green
 }
 
 function Get-ContainerState {
@@ -480,11 +626,15 @@ Apex initial package
   .\scripts\apex.ps1 doctor
   .\scripts\apex.ps1 smoke
   .\scripts\apex.ps1 e2e
+  .\scripts\apex.ps1 pilot-clean
   .\scripts\apex.ps1 status
   .\scripts\apex.ps1 down
 
 Use -DryRun with any command to inspect the operation without Docker,
 configuration writes or external calls.
+
+pilot-clean is fail-closed: it refuses existing .apex configuration, canonical
+Docker resources or tracked worktree changes and never removes them.
 '@
 }
 
@@ -514,6 +664,7 @@ switch ($Action) {
     'doctor' { Assert-Prerequisites; Invoke-Doctor }
     'smoke' { Assert-Prerequisites; Invoke-ProductGate }
     'e2e' { Assert-Prerequisites; Invoke-ProductGate -Full }
+    'pilot-clean' { Invoke-CleanPilot }
     'status' { Show-Status }
     'down' { Stop-Package }
     'help' { Show-Help }

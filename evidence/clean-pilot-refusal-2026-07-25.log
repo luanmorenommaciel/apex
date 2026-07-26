@@ -1,0 +1,8 @@
+APEX_CLEAN_PILOT=refused residues=.apex/,container:apex-clickhouse,container:apex-dev-minio-1,container:apex-dev-minio-init-1,container:apex-dev-spark-history-1,container:apex-dev-spark-master-1,container:apex-dev-spark-worker-1,container:apex-infra-clickhouse,container:apex-infra-hyperdx,container:apex-infra-mongodb,container:apex-infra-otel-collector,container:apex-otel-collector,container:apex-queue-init,network:apex-collect-net,network:apex-dev_default,network:apex-infra-net,volume:apex-collect_clickhouse-data,volume:apex-collect_otel-queue,volume:apex-dev_minio-data,volume:apex-infra_ch-data,volume:apex-infra_mongo-data
+[31;1mException: [0mC:\Users\Guest\Documents\project\codex\apex\apex-base-project-e2e-augusto\scripts\apex.ps1:278[0m
+[31;1m[0m[36;1mLine |[0m
+[31;1m[0m[36;1m[36;1m 278 | [0m         [36;1mthrow 'Clean pilot requires a fresh clone/runtime and dedicat[0m …[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mClean pilot requires a fresh clone/runtime and dedicated Docker resources. No resources were removed.[0m
+PILOT_EXIT=1
+REFUSAL_MUTATIONS containers=False networks=False volumes=False runtime=False report=False

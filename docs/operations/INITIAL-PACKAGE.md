@@ -30,6 +30,34 @@ The first run:
 Do not delete `.apex/` while retaining the corresponding Docker volumes:
 those files hold the local service credentials used to initialize the data.
 
+## Independent clean-machine pilot
+
+On a fresh clone and dedicated Docker runtime:
+
+```powershell
+.\scripts\apex.ps1 pilot-clean
+```
+
+The command first inventories only package-owned resource names. It refuses
+to start when it finds existing `.apex/`, tracked worktree changes, canonical
+containers, networks or named volumes. Refusal is non-destructive:
+
+```text
+APEX_CLEAN_PILOT=refused residues=...
+```
+
+When the preflight is clean, it runs `bootstrap`, `doctor` and `smoke`, then
+writes `evidence/clean-pilot-summary.json`. The report contains no environment
+dump or secret value. Success ends with:
+
+```text
+APEX_CLEAN_PILOT=passed job_id=app-... evidence=evidence\clean-pilot-summary.json
+```
+
+Do not try to make an occupied workstation pass by manually deleting package
+resources. Use another machine, an ephemeral self-hosted runner or an
+explicitly disposable Docker runtime.
+
 ## First product proof
 
 ```powershell
