@@ -4,7 +4,8 @@ param(
     [string[]]$Scenario = @('skew_join', 'spill', 'bad_shuffle', 'driver_oom'),
     [switch]$StartDev,
     [switch]$SkipGenerate,
-    [string]$EnvFile = '.env'
+    [string]$EnvFile = '.env',
+    [string[]]$AdditionalComposeFile = @()
 )
 
 # Native Windows entry point for the canonical Spark -> OTLP -> ClickHouse gate.
@@ -21,7 +22,11 @@ if ([string]::IsNullOrWhiteSpace($env:APEX_CANONICAL_CH_PASSWORD)) {
     throw 'APEX_CANONICAL_CH_PASSWORD is required for canonical ClickHouse assertions.'
 }
 
-$compose = @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.c3-otlp.yml', '--env-file', $EnvFile)
+$compose = @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.c3-otlp.yml')
+foreach ($composeFile in $AdditionalComposeFile) {
+    $compose += @('-f', $composeFile)
+}
+$compose += @('--env-file', $EnvFile)
 $outDir = Join-Path $root 'out'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 

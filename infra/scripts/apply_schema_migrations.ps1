@@ -25,8 +25,8 @@ if ($LASTEXITCODE -ne 0) {
     throw "ClickHouse schema migration failed with exit code $LASTEXITCODE"
 }
 
-docker exec $ClickHouseContainer sh -lc `
-    'clickhouse-client --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" --query "DESCRIBE TABLE apex.findings"'
+'DESCRIBE TABLE apex.findings' | docker exec -i $ClickHouseContainer sh -lc `
+    'clickhouse-client --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD"'
 if ($LASTEXITCODE -ne 0) {
     throw "Could not verify apex.findings after migration"
 }

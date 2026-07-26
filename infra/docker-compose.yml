@@ -54,7 +54,9 @@ services:
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
-      timeout: 5s
+      # mongosh starts a Node.js runtime and can exceed 5s on Docker Desktop
+      # under load even while Mongo is already serving HyperDX connections.
+      timeout: 15s
       retries: 10
       start_period: 10s
     networks: [apex]

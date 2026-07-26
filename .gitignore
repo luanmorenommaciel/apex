@@ -1,6 +1,7 @@
 # --- secrets / env ---
 .env
 *.env
+.apex/
 !.env.example
 # Locally composed reproducibility environment; generated from tracked examples.
 dev/.env.e2e

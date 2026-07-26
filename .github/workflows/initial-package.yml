@@ -1,0 +1,74 @@
+name: Apex initial package
+
+on:
+  push:
+    branches: [base-project-e2e-augusto]
+    paths:
+      - "contract/**"
+      - "dev/**"
+      - "jar/**"
+      - "collect/**"
+      - "infra/**"
+      - "engine/**"
+      - "serve/**"
+      - "scripts/apex.ps1"
+      - "scripts/e2e_six_lanes.py"
+      - "tests/test_apex_initial_package.py"
+      - ".github/workflows/initial-package.yml"
+  pull_request:
+    paths:
+      - "contract/**"
+      - "dev/**"
+      - "jar/**"
+      - "collect/**"
+      - "infra/**"
+      - "engine/**"
+      - "serve/**"
+      - "scripts/apex.ps1"
+      - "scripts/e2e_six_lanes.py"
+      - "tests/test_apex_initial_package.py"
+      - ".github/workflows/initial-package.yml"
+  workflow_dispatch:
+    inputs:
+      full_e2e:
+        description: "Run all four real Spark pathologies"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Package contract
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install "pytest>=8,<9"
+      - run: python -m pytest tests/test_apex_initial_package.py -q
+      - shell: pwsh
+        run: ./scripts/apex.ps1 bootstrap -DryRun
+
+  real-stack:
+    name: Real Spark 4.1.2 stack
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, Windows, X64, apex]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - shell: pwsh
+        run: ./scripts/apex.ps1 bootstrap
+      - shell: pwsh
+        run: ./scripts/apex.ps1 doctor
+      - if: ${{ !inputs.full_e2e }}
+        shell: pwsh
+        run: ./scripts/apex.ps1 smoke
+      - if: ${{ inputs.full_e2e }}
+        shell: pwsh
+        run: ./scripts/apex.ps1 e2e
+      - if: always()
+        shell: pwsh
+        run: ./scripts/apex.ps1 status
