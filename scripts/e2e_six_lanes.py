@@ -110,13 +110,18 @@ def _validate_mcp(payload: dict[str, Any], *, job_id: str, stage_count: int, fin
     }
 
 
+def _default_full_analyzer(job_id: str, store: EngineStore) -> dict[str, Any]:
+    """Run the AQE-inclusive deterministic path used for persisted findings."""
+    return analyze(job_id, store, persist=False, use_crew=False)
+
+
 async def run_gate(
     *,
     job_id: str,
     client: Any,
     mcp_probe: McpProbe,
     analyzer: Callable[[list[Any]], dict[str, Any]] = analyze_events,
-    full_analyzer: Callable[..., dict[str, Any]] = analyze,
+    full_analyzer: Callable[[str, EngineStore], dict[str, Any]] = _default_full_analyzer,
 ) -> dict[str, Any]:
     if not job_id:
         raise GateFailure("job_id_required")
@@ -136,11 +141,10 @@ async def run_gate(
     rejected = list(engine_result.get("rejected", []))
     if rejected:
         raise GateFailure(f"evidence_validator_rejected:{len(rejected)}")
-    # Expected findings must come from the AQE-INCLUSIVE analysis (reads plan_transitions),
-    # which is what engine actually persists. analyze_events sees stage rows only and omits
-    # the aqe_watcher's AQE_REPLAN finding — using it here caused persisted_finding_mismatch.
-    # persist=False + use_crew=False keeps this deterministic and side-effect-free.
-    full_result = full_analyzer(job_id, store, persist=False, use_crew=False)
+    # Expected findings come from the AQE-inclusive analysis, which reads
+    # plan_transitions. The injectable seam keeps tests independent from real
+    # watcher output while production uses the same deterministic path persisted.
+    full_result = full_analyzer(job_id, store)
     if full_result.get("llm_calls") != 0:
         raise GateFailure("engine_full_path_is_not_deterministic")
     findings = list(full_result.get("findings", []))

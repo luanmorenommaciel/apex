@@ -70,10 +70,13 @@ def analyzer(_events):
     return {"mode": "deterministic", "llm_calls": 0, "findings": [finding()], "rejected": []}
 
 
-def full_analyzer(_job_id, _store, *, persist, use_crew):
-    assert persist is False
-    assert use_crew is False
-    return {"mode": "deterministic", "llm_calls": 0, "findings": [finding()]}
+def full_analyzer(_job_id, _store):
+    return {
+        "mode": "deterministic",
+        "llm_calls": 0,
+        "findings": [finding()],
+        "rejected": [],
+    }
 
 
 def probe(findings):
