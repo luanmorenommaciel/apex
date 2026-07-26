@@ -66,6 +66,12 @@ is the fast restart path when no JAR, Dockerfile or dependency changed.
 .\scripts\apex.ps1 e2e
 ```
 
+The reference local validation on 2026-07-25 completed all four canonical
+pathologies (`skew_join`, `spill`, `bad_shuffle`, `driver_oom`) and ended with
+`APEX_PRODUCT_GATE=passed`. See
+[`C12-INITIAL-PACKAGE-VALIDATION-2026-07-25.md`](../convergence/C12-INITIAL-PACKAGE-VALIDATION-2026-07-25.md)
+for the fresh application IDs and measured evidence.
+
 This runs `skew_join`, `spill`, `bad_shuffle` and `driver_oom`, followed by the
 deterministic six-lane and MCP gates. Use it before a release or integration
 decision, not as the normal developer startup.

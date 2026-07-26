@@ -60,6 +60,37 @@ materialized the deterministic five-million-row Delta dataset. The data
 generator completed with hot-key fraction `0.5003`. Later runs can reuse the
 committed Delta tables.
 
+## Full canonical E2E
+
+Command:
+
+```powershell
+.\scripts\apex.ps1 e2e
+```
+
+The public package wrapper completed all four real Spark 4.1.2 pathologies,
+their canonical ClickHouse assertions, the deterministic six-lane gate and the
+MCP stdio product gate. The unabridged output is preserved at
+[`evidence/initial-package-e2e-all-2026-07-25.log`](../../evidence/initial-package-e2e-all-2026-07-25.log).
+
+| Scenario | Fresh application | Measured evidence | Result |
+|---|---|---|---|
+| `skew_join` | `app-20260726005808-0001` | max p99/p50 `12.608x`; 4 stages | passed |
+| `spill` | `app-20260726010245-0002` | `103682159` spill-to-disk bytes; 7 stages | passed |
+| `bad_shuffle` | `app-20260726010724-0003` | expected pattern matched stage 6; 6 stages | passed |
+| `driver_oom` | `app-20260726010950-0004` | expected failure after 7 pre-OOM stages | passed |
+
+The run finished with both:
+
+```text
+OK E2E CANONICAL PASSED - requested pathologies reached ClickHouse
+APEX_PRODUCT_GATE=passed job_id=app-20260726005808-0001
+```
+
+This is a fresh execution: each scenario produced a new Spark application ID
+and the assertions queried its own canonical telemetry. The external
+CrewAI/LLM path was not required by this deterministic package gate.
+
 ## Installation defects found and closed
 
 1. Windows execution policy rejected an unsigned child script. The package now
@@ -80,6 +111,10 @@ committed Delta tables.
 
 - This smoke did not call CrewAI or an external LLM.
 - `suggest_fix` returned data only and did not mutate a file or Git.
-- Full four-pathology `e2e` remains a separate, more expensive command.
+- Full four-pathology `e2e` passed locally through the package wrapper; it is a
+  separate and more expensive command than `smoke`.
 - The real-stack GitHub workflow requires a team-owned self-hosted Windows
-  runner with Docker; it does not run automatically on a hosted runner.
+  runner with Docker; its remote execution has not yet been observed.
+- The package still needs one independent pilot from a fresh clone/clean
+  machine or isolated clean Docker volumes before claiming team-wide
+  installation reproducibility.
