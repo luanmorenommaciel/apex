@@ -74,14 +74,23 @@ def create_server(store: ReadStore) -> FastMCP:
             raise _fail(exc) from None
 
     @mcp.tool(annotations=READ_ONLY)
-    def compare_runs(baseline_job_id: str, current_job_id: str) -> RunComparison:
+    def compare_runs(
+        baseline_job_id: str,
+        current_job_id: str,
+        noise_floor_pct: float | None = None,
+    ) -> RunComparison:
         """Compare two runs stage by stage and flag regressions.
 
         Stages are aligned by stage_id + plan_fingerprint, falling back to the
         fingerprint alone (the fingerprint is literal-normalized, so the same
         query with different literal values still matches). Flags spill
-        introduced, p99/skew regressions, extra shuffle, and any
-        plan_fingerprint change. Read-only.
+        introduced, plan_fingerprint changes, and finding deltas.
+
+        Metric deltas (p99, ratio, shuffle, spill growth) are reported as
+        measurements only, UNLESS `noise_floor_pct` is given — a floor
+        MEASURED for this shape at this scale (CONTRACT.md rule 2; two runs
+        cannot measure their own dispersion). Only deltas clearing it are
+        called regressions. Read-only.
         """
         try:
             return diagnose.compare(
@@ -91,6 +100,7 @@ def create_server(store: ReadStore) -> FastMCP:
                 store.stages(current_job_id),
                 store.findings(baseline_job_id),
                 store.findings(current_job_id),
+                noise_floor_pct=noise_floor_pct,
             )
         except Exception as exc:  # noqa: BLE001
             raise _fail(exc) from None

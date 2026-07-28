@@ -86,7 +86,16 @@ class StageView(BaseModel):
 
 
 class StageSymptom(BaseModel):
-    """An Apex-generated diagnosis line. This text is ours, not the job's."""
+    """An Apex-generated diagnosis line. This text is ours, not the job's.
+
+    A symptom is a MEASUREMENT ("p99/p50 = 21.62x over 50 tasks"); a VERDICT
+    ("critical skew, fix with X") is an adjudication, and adjudication is
+    engine's job — it needs the cluster width, the shape's measured noise
+    floor and the plan's join evidence, none of which a StageView row carries.
+    ``adjudicated`` is True only when a verdict here rests on Spark's own
+    runtime decision (an AQE ground-truth transition), never on a serve-side
+    threshold.
+    """
 
     stage_id: int
     symptom: Symptom
@@ -94,6 +103,7 @@ class StageSymptom(BaseModel):
     evidence: str
     score: float
     ground_truth: bool = False
+    adjudicated: bool = False
 
 
 class PlanTransitionView(BaseModel):

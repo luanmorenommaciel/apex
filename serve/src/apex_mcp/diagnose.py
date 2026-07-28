@@ -33,19 +33,28 @@ MB = 1 << 20
 GB = 1 << 30
 
 # --- thresholds (documented so a reviewer can argue with the numbers) ------
-SKEW_RATIO_INFO = 4.0
-SKEW_RATIO_WARN = 8.0
-SKEW_RATIO_CRIT = 20.0
+# NO skew-ratio thresholds live here. A fixed ratio bar is scale-dependent
+# (CONTRACT.md rule 1: tail-bound iff p99/p50 > (n_tasks-1)/(slots-1) — volume
+# cancels out, so the bar moves with cluster width, which serve does not
+# observe). serve reports the skew MEASUREMENT; the VERDICT is engine's.
 SPILL_WARN_BYTES = 128 * MB
 SPILL_CRIT_BYTES = 1 * GB
 SHUFFLE_WARN_BYTES = 1 * GB
 SHUFFLE_CRIT_BYTES = 8 * GB
 GC_WARN_RATIO = 0.15
 GC_CRIT_RATIO = 0.30
-REGRESSION_PCT = 0.20  # 20% worse counts as a regression
 P99_ABS_FLOOR_MS = 100.0
 SPILL_ABS_FLOOR_BYTES = 1 * MB
 SHUFFLE_ABS_FLOOR_BYTES = 10 * MB
+
+# --- cross-lane mechanism bounds (NOT tunables) -----------------------------
+# Shared verbatim with engine (`physics.MIN_TASKS_FOR_RATIO`,
+# `watchers.skew.MIN_BYTES_PER_TASK`) and verify/ (`guardrails`), so no lane
+# disagrees about which stages are even eligible for a ratio to describe a
+# distribution or carry a data-volume tail. They gate EMISSION of the skew
+# measurement, never its severity.
+MIN_TASKS_FOR_RATIO = 4
+SKEW_MIN_BYTES_PER_TASK = 1 * MB
 
 _CONFIDENCE_SCALE = {"HIGH": 0.9, "MEDIUM": 0.7, "LOW": 0.4}
 
@@ -162,26 +171,44 @@ def stage_symptoms(stage: StageView, time_share: float = 0.0) -> list[StageSympt
             )
         )
 
-    if stage.p99_p50_ratio >= SKEW_RATIO_INFO and stage.task_count > 1:
-        sev = (
-            "critical"
-            if stage.p99_p50_ratio >= SKEW_RATIO_CRIT
-            else "warning"
-            if stage.p99_p50_ratio >= SKEW_RATIO_WARN
-            else "info"
-        )
+    # Skew: serve reports the MEASUREMENT, never the verdict. Emission is
+    # gated only by the cross-lane mechanism bounds (enough tasks for a p99
+    # to describe a distribution, enough volume for a data tail to exist);
+    # severity is NOT computed from the ratio — a fixed ratio bar is the
+    # scale-dependent bug this replaced (CONTRACT.md rule 1). Instead the
+    # evidence states what a verdict would NEED: the break-even cluster width,
+    # derived from the observation alone (same inversion as engine's
+    # `physics.min_slots_for_tail_bound`), which serve never guesses.
+    bytes_per_task = (
+        (stage.shuffle_read_bytes + stage.shuffle_write_bytes + stage.input_bytes)
+        / stage.task_count
+        if stage.task_count
+        else 0.0
+    )
+    if (
+        stage.task_count >= MIN_TASKS_FOR_RATIO
+        and stage.p99_p50_ratio > 1
+        and bytes_per_task >= SKEW_MIN_BYTES_PER_TASK
+    ):
+        break_even_slots = 1.0 + (stage.task_count - 1) / stage.p99_p50_ratio
         out.append(
             StageSymptom(
                 stage_id=stage.stage_id,
                 symptom="skew",
-                severity=sev,
+                severity="info",
+                adjudicated=False,
                 evidence=(
                     f"p99/p50 = {stage.p99_p50_ratio}x "
                     f"({stage.p99_ms:.0f}ms vs {stage.p50_ms:.0f}ms) over "
-                    f"{stage.task_count} tasks — the tail dominates the stage"
+                    f"{stage.task_count} tasks moving "
+                    f"{_human_bytes(bytes_per_task)}/task"
                     + share_note
+                    + " — unadjudicated measurement: whether this tail is worth "
+                    "fixing is engine's call (CONTRACT rule 1 needs the cluster "
+                    "width, which serve does not observe); it is tail-bound "
+                    f"only on a cluster wider than ~{break_even_slots:.1f} slots"
                 ),
-                score=_score(sev, time_share),
+                score=_score("info", time_share),
             )
         )
 
@@ -241,6 +268,7 @@ def _apply_ground_truth(
         for symptom in symptoms:
             if symptom.symptom == "skew":
                 symptom.ground_truth = True
+                symptom.adjudicated = True  # Spark's own decision, not our threshold
                 if symptom.severity in ("info", "warning"):
                     symptom.severity = "critical"
                 # +100 == one full severity tier: ground truth outranks any
@@ -306,8 +334,10 @@ def analyze(
     notes: list[str] = []
     if not findings:
         notes.append(
-            "apex.findings holds no rows for this job_id — the diagnosis below "
-            "is derived from spark_events + plan_transitions only."
+            "apex.findings holds no rows for this job_id — the symptoms below "
+            "are UNADJUDICATED measurements derived from spark_events + "
+            "plan_transitions only. Engine has not ruled on this job; only an "
+            "AQE runtime decision (marked ground_truth) is a verdict here."
         )
 
     if not symptoms:
@@ -426,15 +456,41 @@ def _align(
     return pairs
 
 
-def _stage_regressions(base: StageView, cur: StageView) -> list[str]:
+def _resolves(
+    noise_floor_pct: float | None, baseline: float, current: float
+) -> bool:
+    """Is this relative delta larger than the supplied noise floor?
+
+    CONTRACT.md rule 2: the floor is MEASURED per shape and scale, never
+    hardcoded (this system's shape-level floor measured 32-59% at 8 tasks and
+    32.9% at 100 tasks — the old flat 20% bar sat BELOW it and reported noise
+    as regression). Two runs cannot supply a floor, so ``None`` means every
+    metric delta is UNRESOLVABLE: it stays visible in ``metrics`` as a
+    measurement and is never called a regression. Noise proves a delta is
+    unresolvable — never that it is zero.
+    """
+    if noise_floor_pct is None or baseline <= 0:
+        return False
+    return abs(current - baseline) > baseline * noise_floor_pct
+
+
+def _stage_regressions(
+    base: StageView, cur: StageView, noise_floor_pct: float | None
+) -> list[str]:
     out: list[str] = []
-    if base.spilled_bytes == 0 and cur.spilled_bytes > 0:
+    # Structural changes need no floor: spill appearing where there was none
+    # (past the trivia floor) and a plan change are not magnitude claims.
+    if (
+        base.spilled_bytes == 0
+        and cur.spilled_bytes >= SPILL_ABS_FLOOR_BYTES
+    ):
         out.append(
             f"spill_introduced: stage {cur.stage_id} now spills "
             f"{_human_bytes(cur.spilled_bytes)} (baseline: none)"
         )
     elif (
-        cur.spilled_bytes > base.spilled_bytes * (1 + REGRESSION_PCT)
+        _resolves(noise_floor_pct, base.spilled_bytes, cur.spilled_bytes)
+        and cur.spilled_bytes > base.spilled_bytes
         and cur.spilled_bytes - base.spilled_bytes >= SPILL_ABS_FLOOR_BYTES
     ):
         out.append(
@@ -442,23 +498,24 @@ def _stage_regressions(base: StageView, cur: StageView) -> list[str]:
             f"{_human_bytes(base.spilled_bytes)} -> {_human_bytes(cur.spilled_bytes)}"
         )
     if (
-        cur.p99_ms > base.p99_ms * (1 + REGRESSION_PCT)
+        _resolves(noise_floor_pct, base.p99_ms, cur.p99_ms)
+        and cur.p99_ms > base.p99_ms
         and cur.p99_ms - base.p99_ms >= P99_ABS_FLOOR_MS
     ):
         out.append(
             f"p99_regressed: stage {cur.stage_id} p99 {base.p99_ms:.0f}ms -> "
             f"{cur.p99_ms:.0f}ms"
         )
-    if (
-        cur.p99_p50_ratio > base.p99_p50_ratio * (1 + REGRESSION_PCT)
-        and cur.p99_p50_ratio >= SKEW_RATIO_INFO
+    if _resolves(noise_floor_pct, base.p99_p50_ratio, cur.p99_p50_ratio) and (
+        cur.p99_p50_ratio > base.p99_p50_ratio
     ):
         out.append(
             f"skew_worsened: stage {cur.stage_id} p99/p50 "
             f"{base.p99_p50_ratio}x -> {cur.p99_p50_ratio}x"
         )
     if (
-        cur.shuffle_read_bytes > base.shuffle_read_bytes * (1 + REGRESSION_PCT)
+        _resolves(noise_floor_pct, base.shuffle_read_bytes, cur.shuffle_read_bytes)
+        and cur.shuffle_read_bytes > base.shuffle_read_bytes
         and cur.shuffle_read_bytes - base.shuffle_read_bytes
         >= SHUFFLE_ABS_FLOOR_BYTES
     ):
@@ -576,7 +633,18 @@ def compare(
     current_rows: list[dict],
     baseline_findings: list[dict] | None = None,
     current_findings: list[dict] | None = None,
+    noise_floor_pct: float | None = None,
 ) -> RunComparison:
+    """Diff two runs. Metric deltas become regressions only against a floor.
+
+    ``noise_floor_pct`` is a MEASURED floor for this shape at this scale
+    (CONTRACT.md rule 2), supplied by the caller — two runs cannot measure
+    their own dispersion, so serve never invents one. When it is ``None``,
+    metric deltas are reported in ``metrics`` as measurements and never called
+    regressions; only structural changes (spill introduced/eliminated, plan
+    fingerprint change) and engine-adjudicated finding deltas drive the
+    status.
+    """
     missing = [
         job_id
         for job_id, rows in (
@@ -620,7 +688,7 @@ def compare(
 
         plan_changed = base.plan_fingerprint != cur.plan_fingerprint
         plan_changed_anywhere = plan_changed_anywhere or plan_changed
-        stage_regressions = _stage_regressions(base, cur)
+        stage_regressions = _stage_regressions(base, cur, noise_floor_pct)
         if plan_changed:
             stage_regressions.append(
                 f"plan_fingerprint_changed: stage {cur.stage_id} runs a "
@@ -658,8 +726,10 @@ def compare(
                 f"spill_eliminated: stage {cur.stage_id} no longer spills "
                 f"(baseline {_human_bytes(base.spilled_bytes)})"
             )
-        if cur.p99_ms < base.p99_ms * (1 - REGRESSION_PCT) and (
-            base.p99_ms - cur.p99_ms >= P99_ABS_FLOOR_MS
+        if (
+            _resolves(noise_floor_pct, base.p99_ms, cur.p99_ms)
+            and cur.p99_ms < base.p99_ms
+            and base.p99_ms - cur.p99_ms >= P99_ABS_FLOOR_MS
         ):
             improvements.append(
                 f"p99_improved: stage {cur.stage_id} p99 {base.p99_ms:.0f}ms -> "
@@ -709,6 +779,21 @@ def compare(
         status = "unchanged"
 
     notes: list[str] = []
+    if noise_floor_pct is None:
+        notes.append(
+            "No noise floor was supplied, so metric deltas above are "
+            "measurements, not regressions (CONTRACT.md rule 2: the floor is "
+            "MEASURED per shape and scale — 32-59% at 8 tasks and 32.9% at "
+            "100 tasks on this system — and two runs cannot measure their "
+            "own). Pass noise_floor_pct to adjudicate them; an unresolvable "
+            "delta is not proof of zero change."
+        )
+    else:
+        notes.append(
+            f"Metric deltas were adjudicated against a caller-supplied noise "
+            f"floor of {noise_floor_pct:.0%}. serve did not measure it — if it "
+            f"was not measured at this shape's scale, the verdicts inherit that."
+        )
     if plan_changed_anywhere:
         notes.append(
             "At least one stage changed plan_fingerprint. The fingerprint is "

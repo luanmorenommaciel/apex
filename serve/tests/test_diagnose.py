@@ -31,14 +31,20 @@ def test_clean_run_is_healthy():
     assert result.symptoms == []
 
 
-def test_skew_is_detected_and_graded_by_ratio():
+def test_skew_is_reported_as_a_measurement_not_a_verdict():
+    """A big ratio over real volume is surfaced — at info, unadjudicated.
+    Grading it by the ratio was the P0 false positive (CONTRACT.md rule 1)."""
     result = diagnose.analyze(
-        "job-1", [stage_row(4, p50_ms=20, p99_ms=460)], [], []
+        "job-1",
+        [stage_row(4, p50_ms=20, p99_ms=460, shuffle_read_bytes=50 * 10 * MB)],
+        [],
+        [],
     )
     symptom = result.symptoms[0]
     assert result.primary_symptom == "skew"
     assert result.worst_stage_id == 4
-    assert symptom.severity == "critical"  # 23x >= 20
+    assert symptom.severity == "info"
+    assert symptom.adjudicated is False
     assert "p99/p50" in symptom.evidence
 
 
@@ -72,7 +78,7 @@ def test_memory_only_spill_is_typed_separately():
 def test_symptoms_rank_by_severity_then_time_share():
     """Bytes and ratios are different units — severity must dominate."""
     rows = [
-        stage_row(4, p50_ms=20, p99_ms=460),  # skew, critical
+        stage_row(4, p50_ms=20, p99_ms=460, gc_time_ms=400),  # gc 40%, critical
         stage_row(26, p99_ms=1335, p50_ms=733, task_count=2,
                   spill_disk_bytes=390_465, spill_mem_bytes=50_331_552),  # spill, info
     ]
@@ -100,7 +106,7 @@ def test_heavy_shuffle_needs_real_volume():
 
 # -- AQE ground truth ------------------------------------------------------
 def test_skew_split_promotes_the_skew_heuristic_to_ground_truth():
-    rows = [stage_row(4, p50_ms=100, p99_ms=500)]  # 5x => only 'info' alone
+    rows = [stage_row(4, p50_ms=100, p99_ms=500, shuffle_read_bytes=50 * 10 * MB)]
     plain = diagnose.analyze("job-1", rows, [], [])
     assert plain.symptoms[0].severity == "info"
     assert plain.symptoms[0].ground_truth is False
@@ -115,7 +121,7 @@ def test_coalesce_is_not_evidence_of_skew():
     """Contract v0.2, verified on real P0 data: coalescing means
     spark.sql.shuffle.partitions is over-sized, NOT that the data is skewed.
     Promoting it would be a false positive in the demo."""
-    rows = [stage_row(4, p50_ms=100, p99_ms=500)]
+    rows = [stage_row(4, p50_ms=100, p99_ms=500, shuffle_read_bytes=50 * 10 * MB)]
     result = diagnose.analyze("job-1", rows, [], [transition_row("coalesce")])
     assert result.symptoms[0].ground_truth is False
     assert result.symptoms[0].severity == "info"
@@ -123,7 +129,7 @@ def test_coalesce_is_not_evidence_of_skew():
 
 
 def test_best_effort_transitions_do_not_confer_ground_truth():
-    rows = [stage_row(4, p50_ms=100, p99_ms=500)]
+    rows = [stage_row(4, p50_ms=100, p99_ms=500, shuffle_read_bytes=50 * 10 * MB)]
     result = diagnose.analyze(
         "job-1", rows, [], [transition_row("skew_split", confidence="BEST_EFFORT")]
     )
@@ -167,11 +173,16 @@ def test_spill_eliminated_is_an_improvement():
     assert any("spill_eliminated" in i for i in result.improvements)
 
 
-def test_p99_regression_needs_both_relative_and_absolute_movement():
-    """A 1ms -> 2ms move is 100% worse and completely meaningless."""
-    noise = diagnose.compare("a", "b", [stage_row(2, p99_ms=1)], [stage_row(2, p99_ms=2)], [], [])
+def test_p99_regression_needs_a_floor_and_absolute_movement():
+    """A 1ms -> 2ms move is 100% worse and completely meaningless; a big move
+    still needs a measured floor before it may be called a regression."""
+    noise = diagnose.compare(
+        "a", "b", [stage_row(2, p99_ms=1)], [stage_row(2, p99_ms=2)], [], [],
+        noise_floor_pct=0.20,
+    )
     real = diagnose.compare(
-        "a", "b", [stage_row(2, p99_ms=1000)], [stage_row(2, p99_ms=3000)], [], []
+        "a", "b", [stage_row(2, p99_ms=1000)], [stage_row(2, p99_ms=3000)], [], [],
+        noise_floor_pct=0.20,
     )
     assert not any("p99_regressed" in r for r in noise.regressions)
     assert any("p99_regressed" in r for r in real.regressions)
@@ -182,7 +193,7 @@ def test_stages_align_by_fingerprint_when_stage_ids_shift():
     fingerprint is. Same work must still be compared."""
     before = [stage_row(4, plan_fingerprint=FINGERPRINT_A, p99_ms=1000)]
     after = [stage_row(19, plan_fingerprint=FINGERPRINT_A, p99_ms=3000)]
-    result = diagnose.compare("a", "b", before, after, [], [])
+    result = diagnose.compare("a", "b", before, after, [], [], noise_floor_pct=0.20)
     pair = result.stages[0]
     assert pair.aligned_by == "plan_fingerprint"
     assert pair.baseline_stage_id == 4
