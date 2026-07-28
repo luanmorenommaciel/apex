@@ -1,0 +1,27 @@
+[project]
+name = "apex-memory"
+version = "0.1.0"
+description = "Cross-job plan memory for APEX — ZEST-style zero-execution recall over the v0.3 contract."
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.12,<3"]
+
+[project.optional-dependencies]
+clickhouse = ["clickhouse-connect>=0.8,<1"]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+apex-memory = "apex_memory.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/apex_memory"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+  "integration: needs a live ClickHouse; skips itself when infra/ is down",
+]
