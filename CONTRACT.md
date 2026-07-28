@@ -14,7 +14,7 @@
 
 ---
 
-## Three cross-lane rules (derived from real data — every consumer must honor these)
+## Five cross-lane rules (derived from real data — every consumer must honor these)
 
 **1. Skew is only worth fixing if the stage is TAIL-BOUND.** From list-scheduling makespan bounds (derived and independently re-verified):
 
@@ -24,7 +24,21 @@ Data volume **cancels out** (it scales `p50` and `p99` together), so the thresho
 
 **2. The noise floor is SCALE-DEPENDENT and must be MEASURED, never hardcoded.** Observed on the same system: **5.8%** (job level, tiny scale) → **9.2%** (job level, calibrated scale) → **37.7%** (shape level, 8 tasks, byte-identical work). Measure it at the level and scale you are comparing. When `|delta| < measured_floor`, **no consumer may render the number**. Noise proves a delta is *unresolvable* — never that it is *zero*.
 
-**3. A delta is only creditable to tuning if it is ATTRIBUTABLE.** If history holds **fewer than 2 distinct configurations**, no observed difference between runs can be credited to a config change — it is run-to-run variance. Passing the noise floor is **necessary but not sufficient**. (Real case: byte-identical shuffle/spill across 4 runs still spanned 18.65% in task time, which clears a 5.8% floor and would have shipped as a confident win.)
+**3. A delta is only creditable to tuning if it is ATTRIBUTABLE.** If history holds **fewer than 2 distinct configurations**, no observed difference between runs can be credited to a config change — it is run-to-run variance. Passing the noise floor is **necessary but not sufficient**. (Real case: byte-identical shuffle/spill across 4 runs still spanned 18.65% in task time, which clears a 5.8% floor and would have shipped as a confident win.) Values must be **canonicalized** before counting distinct configs: `'5.0'` and `'5'` are one setting in two spellings, while `'8m'` vs `'67108864b'` is a real 8× difference.
+
+**4. MECHANISM-level and RUNTIME-level evidence are separate verdicts.** A fix can be *proven to have worked mechanically* while its *runtime effect is unresolvable*. These must never be conflated:
+
+| Verdict | Claim | Requires |
+|---|---|---|
+| **mechanism_confirmed** | "AQE split the skewed partitions; the tail ratio collapsed 18–24× → 1.4–2.6×" | the structural change is observable (e.g. a `skew_split` transition, a ratio collapse well above its own floor). **Does NOT require clearing the runtime floor.** |
+| **runtime_certified** | "−9.9% wall clock" | `\|delta\| ≥ measured floor` at the compared level **and** ≥2 distinct configs (rules 2–3) |
+| **runtime_unresolved** | "the effect is below what this bench can resolve" | the honest verdict when the mechanism fired but the magnitude can't clear the floor |
+
+Reporting `runtime_unresolved` alongside `mechanism_confirmed` is **more useful and more honest** than a fabricated percentage. A laptop-scale bench with ~1.2s/stage fixed scheduling overhead on a ~2s stage puts a 17–23% floor under everything — a ~10% effect is *structurally* uncertifiable there, regardless of reps. **Runtime certification of small effects requires a cluster where the stage is long enough to amortize fixed overhead.** Adding reps does not fix this: on a shared host, reps are not independent (background load correlates), so shrinking a standard error is measuring the wrong thing.
+
+> ⚠️ **Corollary — pick a positive control the predictor can model.** AQE `skew_split` typically *coalesces* partitions too (e.g. 100 → 17), so W is **not** conserved and it is a repartitioning, not a pure tail redistribution. A predictor that (correctly) refuses the makespan bound for partition-sizing changes cannot certify such a control. Choose a control whose fix class the model handles.
+
+**5. `skew_split` gating on exchange bytes creates a false-NEGATIVE class.** AQE only splits a partition exceeding `skewedPartitionThresholdInBytes`, so any downstream query shape that **prunes to a narrow key** (`groupBy(k).count()`, `select(k).count()`, …) shrinks the exchange and silently disqualifies an otherwise genuinely skewed stage. *Real case: a 5M-row / 65MB table produced only a 10.6MB exchange and a ~5MB hot partition — under the 16m threshold — so `skew_split` never fired for reasons that had nothing to do with data volume.* Absence of a `skew_split` transition is **not** evidence of absence of skew.
 
 ---
 
