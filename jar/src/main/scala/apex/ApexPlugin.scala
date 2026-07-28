@@ -16,6 +16,8 @@ import java.util.{Collections, Map => JMap}
  * execution_id, flushed at SQL execution end) — no separate QueryExecutionListener
  * is needed, so activation is just `spark.plugins` (or the extraListeners fallback).
  * The AQE listener is registered behind `spark.apex.aqe.enabled` (default on).
+ * The job-conf listener (resolved conf allowlist, once per application) behind
+ * `spark.apex.conf.enabled` (default on).
  */
 class ApexPlugin extends SparkPlugin {
   override def driverPlugin(): DriverPlugin = new ApexDriverPlugin
@@ -32,6 +34,8 @@ class ApexDriverPlugin extends DriverPlugin {
     sc.addSparkListener(new ApexStageListener(conf))
     if (conf.getBoolean("spark.apex.aqe.enabled", defaultValue = true))
       sc.addSparkListener(new ApexAqeListener(conf))
+    if (conf.getBoolean("spark.apex.conf.enabled", defaultValue = true))
+      sc.addSparkListener(new ApexConfListener(conf))
     Collections.emptyMap()
   }
 

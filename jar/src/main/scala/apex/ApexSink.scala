@@ -15,6 +15,9 @@ trait ApexSink {
   /** Emit one AQE re-plan as an `apex.plan_transition` span (v0.2). Non-blocking. */
   def emitPlanTransition(t: PlanTransition): Unit
 
+  /** Emit the resolved conf allowlist as one `apex.job_conf` span (v0.4 proposal). Non-blocking. */
+  def emitJobConf(ev: JobConfEvent): Unit
+
   /** Flush + release. Idempotent; bounded so shutdown can't hang. */
   def close(): Unit
 }

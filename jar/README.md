@@ -57,6 +57,7 @@ Both paths emit the **identical** `apex.stage` events (verified byte-for-byte on
 | `spark.apex.otlp.endpoint` | `http://localhost:4318` | Collector base URL. Apex appends `/v1/traces` itself — pass the **base**, not the full path. |
 | `spark.apex.service.name` | `apex-spark` | OTel resource `service.name` on every span. |
 | `spark.apex.aqe.enabled` | `true` | Register the AQE listener (`apex.plan_transition`). Only effective on the `spark.plugins` path. Set `false` to disable AQE capture. |
+| `spark.apex.conf.enabled` | `true` | Register the job-conf listener (`apex.job_conf`, v0.4 proposal): the resolved, allowlisted SparkConf subset, once per application. Set `false` to disable. |
 | `spark.apex.job_id` | `applicationId` | The contract trace key threaded through every event. Override to correlate a logical job across app runs (e.g. a nightly pipeline); otherwise the Spark `applicationId` is used. |
 
 Standard AQE is unaffected — leave `spark.sql.adaptive.enabled=true` (the default in 3.5/4.0)
@@ -101,6 +102,25 @@ One span per **real** AQE re-plan (no-op re-plans are dropped), landing in
 This is Spark's own decision as ground truth: *"AQE split this skewed join"* / *"AQE demoted
 SortMergeJoin→BroadcastHashJoin"* / *"AQE coalesced partitions"* — a finding at **$0, no LLM
 inference**, and the causal *why* behind the stage metrics.
+
+### `apex.job_conf` (v0.4 proposal — pending ratification)
+
+**One span per application**, emitted at the first `onJobStart` (a SparkSession
+exists by then, so `spark.sql.*` **defaults resolve** — an unset
+`adaptive.enabled` is captured as its effective `"true"`), landing in
+`apex.job_conf` ([proposal](../contract/CONTRACT-EXTENSION-v0.4-job_conf.md)):
+
+| Attribute | Meaning |
+|---|---|
+| `job_id`, `app_id`, `app_name`, `ts` | identity (same keys as `apex.stage`) |
+| one attribute per allowlisted key | e.g. `spark.sql.adaptive.skewJoin.enabled` = `"true"` — the **resolved** value |
+
+**SECURITY: hard-coded ALLOWLIST, never the whole conf.** Only 13 pure
+performance knobs (ZEST's 6 tunables, the AQE flags, `autoBroadcastJoinThreshold`)
+— a SparkConf carries s3a secret keys, JDBC passwords, tokens, and those must
+never reach telemetry. See `ApexJobConfAllowlist`; the invariant is enforced by
+`JobConfSpec` ("secrets never leave the JVM"). Unset executor/driver keys are
+omitted; `spark.sql.*` keys are always present with their effective value.
 
 ---
 
@@ -161,6 +181,8 @@ jar/
     │   ├── ApexSink.scala            # sink seam + JVM-singleton factory
     │   ├── ApexPlanFingerprint.scala # normalized-logical-plan SHA-256
     │   ├── ApexStageEvent.scala      # contract fields + OTel attribute keys
-    │   └── ApexPlanTransition.scala  # v0.2 plan_transition record
-    └── test/scala/apex/              # fingerprint, dual-activation, AQE-transition specs
+    │   ├── ApexPlanTransition.scala  # v0.2 plan_transition record
+    │   ├── ApexJobConf.scala         # v0.4 proposal: job_conf record + security allowlist
+    │   └── ApexConfListener.scala    # v0.4 proposal: resolved conf allowlist, once per app
+    └── test/scala/apex/              # fingerprint, dual-activation, AQE-transition, job-conf specs
 ```

@@ -4,6 +4,7 @@
 #                             + PII bait (query_text, file_path, email, plan_json "desc")
 #                             to prove the redaction second-net.
 #   2. apex.plan_transition — the v0.2 AQE-decision signal.
+#   3. apex.job_conf        — the v0.4 proposal: resolved conf allowlist (one row/app).
 #
 # Usage: scripts/send_sample_events.sh [OTLP_BASE_URL]
 #   default endpoint derives from .env (OTLP_HTTP_HOST_PORT), else http://localhost:4318
@@ -77,6 +78,33 @@ read -r -d '' PAYLOAD <<JSON || true
             { "key": "after",           "value": { "stringValue": "SortMergeJoin+AQEShuffleRead(skew)" } },
             { "key": "confidence",      "value": { "stringValue": "HIGH" } },
             { "key": "ts",              "value": { "stringValue": "${TS_MS}" } }
+          ]
+        },
+        {
+          "traceId": "5b8efff798038103d269b633813fc60e",
+          "spanId": "eee19b7ec3c1b176",
+          "name": "apex.job_conf",
+          "kind": 1,
+          "startTimeUnixNano": "${TS_NS}",
+          "endTimeUnixNano": "${TS_NS}",
+          "attributes": [
+            { "key": "job_id",                          "value": { "stringValue": "${JOB_ID}" } },
+            { "key": "app_id",                          "value": { "stringValue": "application_1718553600000_0042" } },
+            { "key": "app_name",                        "value": { "stringValue": "daily_revenue" } },
+            { "key": "ts",                              "value": { "stringValue": "${TS_MS}" } },
+            { "key": "spark.sql.shuffle.partitions",    "value": { "stringValue": "200" } },
+            { "key": "spark.executor.instances",        "value": { "stringValue": "4" } },
+            { "key": "spark.executor.cores",            "value": { "stringValue": "4" } },
+            { "key": "spark.executor.memory",           "value": { "stringValue": "8g" } },
+            { "key": "spark.driver.cores",              "value": { "stringValue": "2" } },
+            { "key": "spark.driver.memory",             "value": { "stringValue": "4g" } },
+            { "key": "spark.sql.adaptive.enabled",      "value": { "stringValue": "true" } },
+            { "key": "spark.sql.adaptive.skewJoin.enabled", "value": { "stringValue": "true" } },
+            { "key": "spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes", "value": { "stringValue": "256m" } },
+            { "key": "spark.sql.adaptive.skewJoin.skewedPartitionFactor", "value": { "stringValue": "5" } },
+            { "key": "spark.sql.adaptive.coalescePartitions.enabled", "value": { "stringValue": "true" } },
+            { "key": "spark.sql.adaptive.advisoryPartitionSizeInBytes", "value": { "stringValue": "64m" } },
+            { "key": "spark.sql.autoBroadcastJoinThreshold", "value": { "stringValue": "10m" } }
           ]
         }
       ]

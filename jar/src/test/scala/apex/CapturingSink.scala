@@ -11,11 +11,13 @@ import scala.collection.mutable.ArrayBuffer
 class CapturingSink extends ApexSink {
   val events      = ArrayBuffer.empty[ApexStageEvent]
   val transitions = ArrayBuffer.empty[PlanTransition]
+  val jobConfs    = ArrayBuffer.empty[JobConfEvent]
 
   CapturingSink.latest = this
 
   override def emit(ev: ApexStageEvent): Unit = synchronized { events += ev }
   override def emitPlanTransition(t: PlanTransition): Unit = synchronized { transitions += t }
+  override def emitJobConf(ev: JobConfEvent): Unit = synchronized { jobConfs += ev }
   override def close(): Unit = ()
 }
 

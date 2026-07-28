@@ -106,6 +106,20 @@ class ApexOtelSink(endpoint: String, service: String) extends ApexSink {
     } finally span.end()
   }.recover { case th => logger.warn(s"apex: dropped plan_transition exec=${t.execution_id} seq=${t.update_seq}: ${th.getMessage}") }
 
+  /** Emit the resolved conf allowlist as one `apex.job_conf` span. Non-blocking; drops on failure. */
+  def emitJobConf(ev: JobConfEvent): Unit = Try {
+    val span = tracer.spanBuilder("apex.job_conf").startSpan()
+    try {
+      span
+        .setAttribute(ApexAttributes.JobId, ev.job_id)
+        .setAttribute(ApexAttributes.AppId, ev.app_id)
+        .setAttribute(ApexAttributes.AppName, ev.app_name)
+        .setAttribute(ApexAttributes.Ts, Long.box(ev.ts))
+      // Allowlisted keys only (see ApexJobConfAllowlist) — one string attribute each.
+      ev.conf.foreach { case (k, v) => span.setAttribute(k, v) }
+    } finally span.end()
+  }.recover { case t => logger.warn(s"apex: dropped job_conf: ${t.getMessage}") }
+
   /** Flush and close on driver shutdown, bounded so shutdown can't hang. */
   def close(): Unit = {
     Try(sdk.getSdkTracerProvider.forceFlush().join(5, TimeUnit.SECONDS))

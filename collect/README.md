@@ -13,8 +13,8 @@ O comando de reprodução e os gates desta branch estão em
                           memory_limiter                     otel_traces (exporter-owned)
                           transform (SHA256 query_text,          │  MATERIALIZED VIEWs
                                      redact plan literals)        ├─ mv_spark_events      ─► spark_events
-                          attributes (drop file_path/email)      └─ mv_plan_transitions  ─► plan_transitions
-                          redaction/pii (HMAC email/IP)
+                          attributes (drop file_path/email)      ├─ mv_plan_transitions  ─► plan_transitions
+                          redaction/pii (HMAC email/IP)           └─ mv_job_conf          ─► job_conf (v0.4 proposal)
                           clickhouse exporter (internal sending_queue.batch)
 ```
 
@@ -33,6 +33,7 @@ Both span types the jar emits land in the single `otel_traces` table and are rou
 |---|---|---|
 | `apex.stage` | `mv_spark_events` | `apex.spark_events` (19 fields) |
 | `apex.plan_transition` (v0.2 AQE signal) | `mv_plan_transitions` | `apex.plan_transitions` |
+| `apex.job_conf` (v0.4 proposal, resolved conf allowlist) | `mv_job_conf` | `apex.job_conf` |
 
 The MVs flatten the snake_case `SpanAttributes` map into typed columns (see [`ddl/30_`](ddl/30_mv_spark_events.sql) / [`ddl/31_`](ddl/31_mv_plan_transitions.sql)).
 
@@ -65,8 +66,10 @@ collect/
 │   ├── 20_spark_events.sql         # CANONICAL contract mirror
 │   ├── 21_plan_transitions.sql     # CANONICAL contract v0.2 mirror
 │   ├── 22_findings.sql             # CANONICAL contract mirror (engine writes; here for surface parity)
+│   ├── 23_job_conf.sql             # PROPOSED contract v0.4 mirror (resolved conf allowlist)
 │   ├── 30_mv_spark_events.sql      # reshape otel_traces → spark_events
-│   └── 31_mv_plan_transitions.sql  # reshape otel_traces → plan_transitions
+│   ├── 31_mv_plan_transitions.sql  # reshape otel_traces → plan_transitions
+│   └── 32_mv_job_conf.sql          # reshape otel_traces → job_conf (v0.4 proposal)
 └── scripts/
     └── send_sample_events.sh       # POST a real apex.stage + apex.plan_transition to :4318
 ```
