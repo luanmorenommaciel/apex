@@ -12,6 +12,24 @@
 # Host ports are parametrized via .env (CONTRACT Port Map defaults live in .env.example).
 # On the shared dev host the stray oteru-collector squats 8123/9000/4318, so the local .env
 # shifts ClickHouse->28123/29000 and the collector->24318/24317; HyperDX stays on 8090 (Port Map).
+#
+# SHARED-NETWORK ALIAS RULE (postmortem: the lost-telemetry bug).
+# Compose gives every service a short network alias equal to its service name
+# (`clickhouse`, `otel-collector`, ...). On a network SHARED with another lane's stack
+# (e.g. apex-collect-net, whose throwaway ClickHouse is also reachable as `clickhouse`),
+# that short alias resolves to BOTH containers and Docker DNS round-robins between them —
+# spans written to the wrong ClickHouse land in a DB with no reshape MVs and vanish.
+# Rule, enforced below by construction:
+#   1. Every infra service carries an explicit alias equal to its GLOBALLY-UNIQUE
+#      container_name (apex-infra-*). Container names are unique per Docker daemon, so
+#      these aliases can never collide, no matter which network the stack is joined to.
+#   2. Infra-internal references (collector exporter, HyperDX connection, Mongo URI)
+#      use ONLY the qualified apex-infra-* alias — never the short service name — so a
+#      foreign container squatting the short name cannot intercept infra traffic.
+#   3. NEVER `docker network connect --alias <other-lane-name>` an infra container onto
+#      another lane's network (that is exactly how apex-infra-otel-collector once
+#      answered to `apex-otel-collector` on apex-collect-net). Join with no alias, or
+#      with an apex-infra-* alias only.
 
 name: apex-infra
 
@@ -41,7 +59,12 @@ services:
       timeout: 3s
       retries: 20
       start_period: 10s
-    networks: [apex]
+    networks:
+      apex:
+        # Explicit, collision-proof alias = the globally-unique container name.
+        # The short `clickhouse` alias still exists (compose adds it); infra simply
+        # never uses it — see the shared-network alias rule at the top of this file.
+        aliases: [apex-infra-clickhouse]
 
   # ── MongoDB: HyperDX application state (dashboards/sources/connections/users) ──
   mongodb:
@@ -57,7 +80,9 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
-    networks: [apex]
+    networks:
+      apex:
+        aliases: [apex-infra-mongodb]
 
   # ── HyperDX: UI + API. Seeds a ClickHouse connection + the custom Spark Events Source ──
   # DEFAULT_CONNECTIONS/DEFAULT_SOURCES are applied ONCE on a fresh Mongo, then persist in
@@ -87,15 +112,17 @@ services:
       HYPERDX_APP_PORT: ${HYPERDX_APP_PORT:-8090}
       HYPERDX_APP_URL: http://localhost
       HYPERDX_LOG_LEVEL: ${HYPERDX_LOG_LEVEL:-info}
-      MONGO_URI: mongodb://mongodb:27017/hyperdx
+      MONGO_URI: mongodb://apex-infra-mongodb:27017/hyperdx
       NEXT_PUBLIC_SERVER_URL: http://127.0.0.1:${HYPERDX_API_PORT:-8000}
       OPAMP_PORT: ${HYPERDX_OPAMP_PORT:-4320}
       OTEL_SERVICE_NAME: hdx-oss-api
       USAGE_STATS_ENABLED: ${USAGE_STATS_ENABLED:-false}
-      DEFAULT_CONNECTIONS: '[{"name":"Apex ClickHouse","host":"http://clickhouse:8123","username":"${CLICKHOUSE_USER:-apex}","password":"${CLICKHOUSE_PASSWORD:-apex_local_dev}"}]'
+      DEFAULT_CONNECTIONS: '[{"name":"Apex ClickHouse","host":"http://apex-infra-clickhouse:8123","username":"${CLICKHOUSE_USER:-apex}","password":"${CLICKHOUSE_PASSWORD:-apex_local_dev}"}]'
       DEFAULT_SOURCES: '[{"from":{"databaseName":"apex","tableName":"spark_events"},"kind":"log","name":"Spark Events","timestampValueExpression":"ts","displayedTimestampValueExpression":"ts","implicitColumnExpression":"plan_json","serviceNameExpression":"app_id","bodyExpression":"plan_json","eventAttributesExpression":"attributes","resourceAttributesExpression":"attributes","defaultTableSelectExpression":"ts,app_id,job_id,stage_id,task_duration_p50_ms,task_duration_p99_ms","severityTextExpression":"","traceIdExpression":"job_id","spanIdExpression":"","connection":"Apex ClickHouse"}]'
     restart: unless-stopped
-    networks: [apex]
+    networks:
+      apex:
+        aliases: [apex-infra-hyperdx]
 
   # ── OTel Collector: OTLP ingestion -> apex.otel_traces (contrib; interop-identical to collect) ──
   otel-collector:
@@ -115,7 +142,9 @@ services:
       clickhouse:
         condition: service_healthy
     restart: unless-stopped
-    networks: [apex]
+    networks:
+      apex:
+        aliases: [apex-infra-otel-collector]
 
 networks:
   apex:

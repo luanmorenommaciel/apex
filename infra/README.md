@@ -29,26 +29,47 @@ Os gates locais desta branch e a referência da evidência integrada estão em
 | `docker-compose.yml` | 4 services (clickhouse, mongodb, hyperdx, otel-collector) |
 | `.env.example` / `.env` | host ports + creds (`.env` is gitignored; canonical Port Map in `.env.example`) |
 | `otel-collector-config.yaml` | contrib collector → `apex.otel_traces` (interop-identical to collect) |
-| `sql/001..020` | DDL, auto-applied on first ClickHouse init (see below) |
+| `sql/001..032` | DDL, auto-applied on first ClickHouse init (see below) |
+| `Makefile` | `make apply-ddl` / `make verify-ddl` — schema guardrails (see below) |
+| `scripts/apply_ddl.sh` | idempotently applies every `sql/*.sql` to the RUNNING ClickHouse |
+| `scripts/verify_ddl.py` | DESCRIBEs each contract table and diffs it against its DDL source of truth |
 | `scripts/seed.sh` | ~50 stage spans via the real OTLP path (ts=now, TTL-safe) + stand-in findings |
 | `scripts/verify.sh` | exit-criterion healthcheck; exits 0 when a job_id threads all 3 tables |
 | `dashboards/skew_dashboard.json` | per-tile skew dashboard build-spec |
 | `HYPERDX_SETUP.md` | **exact** custom-Source + rollup-registration steps (scripted + manual) |
 
 ### `sql/` — applied in filename order on first boot
-`001` db · `002` spark_events *(contract)* · `003` findings *(contract)* · `004` rollup +
-incremental MV · `005` skew queries · `010` otel_traces landing table · `011` plan_transitions
-*(contract v0.2)* · `020` reshape MVs (`mv_spark_events`, `mv_plan_transitions`).
+`001` db · `002` spark_events *(contract)* · `003` findings *(contract, incl. idempotent
+ALTERs for pre-existing volumes)* · `004` rollup + incremental MV · `005` skew queries ·
+`010` otel_traces landing table · `011` plan_transitions *(contract v0.2)* ·
+`013` job_conf *(contract v0.4)* · `020`/`021` reshape MVs (`mv_spark_events`,
+`mv_plan_transitions`, `mv_job_conf`) · `030`/`031` plan_memory + run_outcomes
+*(ratified v0.3, mirror of `memory/sql/`)* · `032` fix_verifications *(ratified v0.3,
+mirror of `verify/ddl/`)*.
+
+> **⚠️ First-boot-only gotcha:** ClickHouse runs `/docker-entrypoint-initdb.d` ONLY on a
+> fresh volume. On a pre-existing volume, any `sql/` file added later is **silently
+> skipped** — the schema looks applied while it lags the contract. The guardrails:
+>
+> ```bash
+> make apply-ddl   # idempotently apply every sql/*.sql, in order, to the RUNNING instance
+> make verify-ddl  # DESCRIBE each contract table; exit 1 on ANY drift vs its DDL source
+> ```
+>
+> Idempotency lives in the files: `CREATE ... IF NOT EXISTS` everywhere, plus
+> `ALTER ... ADD COLUMN IF NOT EXISTS` for columns added to tables that predate them.
+> Run both after pulling new DDL; CI/lanes can treat `verify-ddl`'s exit code as schema truth.
 
 `012_otel_logs.sql` is the exporter-owned OTLP logs landing table. It is needed
 when the canonical `collect/` pipeline is connected to infra, because that
 pipeline declares both trace and log exporters even though the current Spark
 plugin emits spans only.
 
-> **Schema authority:** `002/003/011` are the contract tables applied **verbatim** — never
-> rename/repurpose a column. `010` + `020` **mirror `collect/ddl/`** so a span landing in
+> **Schema authority:** `002/003/011/013` are the contract tables applied **verbatim** — never
+> rename/repurpose a column. `030/031/032` **mirror `memory/sql/` + `verify/ddl/`** (the lanes own
+> the DDL; infra owns applying it). `010` + `020`/`021` **mirror `collect/ddl/`** so a span landing in
 > `otel_traces` reshapes identically whether it came via infra's collector or collect's. If infra
-> and collect ever differ on a table, **contract/ wins and both conform.**
+> and a lane ever differ on a table, **the lane's source of truth wins and infra re-mirrors.**
 
 ## Ports (CONTRACT.md Port Map — infra's band)
 
@@ -92,6 +113,24 @@ so the reshape MVs fire either way). To wire collect → infra:
 - Attach collect's `otel-collector` to network `apex-infra-net` (or set its clickhouse exporter
   endpoint to `tcp://host.docker.internal:29000`), with `CLICKHOUSE_USER/PASSWORD` = `apex` /
   `.env` value. A POSTed `apex.stage` span then lands in **this** `apex.spark_events` via the MV.
+
+### Shared-network alias rule (hard-won; breaking it cost us 50–70% of telemetry)
+
+Compose gives every service a short network alias equal to its service name. Both infra's and
+collect's ClickHouse therefore answer to `clickhouse` — on a shared network that alias resolves
+to **both** containers and Docker DNS round-robins between them. Spans delivered to collect's
+throwaway ClickHouse (no reshape MVs there) silently vanish. The same failure let a runtime
+`docker network connect --alias apex-otel-collector` turn infra's collector into an impostor for
+collect's container. Rules:
+
+1. **Reference services across lanes only by their globally-unique container-name alias**
+   (`apex-infra-clickhouse`, `apex-infra-otel-collector`, …) — container names are unique per
+   Docker daemon, so these can never collide. Infra declares them explicitly in
+   `docker-compose.yml` and uses them for every internal hop (collector exporter, HyperDX
+   `DEFAULT_CONNECTIONS`, `MONGO_URI`). Never use the short service name on a shared network.
+2. **Never `docker network connect --alias` a foreign name onto a container.** If a container
+   must join another lane's network, join it with no alias or with its own `apex-<lane>-*` name.
+   Check for squatters with `docker network inspect <net> | grep -A2 Aliases`.
 
 ## Teardown
 
