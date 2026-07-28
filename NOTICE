@@ -1,0 +1,25 @@
+Apex — agentic performance intelligence for Apache Spark
+Copyright 2026 Luan Moreno Medeiros Maciel
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+--------------------------------------------------------------------------------
+
+This product depends on software developed by third parties, obtained at build
+time and not redistributed in this source tree:
+
+  - Apache Spark (Apache-2.0) — declared `Provided`; supplied by the host cluster.
+  - OpenTelemetry Java SDK (Apache-2.0) — bundled into the assembled plugin jar.
+  - OpenTelemetry Collector Contrib (Apache-2.0) — run as an unmodified container.
+  - ClickHouse (Apache-2.0) and HyperDX (MIT) — run as unmodified containers.
+  - CrewAI (MIT), Pydantic (MIT), FastMCP (Apache-2.0) — Python dependencies.
