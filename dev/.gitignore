@@ -4,3 +4,9 @@ out/*.log
 .ivy2/
 *.pyc
 __pycache__/
+
+# calibration run artifacts — regenerate with `make calibrate`.
+# The two runs cited as shipping evidence are committed explicitly.
+out/calibration-*.json
+!out/calibration-20260728T193824Z.json
+!out/calibration-20260728T194104Z.json

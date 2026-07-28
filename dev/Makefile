@@ -1,20 +1,29 @@
 # Apex dev-env — Makefile (T13).  `make help` lists targets.
 SHELL   := /usr/bin/env bash
+# Whenever apex-collect-net exists (collect lane is up), compose WITH the C3
+# overlay so master/worker join that network and plugin telemetry reaches the
+# canonical store. Without this, a plain `make up` / `run-pathology` would
+# RECREATE containers off the overlay and silently drop OTLP delivery.
+C3_NET_UP := $(shell docker network inspect apex-collect-net >/dev/null 2>&1 && echo 1)
+ifeq ($(C3_NET_UP),1)
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.c3-otlp.yml
+else
 COMPOSE := docker compose
-C3_COMPOSE := $(COMPOSE) -f docker-compose.yml -f docker-compose.c3-otlp.yml
+endif
+C3_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.c3-otlp.yml
 
 .DEFAULT_GOAL := help
-.PHONY: help env env-spark41 build up down clean ps verify doctor gen-data run-pathology scale c3-up c3-plugin-skew c4-aqe-skew c4-aqe-skewsplit c4-aqe-probe e2e e2e-canonical
+.PHONY: help env env-spark41 build up down clean ps verify doctor gen-data run-pathology scale calibrate c3-up c3-plugin-skew c4-aqe-skew c4-aqe-skewsplit c4-aqe-probe e2e e2e-canonical
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n",$$1,$$2}'
 
 env: ## Create .env from .env.example if it doesn't exist yet
-	@python scripts/ensure_env.py .env.example .env
+	@python3 scripts/ensure_env.py .env.example .env
 
 env-spark41: ## Create .env from the baseline plus the Spark 4.1.2 overlay
-	@python scripts/ensure_env.py .env.example .env.spark41.example .env
+	@python3 scripts/ensure_env.py .env.example .env.spark41.example .env
 
 build: env ## Build the Spark image (S3A + Delta jars baked in)
 	$(COMPOSE) build
@@ -118,3 +127,7 @@ e2e-canonical: env ## Canonical proof: 4 pathologies via OTLP/ClickHouse; requir
 WORKERS ?= 2
 scale: env ## Scale workers, e.g. make scale WORKERS=3
 	$(COMPOSE) up -d --scale spark-worker=$(WORKERS) --wait
+
+RUNS ?= 3
+calibrate: ## Prove each pathology is mechanical: RUNS× per job, report signal CVs + noise floor
+	python3 scripts/calibrate.py --runs $(RUNS)

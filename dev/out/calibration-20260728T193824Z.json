@@ -1,0 +1,449 @@
+{
+  "noise_floor_cv": 0.0925,
+  "runs": 3,
+  "scenarios": {
+    "bad_shuffle": [
+      {
+        "app_id": "app-20260728193404-0010",
+        "exit_code": 0,
+        "hot_partition_bytes": 65782456,
+        "p99_p50": 1.0,
+        "signal_stage": 18,
+        "skew_ratio": 1.0,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 131524551,
+        "stage_spill_bytes": 165359099,
+        "stage_tasks": 2,
+        "tail_bound": true,
+        "tail_threshold": 0.14,
+        "task_dur_max_ms": 1916.0,
+        "task_dur_med_ms": 1916.0,
+        "task_dur_p99_ms": 1916.0,
+        "wall_s": 23.4
+      },
+      {
+        "app_id": "app-20260728193438-0011",
+        "exit_code": 0,
+        "hot_partition_bytes": 65782456,
+        "p99_p50": 1.0,
+        "signal_stage": 18,
+        "skew_ratio": 1.0,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 131524551,
+        "stage_spill_bytes": 165359099,
+        "stage_tasks": 2,
+        "tail_bound": true,
+        "tail_threshold": 0.14,
+        "task_dur_max_ms": 2394.0,
+        "task_dur_med_ms": 2394.0,
+        "task_dur_p99_ms": 2394.0,
+        "wall_s": 24.7
+      },
+      {
+        "app_id": "app-20260728193508-0012",
+        "exit_code": 0,
+        "hot_partition_bytes": 65782456,
+        "p99_p50": 1.0,
+        "signal_stage": 18,
+        "skew_ratio": 1.0,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 131524551,
+        "stage_spill_bytes": 165359099,
+        "stage_tasks": 2,
+        "tail_bound": true,
+        "tail_threshold": 0.14,
+        "task_dur_max_ms": 2082.0,
+        "task_dur_med_ms": 2082.0,
+        "task_dur_p99_ms": 2082.0,
+        "wall_s": 24.9
+      }
+    ],
+    "control": [
+      {
+        "app_id": "app-20260728193538-0013",
+        "exit_code": 0,
+        "hot_partition_bytes": 694507,
+        "p99_p50": 9.26,
+        "signal_stage": 18,
+        "skew_ratio": 9.3,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 137363932,
+        "stage_spill_bytes": 0,
+        "stage_tasks": 200,
+        "tail_bound": false,
+        "tail_threshold": 28.43,
+        "task_dur_max_ms": 214.0,
+        "task_dur_med_ms": 23.0,
+        "task_dur_p99_ms": 213.0,
+        "wall_s": 23.3
+      },
+      {
+        "app_id": "app-20260728193607-0014",
+        "exit_code": 0,
+        "hot_partition_bytes": 694507,
+        "p99_p50": 11.9,
+        "signal_stage": 18,
+        "skew_ratio": 12.14,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 137363932,
+        "stage_spill_bytes": 0,
+        "stage_tasks": 200,
+        "tail_bound": false,
+        "tail_threshold": 28.43,
+        "task_dur_max_ms": 255.0,
+        "task_dur_med_ms": 21.0,
+        "task_dur_p99_ms": 250.0,
+        "wall_s": 23.8
+      },
+      {
+        "app_id": "app-20260728193636-0015",
+        "exit_code": 0,
+        "hot_partition_bytes": 694507,
+        "p99_p50": 7.71,
+        "signal_stage": 18,
+        "skew_ratio": 8.03,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 137363932,
+        "stage_spill_bytes": 0,
+        "stage_tasks": 200,
+        "tail_bound": false,
+        "tail_threshold": 28.43,
+        "task_dur_max_ms": 249.0,
+        "task_dur_med_ms": 31.0,
+        "task_dur_p99_ms": 239.0,
+        "wall_s": 25.0
+      }
+    ],
+    "driver_oom": [
+      {
+        "app_id": "app-20260728193712-0016",
+        "exit_code": 1,
+        "failed_as_expected": true,
+        "oom_in_log": true,
+        "wall_s": 28.1
+      },
+      {
+        "app_id": "app-20260728193740-0017",
+        "exit_code": 1,
+        "failed_as_expected": true,
+        "oom_in_log": true,
+        "wall_s": 23.9
+      },
+      {
+        "app_id": "app-20260728193804-0018",
+        "exit_code": 1,
+        "failed_as_expected": true,
+        "oom_in_log": true,
+        "wall_s": 22.2
+      }
+    ],
+    "skew_join": [
+      {
+        "app_id": "app-20260728192859-0001",
+        "exit_code": 0,
+        "hot_partition_bytes": 26146301,
+        "p99_p50": 18.93,
+        "plugin_p50_ms": 69.0,
+        "plugin_p99_ms": 1218.0,
+        "plugin_p99_p50": 17.65,
+        "plugin_tail_bound": true,
+        "signal_stage": 21,
+        "skew_ratio": 18.93,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 112930867,
+        "stage_spill_bytes": 46490014,
+        "stage_tasks": 100,
+        "tail_bound": true,
+        "tail_threshold": 14.14,
+        "task_dur_max_ms": 1325.0,
+        "task_dur_med_ms": 70.0,
+        "task_dur_p99_ms": 1325.0,
+        "wall_s": 22.1
+      },
+      {
+        "app_id": "app-20260728192931-0002",
+        "exit_code": 0,
+        "hot_partition_bytes": 26146301,
+        "p99_p50": 20.6,
+        "plugin_p50_ms": 58.0,
+        "plugin_p99_ms": 1083.0,
+        "plugin_p99_p50": 18.67,
+        "plugin_tail_bound": true,
+        "signal_stage": 21,
+        "skew_ratio": 20.6,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 112930867,
+        "stage_spill_bytes": 47259794,
+        "stage_tasks": 100,
+        "tail_bound": true,
+        "tail_threshold": 14.14,
+        "task_dur_max_ms": 1195.0,
+        "task_dur_med_ms": 58.0,
+        "task_dur_p99_ms": 1195.0,
+        "wall_s": 21.4
+      },
+      {
+        "app_id": "app-20260728192958-0003",
+        "exit_code": 0,
+        "hot_partition_bytes": 26146301,
+        "p99_p50": 19.38,
+        "plugin_p50_ms": 55.0,
+        "plugin_p99_ms": 1064.0,
+        "plugin_p99_p50": 19.35,
+        "plugin_tail_bound": true,
+        "signal_stage": 21,
+        "skew_ratio": 19.38,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 112930867,
+        "stage_spill_bytes": 41921042,
+        "stage_tasks": 100,
+        "tail_bound": true,
+        "tail_threshold": 14.14,
+        "task_dur_max_ms": 1066.0,
+        "task_dur_med_ms": 55.0,
+        "task_dur_p99_ms": 1066.0,
+        "wall_s": 21.6
+      }
+    ],
+    "skew_join_aqe": [
+      {
+        "app_id": "app-20260728193029-0004",
+        "exit_code": 0,
+        "hot_partition_bytes": 7934642,
+        "p99_p50": 2.57,
+        "plan_transitions": [
+          "skew_split",
+          "coalesce",
+          "coalesce"
+        ],
+        "signal_stage": 29,
+        "skew_ratio": 2.57,
+        "skew_split_fired": true,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 112941067,
+        "stage_spill_bytes": 81033337,
+        "stage_tasks": 17,
+        "tail_bound": true,
+        "tail_threshold": 2.29,
+        "task_dur_max_ms": 890.0,
+        "task_dur_med_ms": 346.0,
+        "task_dur_p99_ms": 890.0,
+        "wall_s": 20.7
+      },
+      {
+        "app_id": "app-20260728193100-0005",
+        "exit_code": 0,
+        "hot_partition_bytes": 7934642,
+        "p99_p50": 2.38,
+        "plan_transitions": [
+          "skew_split",
+          "coalesce",
+          "coalesce"
+        ],
+        "signal_stage": 29,
+        "skew_ratio": 2.38,
+        "skew_split_fired": true,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 112941067,
+        "stage_spill_bytes": 81033337,
+        "stage_tasks": 17,
+        "tail_bound": true,
+        "tail_threshold": 2.29,
+        "task_dur_max_ms": 696.0,
+        "task_dur_med_ms": 292.0,
+        "task_dur_p99_ms": 696.0,
+        "wall_s": 20.8
+      },
+      {
+        "app_id": "app-20260728193132-0006",
+        "exit_code": 0,
+        "hot_partition_bytes": 7934642,
+        "p99_p50": 2.43,
+        "plan_transitions": [
+          "skew_split",
+          "coalesce",
+          "coalesce"
+        ],
+        "signal_stage": 29,
+        "skew_ratio": 2.43,
+        "skew_split_fired": true,
+        "slots": 8,
+        "stage_shuffle_read_bytes": 112941067,
+        "stage_spill_bytes": 82186815,
+        "stage_tasks": 17,
+        "tail_bound": true,
+        "tail_threshold": 2.29,
+        "task_dur_max_ms": 792.0,
+        "task_dur_med_ms": 326.0,
+        "task_dur_p99_ms": 792.0,
+        "wall_s": 22.6
+      }
+    ],
+    "spill": [
+      {
+        "app_id": "app-20260728193205-0007",
+        "exit_code": 1,
+        "signal_stage": 18,
+        "spill_disk_bytes": 0,
+        "stage_duration_max_ms": 1686.0,
+        "wall_s": 29.9
+      },
+      {
+        "app_id": "app-20260728193245-0008",
+        "exit_code": 1,
+        "signal_stage": 18,
+        "spill_disk_bytes": 0,
+        "stage_duration_max_ms": 1910.0,
+        "wall_s": 31.9
+      },
+      {
+        "app_id": "app-20260728193322-0009",
+        "exit_code": 0,
+        "signal_stage": 19,
+        "spill_disk_bytes": 211290628,
+        "stage_duration_max_ms": 1458.0,
+        "wall_s": 31.0
+      }
+    ]
+  },
+  "slots": 8,
+  "started_utc": "2026-07-28T19:28:57.370184+00:00",
+  "summary": {
+    "bad_shuffle": {
+      "hot_partition_bytes_cv": 0.0,
+      "hot_partition_bytes_values": [
+        65782456,
+        65782456,
+        65782456
+      ],
+      "hot_task_dur_cv": 0.1139,
+      "p99_p50_cv": 0.0,
+      "p99_p50_values": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "runs_ok": 3,
+      "skew_ratio_cv": 0.0,
+      "skew_ratio_values": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "tail_bound_every_run": true,
+      "tail_threshold": 0.14,
+      "task_dur_max_ms_values": [
+        1916.0,
+        2394.0,
+        2082.0
+      ]
+    },
+    "control": {
+      "hot_partition_bytes_cv": 0.0,
+      "hot_partition_bytes_values": [
+        694507,
+        694507,
+        694507
+      ],
+      "hot_task_dur_cv": 0.0925,
+      "p99_p50_cv": 0.2201,
+      "p99_p50_values": [
+        9.26,
+        11.9,
+        7.71
+      ],
+      "runs_ok": 3,
+      "skew_ratio_cv": 0.2142,
+      "skew_ratio_values": [
+        9.3,
+        12.14,
+        8.03
+      ],
+      "tail_bound_every_run": false,
+      "tail_threshold": 28.43,
+      "task_dur_max_ms_values": [
+        214.0,
+        255.0,
+        249.0
+      ]
+    },
+    "driver_oom": {
+      "oom_every_run": true,
+      "runs_ok": 3
+    },
+    "skew_join": {
+      "hot_partition_bytes_cv": 0.0,
+      "hot_partition_bytes_values": [
+        26146301,
+        26146301,
+        26146301
+      ],
+      "hot_task_dur_cv": 0.1083,
+      "p99_p50_cv": 0.044,
+      "p99_p50_values": [
+        18.93,
+        20.6,
+        19.38
+      ],
+      "plugin_p99_p50_values": [
+        17.65,
+        18.67,
+        19.35
+      ],
+      "plugin_tail_bound_every_run": true,
+      "runs_ok": 3,
+      "skew_ratio_cv": 0.044,
+      "skew_ratio_values": [
+        18.93,
+        20.6,
+        19.38
+      ],
+      "tail_bound_every_run": true,
+      "tail_threshold": 14.14,
+      "task_dur_max_ms_values": [
+        1325.0,
+        1195.0,
+        1066.0
+      ]
+    },
+    "skew_join_aqe": {
+      "hot_partition_bytes_cv": 0.0,
+      "hot_partition_bytes_values": [
+        7934642,
+        7934642,
+        7934642
+      ],
+      "hot_task_dur_cv": 0.1224,
+      "p99_p50_cv": 0.04,
+      "p99_p50_values": [
+        2.57,
+        2.38,
+        2.43
+      ],
+      "runs_ok": 3,
+      "skew_ratio_cv": 0.04,
+      "skew_ratio_values": [
+        2.57,
+        2.38,
+        2.43
+      ],
+      "skew_split_every_run": true,
+      "tail_bound_every_run": true,
+      "tail_threshold": 2.29,
+      "task_dur_max_ms_values": [
+        890.0,
+        696.0,
+        792.0
+      ]
+    },
+    "spill": {
+      "runs_ok": 3,
+      "spill_bytes_cv": 1.7321,
+      "spill_disk_bytes_values": [
+        0,
+        0,
+        211290628
+      ]
+    }
+  }
+}

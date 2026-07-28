@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, "/opt/apex")
 
-from common.session import build_session          # noqa: E402
+from common.session import build_session, stop_session  # noqa: E402
 from common.data import ensure_data, FACT_PATH     # noqa: E402
 
 
@@ -19,6 +19,9 @@ def main() -> int:
     conf = {
         "spark.sql.adaptive.enabled": "false",
         "spark.executor.memory": "2g" if fix else "1g",
+        "spark.executor.cores": "2",   # pin per-executor concurrency: at 8 slots
+                                       # 8 tasks share the starved 1g heap and the
+                                       # executor dies (FetchFailed) instead of spilling
         "spark.sql.shuffle.partitions": "200" if fix else "8",
         "spark.memory.fraction": "0.6" if fix else "0.1",   # starve execution memory → spill
     }
@@ -33,7 +36,7 @@ def main() -> int:
     sorted_df.write.format("noop").mode("overwrite").save()   # materialize the full sort
     print(f"APEX_JOB spill fix={fix} app_id={app_id}", flush=True)
 
-    spark.stop()
+    stop_session(spark)
     return 0
 
 

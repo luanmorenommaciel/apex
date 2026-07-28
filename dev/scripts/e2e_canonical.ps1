@@ -96,7 +96,7 @@ if (-not $SkipGenerate) {
         --conf spark.driver.host=spark-master `
         --conf spark.driver.bindAddress=0.0.0.0 `
         /opt/apex/jobs/generate_data.py 2>&1 | Tee-Object -FilePath $generateLog
-    if ($LASTEXITCODE -ne 0 -or -not (Select-String -Quiet -Path $generateLog -Pattern 'hot_key_~50pct=PASS')) {
+    if ($LASTEXITCODE -ne 0 -or -not (Select-String -Quiet -Path $generateLog -Pattern 'hot_keys_~50pct=PASS')) {
         throw "Deterministic hot-key generation failed (see $generateLog)."
     }
 }

@@ -18,7 +18,7 @@ import sys
 
 sys.path.insert(0, "/opt/apex")
 
-from common.session import build_session          # noqa: E402
+from common.session import build_session, stop_session  # noqa: E402
 from common.data import ensure_data, FACT_PATH     # noqa: E402
 
 
@@ -53,7 +53,7 @@ def main() -> int:
     print("APEX_JOB driver_oom collecting multi-GB to a 512m driver (expect OOM)...", flush=True)
     rows = big.collect()                       # OOM here
     print(f"APEX_JOB driver_oom collected={len(rows)} (did NOT OOM — raise payload/rows)", flush=True)
-    spark.stop()
+    stop_session(spark)
     return 0
 
 

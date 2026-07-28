@@ -9,7 +9,7 @@ import sys
 
 sys.path.insert(0, "/opt/apex")
 
-from common.session import build_session          # noqa: E402
+from common.session import build_session, stop_session  # noqa: E402
 from common.data import ensure_data, FACT_PATH     # noqa: E402
 
 
@@ -30,7 +30,7 @@ def main() -> int:
     agg.write.format("noop").mode("overwrite").save()
     print(f"APEX_JOB bad_shuffle fix={fix} app_id={app_id}", flush=True)
 
-    spark.stop()
+    stop_session(spark)
     return 0
 
 

@@ -128,7 +128,7 @@ else
     --conf spark.plugins=apex.ApexPlugin --conf spark.apex.otlp.endpoint="$APEX_OTLP_ENDPOINT" \
     --conf spark.driver.host="$DRIVER_HOST" --conf spark.driver.bindAddress=0.0.0.0 \
     /opt/apex/jobs/generate_data.py >out/e2e-canonical-generate-data.log 2>&1
-  if grep -q 'hot_key_~50pct=PASS' out/e2e-canonical-generate-data.log; then
+  if grep -q 'hot_keys_~50pct=PASS' out/e2e-canonical-generate-data.log; then
     ok "deterministic hot key generated"
   else
     bad "data generation did not prove hot key distribution"
