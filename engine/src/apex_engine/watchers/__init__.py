@@ -9,10 +9,17 @@ Two feeds, one rule set:
   * `run_all_offline(...)`    — the same rules over in-memory aggregates.
 Both evaluate `StageAggregate` rows produced by the same reduction, so they
 cannot disagree.
+
+Every `evaluate` takes an optional `JobContext` — the job-scoped observations the
+cross-lane rules need (cluster width, measured noise floors, config history).
+It is optional so the offline path stays a one-liner, and a missing context is
+the EMPTY one, in which the rules that depend on it degrade to "cannot
+determine" rather than to a default.
 """
 
 from __future__ import annotations
 
+from ..context import JobContext, context_for
 from ..schema import Finding, PlanTransition, StageAggregate
 from . import aqe, code, cost, memory, shuffle, skew
 
@@ -31,14 +38,16 @@ __all__ = [
 def run_all_offline(
     aggregates: list[StageAggregate],
     transitions: list[PlanTransition] | None = None,
+    ctx: JobContext | None = None,
 ) -> list[Finding]:
     """Every deterministic rule over already-materialized rows. No I/O, no LLM."""
     transitions = list(transitions or [])
+    ctx = context_for(ctx)
     findings: list[Finding] = []
 
     for module in STAGE_WATCHERS:
         for stage in aggregates:
-            if finding := module.evaluate(stage):
+            if finding := module.evaluate(stage, ctx):
                 findings.append(finding)
 
     findings.extend(code.evaluate_job(aggregates))
@@ -52,6 +61,8 @@ def run_all_offline(
     return aqe.corroborate_skew(findings, transitions)
 
 
-def run_all(job_id: str, store) -> list[Finding]:
+def run_all(job_id: str, store, ctx: JobContext | None = None) -> list[Finding]:
     """Deterministic analysis of one job straight out of ClickHouse."""
-    return run_all_offline(store.stage_aggregates(job_id), store.plan_transitions(job_id))
+    return run_all_offline(
+        store.stage_aggregates(job_id), store.plan_transitions(job_id), ctx
+    )

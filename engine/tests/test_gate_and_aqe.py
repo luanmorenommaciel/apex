@@ -1,7 +1,9 @@
 """The escalation gate (T10) and the AQE ground-truth watcher (bonus)."""
 
 from apex_engine import Confidence, Finding, FindingType, PlanTransition, Severity, StageAggregate
+from apex_engine.context import JobContext
 from apex_engine.gate import partition, should_escalate
+from apex_engine.jobconf import operator_width
 from apex_engine.watchers import aqe, run_all_offline
 from apex_engine.watchers.base import JOB_LEVEL_STAGE_ID
 
@@ -90,8 +92,9 @@ def test_no_transitions_means_no_aqe_findings():
 
 
 def test_aqe_ground_truth_upgrades_an_ambiguous_heuristic_to_free():
-    """The DataFlint-beating move: a 7x ratio would cost an LLM call, but if AQE
-    split a skewed partition in the same job the heuristic is confirmed at $0."""
+    """The DataFlint-beating move: an ambiguous ratio would cost an LLM call, but
+    if AQE split a skewed partition in the same job the heuristic is confirmed
+    at $0."""
     heuristic = finding(0.55, Severity.WARNING)
     assert should_escalate(heuristic) is False  # warning, so not yet gate-eligible
 
@@ -99,10 +102,26 @@ def test_aqe_ground_truth_upgrades_an_ambiguous_heuristic_to_free():
     assert should_escalate(severe_but_unsure) is True
 
     upgraded = aqe.corroborate_skew([severe_but_unsure], [transition("skew_split")])
-    assert upgraded[0].confidence is Confidence.HIGH
     assert should_escalate(upgraded[0]) is False  # now free
     assert upgraded[0].details["aqe_corroborated"] is True
     assert "corroborated by an AQE skew_split" in upgraded[0].evidence
+
+
+def test_ground_truth_cannot_launder_a_missing_cluster_width_into_high():
+    """A skew_split proves the skew EXISTS. What it costs is CONTRACT.md rule 1,
+    which needs `slots` — so a finding carrying no width evidence is corroborated
+    only to MEDIUM, and keeps its severity."""
+    no_width = finding(0.55, Severity.WARNING)
+    upgraded = aqe.corroborate_skew([no_width], [transition("skew_split")])
+    assert upgraded[0].confidence is Confidence.MEDIUM
+    assert upgraded[0].severity is Severity.WARNING
+
+    with_width = finding(0.55, Severity.WARNING).model_copy(
+        update={"details": {"slots_source": "job_conf", "slots": 8}}
+    )
+    promoted = aqe.corroborate_skew([with_width], [transition("skew_split")])
+    assert promoted[0].confidence is Confidence.HIGH
+    assert promoted[0].severity is Severity.CRITICAL
 
 
 def test_coalesce_alone_does_not_upgrade_a_skew_heuristic():
@@ -113,9 +132,16 @@ def test_coalesce_alone_does_not_upgrade_a_skew_heuristic():
 
 
 def test_end_to_end_offline_run_merges_both_tiers():
-    aggregates = [StageAggregate(job_id="job-1", app_id="app-1", stage_id=4, task_count=50,
-                                 task_duration_p50_ms=21, task_duration_p99_ms=454)]
-    findings = run_all_offline(aggregates, [transition("skew_split")])
+    """The heuristic tier needs volume, a Join node and a width before it makes a
+    claim at all; given those, both tiers report and both are HIGH."""
+    aggregates = [StageAggregate(
+        job_id="job-1", app_id="app-1", stage_id=4, task_count=50,
+        task_duration_p50_ms=21, task_duration_p99_ms=454,
+        shuffle_read_bytes=112_930_867,
+        plan_json="'Join Inner, (none#2L = cast(none#0 as bigint))",
+    )]
+    ctx = JobContext(width=operator_width(8))
+    findings = run_all_offline(aggregates, [transition("skew_split")], ctx)
     types = [f.type for f in findings]
     assert types.count(FindingType.SKEW_ON_JOIN) == 2  # heuristic + ground truth
     assert all(f.confidence is Confidence.HIGH for f in findings)

@@ -7,6 +7,7 @@ actually spilled to disk, which is measured, not inferred.
 
 from __future__ import annotations
 
+from ..context import JobContext
 from ..schema import Finding, FindingType, Severity, StageAggregate
 from .base import GIB, human_bytes, stage_finding
 
@@ -31,7 +32,7 @@ ORDER BY shuffle_read_bytes DESC
 """
 
 
-def evaluate(stage: StageAggregate) -> Finding | None:
+def evaluate(stage: StageAggregate, ctx: JobContext | None = None) -> Finding | None:
     if stage.shuffle_read_bytes < MIN_SHUFFLE_BYTES:
         return None
 

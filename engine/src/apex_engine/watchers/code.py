@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from ..context import JobContext
 from ..schema import Finding, FindingType, Severity, StageAggregate
 from .base import MIB, human_bytes, stage_finding
 
@@ -54,7 +55,7 @@ ORDER BY stage_id
 """
 
 
-def evaluate(stage: StageAggregate) -> Finding | None:
+def evaluate(stage: StageAggregate, ctx: JobContext | None = None) -> Finding | None:
     for operator, (severity, confidence, impact, fix) in RISKY_OPERATORS.items():
         if operator in stage.plan_json:
             return stage_finding(

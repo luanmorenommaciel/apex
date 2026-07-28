@@ -17,24 +17,38 @@ import pytest
 
 from apex_engine import Confidence, FindingType, Severity, analyze
 from apex_engine.gate import should_escalate
+from apex_engine.jobconf import JobConf
 from apex_engine.schema import Finding, PlanTransition, StageAggregate
 
-CLEAN = {"task_duration_p50_ms": 100, "task_duration_p99_ms": 110, "task_count": 50}
-SEVERE_SKEW = {"task_duration_p50_ms": 21, "task_duration_p99_ms": 454, "task_count": 50}
-AMBIGUOUS_SKEW = {"task_duration_p50_ms": 100, "task_duration_p99_ms": 710, "task_count": 50}
+# A skew claim now needs VOLUME and a Join node before its ratio is a statistic
+# at all (CONTRACT.md rule 1 + dev's volume finding), so the skew fixtures carry
+# both. Without them these stages are correctly invisible to the watcher.
+JOINED = {
+    "shuffle_read_bytes": 112_930_867,
+    "plan_json": "'Join Inner, (none#2L = cast(none#0 as bigint))",
+}
+CLEAN = {**JOINED, "task_duration_p50_ms": 100, "task_duration_p99_ms": 110, "task_count": 50}
+SEVERE_SKEW = {**JOINED, "task_duration_p50_ms": 21, "task_duration_p99_ms": 454, "task_count": 50}
+AMBIGUOUS_SKEW = {**JOINED, "task_duration_p50_ms": 100, "task_duration_p99_ms": 710, "task_count": 50}
 # critical GC ratio on an estimated denominator -> severity critical, confidence 0.45
 ESCALATING = {"gc_time_ms": 3_000, "task_count": 10, "task_duration_p50_ms": 100}
 
+# 4 x 2 = 8 slots, the width this lab actually runs. Contract v0.4 carries these
+# keys only when they are explicitly set, which is why the width being ABSENT is
+# a first-class fixture below rather than an edge case.
+CLUSTER_CONF = {"spark.executor.instances": "4", "spark.executor.cores": "2"}
+
 
 class FakeStore:
-    """Serves aggregates/transitions and records what would be written."""
+    """Serves aggregates/transitions/conf and records what would be written."""
 
-    def __init__(self, stages: list[dict], transitions=None):
+    def __init__(self, stages: list[dict], transitions=None, conf=CLUSTER_CONF):
         self.aggregates = [
             StageAggregate(job_id="job-1", app_id="app-1", stage_id=i, **s)
             for i, s in enumerate(stages)
         ]
         self.transitions = transitions or []
+        self.conf = conf
         self.persisted: list[Finding] = []
 
     def stage_aggregates(self, job_id):
@@ -42,6 +56,11 @@ class FakeStore:
 
     def plan_transitions(self, job_id):
         return self.transitions
+
+    def job_conf(self, job_id):
+        if self.conf is None:
+            return JobConf.missing(job_id)
+        return JobConf(job_id=job_id, app_id="app-1", conf=dict(self.conf), present=True)
 
     def persist_new_findings(self, job_id, findings):
         findings = list(findings)
@@ -106,15 +125,19 @@ def test_a_confident_severe_finding_emits_free():
 
 
 def test_an_unsure_but_non_severe_finding_also_emits_free():
-    """The gate needs BOTH conditions: a 7x skew is only a warning."""
-    store = FakeStore([AMBIGUOUS_SKEW])
+    """The gate needs BOTH conditions, and an unknown cluster width is exactly
+    the unsure-but-not-severe case: rule 1 caps confidence, and no model can
+    supply the missing width, so escalating would buy nothing."""
+    store = FakeStore([AMBIGUOUS_SKEW], conf=None)   # no job_conf row -> width unknown
     result = analyze("job-1", store, crew_factory=spy_factory(confident_verdict))
 
     finding = result["findings"][0]
     assert finding.confidence_score < 0.6          # unsure
     assert finding.severity is Severity.WARNING    # but not severe
+    assert finding.details["slots"] is None
     assert SpyCrew.invocations == 0
     assert result["llm_calls"] == 0
+    assert "unknown" in result["cluster_width"]
 
 
 def test_only_the_unsure_and_severe_candidate_reaches_the_crew():

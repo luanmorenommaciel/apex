@@ -27,6 +27,13 @@ from .config import CONFIDENCE_LOW_MAX, CONFIDENCE_MEDIUM_MAX
 class FindingType(str, Enum):
     SHUFFLE = "SHUFFLE"
     SKEW_ON_JOIN = "SKEW_ON_JOIN"
+    # A tail-bound stage with real volume but NO plan evidence of a join. It is
+    # a separate type because the fix is different in kind: `skewJoin.*` applies
+    # only to joins, and calling a map-stage tail `SKEW_ON_JOIN` is the exact
+    # fabrication that made stage 4 of app-20260724160310-0000 a false positive.
+    # `findings.type` is an open `String` column in the contract DDL, so this is
+    # an additive value, not a schema change.
+    TASK_SKEW = "TASK_SKEW"
     MEMORY = "MEMORY"
     DRIVER_OOM = "DRIVER_OOM"
     COST = "COST"
@@ -154,6 +161,19 @@ class StageAggregate(BaseModel):
     @property
     def spilled_bytes(self) -> int:
         return self.spill_disk_bytes + self.spill_mem_bytes
+
+    @property
+    def bytes_touched(self) -> int:
+        """Bytes this stage actually moved. Skew is a property of data volume.
+
+        Identical definition to verify/'s `StageObservation.bytes_touched`, so a
+        stage that is volume-ineligible in one lane is ineligible in the other.
+        """
+        return self.shuffle_read_bytes + self.shuffle_write_bytes + self.input_bytes
+
+    @property
+    def bytes_per_task(self) -> float:
+        return self.bytes_touched / self.task_count if self.task_count else 0.0
 
     @property
     def gc_ratio(self) -> float:

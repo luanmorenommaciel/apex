@@ -11,6 +11,8 @@ from typing import Any
 
 from . import gate
 from .clickhouse import EngineStore, aggregate_events
+from .config import cluster_slots
+from .context import JobContext, build_context, context_for
 from .schema import Finding, PlanTransition, StageAggregate, StageEvent
 from .validation import validate_finding
 from .watchers import run_all_offline
@@ -28,24 +30,44 @@ def _validate(candidates: Iterable[Finding]) -> tuple[list[Finding], list[dict[s
     return accepted, rejected
 
 
-def analyze_events(events: Iterable[StageEvent | dict[str, object]]) -> dict[str, Any]:
+def analyze_events(
+    events: Iterable[StageEvent | dict[str, object]],
+    ctx: JobContext | None = None,
+) -> dict[str, Any]:
     """Deterministic-only analysis of in-memory events. Never calls an LLM.
 
     This is the offline/fixture path and the one the six-lane E2E gate drives;
     its `mode`/`llm_calls` contract is what that gate asserts on.
+
+    With no `ctx` the cluster width is UNKNOWN, so rule-1 findings come out
+    capped and say so. That is the correct offline default: a fixture carries no
+    evidence of how wide the cluster was.
     """
     normalized = [e if isinstance(e, StageEvent) else StageEvent.model_validate(e) for e in events]
-    accepted, rejected = _validate(run_all_offline(aggregate_events(normalized)))
-    return {"mode": "deterministic", "llm_calls": 0, "findings": accepted, "rejected": rejected}
+    accepted, rejected = _validate(run_all_offline(aggregate_events(normalized), None, ctx))
+    return {
+        "mode": "deterministic",
+        "llm_calls": 0,
+        "findings": accepted,
+        "rejected": rejected,
+        "cluster_width": str(context_for(ctx).width),
+    }
 
 
 def analyze_aggregates(
     aggregates: list[StageAggregate],
     transitions: list[PlanTransition] | None = None,
+    ctx: JobContext | None = None,
 ) -> dict[str, Any]:
     """Deterministic-only analysis of already-reduced rows (+ AQE ground truth)."""
-    accepted, rejected = _validate(run_all_offline(aggregates, transitions))
-    return {"mode": "deterministic", "llm_calls": 0, "findings": accepted, "rejected": rejected}
+    accepted, rejected = _validate(run_all_offline(aggregates, transitions, ctx))
+    return {
+        "mode": "deterministic",
+        "llm_calls": 0,
+        "findings": accepted,
+        "rejected": rejected,
+        "cluster_width": str(context_for(ctx).width),
+    }
 
 
 def analyze(
@@ -55,6 +77,7 @@ def analyze(
     persist: bool = True,
     use_crew: bool = True,
     crew_factory: Any = None,
+    slots: int | None = None,
 ) -> dict[str, Any]:
     """Analyze one job end to end.
 
@@ -62,6 +85,11 @@ def analyze(
     escalates (confidence < 0.6 AND severity >= critical) reach CrewAI, and only
     if `use_crew` is on and the crew is actually available. Everything else —
     including every finding of a healthy job, of which there are none — costs $0.
+
+    `slots` is the observed cluster width for CONTRACT.md rule 1 (falls back to
+    `$APEX_CLUSTER_SLOTS`, then to the run's own `apex.job_conf`). It is never
+    defaulted to a number: when no source supplies it, rule-1 findings are capped
+    and the returned `cluster_width` says why.
     """
     if not job_id:
         raise ValueError("job_id_required")
@@ -69,7 +97,8 @@ def analyze(
 
     aggregates = store.stage_aggregates(job_id)
     transitions = store.plan_transitions(job_id)
-    candidates = run_all_offline(aggregates, transitions)
+    ctx = build_context(store, job_id, aggregates, slots=slots or cluster_slots())
+    candidates = run_all_offline(aggregates, transitions, ctx)
     accepted, rejected = _validate(candidates)
 
     direct, escalated = gate.partition(accepted)
@@ -119,6 +148,13 @@ def analyze(
         "mode": "deterministic" if llm_calls == 0 else "deterministic+crew",
         "stages_analyzed": len(aggregates),
         "plan_transitions": len(transitions),
+        # Rule 1's input, surfaced because it changes every skew verdict and a
+        # reader must be able to see which of the two it was.
+        "cluster_width": str(ctx.width),
+        "job_conf_present": ctx.job_conf.present,
+        # Degraded optional reads, so a missing noise floor is never mistaken for
+        # a measured one of zero.
+        "store_warnings": getattr(store, "read_warnings", []),
         "candidates": len(candidates),
         "findings": findings,
         "rejected": rejected,

@@ -1,8 +1,14 @@
 """Tier-1 watcher rules. Every case here is deterministic and LLM-free."""
 
 from apex_engine import FindingType, Severity, StageAggregate
+from apex_engine.context import JobContext
+from apex_engine.jobconf import operator_width
 from apex_engine.watchers import code, cost, memory, shuffle, skew
 from apex_engine.watchers.base import GIB, MIB
+
+# Redacted tree-strings copied in shape from real rows in this store.
+JOIN_PLAN = "'Join Inner, (none#2L = cast(none#0 as bigint))\n:- Project [none#1, none#2]"
+DELTA_META_PLAN = "!Aggregate [collect_set(none#5, 0, 0) AS #0]\n+- Project [none#0, none#1]"
 
 
 def stage(**overrides) -> StageAggregate:
@@ -15,45 +21,115 @@ def stage(**overrides) -> StageAggregate:
     return StageAggregate.model_validate(payload)
 
 
-# --- T6 skew: the rule lifted from infra/sql/005_skew.sql -----------------
+def joined(**overrides) -> StageAggregate:
+    """A stage carrying enough VOLUME and a Join node for a skew claim to be
+    admissible at all — the two things the old watcher never checked."""
+    payload = {
+        "task_duration_p50_ms": 50.0, "task_duration_p99_ms": 1035.0, "task_count": 100,
+        "shuffle_read_bytes": 112_930_867, "plan_json": JOIN_PLAN, "stage_id": 21,
+    }
+    payload.update(overrides)
+    return stage(**payload)
 
-def test_skew_matches_the_proven_005_sql_case():
-    """Stage 4 of the real P0 job: p50=21, p99=454 -> 21.62x, must flag."""
-    finding = skew.evaluate(stage(task_duration_p50_ms=21, task_duration_p99_ms=454))
+
+def at(slots: int | None) -> JobContext:
+    return JobContext(width=operator_width(slots))
+
+
+# --- T6 skew: CONTRACT.md rule 1, not a fixed threshold --------------------
+
+def test_the_marquee_false_positive_is_gone():
+    """Stage 4 of app-20260724160310-0000: 21.62x over 50 tasks, and the old
+    watcher's CRITICAL SKEW_ON_JOIN. It moves 9,163+4,750 bytes total and its
+    plan is Delta-metadata `!Aggregate` with no Join — nothing to find."""
+    stage4 = stage(
+        task_duration_p50_ms=21, task_duration_p99_ms=454, task_count=50,
+        shuffle_read_bytes=0, shuffle_write_bytes=4_750, input_bytes=9_163,
+        plan_json=DELTA_META_PLAN,
+    )
+    assert skew.evaluate(stage4, at(2)) is None
+    assert skew.evaluate(stage4, at(50)) is None   # not even on a wide cluster
+    assert skew.evaluate(stage4, at(None)) is None  # nor with the width unknown
+
+
+def test_the_same_ratio_is_work_bound_on_a_narrow_cluster():
+    """21.62x needs > (50-1)/(2-1) = 49x on 2 slots. A perfect fix returns 0."""
+    narrow = joined(task_duration_p50_ms=21, task_duration_p99_ms=454, task_count=50)
+    assert skew.evaluate(narrow, at(2)) is None
+
+
+def test_the_same_ratio_bites_once_the_cluster_is_wide_enough():
+    """On 50 slots the bar is (50-1)/(50-1) = 1x, so the tail does bound it."""
+    wide = joined(task_duration_p50_ms=21, task_duration_p99_ms=454, task_count=50)
+    finding = skew.evaluate(wide, at(50))
     assert finding is not None
+    assert finding.details["tail_bound_threshold"] == 1.0
+    assert finding.details["skew_ratio"] > 1.0
+
+
+def test_volume_is_required_before_a_ratio_becomes_a_statistic():
+    """dev: the tiny 50-task Delta stages "will still fool any watcher that
+    doesn't key on shuffle volume". 4,875 bytes over 50 tasks is 97 bytes/task."""
+    tiny = joined(task_duration_p50_ms=36, task_duration_p99_ms=386, task_count=50,
+                  shuffle_read_bytes=0, shuffle_write_bytes=4_875, input_bytes=16_515)
+    assert skew.evaluate(tiny, at(8)) is None
+    # the identical ratio over real volume is a finding
+    real = joined(task_duration_p50_ms=36, task_duration_p99_ms=386, task_count=50,
+                  shuffle_read_bytes=200 * MIB)
+    assert skew.evaluate(real, at(8)) is not None
+
+
+def test_join_skew_requires_plan_evidence_of_a_join():
+    no_join = joined(plan_json=DELTA_META_PLAN)
+    finding = skew.evaluate(no_join, at(8))
+    assert finding.type is FindingType.TASK_SKEW
+    assert "no Join node" in finding.evidence
+    # skewJoin.* applies only to joins; recommending it here is the category error
+    assert "skewJoin" not in finding.fix or "does not apply" in finding.fix
+
+
+def test_join_skew_requires_shuffle_on_the_read_side():
+    """Join skew lands on the shuffle READ side. A stage that reads none cannot
+    have it, however wide its tail — it is reported as a task-level tail."""
+    write_only = joined(shuffle_read_bytes=0, shuffle_write_bytes=200 * MIB)
+    finding = skew.evaluate(write_only, at(8))
+    assert finding.type is FindingType.TASK_SKEW
+    assert "shuffle READ side" in finding.evidence
+
+
+def test_a_real_join_tail_is_reported_as_join_skew():
+    finding = skew.evaluate(joined(), at(8))
     assert finding.type is FindingType.SKEW_ON_JOIN
     assert finding.severity is Severity.CRITICAL
-    assert "21.62x" in finding.evidence
-    assert finding.details["skew_ratio"] > 10
+    assert finding.details["tail_bound_verdict"] == "tail_bound"
+    assert round(finding.details["tail_bound_threshold"], 2) == 14.14
+
+
+def test_an_undeterminable_width_caps_confidence_and_says_so():
+    """Rule 1: "if it cannot be determined, confidence is capped, never guessed."""
+    finding = skew.evaluate(joined(), at(None))
+    assert finding.confidence_score < 0.6
+    assert finding.severity is Severity.WARNING
+    assert finding.details["slots"] is None
+    # it reports what the width would have to be, which IS derivable
+    assert round(finding.details["min_slots_required"], 1) == 5.8
+    assert "not evaluable" in finding.evidence
 
 
 def test_skew_excludes_the_healthy_job_the_sql_excludes():
     """The 1.11x/1.0x healthy stages 005_skew.sql leaves alone stay unflagged."""
-    assert skew.evaluate(stage(task_duration_p50_ms=100, task_duration_p99_ms=111)) is None
-    assert skew.evaluate(stage(task_duration_p50_ms=1857, task_duration_p99_ms=1857)) is None
-
-
-def test_skew_boundary_is_strictly_above_5x():
-    assert skew.evaluate(stage(task_duration_p50_ms=100, task_duration_p99_ms=500)) is None
-    assert skew.evaluate(stage(task_duration_p50_ms=100, task_duration_p99_ms=486)) is None  # the real 4.86x stage
-    assert skew.evaluate(stage(task_duration_p50_ms=100, task_duration_p99_ms=501)) is not None
-
-
-def test_skew_medium_band_is_gate_eligible_and_severe_band_is_not():
-    medium = skew.evaluate(stage(task_duration_p50_ms=100, task_duration_p99_ms=700))  # 7x
-    severe = skew.evaluate(stage(task_duration_p50_ms=100, task_duration_p99_ms=2_000))  # 20x
-    assert medium.severity is Severity.WARNING and medium.confidence_score < 0.6
-    assert severe.severity is Severity.CRITICAL and severe.confidence_score >= 0.6
+    assert skew.evaluate(joined(task_duration_p50_ms=100, task_duration_p99_ms=111), at(8)) is None
+    assert skew.evaluate(joined(task_duration_p50_ms=1857, task_duration_p99_ms=1857), at(8)) is None
 
 
 def test_skew_never_divides_by_zero():
     """`nullIf(p50, 0)` server-side; the same guard must hold in Python."""
-    assert skew.evaluate(stage(task_duration_p50_ms=0, task_duration_p99_ms=9_999)) is None
+    assert skew.evaluate(joined(task_duration_p50_ms=0, task_duration_p99_ms=9_999), at(8)) is None
 
 
 def test_skew_ignores_a_ratio_from_too_few_tasks():
     """A p99 over 2 tasks is not a distribution."""
-    assert skew.evaluate(stage(task_duration_p50_ms=10, task_duration_p99_ms=900, task_count=2)) is None
+    assert skew.evaluate(joined(task_duration_p50_ms=10, task_duration_p99_ms=900, task_count=2), at(8)) is None
 
 
 # --- T5 shuffle ------------------------------------------------------------

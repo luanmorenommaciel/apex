@@ -11,6 +11,7 @@ meaningless and they are skipped rather than flagged.
 
 from __future__ import annotations
 
+from ..context import JobContext
 from ..schema import Finding, FindingType, Severity, StageAggregate
 from .base import GIB, MIB, human_bytes, stage_finding
 
@@ -36,7 +37,7 @@ ORDER BY input_bytes DESC
 """
 
 
-def evaluate(stage: StageAggregate) -> Finding | None:
+def evaluate(stage: StageAggregate, ctx: JobContext | None = None) -> Finding | None:
     if stage.input_bytes < MIN_INPUT_BYTES:
         return None
 

@@ -51,12 +51,19 @@ def store():
     return EngineStore(_client())
 
 
+# 4 x 2 = 8 slots. Seeded into apex.job_conf (contract v0.4) because rule 1's
+# threshold is (n-1)/(slots-1) and without a width there is no verdict to assert.
+CLUSTER_CONF = {"spark.executor.instances": "4", "spark.executor.cores": "2",
+                "spark.sql.adaptive.enabled": "true",
+                "spark.sql.adaptive.skewJoin.enabled": "true"}
+
+
 @pytest.fixture
 def seeded(store):
-    """Seed stage rows under a throwaway job_id and always clean them up."""
+    """Seed stage rows (+ a job_conf row) under a throwaway job_id, then clean up."""
     created: list[str] = []
 
-    def seed(stages: list[dict]) -> str:
+    def seed(stages: list[dict], conf: dict | None = CLUSTER_CONF) -> str:
         job_id = f"engine-test-{uuid.uuid4().hex[:12]}"
         created.append(job_id)
         base = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -70,17 +77,21 @@ def seeded(store):
             rows.append([row[c] for c in EVENT_COLUMNS])
         store.client.insert(table="spark_events", database="apex",
                             data=rows, column_names=EVENT_COLUMNS)
+        if conf is not None:
+            store.client.insert(
+                table="job_conf", database="apex",
+                data=[[job_id, f"app-{job_id}", "engine-test", dict(conf),
+                       datetime.now(timezone.utc)]],
+                column_names=["job_id", "app_id", "app_name", "conf", "ts"])
         return job_id
 
     yield seed
 
     for job_id in created:
-        store.client.command(
-            "ALTER TABLE apex.spark_events DELETE WHERE job_id = %(j)s SETTINGS mutations_sync=1",
-            parameters={"j": job_id})
-        store.client.command(
-            "ALTER TABLE apex.findings DELETE WHERE job_id = %(j)s SETTINGS mutations_sync=1",
-            parameters={"j": job_id})
+        for table in ("spark_events", "findings", "job_conf"):
+            store.client.command(
+                f"ALTER TABLE apex.{table} DELETE WHERE job_id = %(j)s SETTINGS mutations_sync=1",
+                parameters={"j": job_id})
 
 
 HEALTHY = {"task_duration_p50_ms": 100, "task_duration_p99_ms": 110,
@@ -90,7 +101,15 @@ HEALTHY = {"task_duration_p50_ms": 100, "task_duration_p99_ms": 110,
            "peak_execution_mem_bytes": 1_000, "task_count": 50,
            "plan_json": "Project [id]\n+- Relation parquet"}
 
-SKEWED = {**HEALTHY, "task_duration_p50_ms": 21, "task_duration_p99_ms": 454}
+# A skew claim needs VOLUME (dev's finding) and a Join node (the fabricated-type
+# bug). 112 MB of shuffle READ over 50 tasks is 2.3 MB/task — a real tail.
+SKEWED = {**HEALTHY, "task_duration_p50_ms": 21, "task_duration_p99_ms": 454,
+          "shuffle_read_bytes": 112_930_867,
+          "plan_json": "'Join Inner, (none#2L = cast(none#0 as bigint))"}
+
+# Byte-for-byte the same ratio with no volume and no join: the shape of the
+# marquee false positive, and now invisible.
+JITTER_ONLY = {**HEALTHY, "task_duration_p50_ms": 21, "task_duration_p99_ms": 454}
 
 
 def test_fixture_ts_would_be_ttl_expired(seeded, store):
@@ -119,6 +138,16 @@ def test_clean_job_inserts_zero_rows_and_makes_zero_llm_calls(seeded, store):
     assert stored == 0
 
 
+def test_a_jitter_only_ratio_writes_nothing_even_against_real_clickhouse(seeded, store):
+    """21.62x over 13 KB with no Join: the false positive's shape, end to end."""
+    job_id = seeded([HEALTHY, JITTER_ONLY])
+    result = analyze(job_id, store)
+
+    assert result["findings"] == []
+    assert result["written_rows"] == 0
+    assert result["llm_calls"] == 0
+
+
 def test_skewed_job_writes_a_finding_no_llm_needed(seeded, store):
     job_id = seeded([HEALTHY, SKEWED])
     result = analyze(job_id, store)
@@ -127,6 +156,12 @@ def test_skewed_job_writes_a_finding_no_llm_needed(seeded, store):
     assert len(skew) == 1
     assert skew[0].stage_id == 1
     assert "21.62x" in skew[0].evidence
+    # the width came from the seeded v0.4 job_conf row: 4 instances x 2 cores
+    assert result["cluster_width"] == "8 slots (job_conf)"
+    assert result["job_conf_present"] is True
+    assert skew[0].details["tail_bound_threshold"] == pytest.approx(7.0)
+    # NO-OP CHECK: skewJoin.enabled is already true on the seeded run
+    assert "ALREADY true" in skew[0].fix
     assert result["written_rows"] == len(result["findings"])
     assert result["llm_calls"] == 0
 
@@ -167,20 +202,32 @@ def test_dry_run_never_writes(seeded, store):
     assert stored == 0
 
 
-def test_real_p0_job_reproduces_the_proven_skew(store):
-    """The exact case infra/sql/005_skew.sql already proved: 21.62x on stage 4."""
+def test_real_p0_job_no_longer_fabricates_join_skew(store):
+    """The marquee false positive, against the real rows that produced it.
+
+    `005_skew.sql` flagged stage 4 of this job at 21.62x and engine shipped it as
+    a CRITICAL SKEW_ON_JOIN. Three independent facts in these same rows say it is
+    not one, and each alone is disqualifying:
+      * its logical plan is a Delta-metadata `!Aggregate` with no Join node;
+      * it reads 0 shuffle bytes, and join skew lands on the shuffle READ side;
+      * it moves 13,913 bytes over 50 tasks — 278 bytes/task, no volume tail.
+    """
     aggregates = store.stage_aggregates(P0_JOB_ID)
     if not aggregates:
         pytest.skip(f"{P0_JOB_ID} not present in this ClickHouse")
+
+    stage4 = next(s for s in aggregates if s.stage_id == 4)
+    assert stage4.skew_ratio > 21  # the ratio is real...
+    assert stage4.bytes_per_task < 1024 * 1024  # ...and it is measuring nothing
 
     result = analyze(P0_JOB_ID, store, persist=False, use_crew=False)
     assert result["stages_analyzed"] == 17
     assert result["llm_calls"] == 0
 
-    by_stage = {f.stage_id: f for f in result["findings"] if f.type is FindingType.SKEW_ON_JOIN}
-    assert "21.62x" in by_stage[4].evidence
-    # and the healthy stages 005_skew.sql leaves alone stay unflagged
-    assert 19 not in by_stage and 21 not in by_stage and 0 not in by_stage
+    skew = [f for f in result["findings"]
+            if f.type in (FindingType.SKEW_ON_JOIN, FindingType.TASK_SKEW)
+            and f.detected_by.startswith("skew_watcher")]
+    assert skew == [], f"expected no heuristic skew finding, got {[f.evidence for f in skew]}"
 
 
 def test_real_p0_job_yields_aqe_ground_truth(store):

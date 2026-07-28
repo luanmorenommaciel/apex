@@ -13,6 +13,7 @@ denominator.
 
 from __future__ import annotations
 
+from ..context import JobContext
 from ..schema import Finding, FindingType, Severity, StageAggregate
 from .base import GIB, MIB, human_bytes, stage_finding
 
@@ -43,7 +44,7 @@ ORDER BY stage_id
 """
 
 
-def evaluate(stage: StageAggregate) -> Finding | None:
+def evaluate(stage: StageAggregate, ctx: JobContext | None = None) -> Finding | None:
     reason = stage.failure_reason.lower()
     if any(marker in reason for marker in OOM_MARKERS):
         return stage_finding(

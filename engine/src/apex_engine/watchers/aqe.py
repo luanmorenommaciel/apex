@@ -128,31 +128,47 @@ def _describe(transitions: list[PlanTransition]) -> str:
     return "; ".join(dict.fromkeys(t.detail for t in transitions if t.detail))
 
 
+# Corroborated confidence, split by whether the closed form was evaluable.
+CORROBORATED_SCORE = 0.93
+# Deliberately just under CONFIDENCE_MEDIUM_MAX (0.85) so it displays as MEDIUM:
+# the mechanism is proven, the cost of it is not.
+CORROBORATED_SCORE_SLOTS_UNKNOWN = 0.84
+
+
 def corroborate_skew(findings: list[Finding], transitions: list[PlanTransition]) -> list[Finding]:
     """Upgrade heuristic skew findings that AQE independently confirms.
 
-    A p99/p50 ratio in the ambiguous 5-10x band is normally gate-eligible and
-    may cost an LLM call. If AQE split a skewed partition in the same job, the
-    heuristic is corroborated by ground truth: raise confidence to HIGH so the
-    finding emits at $0 instead of being escalated. This is the whole point of
-    consuming plan_transitions.
+    If AQE split a skewed partition in the same job, the heuristic is corroborated
+    by Spark's own runtime decision: raise confidence so the finding emits at $0
+    instead of being escalated. This is the whole point of consuming
+    plan_transitions.
+
+    What corroboration does NOT do is supply a cluster width. A `skew_split`
+    proves the skew EXISTS; whether the tail bounds the stage — and therefore what
+    fixing it is worth — is CONTRACT.md rule 1, which needs `slots`. So a finding
+    whose own evidence says the width was unknown is upgraded only to just below
+    the HIGH tier and keeps its severity: ground truth about the mechanism cannot
+    be laundered into a quantified cost.
     """
     if not any(t.is_ground_truth and t.transition_type == SKEW_SPLIT for t in transitions):
         return findings
 
     upgraded: list[Finding] = []
     for finding in findings:
-        if finding.type is FindingType.SKEW_ON_JOIN and finding.detected_by != NAME:
-            upgraded.append(
-                finding.model_copy(update={
-                    "confidence_score": max(finding.confidence_score, 0.93),
-                    "confidence": Confidence.HIGH,
-                    "severity": Severity.CRITICAL,
-                    "evidence": f"{finding.evidence}; corroborated by an AQE skew_split in the same job",
-                    "detected_by": f"{finding.detected_by}+aqe",
-                    "details": {**finding.details, "aqe_corroborated": True},
-                })
-            )
-        else:
+        if finding.type is not FindingType.SKEW_ON_JOIN or finding.detected_by == NAME:
             upgraded.append(finding)
+            continue
+
+        slots_known = finding.details.get("slots_source", "unknown") != "unknown"
+        score = CORROBORATED_SCORE if slots_known else CORROBORATED_SCORE_SLOTS_UNKNOWN
+        update = {
+            "confidence_score": max(finding.confidence_score, score),
+            "confidence": Confidence.from_score(max(finding.confidence_score, score)),
+            "evidence": f"{finding.evidence}; corroborated by an AQE skew_split in the same job",
+            "detected_by": f"{finding.detected_by}+aqe",
+            "details": {**finding.details, "aqe_corroborated": True},
+        }
+        if slots_known:
+            update["severity"] = Severity.CRITICAL
+        upgraded.append(finding.model_copy(update=update))
     return upgraded

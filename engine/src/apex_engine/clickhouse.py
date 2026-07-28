@@ -9,11 +9,13 @@ Two rules hold everywhere in this file:
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import datetime
 from typing import Any, Protocol
 
 from .config import ClickHouseSettings
+from .context import ShapeSample
+from .jobconf import JobConf
 from .schema import Finding, PlanTransition, StageAggregate, StageEvent
 
 FINDING_COLUMNS = (
@@ -83,13 +85,67 @@ FROM apex.findings
 WHERE job_id = {job_id:String}
 """
 
+# contract v0.4. One row per job_id; `argMax(conf, ts)` because a logical job_id
+# reused across runs (spark.apex.job_id) legitimately has several, and MergeTree
+# is at-least-once, so a duplicate row must not turn into two configurations.
+JOB_CONF_SQL = """
+SELECT job_id, argMax(app_id, ts) AS app_id, argMax(app_name, ts) AS app_name,
+       argMax(conf, ts) AS conf
+FROM apex.job_conf
+WHERE job_id = {job_id:String}
+GROUP BY job_id
+"""
+
+JOB_CONFS_SQL = """
+SELECT job_id, argMax(app_id, ts) AS app_id, argMax(app_name, ts) AS app_name,
+       argMax(conf, ts) AS conf
+FROM apex.job_conf
+WHERE job_id IN {job_ids:Array(String)}
+GROUP BY job_id
+"""
+
+# Repeated observations of the same stage shape, for the MEASURED noise floor
+# (CONTRACT.md rule 2) and the distinct-config count (rule 3).
+#
+# Keyed on plan_fingerprint, which is NOT the table's ORDER BY, so this is a
+# scan. It is bounded by the fingerprint set of ONE job and by MAX_SHAPE_ROWS,
+# and it deliberately carries no time window: analyze(job_id) must return the
+# same answer for a job whether it ran five minutes or five days ago — the same
+# reason STAGE_AGGREGATES_SQL drops 005_skew.sql's 6-hour window.
+#
+# The aggregate aliases must NOT reuse the filtered column's name: aliasing
+# `argMax(plan_fingerprint, ts) AS plan_fingerprint` makes ClickHouse resolve the
+# WHERE clause to the aggregate and fail with ILLEGAL_AGGREGATION (code 184).
+SHAPE_HISTORY_SQL = """
+SELECT
+  job_id,
+  stage_id,
+  argMax(plan_fingerprint, ts)      AS shape_fingerprint,
+  argMax(task_count, ts)            AS shape_task_count,
+  argMax(task_duration_p50_ms, ts)  AS p50_ms,
+  argMax(task_duration_p99_ms, ts)  AS p99_ms,
+  argMax(shuffle_read_bytes, ts)
+    + argMax(shuffle_write_bytes, ts)
+    + argMax(input_bytes, ts)       AS bytes_touched
+FROM apex.spark_events
+WHERE plan_fingerprint IN {fingerprints:Array(String)}
+GROUP BY job_id, stage_id
+ORDER BY job_id, stage_id
+LIMIT {limit:Int32}
+"""
+
+# A shape's floor needs a handful of runs, not a corpus. 2000 rows covers ~100
+# runs of a 20-stage job; past that the floor does not get more honest, and a
+# truncated read is reported rather than silently treated as the whole history.
+MAX_SHAPE_ROWS = 2000
+
 
 class QueryResult(Protocol):
     def named_results(self) -> Iterable[dict[str, Any]]: ...
 
 
 class ClickHouseClient(Protocol):
-    def query(self, query: str, parameters: dict[str, str]) -> QueryResult: ...
+    def query(self, query: str, parameters: dict[str, Any]) -> QueryResult: ...
 
     def insert(self, table: str, data: list[Any], column_names: tuple[str, ...], database: str) -> Any: ...
 
@@ -98,6 +154,12 @@ class EngineStore:
     def __init__(self, client: ClickHouseClient, *, database: str = "apex") -> None:
         self._client = client
         self._database = database
+        # Optional reads degrade instead of crashing, which is right for a table
+        # a deployment may not have applied yet — but degradation must never be
+        # SILENT. A broken query and an absent table look identical from the
+        # caller's side otherwise (a shadowed alias in SHAPE_HISTORY_SQL hid here
+        # and cost every finding its noise floor with no symptom).
+        self._read_warnings: list[str] = []
 
     @classmethod
     def connect(cls, settings: ClickHouseSettings | None = None) -> "EngineStore":
@@ -108,6 +170,16 @@ class EngineStore:
     @property
     def client(self) -> ClickHouseClient:
         return self._client
+
+    @property
+    def read_warnings(self) -> list[str]:
+        """Optional reads that failed, so `analyze()` can report the degradation."""
+        return list(self._read_warnings)
+
+    def _warn(self, read: str, exc: Exception) -> None:
+        message = f"{read}:{type(exc).__name__}:{str(exc).splitlines()[0][:160]}"
+        if message not in self._read_warnings:
+            self._read_warnings.append(message)
 
     # --- reads -------------------------------------------------------------
 
@@ -130,10 +202,69 @@ class EngineStore:
             return []
         return [PlanTransition.model_validate(row) for row in rows]
 
+    def job_conf(self, job_id: str) -> JobConf:
+        """The run's allowlisted resolved SparkConf (contract v0.4).
+
+        A missing table or missing row is NOT an error: v0.4 is additive and a
+        cluster that has not applied it must still be analyzable. The absence is
+        returned as `JobConf.missing()`, which every rule reads as UNKNOWN —
+        never as "the key was not set".
+        """
+        try:
+            rows = self._rows(JOB_CONF_SQL, job_id)
+            return JobConf.from_row(rows[0]) if rows else JobConf.missing(job_id)
+        except Exception as exc:  # noqa: BLE001 - optional v0.4 table
+            self._warn("job_conf", exc)
+            return JobConf.missing(job_id)
+
+    def job_confs(self, job_ids: Sequence[str]) -> dict[str, JobConf]:
+        """`job_conf` for many runs at once, for the distinct-config count."""
+        if not job_ids:
+            return {}
+        try:
+            rows = self._query(JOB_CONFS_SQL, {"job_ids": list(job_ids)})
+            confs = [JobConf.from_row(row) for row in rows]
+        except Exception as exc:  # noqa: BLE001 - optional v0.4 table
+            self._warn("job_confs", exc)
+            return {}
+        return {conf.job_id: conf for conf in confs}
+
+    def shape_history(self, fingerprints: Sequence[str]) -> list[ShapeSample]:
+        """Every run's measurement of the given plan shapes (rules 2 and 3).
+
+        Best-effort by design: a noise floor is an enrichment, so a store that
+        cannot serve this read costs the finding its floor, not its existence.
+        """
+        if not fingerprints:
+            return []
+        try:
+            rows = self._query(
+                SHAPE_HISTORY_SQL,
+                {"fingerprints": list(fingerprints), "limit": MAX_SHAPE_ROWS},
+            )
+            return [
+                ShapeSample(
+                    job_id=_as_text(row["job_id"]),
+                    stage_id=int(row["stage_id"]),
+                    plan_fingerprint=_as_text(row["shape_fingerprint"]),
+                    task_count=int(row["shape_task_count"]),
+                    task_duration_p50_ms=float(row["p50_ms"]),
+                    task_duration_p99_ms=float(row["p99_ms"]),
+                    bytes_touched=int(row["bytes_touched"]),
+                )
+                for row in rows
+            ]
+        except Exception as exc:  # noqa: BLE001 - a floor is optional, a crash is not
+            self._warn("shape_history", exc)
+            return []
+
     def _rows(self, sql: str, job_id: str) -> list[dict[str, Any]]:
         if not job_id:
             raise ValueError("job_id_required")
-        result = self._client.query(sql, parameters={"job_id": job_id})
+        return self._query(sql, {"job_id": job_id})
+
+    def _query(self, sql: str, parameters: dict[str, Any]) -> list[dict[str, Any]]:
+        result = self._client.query(sql, parameters=parameters)
         return list(result.named_results())
 
     # --- writes ------------------------------------------------------------
@@ -177,6 +308,20 @@ class EngineStore:
         if written != len(rows):
             raise RuntimeError(f"finding_insert_count_mismatch:{written}!={len(rows)}")
         return written
+
+
+def _as_text(value: Any) -> str:
+    """Decode a ClickHouse value to the same `str` a pydantic model would hold.
+
+    `plan_fingerprint` is `FixedString(64)`, which clickhouse-connect returns as
+    `bytes`. `StageAggregate` goes through pydantic and ends up with `str`, so a
+    plain `str(value)` here yields `"b'11e45…'"` and every shape key silently
+    fails to match — no exception, no warning, just a noise floor that is never
+    measured. Decode explicitly instead.
+    """
+    if isinstance(value, (bytes, bytearray)):
+        return value.decode("utf-8", "replace").rstrip("\x00")
+    return "" if value is None else str(value)
 
 
 def _signature(finding: Finding) -> tuple[int, str, str, str]:

@@ -50,3 +50,29 @@ class ClickHouseSettings:
 
 def anthropic_api_key() -> str | None:
     return os.getenv("ANTHROPIC_API_KEY")
+
+
+# Cluster width for CONTRACT.md rule 1. Contract v0.4 emits
+# spark.executor.instances / .cores only when they are EXPLICITLY set (never a
+# synthesized default), so on a standalone cluster they are usually absent —
+# 0 of 51 job_conf rows in this store carry `instances`. An operator who can see
+# the cluster may supply the width here; this lab's true width is the sum of
+# ALIVE worker cores from the Spark master's /json/ endpoint, which is where
+# dev's calibration reads `slots=8`.
+#
+# It is UNSET by default and never defaulted to a number: rule 1 says an
+# undeterminable width caps confidence, and a guessed width would silently
+# manufacture verdicts. `spark.sql.shuffle.partitions` is not a width.
+CLUSTER_SLOTS_ENV = "APEX_CLUSTER_SLOTS"
+
+
+def cluster_slots() -> int | None:
+    """Operator-supplied cluster width, or None. Never a default."""
+    raw = os.getenv(CLUSTER_SLOTS_ENV, "").strip()
+    if not raw:
+        return None
+    try:
+        slots = int(raw)
+    except ValueError:
+        return None
+    return slots if slots > 0 else None
