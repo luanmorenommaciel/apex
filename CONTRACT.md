@@ -4,11 +4,27 @@
 > It defines the data shapes that flow between stages so each directory can be built independently and still fuse.
 > A stage may **add** a field; it may never rename or repurpose one. Breaking changes = version bump + a note here.
 
-**Status:** contract **v0.2** · **Consumed by:** `dev` · `jar` · `collect` · `infra` · `engine` · `serve`
-**Artifacts:** [`contract/sample_event.json`](contract/) (the fixture) · [`contract/spark_events.ddl.sql`](contract/) · [`contract/findings.ddl.sql`](contract/) · [`contract/plan_transitions.ddl.sql`](contract/)
+**Status:** contract **v0.4** · **Consumed by:** `dev` · `jar` · `collect` · `infra` · `engine` · `serve` · `memory` · `verify`
+**Artifacts:** [`contract/sample_event.json`](contract/) · [`spark_events`](contract/spark_events.ddl.sql) · [`findings`](contract/findings.ddl.sql) · [`plan_transitions`](contract/plan_transitions.ddl.sql) · [`job_conf`](contract/job_conf.ddl.sql) · `memory/sql/030_plan_memory.sql` · `memory/sql/031_run_outcomes.sql` · `verify/ddl/fix_verifications.ddl.sql`
 
 **Changelog:**
-- **v0.2** — ADDITIVE: new optional `plan_transition` event + `apex.plan_transitions` table (AQE runtime-decision capture — Spark's own optimization decisions as ground-truth signal). Existing `spark_events`/`findings` unchanged. See § "AQE plan transitions" below. Affects: `jar` (emits), `collect` (routes), `infra` (creates table), `engine`/`serve` (may read).
+- **v0.4** — ADDITIVE: `apex.job_conf` (one row per `job_id`, `conf Map(String,String)` of an **allowlisted** resolved `spark.*` subset). Emitted at **first `onJobStart`**, NOT `onApplicationStart` — at ApplicationStart no SparkSession exists, so `spark.sql.*` defaults cannot be resolved and you would lose `adaptive.enabled` on exactly the keys the no-op gate depends on. **Allowlist only, never a whole-conf dump** (SparkConf can hold s3a keys / JDBC passwords / tokens). Resource keys (`spark.executor.*`/`spark.driver.*`) are present **iff explicitly set** — never synthesized, because a fabricated default poisons "the config that worked". Affects: `jar` (emits), `collect`+`infra` (route/store), `engine`/`memory`/`verify` (read).
+- **v0.3** — ADDITIVE: `apex.plan_memory` + `apex.run_outcomes` (cross-job plan-similarity memory: fuzzy structural index + per-run outcome evidence) and `apex.fix_verifications` (predicted/replayed fix outcomes). No existing table changed.
+- **v0.2** — ADDITIVE: `plan_transition` event + `apex.plan_transitions` (AQE runtime-decision capture). Existing tables unchanged.
+
+---
+
+## Three cross-lane rules (derived from real data — every consumer must honor these)
+
+**1. Skew is only worth fixing if the stage is TAIL-BOUND.** From list-scheduling makespan bounds (derived and independently re-verified):
+
+> **tail-bound ⟺ `p99/p50 > (n_tasks − 1) / (slots − 1)`**
+
+Data volume **cancels out** (it scales `p50` and `p99` together), so the threshold depends only on **task count and cluster width**. A 21.6× ratio is worthless advice on 2 slots (needs > 49×) and sound advice on 50 slots (needs > 1×). **A fixed `5×`/`10×` skew threshold is wrong** — it must be computed per stage. `slots` comes from the observed cluster width; if it cannot be determined, confidence is capped, never guessed. *Empirically validated: a balanced control stage manufactures 8–12× ratios from jitter alone but never passes the closed form (9.3/11.9/7.7 vs its 28.4 threshold), while a genuinely skewed stage always does.*
+
+**2. The noise floor is SCALE-DEPENDENT and must be MEASURED, never hardcoded.** Observed on the same system: **5.8%** (job level, tiny scale) → **9.2%** (job level, calibrated scale) → **37.7%** (shape level, 8 tasks, byte-identical work). Measure it at the level and scale you are comparing. When `|delta| < measured_floor`, **no consumer may render the number**. Noise proves a delta is *unresolvable* — never that it is *zero*.
+
+**3. A delta is only creditable to tuning if it is ATTRIBUTABLE.** If history holds **fewer than 2 distinct configurations**, no observed difference between runs can be credited to a config change — it is run-to-run variance. Passing the noise floor is **necessary but not sufficient**. (Real case: byte-identical shuffle/spill across 4 runs still spanned 18.65% in task time, which clears a 5.8% floor and would have shipped as a confident win.)
 
 ---
 
