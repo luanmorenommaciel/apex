@@ -19,6 +19,7 @@ SHELL := /bin/bash
 
 PY_LANES := engine serve memory verify
 UV       := uv
+JDK_MIN  := 17   # Spark 4.x floor; find-jdk.sh prefers 21 then 17
 
 # ANSI, but only when stdout is a TTY (keeps CI logs clean).
 ifneq (,$(findstring xterm,$(TERM)))
@@ -29,7 +30,8 @@ ifneq (,$(findstring xterm,$(TERM)))
   N := \033[0m
 endif
 
-.PHONY: help test test-py test-jar test-root $(addprefix test-,$(PY_LANES)) verify-e2e verify-ddl clean lanes
+.PHONY: help test test-py test-jar test-jar-cell test-root jdk \
+        $(addprefix test-,$(PY_LANES)) verify-e2e verify-ddl clean lanes
 
 help: ## Show this help
 	@printf "$(B)Apex$(N) — agentic performance intelligence for Apache Spark\n\n"
@@ -65,9 +67,7 @@ test: ## Run every test suite (Python lanes + jar + root gate); non-zero if any 
 	  printf "         brew install sbt, or rely on CI. Refusing to report green.\n"; \
 	  failed="$$failed jar(sbt-missing)"; \
 	else \
-	  jv=$$( cd jar && sbt -batch 'eval System.getProperty("java.specification.version")' 2>/dev/null \
-	         | grep -oE 'ans: String = [0-9]+' | grep -oE '[0-9]+$$' ); \
-	  $(MAKE) --no-print-directory _jar-cells JV="$$jv" || failed="$$failed jar"; \
+	  $(MAKE) --no-print-directory test-jar || failed="$$failed jar"; \
 	fi; \
 	echo; \
 	if [ -n "$$failed" ]; then \
@@ -78,35 +78,29 @@ test: ## Run every test suite (Python lanes + jar + root gate); non-zero if any 
 test-py: ## Run only the Python lane suites
 	@for lane in $(PY_LANES); do ( cd $$lane && $(UV) run --extra dev pytest -q -p no:warnings ) || exit 1; done
 
-test-jar: ## Run only the jar (Scala) suite (4 cross-build cells; 4.x needs JDK 17/21)
-	@command -v sbt >/dev/null 2>&1 || { echo "sbt not installed"; exit 1; }
-	@jv=$$( cd jar && sbt -batch 'eval System.getProperty("java.specification.version")' 2>/dev/null \
-	        | grep -oE 'ans: String = [0-9]+' | grep -oE '[0-9]+$$' ); \
-	 $(MAKE) --no-print-directory _jar-cells JV="$$jv"
-
-# build.sbt is a 4-cell matrix: apex_35 x {2.12, 2.13} run on JDK 8/11/17, but
+# build.sbt publishes 4 cells: apex_35 x {2.12, 2.13} run on JDK 8/11/17, but
 # apex_40 and apex_41 need JDK 17+ (Spark 4 dropped 11). sbt's forked test JVM
 # inherits sbt's own JVM — Test/javaHome is None and $JAVA_HOME does NOT override
-# it — so on a JDK 11 sbt the 4.x cells abort with UnsupportedClassVersionError.
-# Run what CAN be verified and say plainly what could not. A blanket failure that
-# doesn't distinguish "broken" from "wrong JDK" is how 2 of 4 published cells went
-# unverified in the first place.
-.PHONY: _jar-cells
-_jar-cells:
-	@if [ -z "$(JV)" ]; then echo "could not determine sbt's JVM version"; exit 1; fi
-	@if [ "$(JV)" -ge 17 ] 2>/dev/null; then \
-	  printf "  sbt JVM: Java $(JV) — all 4 cells verifiable\n"; \
-	  cd jar && sbt -batch -error test; \
-	else \
-	  printf "  sbt JVM: Java $(JV)\n"; \
-	  printf "$(Y)  PARTIAL$(N)  apex_35 (Scala 2.12 + 2.13) only.\n"; \
-	  printf "$(R)  NOT VERIFIED$(N)  apex_40, apex_41 — Spark 4.x requires JDK 17+.\n"; \
-	  printf "           sbt runs on Java $(JV) and its forked test JVM inherits that;\n"; \
-	  printf "           JAVA_HOME does not override it. Install JDK 17 or 21 and make it\n"; \
-	  printf "           sbt's JVM, or set Test/javaHome in build.sbt. CI matrixes both.\n"; \
-	  cd jar && sbt -batch -error 'apex_35/test' && \
-	    { printf "$(Y)  apex_35 green; 2 of 4 cells unverified — not reporting jar green.$(N)\n"; exit 1; }; \
-	fi
+# it — so on a JDK 11 sbt the 4.x cells abort with UnsupportedClassVersionError,
+# which is how 2 of 4 published cells stayed unverified while the suite read green.
+# `sbt -java-home` is the override that actually works; scripts/find-jdk.sh locates
+# a Spark-supported JDK without requiring a global machine change.
+test-jar: ## Run the jar suite — all 4 cross-build cells on a discovered JDK 17+
+	@command -v sbt >/dev/null 2>&1 || { echo "sbt not installed (brew install sbt)"; exit 1; }
+	@jdk="$$( ./scripts/find-jdk.sh $(JDK_MIN) )" || exit 1; \
+	 printf "  JDK: %s (Java %s)\n" "$$jdk" \
+	   "$$( "$$jdk/bin/java" -version 2>&1 | sed -nE '1s/.*version "([0-9]+).*/\1/p' )"; \
+	 cd jar && sbt -batch -error -java-home "$$jdk" test
+
+test-jar-cell: ## Run one cross-build cell. Usage: make test-jar-cell CELL=apex_40
+	@test -n "$(CELL)" || { echo "usage: make test-jar-cell CELL=apex_35|apex_40|apex_41"; exit 2; }
+	@jdk="$$( ./scripts/find-jdk.sh $(JDK_MIN) )" || exit 1; \
+	 cd jar && sbt -batch -error -java-home "$$jdk" '$(CELL)/test'
+
+jdk: ## Show which JDK the jar lane will build with
+	@jdk="$$( ./scripts/find-jdk.sh $(JDK_MIN) )" || exit 1; \
+	 printf "%s\n  Java %s\n" "$$jdk" \
+	   "$$( "$$jdk/bin/java" -version 2>&1 | sed -nE '1s/.*version "([0-9]+).*/\1/p' )"
 
 test-root: ## Run only the root six-lane gate unit tests
 	@cd engine && $(UV) run --extra dev pytest ../tests -q -p no:warnings
