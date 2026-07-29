@@ -193,12 +193,36 @@ def test_use_crew_false_never_calls_out_even_when_the_gate_would():
 
 
 def test_a_severe_finding_the_judge_cannot_reach_is_still_reported(monkeypatch):
-    """No API key in CI: the measured finding must survive, flagged as unjudged."""
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    """The judge being unreachable must never lose a measured finding.
+
+    INJECT the unavailability; do not try to manufacture it from the environment.
+    Deleting ANTHROPIC_API_KEY and hoping was wrong in three different ways, one
+    per environment this suite runs in:
+
+      * CI — crewai is not installed, so the reason is `crewai_not_installed`,
+        not `no_anthropic_api_key`. Six consecutive CI runs failed on the string
+        mismatch while the suite passed locally, which is how it went unnoticed.
+      * this laptop — crewai IS installed and credentials resolve from outside
+        the deleted variable, so the crew actually RAN and issued a live network
+        call to the Anthropic API from a unit test. It then failed on an
+        unrelated deprecated `temperature` parameter.
+      * a laptop with crewai installed and no credentials anywhere — the only
+        environment where the original assertion held.
+
+    A unit test must not depend on which machine runs it, and must never make a
+    network call. Patching `is_available` makes the unavailable branch the thing
+    under test in every environment, and the assertion checks the CLASS rather
+    than a reason string that is a property of the environment, not of this
+    behaviour.
+    """
+    import apex_engine.crew as crew_mod
+
+    monkeypatch.setattr(crew_mod, "is_available", lambda: (False, "crewai_not_installed"))
     store = FakeStore([ESCALATING])
     result = analyze("job-1", store, use_crew=True, crew_factory=None)
 
-    assert result["crew"] == "unavailable:no_anthropic_api_key"
+    assert result["crew"].startswith("unavailable:")
+    assert result["crew"] != "unavailable:"          # a reason must still be given
     assert result["llm_calls"] == 0
     assert len(result["findings"]) == 1
     assert result["findings"][0].confidence_score == pytest.approx(0.45)
