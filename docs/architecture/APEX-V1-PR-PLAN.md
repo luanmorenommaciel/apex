@@ -1,5 +1,24 @@
 # Plano de entrega por PR
 
+> ## ⓘ HISTORICAL — this plan was executed. Do not follow it as a live plan.
+>
+> Written 2026-07-23, before the lanes were built. **Waves 0–1 shipped** as PRs #44–51
+> (`git log --merges`). The plan is kept because it records how eight concurrent lanes were
+> organized, which is a genuinely reusable result — not because it describes remaining work.
+>
+> **Where reality diverged:**
+> - Two lanes it does not mention were added mid-build: **`memory/`** (⑦ recall) and
+>   **`verify/`** (⑧ refute). `verify` turned out to be the lane that most distinguishes the
+>   product — it refuted Apex's own headline finding.
+> - The contract went **v0.2 → v0.4** and grew **five cross-lane rules**, every one discovered
+>   by an implementation contradicting the spec.
+> - Delivery ran as parallel agent sessions against a frozen contract rather than as sequenced
+>   PR waves. Result: 50+ commits, eight lanes, **zero merge conflicts**.
+>
+> **Current state:** [`../../README.md`](../../README.md) ·
+> [`../../PIPELINE.md`](../../PIPELINE.md) · [`../../CHANGELOG.md`](../../CHANGELOG.md)
+> · lane briefs in [`../lanes/`](../lanes/)
+
 **Base de todos os PRs:** `origin/feat/base-project-e2e` (`9d51aca`)
 
 Os nomes abaixo são propostas. Nenhuma branch remota ou PR foi criado.

@@ -1,5 +1,15 @@
 # Apex V1 por raias e PRs
 
+> ## ⓘ HISTORICAL — the 6-lane design as approved on 2026-07-23.
+>
+> Preserved as the record of what was agreed. **v0.1 shipped eight lanes:** `memory/` (⑦) and
+> `verify/` (⑧) were added mid-build in response to what the first six uncovered. The security
+> boundaries and gates described here still hold; the lane inventory does not.
+>
+> **Current state:** [`../../PIPELINE.md`](../../PIPELINE.md) ·
+> [`../../CONTRACT.md`](../../CONTRACT.md) (now v0.4, five cross-lane rules) ·
+> [`../lanes/`](../lanes/)
+
 **Data:** 2026-07-23
 **Captain:** Augusto Cezar
 **Base central:** `origin/feat/base-project-e2e` em `9d51aca`

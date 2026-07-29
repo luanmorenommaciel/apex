@@ -22,8 +22,7 @@ The C3 tracer bullet was completed with `app-20260722192806-0000`: 19 plugin
 spans crossed `collect` into the canonical `infra` ClickHouse, became 19
 contract events, produced five deterministic skew findings, and were read by
 the MCP server. The two-core local scenario took about 385 seconds; use a
-runner timeout above seven minutes. Full evidence:
-[`../evidence/c3-full-tracer-bullet-2026-07-22.log`](../evidence/c3-full-tracer-bullet-2026-07-22.log).
+runner timeout above seven minutes. The full run log is not committed (build logs are gitignored); reproduce it with `make c3-full`.
 
 `make c4-aqe-skew` enables the dedicated AQE pathology. For a narrow runtime
 calibration, `make c4-aqe-probe` mirrors the JAR AQE test and must persist a
