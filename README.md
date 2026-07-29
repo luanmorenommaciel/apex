@@ -94,7 +94,7 @@ See **[docs/e2e/README.md](docs/e2e/README.md)** for how the three end-to-end en
 
 ## Start here
 
-1. **[CONTRACT.md](CONTRACT.md)** — the frozen interface every lane obeys, plus five cross-lane rules that were each discovered by an implementation contradicting the spec.
+1. **[CONTRACT.md](CONTRACT.md)** — the frozen interface every lane obeys, plus seven cross-lane rules that were each discovered by an implementation contradicting the spec.
 2. **[PIPELINE.md](PIPELINE.md)** — stage map, dependency graph, build order.
 3. **[docs/lanes/](docs/lanes/)** — the research-backed build brief for each lane.
 4. **[CHANGELOG.md](CHANGELOG.md)** — what shipped, and what each fix cost to learn.
@@ -119,7 +119,7 @@ Known limits, stated plainly:
 - **`memory/`'s corpus is one environment.** Its confidence numbers are directionally right and magnitude-uncertain until there is cross-host history.
 - **ZEST cold-start seeding is built but not seeded** — the upstream dataset returns `403 AccessDenied`, verified by a live probe kept in the code so the claim stays falsifiable.
 - **Spark 3.5 on JDK 21** is not officially supported by Spark, though both 3.5 cells pass there. Local builds prefer JDK 17, the only version supported by every cell; CI matrixes 17 and 21.
-- **`serve`'s advisory `symptoms[]` promotes AQE corroboration stage-blind.** A `skew_split` is execution-scoped, so a balanced stage in a job that had skew elsewhere can be labelled critical. `findings[]` — the adjudicated output — is unaffected. Tracked in [docs/e2e/CANONICAL_GATE.md](docs/e2e/CANONICAL_GATE.md).
+- **The 1 MiB/task skew floor can miss a stage AQE already split.** Splitting spreads the hot partition's bytes over more tasks, so a rescued stage systematically under-reads on bytes/task (live: stage 29 of the canonical run, 5% under the floor). The ground-truth path backstops it — engine reports the skew job-level from the `skew_split` transition. Adjudicated as intended conservatism, with the rationale in [docs/e2e/CANONICAL_GATE.md](docs/e2e/CANONICAL_GATE.md).
 
 ## License
 

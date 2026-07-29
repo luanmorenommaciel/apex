@@ -112,6 +112,27 @@ First complete release. Eight lanes, one frozen contract, 400 tests.
    the wrong thing. Corollary: pick a positive control the predictor can actually model.
 5. **`skew_split` gating on exchange bytes creates a false-negative class.** Projection pruning
    shrinks the exchange, so absence of a transition is **not** evidence of absence of skew.
+6. **Rule 1 is vacuous when `n_tasks ≤ slots`.** `bar = (n−1)/(slots−1) ≤ 1` exactly when
+   `n ≤ slots`, and `p99/p50 ≥ 1` always — so every such stage passes unconditionally, including
+   a perfectly uniform one. Live: stage 25 at ratio **1.03**, stage 2 at **1.00**, both
+   "tail-bound." Exclude them rather than passing them.
+7. **A threshold on post-intervention telemetry measures the healed state.** Stage 29's exchange
+   was **1.084 MiB/task** over its original 100 partitions — above the floor — but AQE split it
+   into 114 tasks, giving 0.951 MiB/task, below. It was disqualified by the dilution its own fix
+   produced. Detect the reshape (`task_count > shuffle.partitions`, joinable via `job_conf`);
+   do **not** soften a measurability bound to compensate for a timing artifact.
+
+### Fixed — found by the live end-to-end run
+
+- **`serve` promoted skew symptoms stage-blind.** A `skew_split` is **execution-scoped** —
+  contract v0.2 keys transitions by `(job_id, execution_id)` and carries no execution→stage map —
+  yet every skew symptom was promoted to `critical` + `adjudicated=True` whenever one existed
+  anywhere in the job. Live consequence: stage 25, a **1.03× ratio** (perfectly balanced),
+  reported as *"critical skew, confirmed by Spark itself."* It also inflated `suggest_fix`
+  confidence to 0.9. Fixed by removing promotion entirely: the split is now an execution-scoped
+  note stating its own scope. Attaching it to "the stage it came from" was **rejected** —
+  nothing in the contract ties an execution to a stage, and fabricating that tie is the same
+  class of bug one layer down. `findings[]` was never affected, which is why the gate passed.
 
 ### Known limits
 

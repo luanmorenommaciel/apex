@@ -100,27 +100,66 @@ sources exactly: `spark_events` (20 cols), `findings` (14), `plan_transitions` (
 
 ---
 
-## Findings from this run — two open, neither blocking the gate
+## Findings from this run — one fixed, one adjudicated by design
 
-**1. `serve` symptom promotion is stage-blind.** `diagnose.py:268-276` promotes **every** skew
-symptom to `critical` + `adjudicated=True` whenever a `skew_split` exists anywhere in the job.
-But a `skew_split` is **execution-scoped**, not stage-scoped: it proves skew occurred *somewhere
-in that execution*, not that a given stage is skewed. On this run the only symptom clearing the
-volume floor was **stage 25 at a 1.03× ratio** — perfectly balanced — and it was promoted to
-"critical skew, confirmed by Spark itself." The emitted evidence text even contradicts its own
-severity, reading `critical` alongside *"unadjudicated measurement… is engine's call."*
+**1. `serve` symptom promotion was stage-blind — FIXED.** `diagnose.py:_apply_ground_truth`
+promoted **every** skew symptom to `critical` + `adjudicated=True` whenever a `skew_split`
+existed anywhere in the job. But a `skew_split` is **execution-scoped**, not stage-scoped:
+contract v0.2 keys transitions by `(job_id, execution_id)` and carries no execution→stage map,
+so a split proves skew occurred *somewhere in that execution*, never that a given stage is
+skewed. On this run the only symptom clearing the volume floor was **stage 25 at a 1.03×
+ratio** — perfectly balanced, 8 tasks — promoted to "critical skew, confirmed by Spark itself,"
+with evidence reading *"unadjudicated measurement… is engine's call"* in the same breath.
 
-Engine gets this right by placing its AQE finding at `stage_id: -1`. **This does not affect
-`findings[]`**, which serve reads from `apex.findings` and passes through unchanged — the gate
-compares those and passed. It affects the advisory `symptoms[]` surface only.
+Pinned by `test_a_skew_split_adjudicates_no_individual_stage` (serve), built from these exact
+numbers: it failed red against the old code (`'critical' != 'info'`) before the fix. The fix
+holds the symptom/verdict split: an execution-scoped signal cannot adjudicate a stage-scoped
+symptom, so no stage symptom is promoted, ever — the split is reported as an
+**execution-scoped note** in `Diagnosis.aqe_ground_truth` that states its own scope. This is
+the scope engine already uses: its AQE finding sits at `stage_id: -1` because the signal is
+job-scoped, and serve's `StageSymptom.adjudicated`/`ground_truth` fields now document that no
+v0.2 signal can honestly set them. The alternative — attaching the split to "the stage it came
+from" — was rejected: nothing in the contract ties an execution to a stage, and fabricating
+that tie is the same class of bug as the promotion, one layer down. **`findings[]` was never
+affected** (serve passes engine's rows through unchanged — which is why the gate passed); the
+defect lived in the advisory `symptoms[]` surface only.
 
-**2. The 1 MiB/task volume floor excluded the genuinely skewed stage.** Stage 29 carried 114
-tasks (= 100 + 14 AQE subpartitions — it is *the stage AQE actually split*) at **996,772
-bytes/task**, which is **95% of 1 MiB**. It missed the floor by 5% and was dropped. Same family as
-contract rule 5's false-negative class: a byte threshold silencing a real signal. Worth deciding
-whether the floor should be a hard cut or a confidence input.
+**2. The 1 MiB/task volume floor excluded the genuinely skewed stage — ADJUDICATED: the hard
+cut stays.** Stage 29 carried 114 tasks (= 100 + 14 AQE subpartitions — it is *the stage AQE
+actually split*) at **996,772 bytes/task**, 95% of 1 MiB, and was dropped. The question asked
+was whether volume should be a confidence input rather than a gate. Judgment: **no**, for five
+reasons:
 
-Neither is a data-integrity defect and neither failed the gate.
+- **The floor is a measurability bound, not a threshold.** Below ~1 MiB/task a p99/p50 ratio
+  is dominated by JVM warm-up and scheduler jitter — there is no data-volume tail for the
+  ratio to describe, at *any* confidence. A confidence input answers "how sure are we of the
+  claim"; the floor says "there is no claim to be sure about." Confidence cannot weight a
+  non-measurement into existence.
+- **The noise it excludes was live in this very run.** Stage 6 — the job's *highest* ratio at
+  10.97× — moves 427 B/task. A soft gate emits it (a confidence label does not re-rank), and
+  the advisory surface is back to the P0 disease: the loudest number is the wrong one.
+- **The constant is a cross-lane agreement, not a local choice.** It is shared verbatim by
+  engine (`watchers.skew.MIN_BYTES_PER_TASK`), verify (`guardrails.SKEW_MIN_BYTES_PER_TASK`)
+  and serve precisely so no two lanes disagree about which stages a ratio may describe.
+  Softening it in one lane re-opens the P0 contradiction class — one job, two lanes, opposite
+  verdicts.
+- **Stage 29's miss is a different defect than "the cut is too hard."** Its bytes/task is low
+  *because AQE already split it*: the 14 subpartitions divided the hot partition's bytes
+  across more tasks, so the floor compared a **post-intervention** measurement against a
+  pre-intervention eligibility bound. A stage AQE has already rescued will systematically
+  under-read on bytes/task — moving the cut to 950 KiB just moves the boundary; the next
+  rescued stage lands at 90%.
+- **The system did not miss the skew.** Engine's AQE watcher reported it job-level at 0.97
+  from the transition. The floor's false-negative class (contract rule 5 names the mirror
+  class — small exchanges where the split never fires) is backstopped by the ground-truth
+  path whenever AQE is on and acts. Both signals are conservative by design; the contract's
+  accepted posture is that absence of evidence is reported as such, never smoothed over.
+
+The honest follow-up is not loosening the floor: it is recognizing that
+`task_count > spark.sql.shuffle.partitions` (readable by joining `apex.job_conf`) marks a
+stage AQE reshaped, whose bytes/task is a post-split measurement. That refinement belongs to
+engine — which reads `job_conf` and `plan_transitions`; serve does not — and rides with the
+execution→stage map work, not with a threshold tweak in one lane.
 
 ---
 

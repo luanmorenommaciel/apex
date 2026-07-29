@@ -10,7 +10,7 @@
 > - Two lanes it does not mention were added mid-build: **`memory/`** (⑦ recall) and
 >   **`verify/`** (⑧ refute). `verify` turned out to be the lane that most distinguishes the
 >   product — it refuted Apex's own headline finding.
-> - The contract went **v0.2 → v0.4** and grew **five cross-lane rules**, every one discovered
+> - The contract went **v0.2 → v0.4** and grew **seven cross-lane rules**, every one discovered
 >   by an implementation contradicting the spec.
 > - Delivery ran as parallel agent sessions against a frozen contract rather than as sequenced
 >   PR waves. Result: 50+ commits, eight lanes, **zero merge conflicts**.

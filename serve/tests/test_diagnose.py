@@ -105,16 +105,23 @@ def test_heavy_shuffle_needs_real_volume():
 
 
 # -- AQE ground truth ------------------------------------------------------
-def test_skew_split_promotes_the_skew_heuristic_to_ground_truth():
+def test_skew_split_is_execution_scoped_and_promotes_no_stage_symptom():
+    """A skew_split proves skew existed SOMEWHERE in the execution (contract
+    v0.2 has no execution→stage map), so it is a job-level note — never a
+    per-stage verdict. Before this split was enforced, the mere presence of a
+    split promoted every skew symptom in the job to critical."""
     rows = [stage_row(4, p50_ms=100, p99_ms=500, shuffle_read_bytes=50 * 10 * MB)]
     plain = diagnose.analyze("job-1", rows, [], [])
     assert plain.symptoms[0].severity == "info"
     assert plain.symptoms[0].ground_truth is False
 
     confirmed = diagnose.analyze("job-1", rows, [], [transition_row("skew_split")])
-    assert confirmed.symptoms[0].ground_truth is True
-    assert confirmed.symptoms[0].severity == "critical"
-    assert "Confirmed by an AQE runtime decision" in confirmed.summary
+    # the symptom is unchanged — still an unadjudicated measurement...
+    assert confirmed.symptoms[0].severity == "info"
+    assert confirmed.symptoms[0].adjudicated is False
+    assert confirmed.symptoms[0].ground_truth is False
+    # ...while the ground truth is reported at its own scope, saying so
+    assert any("execution" in note for note in confirmed.aqe_ground_truth)
 
 
 def test_coalesce_is_not_evidence_of_skew():

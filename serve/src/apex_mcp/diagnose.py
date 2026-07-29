@@ -248,32 +248,30 @@ def stage_symptoms(stage: StageView, time_share: float = 0.0) -> list[StageSympt
     return sorted(out, key=lambda s: s.score, reverse=True)
 
 
-def _apply_ground_truth(
-    symptoms: list[StageSymptom], transitions: list[PlanTransitionView]
-) -> list[str]:
-    """AQE told us what it actually did — promote matching heuristics.
+def _apply_ground_truth(transitions: list[PlanTransitionView]) -> list[str]:
+    """AQE told us what it actually did — report it at ITS scope, no further.
 
-    A p99/p50 ratio is a *symptom* that needs interpretation; an AQE skew split
-    is Spark's own decision, i.e. ground truth. When both agree, the finding
-    stops being a guess.
+    A p99/p50 ratio is a *symptom* keyed to a stage; an AQE skew split is
+    Spark's own decision keyed to an EXECUTION (contract v0.2 has no
+    execution→stage map). The split proves skew existed SOMEWHERE in the
+    execution — never that any given stage is skewed — so it cannot adjudicate
+    a stage-scoped symptom. Promoting one did exactly that: a balanced stage
+    (live: stage 25 of app-20260729180235-0044, 1.03x over 8 tasks) was
+    rendered "critical, confirmed by Spark itself". Engine carries the same
+    signal as a finding at stage_id -1 for the same reason; serve carries it
+    as an execution-scoped NOTE and leaves every symptom unadjudicated.
     """
     kinds = {t.transition_type for t in transitions if t.confidence == "HIGH"}
     notes: list[str] = []
 
     if "skew_split" in kinds:
         notes.append(
-            "AQE split a skewed join at runtime (HIGH confidence) — skew is "
-            "confirmed by Spark itself, not inferred from the p99/p50 tail."
+            "AQE split a skewed partition at runtime (HIGH confidence) — Spark "
+            "itself confirms skew existed SOMEWHERE in this execution. The "
+            "signal is execution-scoped (contract v0.2 has no execution→stage "
+            "map), so it adjudicates NO individual stage: per-stage skew "
+            "verdicts remain engine's call."
         )
-        for symptom in symptoms:
-            if symptom.symptom == "skew":
-                symptom.ground_truth = True
-                symptom.adjudicated = True  # Spark's own decision, not our threshold
-                if symptom.severity in ("info", "warning"):
-                    symptom.severity = "critical"
-                # +100 == one full severity tier: ground truth outranks any
-                # purely heuristic symptom of the same nominal severity.
-                symptom.score = _score(symptom.severity, 0.0) + 100.0
     if "join_switch" in kinds:
         notes.append(
             "AQE changed the join strategy at runtime (HIGH confidence) — the "
@@ -327,7 +325,7 @@ def analyze(
         share = (stage.p99_ms / total_tail_ms) if total_tail_ms else 0.0
         symptoms.extend(stage_symptoms(stage, share))
 
-    aqe_notes = _apply_ground_truth(symptoms, transitions)
+    aqe_notes = _apply_ground_truth(transitions)
     symptoms.sort(key=lambda s: s.score, reverse=True)
 
     first = stage_rows[0]
@@ -336,8 +334,9 @@ def analyze(
         notes.append(
             "apex.findings holds no rows for this job_id — the symptoms below "
             "are UNADJUDICATED measurements derived from spark_events + "
-            "plan_transitions only. Engine has not ruled on this job; only an "
-            "AQE runtime decision (marked ground_truth) is a verdict here."
+            "plan_transitions only. Engine has not ruled on this job; an AQE "
+            "runtime decision (see aqe_ground_truth) is execution-scoped ground "
+            "truth and adjudicates no individual stage."
         )
 
     if not symptoms:

@@ -11,8 +11,9 @@ one was louder.
 These tests pin the split this fix lands on:
 
   a SYMPTOM is a MEASUREMENT  — "p99/p50 = 21.62x across 50 tasks, 278 B/task"
-  a VERDICT  is an ADJUDICATION — "critical skew, fix with X" (engine's job,
-                                or Spark's own via an AQE skew_split)
+  a VERDICT  is an ADJUDICATION — "critical skew, fix with X" (engine's job;
+                                Spark's own AQE skew_split is execution-scoped
+                                and adjudicates no individual stage)
 """
 
 from __future__ import annotations
@@ -73,17 +74,49 @@ def test_fallback_reports_real_skew_as_an_unadjudicated_measurement():
     assert "3.3 slots" in skew.evidence
 
 
-def test_aqe_skew_split_is_the_only_skew_adjudication_serve_makes():
-    """Spark's own runtime decision is ground truth serve CAN support."""
+def test_a_skew_split_adjudicates_no_individual_stage():
+    """Live gate run `app-20260729180235-0044`: the only skew symptom clearing
+    the volume floor was stage 25 at 1.03x over 8 tasks — balanced — and a
+    skew_split elsewhere in the job promoted it to "critical skew, confirmed by
+    Spark itself", with evidence reading "unadjudicated measurement… is
+    engine's call" in the same breath.
+
+    A skew_split is EXECUTION-scoped: contract v0.2 keys transitions by
+    (job_id, execution_id) and carries no execution→stage map, so it proves
+    skew existed SOMEWHERE in the execution, never that a given stage is
+    skewed. Engine places its AQE finding at stage_id -1 for exactly this
+    reason. A stage-scoped symptom cannot carry an execution-scoped verdict.
+    """
+    row = stage_row(
+        25, p50_ms=1000, p99_ms=1030, task_count=8,  # 1.03x — balanced
+        shuffle_read_bytes=8 * 2 * MB,               # 2 MiB/task: clears the floor
+    )
+    result = diagnose.analyze("job-1", [row], [], [transition_row("skew_split")])
+
+    skew = next(s for s in result.symptoms if s.symptom == "skew")
+    assert skew.severity == "info"
+    assert skew.adjudicated is False
+    assert skew.ground_truth is False
+    assert "unadjudicated" in skew.evidence
+    # The ground truth survives — execution-scoped, in the job-level surface
+    # where it belongs, and saying so.
+    assert any("execution" in note for note in result.aqe_ground_truth)
+
+
+def test_aqe_skew_split_makes_no_stage_scoped_adjudication():
+    """Spark's own runtime decision is ground truth serve CAN report — but only
+    at the decision's own scope. A 5x tail with real volume keeps its
+    measurement; the split adds an execution-scoped note, not a verdict."""
     row = stage_row(
         4, p50_ms=100, p99_ms=500, task_count=50,
         shuffle_read_bytes=50 * 10 * MB,
     )
     result = diagnose.analyze("job-1", [row], [], [transition_row("skew_split")])
     skew = next(s for s in result.symptoms if s.symptom == "skew")
-    assert skew.ground_truth is True
-    assert skew.adjudicated is True
-    assert skew.severity == "critical"
+    assert skew.ground_truth is False
+    assert skew.adjudicated is False
+    assert skew.severity == "info"
+    assert any("execution" in note for note in result.aqe_ground_truth)
 
 
 def test_compare_runs_does_not_report_noise_as_regression():

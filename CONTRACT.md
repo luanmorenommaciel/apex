@@ -14,7 +14,7 @@
 
 ---
 
-## Five cross-lane rules (derived from real data — every consumer must honor these)
+## Seven cross-lane rules (derived from real data — every consumer must honor these)
 
 **1. Skew is only worth fixing if the stage is TAIL-BOUND.** From list-scheduling makespan bounds (derived and independently re-verified):
 
@@ -39,6 +39,18 @@ Reporting `runtime_unresolved` alongside `mechanism_confirmed` is **more useful 
 > ⚠️ **Corollary — pick a positive control the predictor can model.** AQE `skew_split` typically *coalesces* partitions too (e.g. 100 → 17), so W is **not** conserved and it is a repartitioning, not a pure tail redistribution. A predictor that (correctly) refuses the makespan bound for partition-sizing changes cannot certify such a control. Choose a control whose fix class the model handles.
 
 **5. `skew_split` gating on exchange bytes creates a false-NEGATIVE class.** AQE only splits a partition exceeding `skewedPartitionThresholdInBytes`, so any downstream query shape that **prunes to a narrow key** (`groupBy(k).count()`, `select(k).count()`, …) shrinks the exchange and silently disqualifies an otherwise genuinely skewed stage. *Real case: a 5M-row / 65MB table produced only a 10.6MB exchange and a ~5MB hot partition — under the 16m threshold — so `skew_split` never fired for reasons that had nothing to do with data volume.* Absence of a `skew_split` transition is **not** evidence of absence of skew.
+
+**6. Rule 1 is VACUOUS when `n_tasks ≤ slots`, and must not be applied there.** The bar is `(n−1)/(slots−1)`, so `bar ≤ 1` **exactly when** `n ≤ slots` — and `p99/p50 ≥ 1` always. Therefore *every* stage with `n ≤ slots` satisfies rule 1 unconditionally, **including a perfectly uniform one**. This is arithmetic, not an edge case.
+
+*Real case (`app-20260729182801-0045`, 8 slots): stage 25 at ratio **1.03** (bar 1.0), stage 12 at **1.01** (bar 0.43), stage 2 at **1.00** (bar 0.43) — all "tail-bound." Stage 25 was the only symptom to survive every other gate, and it is perfectly balanced; it is what a consumer then promoted to "critical skew."*
+
+The verdict is *technically* correct — with a single wave, makespan **is** the longest task — but it carries **zero information about skew**, because it holds for every such stage. A stage with `n ≤ slots` cannot be helped by redistribution at all: every task already owns a slot. **Exclude `n ≤ slots` stages from rule-1 skew reasoning rather than passing them.** Where cluster width is UNKNOWN, this exclusion is unavailable — one more reason a rule-1 verdict at unknown width may never carry full confidence.
+
+**7. A threshold evaluated on POST-INTERVENTION telemetry measures the healed state.** AQE reshapes a stage *before* the plugin observes it, so the metrics that arrive already reflect the fix. Any per-task threshold applied to them is compared against a bound derived for the *pre*-intervention shape.
+
+*Real case: stage 29's exchange of 113,632,037 bytes over its original `spark.sql.shuffle.partitions=100` is **1,136,320 B/task — 1.084 MiB, above the 1 MiB floor**. AQE split it into **114** tasks, giving 996,772 B/task = 0.951 MiB — **below** the floor. The stage was disqualified by the dilution its own fix produced.*
+
+This is **not** a threshold-tuning problem: lowering the cut to 950 KiB only relocates the boundary and rescues a different arbitrary stage. Detect the reshape instead — `task_count > spark.sql.shuffle.partitions` (joinable via `apex.job_conf`) marks an AQE-reshaped stage, whose pre-intervention shape must be reconstructed before any per-task bound is applied to it. **Do not soften a measurability bound to compensate for a timing artifact.** (Credit: serve lane.)
 
 ---
 

@@ -7,7 +7,7 @@
 > boundaries and gates described here still hold; the lane inventory does not.
 >
 > **Current state:** [`../../PIPELINE.md`](../../PIPELINE.md) ·
-> [`../../CONTRACT.md`](../../CONTRACT.md) (now v0.4, five cross-lane rules) ·
+> [`../../CONTRACT.md`](../../CONTRACT.md) (now v0.4, seven cross-lane rules) ·
 > [`../lanes/`](../lanes/)
 
 **Data:** 2026-07-23

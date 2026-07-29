@@ -92,9 +92,13 @@ class StageSymptom(BaseModel):
     ("critical skew, fix with X") is an adjudication, and adjudication is
     engine's job — it needs the cluster width, the shape's measured noise
     floor and the plan's join evidence, none of which a StageView row carries.
-    ``adjudicated`` is True only when a verdict here rests on Spark's own
-    runtime decision (an AQE ground-truth transition), never on a serve-side
-    threshold.
+    ``adjudicated`` may be True only when a verdict here rests on Spark's own
+    runtime decision, never on a serve-side threshold — and contract v0.2 keys
+    those decisions by execution, with no execution→stage map, so today no
+    transition can honestly set it on a stage-scoped symptom and none does.
+    The fields stay in the schema for the contract version that carries that
+    map; an AQE decision is meanwhile reported execution-scoped in
+    ``Diagnosis.aqe_ground_truth``.
     """
 
     stage_id: int

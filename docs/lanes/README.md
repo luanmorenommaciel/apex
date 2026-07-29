@@ -15,7 +15,7 @@ One research-backed brief per lane. Each is a **self-contained branch brief**: m
 
 **Two framings, deliberately.** Briefs ①–⑥ were written *before* their lane existed and are
 preserved as-written — they are the specification the lane was built against, and reading them
-next to the result shows where the spec was wrong (all five cross-lane contract rules came from
+next to the result shows where the spec was wrong (all seven cross-lane contract rules came from
 exactly that gap). `MEMORY.md` and `VERIFY.md` are **as-built**: both lanes were added mid-build
 in response to what the first six uncovered, so a forward-looking brief for them would be
 fiction. Each documents the lane as shipped, with the research that justified its decisions.
