@@ -1,0 +1,155 @@
+# Apex infra · the REAL, persistent ClickStack — the canonical data platform the whole
+# pipeline stores into and visualizes from. Four services:
+#
+#   otel-collector ──native:9000──> clickhouse <──HTTP:8123── hyperdx(app) ──state──> mongodb
+#        ▲ OTLP :4318                (apex DB, contract schema + rollups + reshape MVs)
+#        │
+#   jar / collect  (a POSTed apex.stage span -> otel_traces -> MV -> spark_events)
+#
+# MongoDB is REQUIRED: HyperDX stores dashboards/sources/connections/users in Mongo, NOT in
+# ClickHouse. The all-in-one image loses that on restart — this compose stack persists it.
+#
+# Host ports are parametrized via .env (CONTRACT Port Map defaults live in .env.example).
+# On the shared dev host the stray oteru-collector squats 8123/9000/4318, so the local .env
+# shifts ClickHouse->28123/29000 and the collector->24318/24317; HyperDX stays on 8090 (Port Map).
+#
+# SHARED-NETWORK ALIAS RULE (postmortem: the lost-telemetry bug).
+# Compose gives every service a short network alias equal to its service name
+# (`clickhouse`, `otel-collector`, ...). On a network SHARED with another lane's stack
+# (e.g. apex-collect-net, whose throwaway ClickHouse is also reachable as `clickhouse`),
+# that short alias resolves to BOTH containers and Docker DNS round-robins between them —
+# spans written to the wrong ClickHouse land in a DB with no reshape MVs and vanish.
+# Rule, enforced below by construction:
+#   1. Every infra service carries an explicit alias equal to its GLOBALLY-UNIQUE
+#      container_name (apex-infra-*). Container names are unique per Docker daemon, so
+#      these aliases can never collide, no matter which network the stack is joined to.
+#   2. Infra-internal references (collector exporter, HyperDX connection, Mongo URI)
+#      use ONLY the qualified apex-infra-* alias — never the short service name — so a
+#      foreign container squatting the short name cannot intercept infra traffic.
+#   3. NEVER `docker network connect --alias <other-lane-name>` an infra container onto
+#      another lane's network (that is exactly how apex-infra-otel-collector once
+#      answered to `apex-otel-collector` on apex-collect-net). Join with no alias, or
+#      with an apex-infra-* alias only.
+
+name: apex-infra
+
+services:
+  # ── ClickHouse: canonical store (contract schema applied on first init from ./sql) ──
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: apex-infra-clickhouse
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-apex_local_dev}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-apex}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "${CLICKHOUSE_HTTP_HOST_PORT:-8123}:8123"     # HTTP  (human/tool + HyperDX reach-in)
+      - "${CLICKHOUSE_NATIVE_HOST_PORT:-9000}:9000"   # native TCP (collector + reach-in)
+    ulimits:
+      nofile: { soft: 262144, hard: 262144 }
+    volumes:
+      - ch-data:/var/lib/clickhouse
+      # Contract DDL auto-applied on first boot in filename order: db, contract tables,
+      # rollup+MV, skew, otel landing table, plan_transitions, reshape MVs.
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--user", "${CLICKHOUSE_USER:-apex}", "--password", "${CLICKHOUSE_PASSWORD:-apex_local_dev}", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks:
+      apex:
+        # Explicit, collision-proof alias = the globally-unique container name.
+        # The short `clickhouse` alias still exists (compose adds it); infra simply
+        # never uses it — see the shared-network alias rule at the top of this file.
+        aliases: [apex-infra-clickhouse]
+
+  # ── MongoDB: HyperDX application state (dashboards/sources/connections/users) ──
+  mongodb:
+    image: mongo:5.0.14-focal
+    container_name: apex-infra-mongodb
+    ports:
+      - "${MONGO_HOST_PORT:-27017}:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      apex:
+        aliases: [apex-infra-mongodb]
+
+  # ── HyperDX: UI + API. Seeds a ClickHouse connection + the custom Spark Events Source ──
+  # DEFAULT_CONNECTIONS/DEFAULT_SOURCES are applied ONCE on a fresh Mongo, then persist in
+  # Mongo. This scripts the #1 HyperDX gotcha: spark_events is a CUSTOM schema HyperDX cannot
+  # auto-infer, so every expression (Timestamp=ts, Service=app_id, attributes=attributes,
+  # Trace Id=job_id) is set explicitly — otherwise the source silently returns nothing.
+  hyperdx:
+    # NOTE: the brief's `clickhouse/hdx-oss-v2` is not a real Docker Hub repo. The actual
+    # HyperDX v2 app image (the one the official v2 compose uses, supports MONGO_URI +
+    # DEFAULT_CONNECTIONS/DEFAULT_SOURCES) is docker.hyperdx.io/hyperdx/hyperdx, mirrored on
+    # Docker Hub as hyperdx/hyperdx. Override via HDX_IMAGE / HDX_IMAGE_VERSION in .env.
+    image: ${HDX_IMAGE:-hyperdx/hyperdx}:${HDX_IMAGE_VERSION:-2}
+    container_name: apex-infra-hyperdx
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+    ports:
+      - "${HYPERDX_APP_HOST_PORT:-8090}:${HYPERDX_APP_PORT:-8090}"     # UI  (Port Map: 8090, NOT 8080)
+      - "${HYPERDX_API_HOST_PORT:-8000}:${HYPERDX_API_PORT:-8000}"     # API (browser -> NEXT_PUBLIC_SERVER_URL)
+      - "${HYPERDX_OPAMP_HOST_PORT:-4320}:${HYPERDX_OPAMP_PORT:-4320}" # OpAMP (Port Map: 4320)
+    environment:
+      FRONTEND_URL: http://localhost:${HYPERDX_APP_PORT:-8090}
+      HYPERDX_API_KEY: ${HYPERDX_API_KEY:?set HYPERDX_API_KEY in .env}
+      HYPERDX_API_PORT: ${HYPERDX_API_PORT:-8000}
+      HYPERDX_APP_PORT: ${HYPERDX_APP_PORT:-8090}
+      HYPERDX_APP_URL: http://localhost
+      HYPERDX_LOG_LEVEL: ${HYPERDX_LOG_LEVEL:-info}
+      MONGO_URI: mongodb://apex-infra-mongodb:27017/hyperdx
+      NEXT_PUBLIC_SERVER_URL: http://127.0.0.1:${HYPERDX_API_PORT:-8000}
+      OPAMP_PORT: ${HYPERDX_OPAMP_PORT:-4320}
+      OTEL_SERVICE_NAME: hdx-oss-api
+      USAGE_STATS_ENABLED: ${USAGE_STATS_ENABLED:-false}
+      DEFAULT_CONNECTIONS: '[{"name":"Apex ClickHouse","host":"http://apex-infra-clickhouse:8123","username":"${CLICKHOUSE_USER:-apex}","password":"${CLICKHOUSE_PASSWORD:-apex_local_dev}"}]'
+      DEFAULT_SOURCES: '[{"from":{"databaseName":"apex","tableName":"spark_events"},"kind":"log","name":"Spark Events","timestampValueExpression":"ts","displayedTimestampValueExpression":"ts","implicitColumnExpression":"plan_json","serviceNameExpression":"app_id","bodyExpression":"plan_json","eventAttributesExpression":"attributes","resourceAttributesExpression":"attributes","defaultTableSelectExpression":"ts,app_id,job_id,stage_id,task_duration_p50_ms,task_duration_p99_ms","severityTextExpression":"","traceIdExpression":"job_id","spanIdExpression":"","connection":"Apex ClickHouse"}]'
+    restart: unless-stopped
+    networks:
+      apex:
+        aliases: [apex-infra-hyperdx]
+
+  # ── OTel Collector: OTLP ingestion -> apex.otel_traces (contrib; interop-identical to collect) ──
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.156.0
+    container_name: apex-infra-otel-collector
+    command: ["--config", "/etc/otelcol-contrib/config.yaml"]
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-apex_local_dev}
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "${OTLP_HTTP_HOST_PORT:-4318}:4318"           # OTLP/HTTP receiver (jar/collect -> infra)
+      - "${OTLP_GRPC_HOST_PORT:-4317}:4317"           # OTLP/gRPC receiver (optional)
+      - "${COLLECTOR_HEALTH_HOST_PORT:-13133}:13133"  # health_check extension
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      apex:
+        aliases: [apex-infra-otel-collector]
+
+networks:
+  apex:
+    name: apex-infra-net
+
+volumes:
+  ch-data:
+  mongo-data:

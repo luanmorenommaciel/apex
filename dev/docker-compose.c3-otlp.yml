@@ -1,0 +1,22 @@
+# Optional C3 integration overlay.
+#
+# Keep docker-compose.yml standalone: this overlay is used only after infra/
+# created apex-collect-net. Master and worker join that network so the Spark
+# RPC bind address and executor callbacks can reach the redacting collector.
+services:
+  spark-master:
+    networks:
+      default: {}
+      apex-collect: {}
+  # The worker must share the collector network with the master. Spark binds
+  # the master's RPC service to the first attached network address, and plugin
+  # callbacks can also run on executors.
+  spark-worker:
+    networks:
+      default: {}
+      apex-collect: {}
+
+networks:
+  apex-collect:
+    external: true
+    name: apex-collect-net

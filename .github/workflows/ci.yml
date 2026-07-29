@@ -1,0 +1,106 @@
+name: CI
+
+# Every lane is a separate project with its own dependency set, so each gets its
+# own job. Tests that need live ClickHouse skip themselves, which keeps this
+# workflow fast and service-free — the live end-to-end gate is e2e.yml.
+#
+# The jar job matrixes over JDK 17 and 21 because build.sbt publishes four
+# (Spark, Scala) cells and the two Spark 4.x cells cannot run on JDK 11. A
+# developer laptop on JDK 11 can only verify half the matrix; this is the only
+# place all four are actually covered.
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: ${{ matrix.lane }} (py)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [engine, serve, memory, verify]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: pytest
+        working-directory: ${{ matrix.lane }}
+        run: uv run --extra dev pytest -q -p no:warnings
+
+  root-gate:
+    name: root six-lane gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      # Driven from engine's environment: the gate imports apex_engine and
+      # apex_mcp, and engine's project pins both.
+      - name: pytest tests/
+        working-directory: engine
+        run: uv run --extra dev pytest ../tests -q -p no:warnings
+
+  jar:
+    name: jar (JDK ${{ matrix.jdk }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: ["17", "21"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.jdk }}
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - name: sbt test (all 4 cross-build cells)
+        working-directory: jar
+        run: sbt -batch test
+
+  collector-config:
+    name: collect config validates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # A malformed collector pipeline is invisible until telemetry silently
+      # stops arriving, which already cost this project 50-70% of its events
+      # once. Validate the config without starting anything.
+      # Every ${env:...} the config references must be supplied or validation fails
+      # on the FIRST missing one and hides the rest. CLICKHOUSE_ENDPOINT is not
+      # optional: the clickhouse exporter parses it as a DSN at load time.
+      # tcp:// selects the native protocol — never mix tcp:// with the 8123 HTTP port.
+      - name: otelcol validate
+        working-directory: collect
+        run: |
+          docker run --rm \
+            -e REDACTION_SECRET_KEY=$(openssl rand -hex 32) \
+            -e CLICKHOUSE_ENDPOINT=tcp://clickhouse:9000 \
+            -e CLICKHOUSE_USER=apex \
+            -e CLICKHOUSE_PASSWORD=ci_placeholder \
+            -v "$PWD/config.yaml:/c.yaml:ro" \
+            otel/opentelemetry-collector-contrib:0.156.0 validate --config /c.yaml
+
+  license:
+    name: license present
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The README calls Apex open. Without a LICENSE that is legally false, so
+      # assert the file exists rather than trusting it stays there.
+      - run: test -f LICENSE && grep -q "Apache License" LICENSE

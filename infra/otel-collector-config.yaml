@@ -1,0 +1,72 @@
+# Apex infra · OTel Collector (contrib v0.156.0) — the ClickStack ingestion collector.
+#
+#   OTLP/HTTP :4318 (+ gRPC :4317)  ->  memory_limiter  ->  clickhouse exporter  ->  apex.otel_traces
+#
+# WHY contrib (not the OpAMP-managed clickstack collector): infra is the STORE that collect
+# points at, and the exit criterion is byte-level interop with collect. This is the SAME
+# collector image + clickhouse-exporter contract collect proved (create_schema:false, native
+# tcp:9000, traces_table_name=otel_traces), so a span POSTed to infra's :4318 lands in the
+# identical apex.otel_traces the reshape MVs read — whether it arrived here or via collect.
+# The HyperDX app still exposes OpAMP :4320 (Port Map) for a clickstack-managed collector if
+# you prefer that path later; this standalone collector simply doesn't attach to it.
+#
+# Spans only: the contract ships apex.stage + apex.plan_transition as SPANS with numeric
+# SpanAttributes (metrics support is alpha at 0.156.0). Both land in otel_traces; the reshape
+# MVs route them to spark_events / plan_transitions by SpanName.
+#
+# Redaction is NOT repeated here — the jar redacts in-JVM (primary) and collect is the second
+# net (contract §Redaction). By the time a span reaches the store it is already clean.
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      http:                              # jar/collect -> infra transport (OTLP/HTTP)
+        endpoint: 0.0.0.0:4318
+      grpc:                              # optional sibling transport (contract Port Map)
+        endpoint: 0.0.0.0:4317
+
+processors:
+  # First in the pipeline: apply backpressure before spending memory on export.
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 2048
+    spike_limit_mib: 512
+
+exporters:
+  clickhouse:
+    # tcp:// selects the NATIVE protocol (9000). NEVER mix tcp:// with the 8123 HTTP port.
+    # Use the qualified alias apex-infra-clickhouse, NEVER the short `clickhouse` name:
+    # on a shared network that short alias can round-robin to another lane's throwaway
+    # ClickHouse (no reshape MVs there => spans silently lost). See docker-compose.yml.
+    endpoint: tcp://apex-infra-clickhouse:9000?compress=lz4&async_insert=1
+    database: apex
+    username: ${env:CLICKHOUSE_USER}
+    password: ${env:CLICKHOUSE_PASSWORD}
+    ttl: 720h                            # cosmetic under create_schema:false — real TTL is in the DDL
+    create_schema: false                 # infra owns partitioning/TTL; no collector races DDL
+    traces_table_name: otel_traces       # reshape MVs read this table
+    timeout: 10s
+    sending_queue:
+      enabled: true
+      num_consumers: 10
+      queue_size: 10000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter]
+      exporters: [clickhouse]
+  telemetry:
+    logs:
+      level: info

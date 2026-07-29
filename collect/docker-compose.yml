@@ -1,0 +1,78 @@
+# Apex — Lane 3 (collect) · local test stack.
+#
+#   otel-collector (otelcol-contrib:0.156.0)  --tcp:9000-->  clickhouse (LOCAL test instance)
+#
+# LANE BOUNDARY: collect owns the collector -> ClickHouse wiring end to end. It does NOT own
+# the ClickHouse server — that is the infra/ lane. The clickhouse service here is a throwaway
+# used only to test this lane in isolation. When infra/ lands, delete the clickhouse service
+# below and attach the collector to infra's network / point it at infra's clickhouse:9000.
+
+name: apex-collect
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: apex-clickhouse
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-apex_local_dev}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-apex}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "${CLICKHOUSE_HTTP_HOST_PORT:-8123}:8123"     # HTTP  (human/tool reach-in only)
+      - "${CLICKHOUSE_NATIVE_HOST_PORT:-9000}:9000"   # native TCP (human/tool reach-in only)
+    ulimits:
+      nofile: { soft: 262144, hard: 262144 }
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      # DDL auto-applied on first boot, in filename order: database, exporter-owned OTLP
+      # tables, contract tables, then the reshape MVs.
+      - ./ddl:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--user", "${CLICKHOUSE_USER:-apex}", "--password", "${CLICKHOUSE_PASSWORD:-apex_local_dev}", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [apex]
+
+  # One-shot: a fresh named volume is root-owned, but the collector image runs as uid 10001
+  # and needs to write the file_storage queue. Chown once, then the collector starts non-root.
+  queue-init:
+    image: busybox:1.36
+    container_name: apex-queue-init
+    command: ["sh", "-c", "mkdir -p /var/lib/otelcol/queue && chown -R 10001:10001 /var/lib/otelcol"]
+    volumes:
+      - otel-queue:/var/lib/otelcol/queue
+    networks: [apex]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.156.0
+    container_name: apex-otel-collector
+    command: ["--config", "/etc/otelcol-contrib/config.yaml"]
+    environment:
+      REDACTION_SECRET_KEY: ${REDACTION_SECRET_KEY:?set REDACTION_SECRET_KEY in .env}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-apex_local_dev}
+      CLICKHOUSE_ENDPOINT: ${CLICKHOUSE_ENDPOINT:-tcp://clickhouse:9000?compress=lz4&async_insert=1}
+    volumes:
+      - ./config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - otel-queue:/var/lib/otelcol/queue           # crash-safe sending queue (file_storage)
+    ports:
+      - "${OTLP_HTTP_HOST_PORT:-4318}:4318"          # OTLP/HTTP receiver  (jar -> collect)
+      - "${OTLP_GRPC_HOST_PORT:-4317}:4317"          # OTLP/gRPC receiver  (optional)
+      - "${HEALTHCHECK_HOST_PORT:-13133}:13133"      # health_check extension
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      queue-init:
+        condition: service_completed_successfully
+    networks: [apex]
+
+networks:
+  apex:
+    name: apex-collect-net
+
+volumes:
+  clickhouse-data:
+  otel-queue:

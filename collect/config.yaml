@@ -1,0 +1,104 @@
+# Apex — Lane 3 (collect) · otelcol-contrib v0.156.0 · config-only (no OCB build)
+# OTLP/HTTP :4318  ->  memory_limiter -> PII scrub (OTTL + attributes + redaction) -> clickhouse exporter
+#
+# Ingests TWO span types from the jar lane (both land in apex.otel_traces):
+#   * apex.stage            -> reshaped into apex.spark_events      via mv_spark_events
+#   * apex.plan_transition  -> reshaped into apex.plan_transitions  via mv_plan_transitions
+# The clickhouseexporter can only write its fixed OTLP schema (otel_traces/otel_logs);
+# the reshape into custom-column tables happens in ClickHouse MATERIALIZED VIEWs (see ddl/).
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  file_storage:                       # crash-safe sending queue (at-least-once)
+    directory: /var/lib/otelcol/queue
+    create_directory: true            # queue dir may not pre-exist in the image
+
+receivers:
+  otlp:
+    protocols:
+      http:                           # jar -> collect transport (OTLP/HTTP, protobuf or JSON)
+        endpoint: 0.0.0.0:4318
+        include_metadata: true
+      grpc:                           # optional sibling transport (contract Port Map)
+        endpoint: 0.0.0.0:4317
+
+processors:
+  # MUST be first in every pipeline: apply backpressure BEFORE PII scrub spends memory.
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 2048
+    spike_limit_mib: 512
+
+  # Second net (defense-in-depth). The jar already redacts in-JVM before egress;
+  # this re-hashes query_text and strips any plan literals that slipped through.
+  # plan_fingerprint is opaque and computed upstream — NEVER touched/recomputed here.
+  transform/redaction:
+    error_mode: ignore                # SHA256() throws on nil; ignore keeps the pipeline flowing
+    trace_statements:
+      # one-way hash the high-entropy query text (guarded against nil)
+      - set(span.attributes["query_text"], SHA256(span.attributes["query_text"])) where span.attributes["query_text"] != nil
+      # strip any residual "desc":"..." literals from plan text (no-op on already-redacted plans)
+      - replace_pattern(span.attributes["plan_json"], "\"desc\":\"[^\"]*\"", "\"desc\":\"[REDACTED]\"") where span.attributes["plan_json"] != nil
+
+  # Cleanly drop PII keys that must never land in the store.
+  attributes/scrub:
+    actions:
+      - { key: file_path, action: delete }
+      - { key: email,     action: delete }
+
+  # Low-entropy PII (emails/IPs) embedded in free-text values are dictionary-reversible
+  # under plain hashing — mask them with keyed HMAC instead.
+  redaction/pii:
+    allow_all_keys: true
+    blocked_values:
+      - "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
+      - "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}"
+    hash_function: hmac-sha256
+    hmac_key: ${env:REDACTION_SECRET_KEY}
+
+exporters:
+  clickhouse:
+    # tcp:// selects the native protocol (9000). NEVER mix tcp:// with the 8123 HTTP port.
+    endpoint: ${env:CLICKHOUSE_ENDPOINT}
+    database: apex
+    username: ${env:CLICKHOUSE_USER}
+    password: ${env:CLICKHOUSE_PASSWORD}
+    ttl: 720h                         # cosmetic under create_schema:false — real TTL lives in the DDL
+    create_schema: false              # we own partitioning/TTL; no collector races DDL at startup
+    traces_table_name: otel_traces
+    logs_table_name: otel_logs
+    timeout: 10s
+    sending_queue:
+      enabled: true
+      num_consumers: 10
+      queue_size: 10000
+      sizer: items
+      block_on_overflow: true         # real backpressure instead of silent drop
+      storage: file_storage           # persist queue to disk -> survives restart
+      batch:                          # internal batching (README PR #49424) — NOT the batch processor
+        min_size: 5000
+        flush_timeout: 5s
+        sizer: items
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+service:
+  extensions: [health_check, file_storage]
+  pipelines:
+    # Spark stage metrics + AQE plan transitions arrive as SPANS (metrics support is alpha
+    # at 0.156.0; traces are beta) — model them as traces with numeric SpanAttributes.
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/redaction, attributes/scrub, redaction/pii]
+      exporters: [clickhouse]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/redaction, attributes/scrub, redaction/pii]
+      exporters: [clickhouse]
+  telemetry:
+    logs:
+      level: info

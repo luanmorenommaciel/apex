@@ -1,0 +1,45 @@
+{
+  "noise_floor_cv": null,
+  "runs": 3,
+  "scenarios": {
+    "spill": [
+      {
+        "app_id": "app-20260728193914-0019",
+        "exit_code": 0,
+        "signal_stage": 19,
+        "spill_disk_bytes": 209067592,
+        "stage_duration_max_ms": 1126.0,
+        "wall_s": 26.4
+      },
+      {
+        "app_id": "app-20260728193945-0020",
+        "exit_code": 0,
+        "signal_stage": 19,
+        "spill_disk_bytes": 209064633,
+        "stage_duration_max_ms": 1430.0,
+        "wall_s": 32.6
+      },
+      {
+        "app_id": "app-20260728194029-0021",
+        "exit_code": 0,
+        "signal_stage": 19,
+        "spill_disk_bytes": 210655879,
+        "stage_duration_max_ms": 1024.0,
+        "wall_s": 27.3
+      }
+    ]
+  },
+  "slots": 8,
+  "started_utc": "2026-07-28T19:39:11.999816+00:00",
+  "summary": {
+    "spill": {
+      "runs_ok": 3,
+      "spill_bytes_cv": 0.0044,
+      "spill_disk_bytes_values": [
+        209067592,
+        209064633,
+        210655879
+      ]
+    }
+  }
+}

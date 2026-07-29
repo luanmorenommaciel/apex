@@ -1,0 +1,44 @@
+{
+  "app_id": "app-20260729180235-0044",
+  "gate": "six-lane-canonical-e2e",
+  "job_id": "app-20260729180235-0044",
+  "lanes": {
+    "collect": {
+      "otlp_stage_rows_observed": 20,
+      "status": "passed"
+    },
+    "dev": {
+      "status": "passed",
+      "submitted_job_observed": true
+    },
+    "engine": {
+      "accepted_findings": 2,
+      "llm_calls": 0,
+      "mode": "deterministic",
+      "persistence": {
+        "mode": "already_present",
+        "persisted_count": 2,
+        "written_rows": 0
+      },
+      "status": "passed",
+      "validator_rejections": 0
+    },
+    "infra": {
+      "clickhouse_stage_rows": 20,
+      "status": "passed"
+    },
+    "jar": {
+      "canonical_stage_events": 20,
+      "plan_fingerprint_count": 20,
+      "status": "passed"
+    },
+    "serve": {
+      "finding_count": 2,
+      "read_only": true,
+      "stage_count": 20,
+      "status": "degraded",
+      "tool": "analyze_run"
+    }
+  },
+  "status": "passed"
+}

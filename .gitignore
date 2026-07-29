@@ -1,0 +1,41 @@
+# --- secrets / env ---
+.env
+*.env
+!.env.example
+
+# --- data volumes (infra ClickStack, dev MinIO) ---
+.volumes/
+**/data/
+spark-logs/
+
+# --- Python (engine, serve) ---
+__pycache__/
+*.pyc
+.venv/
+.uv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Scala / sbt (jar) ---
+target/
+project/target/
+project/project/
+.bsp/
+.metals/
+.bloop/
+
+# --- OTel collector (collect) queue ---
+otel-queue/
+
+# --- OS / editor ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# transient browser-automation screenshots
+.playwright-mcp/

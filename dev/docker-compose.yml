@@ -1,0 +1,152 @@
+# Apex dev-env — local Spark pathology lab (T3)
+# 5 services on one bridge network: minio, minio-init, spark-master, spark-worker, spark-history.
+# The spark image is built once (Dockerfile) and reused for all three spark roles.
+
+name: apex-dev
+
+x-spark-common: &spark-common
+  image: ${APEX_IMAGE:-apex-spark:local}
+  build:
+    # The plugin is built from ../jar in a first Docker stage, then baked into
+    # the same Spark image used by master, workers and History Server.
+    context: ..
+    dockerfile: dev/Dockerfile
+    args:
+      SPARK_IMAGE: ${SPARK_IMAGE}
+      HADOOP_AWS_VERSION: ${HADOOP_AWS_VERSION}
+      AWS_SDK_BUNDLE_VERSION: ${AWS_SDK_BUNDLE_VERSION}
+      DELTA_VERSION: ${DELTA_VERSION}
+      DELTA_ARTIFACT: ${DELTA_ARTIFACT:-delta-spark_2.13}
+      SCALA_BIN: ${SCALA_BIN}
+      APEX_JAR_TARGET: ${APEX_JAR_TARGET:-apex_40}
+  entrypoint: [""]            # clear base entrypoint; run spark-class directly in foreground
+  init: true                  # tini reaps children / forwards signals
+  environment: &spark-env
+    SPARK_NO_DAEMONIZE: "true"
+    AWS_REGION: ${S3_REGION}
+    APEX_OTLP_ENDPOINT: ${APEX_OTLP_ENDPOINT}
+    # ── Determinism (a pathology repro lab must be byte-stable across runs/hosts) ──
+    PYTHONHASHSEED: "0"        # stable Python hashing → stable dict/set ordering in UDFs
+    TZ: "UTC"                  # stable timestamps regardless of host timezone
+  volumes:
+    - ./conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+    - ./jobs:/opt/apex/jobs:ro
+    - ./common:/opt/apex/common:ro
+    - ./scripts:/opt/apex/scripts:ro   # smoke / verify helpers
+    - ./tests:/opt/apex/tests:ro       # fingerprint probes
+
+services:
+  # ── Object store (S3-compatible) ──────────────────────────────────────────
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:latest}   # pinned by digest in .env
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "${MINIO_API_PORT:-9010}:9000"       # S3 API (host port shifted off 9000)
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"   # console
+    volumes:
+      - minio-data:/data
+    # `mc ready local` is MinIO's own recommended probe — checks the server can actually
+    # SERVE (quorum ready), not just that the port is open. Robust vs. curl being dropped
+    # from the (UBI-micro) image. Verified: `local` alias resolves to :9000 out-of-the-box.
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  # ── One-shot: create buckets, then exit 0 (buckets must exist before first write) ──
+  minio-init:
+    image: ${MC_IMAGE:-minio/mc:latest}   # pinned by digest in .env
+    depends_on:
+      minio:
+        condition: service_healthy   # buckets are created only after MinIO is truly ready
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing local/${WAREHOUSE_BUCKET} &&
+      mc mb --ignore-existing local/${LOGS_BUCKET} &&
+      echo apex | mc pipe local/${LOGS_BUCKET}/events/.keep &&
+      mc ls local &&
+      echo 'buckets ready';
+      "
+    restart: "no"
+
+  # ── Spark standalone master ───────────────────────────────────────────────
+  spark-master:
+    <<: *spark-common
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
+    ports:
+      - "${SPARK_MASTER_UI_PORT:-8080}:8080"   # master web UI
+      - "${SPARK_MASTER_PORT:-7077}:7077"      # cluster submit port
+    healthcheck:
+      # Master REST/UI actually serving (not just port open). curl is baked into our image.
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+
+  # ── Spark workers (scalable: `docker compose up -d --scale spark-worker=N`) ──
+  spark-worker:
+    <<: *spark-common
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+      - --cores
+      - "${SPARK_WORKER_CORES}"
+      - --memory
+      - "${SPARK_WORKER_MEMORY}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/"]   # worker UI serving
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    depends_on:
+      spark-master:
+        condition: service_healthy   # worker only starts once the master is serving
+    # No fixed container_name / no host-port bind → free to scale to N replicas.
+
+  # ── Spark History Server (reads finalized event logs from s3a://spark-logs) ──
+  spark-history:
+    <<: *spark-common
+    # No restart:on-failure workaround needed: minio-init seeds the events/ prefix (so the
+    # log dir exists) BEFORE this starts, gated via service_completed_successfully.
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.history.HistoryServer
+    environment:
+      <<: *spark-env
+      SPARK_HISTORY_OPTS: >-
+        -Dspark.history.fs.logDirectory=s3a://${LOGS_BUCKET}/events/
+        -Dspark.history.ui.port=18080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18080/"]   # history UI serving
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    ports:
+      - "${SPARK_HISTORY_PORT:-18080}:18080"
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+
+volumes:
+  minio-data:

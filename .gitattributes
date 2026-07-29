@@ -1,0 +1,2 @@
+# Shell gates run in Linux containers and Git Bash on Windows.
+*.sh text eol=lf

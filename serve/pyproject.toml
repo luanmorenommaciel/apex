@@ -1,0 +1,31 @@
+[project]
+name = "apex-mcp"
+version = "0.2.0"
+description = "Apex MCP server — Spark run diagnosis over the frozen v0.2 contract (stdio; 3 read-only tools + 1 gated proposal tool)."
+requires-python = ">=3.10"
+dependencies = [
+  # SDK-bundled FastMCP (`from mcp.server.fastmcp import FastMCP`).
+  # PIN <2: the v2 line renames FastMCP -> MCPServer and moves types to mcp_types.
+  # NOT the separate PyPI `fastmcp` 3.x — different import root, different API.
+  "mcp[cli]>=1.27,<2",
+  "clickhouse-connect>=1.4,<2",
+  "pydantic>=2.11,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+# enables `uvx apex-mcp` — the single-command install path
+apex-mcp = "apex_mcp.server:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/apex_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
