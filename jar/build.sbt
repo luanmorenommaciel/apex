@@ -53,6 +53,35 @@ val sparkJdk17Opens = Seq(
   "--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED"
 )
 
+// ── JDK gate for the Spark 4.x cells ──────────────────────────────────────────
+// Spark 4 dropped Java 11 (its jars are class-file v61). sbt's FORKED test JVM
+// inherits sbt's OWN JVM — Test/javaHome is unset and $JAVA_HOME does NOT
+// override it — so on a JDK 11 sbt the 4.x cells used to abort with a 40-line
+// UnsupportedClassVersionError, and a lane that only ran the 3.5 cells reported
+// green while half the published matrix was never verified. Fail fast with ONE
+// readable line instead.
+val spark4JdkGate = taskKey[Unit]("Fail fast if sbt's JVM is older than the Spark 4.x minimum")
+
+lazy val sbtJdkMajor: Int = {
+  val v = sys.props("java.specification.version")
+  val core = if (v.startsWith("1.")) v.drop(2) else v
+  core.takeWhile(_.isDigit).toInt
+}
+
+def jdkGateSettings(minJdk: Int): Seq[Setting[_]] = Seq(
+  spark4JdkGate := {
+    if (sbtJdkMajor < minJdk)
+      sys.error(
+        s"this cell (Spark 4.x) requires JDK $minJdk+, but sbt is running on Java $sbtJdkMajor " +
+        "and its forked test JVM inherits that (JAVA_HOME does not override it). " +
+        "Run sbt itself on a newer JDK — e.g. `sbt -java-home \"$(../scripts/find-jdk.sh 17)\" test` " +
+        "(find-jdk.sh also finds keg-only Homebrew JDKs; override with APEX_JDK_HOME) — " +
+        "or export JAVA_HOME to a JDK 17/21 first.")
+  },
+  Test / test     := (Test / test).dependsOn(spark4JdkGate).value,
+  Test / testOnly := (Test / testOnly).dependsOn(spark4JdkGate).evaluated
+)
+
 // OTel Java SDK — pin every component to one version (BOM-equivalent) so the
 // exporter, sdk, and api never skew. These are BUNDLED (Spark does not ship them).
 val otelVersion = "1.43.0"
@@ -128,11 +157,11 @@ lazy val apex = (projectMatrix in file("."))
   .customRow(
     scalaVersions = Seq("2.13.14"),
     axisValues    = Seq(Spark40, VirtualAxis.jvm),
-    _.settings(sparkSuffix := "_4.0").settings(sparkCell("4.0.0", "2.18.2", "2.18.2"))
+    _.settings(sparkSuffix := "_4.0").settings(sparkCell("4.0.0", "2.18.2", "2.18.2")).settings(jdkGateSettings(17))
   )
   // Spark 4.1 · Scala 2.13 (Java 17/21) — additive compatibility cell.
   .customRow(
     scalaVersions = Seq("2.13.17"),
     axisValues    = Seq(Spark41, VirtualAxis.jvm),
-    _.settings(sparkSuffix := "_4.1").settings(sparkCell("4.1.2", "2.21.2", "2.21"))
+    _.settings(sparkSuffix := "_4.1").settings(sparkCell("4.1.2", "2.21.2", "2.21")).settings(jdkGateSettings(17))
   )

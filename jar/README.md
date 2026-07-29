@@ -101,7 +101,10 @@ One span per **real** AQE re-plan (no-op re-plans are dropped), landing in
 
 This is Spark's own decision as ground truth: *"AQE split this skewed join"* / *"AQE demoted
 SortMergeJoin→BroadcastHashJoin"* / *"AQE coalesced partitions"* — a finding at **$0, no LLM
-inference**, and the causal *why* behind the stage metrics.
+inference**, and the causal *why* behind the stage metrics. For `skew_split`, `detail` counts
+skewed **partitions** (Spark's own `numSkewedPartitions` driver metric, captured when the
+skewed read executes) — not AQEShuffleRead nodes, which undercounts when one read splits
+several hot partitions.
 
 ### `apex.job_conf` (v0.4 proposal — pending ratification)
 
@@ -138,6 +141,26 @@ omitted; `spark.sql.*` keys are always present with their effective value.
 ---
 
 ## Build & publish locally
+
+### Prerequisites — JDK (this bites; read it)
+
+**JDK 17 builds and tests all four cells.** JDK 21 also works (CI matrixes 17 and
+21). On **JDK 11 only the two `apex_3.5` cells can run** — Spark 4 dropped Java 11.
+
+The trap: the forked **test JVM inherits sbt's own JVM** (`Test/javaHome` is unset
+and `JAVA_HOME` does **not** override it), so "a JDK 17 is installed somewhere" is
+not enough — **sbt itself must run on 17+**. The 4.x cells fail fast with a
+one-line message (`spark4JdkGate`) instead of an `UnsupportedClassVersionError`:
+
+```bash
+cd jar && sbt -java-home "$(../scripts/find-jdk.sh 17)" test
+```
+
+[`../scripts/find-jdk.sh`](../scripts/find-jdk.sh) also finds keg-only Homebrew
+JDKs that neither `PATH` nor `/usr/libexec/java_home` can see (override with
+`APEX_JDK_HOME`). `.java-version` here pins `17` for jenv-style tooling.
+
+### Cross-build
 
 Cross-built with `sbt-projectmatrix` — four cells (Spark 4.x requires Scala 2.13):
 

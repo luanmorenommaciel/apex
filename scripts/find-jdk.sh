@@ -29,10 +29,20 @@ set -euo pipefail
 
 REQUIRED="${1:-17}"
 
-# Preference order, deliberately NOT "newest first". Spark 4.x supports Java 17
-# and 21 and does not claim support for 22+. Handing Spark a Java 24 buys
-# reflection and module-access failures that look exactly like Apex bugs.
-PREFERRED=(21 17)
+# Preference order, deliberately NOT "newest first".
+#
+# 17 is FIRST because it is the only JDK that officially supports every cell in
+# the matrix: Spark 3.5 supports 8/11/17, Spark 4.x supports 17/21. Only 17 is in
+# both sets. Preferring 21 (as this script first did) silently runs the two Spark
+# 3.5 cells on a JDK Spark 3.5 does not claim to support — they happen to pass, but
+# "happens to pass" is not the standard this repo holds. Credit: jar lane.
+#
+# 21 is second so a machine with only 21 still builds everything. Nothing above 21
+# is claimed by any Spark version we ship, so 22+ is a last resort only: handing
+# Spark an unsupported JDK buys reflection and module-access failures that look
+# exactly like Apex bugs. CI matrixes 17 AND 21 to catch version-specific breakage
+# that a single local JDK cannot.
+PREFERRED=(17 21)
 FALLBACK=(24 23 22 20 19 18)
 
 # Major version of the JDK rooted at $1, or empty if it isn't a usable JDK.

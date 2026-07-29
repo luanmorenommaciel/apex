@@ -3,7 +3,7 @@ package apex
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.scheduler.{SparkListener, SparkListenerEvent}
 import org.apache.spark.sql.execution.SparkPlanInfo
-import org.apache.spark.sql.execution.ui.{SparkListenerSQLAdaptiveExecutionUpdate, SparkListenerSQLExecutionEnd, SparkListenerSQLExecutionStart}
+import org.apache.spark.sql.execution.ui.{SparkListenerDriverAccumUpdates, SparkListenerSQLAdaptiveExecutionUpdate, SparkListenerSQLExecutionEnd, SparkListenerSQLExecutionStart}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -28,6 +28,15 @@ import scala.util.Try
  * confidence — structural. We never ship `physicalPlanDescription`; `detail`/`before`/
  * `after` are built from node names + AQE descriptors only (no literals).
  *
+ * Skew counts: the descriptor counts skewed PARTITIONS (Spark's own
+ * `numSkewedPartitions` driver metric), not AQEShuffleRead nodes — one read can
+ * split several hot partitions, and counting reads undercounts ("skewed x1" when
+ * two hot partitions split). The metric value is not in the plan snapshot; Spark
+ * posts it as `SparkListenerDriverAccumUpdates` when the skewed read EXECUTES,
+ * after the re-plan update. So a skew_split is parked until the value lands and
+ * emitted with the true count; if it never lands (aborted query), execution end
+ * flushes it with the read count as a fallback. Same strings on 3.5/4.0/4.1.
+ *
  * Behind `spark.apex.aqe.enabled`; registered by the plugin. Rides the same sink +
  * bounded queue + `Try`. Snapshot maps are bounded and cleaned on execution end.
  * All callbacks run on the single listener-bus thread → no synchronization.
@@ -43,8 +52,10 @@ class ApexAqeListener(sink: ApexSink, private var jobId: String) extends SparkLi
   private val logger = LoggerFactory.getLogger(getClass)
   private val MaxLiveExecutions = 128
 
-  private val snapshots = mutable.LinkedHashMap.empty[Long, ApexAqeListener.PlanShape]
-  private val nextSeq   = mutable.Map.empty[Long, Int]
+  private val snapshots   = mutable.LinkedHashMap.empty[Long, ApexAqeListener.PlanShape]
+  private val nextSeq     = mutable.Map.empty[Long, Int]
+  private val pendingSkew = mutable.Map.empty[Long, List[ApexAqeListener.PendingSkew]]
+  private val accumValues = mutable.Map.empty[Long, mutable.Map[Long, Long]]
 
   // spark.apex.job_id override, else applicationId — resolved at event time (context is up by then).
   private def resolvedJobId(): String = {
@@ -65,27 +76,65 @@ class ApexAqeListener(sink: ApexSink, private var jobId: String) extends SparkLi
         val cur = ApexAqeListener.extract(up.sparkPlanInfo)
         snapshots.get(up.executionId) match {
           case Some(prev) =>
-            val transitions = ApexAqeListener.diff(prev, cur)
-            transitions.foreach { t =>
-              val seq = nextSeq.getOrElse(up.executionId, 0)
-              nextSeq.update(up.executionId, seq + 1)
-              sink.emitPlanTransition(PlanTransition(
-                job_id = resolvedJobId(), execution_id = up.executionId, update_seq = seq,
-                transition_type = t.kind, detail = t.detail, before = t.before, after = t.after,
-                confidence = t.confidence, ts = System.currentTimeMillis()))
+            ApexAqeListener.diff(prev, cur).foreach {
+              // A skew_split whose metric ids are known is PARKED until Spark posts
+              // numSkewedPartitions (see class doc); everything else emits at once.
+              case t if t.kind == PlanTransition.SkewSplit && t.skewAccumIds.nonEmpty =>
+                pendingSkew.update(up.executionId,
+                  pendingSkew.getOrElse(up.executionId, Nil) :+
+                    ApexAqeListener.PendingSkew(t.skewAccumIds, prev.skewAccumIds, t.readCount, t.before, t.after))
+                flushPending(up.executionId)
+              case t =>
+                emit(up.executionId, t.kind, t.detail, t.before, t.after, t.confidence)
             }
             setSnapshot(up.executionId, cur) // advance baseline to latest
           case None =>
             setSnapshot(up.executionId, cur) // no baseline yet → establish one, emit nothing
         }
 
+      case upd: SparkListenerDriverAccumUpdates =>
+        // numSkewedPartitions lands here, when the skewed read executes — after the
+        // plan update that introduced it.
+        val vals = accumValues.getOrElseUpdate(upd.executionId, mutable.Map.empty)
+        upd.accumUpdates.foreach { case (id, v) => vals.update(id, v) }
+        flushPending(upd.executionId)
+
       case end: SparkListenerSQLExecutionEnd =>
+        // Never lose a transition: if the skew metric never arrived (aborted query),
+        // flush with the read count — the old, undercounting descriptor.
+        pendingSkew.remove(end.executionId).toList.flatten.foreach { p =>
+          emit(end.executionId, PlanTransition.SkewSplit,
+            s"AQEShuffleRead skewed x${p.readCount}", p.before, p.after, PlanTransition.High)
+        }
         snapshots.remove(end.executionId)
         nextSeq.remove(end.executionId)
+        accumValues.remove(end.executionId)
 
       case _ => ()
     }
   }.recover { case t => logger.warn(s"apex: AQE onOtherEvent failed: ${t.getMessage}") }
+
+  private def emit(execId: Long, kind: String, detail: String, before: String, after: String, confidence: String): Unit = {
+    val seq = nextSeq.getOrElse(execId, 0)
+    nextSeq.update(execId, seq + 1)
+    sink.emitPlanTransition(PlanTransition(
+      job_id = resolvedJobId(), execution_id = execId, update_seq = seq,
+      transition_type = kind, detail = detail, before = before, after = after,
+      confidence = confidence, ts = System.currentTimeMillis()))
+  }
+
+  /** Emit parked skew_splits whose partition counts Spark has now reported. */
+  private def flushPending(execId: Long): Unit = {
+    val vals = accumValues.getOrElse(execId, mutable.Map.empty)
+    val (ready, waiting) = pendingSkew.getOrElse(execId, Nil).partition(p => p.accumIds.forall(vals.contains))
+    if (ready.nonEmpty) pendingSkew.update(execId, waiting)
+    ready.foreach { p =>
+      val split  = p.accumIds.flatMap(vals.get).sum      // hot partitions split by THIS re-plan
+      val before = p.prevAccumIds.flatMap(vals.get).sum  // hot partitions already split before it
+      emit(execId, PlanTransition.SkewSplit,
+        s"AQEShuffleRead skewed x$split", s"$before skewed", s"${before + split} skewed", PlanTransition.High)
+    }
+  }
 
   private def setSnapshot(execId: Long, shape: ApexAqeListener.PlanShape): Unit = {
     snapshots.update(execId, shape)
@@ -93,6 +142,8 @@ class ApexAqeListener(sink: ApexSink, private var jobId: String) extends SparkLi
       val oldest = snapshots.head._1
       snapshots.remove(oldest)
       nextSeq.remove(oldest)
+      pendingSkew.remove(oldest)
+      accumValues.remove(oldest)
     }
   }
 }
@@ -101,18 +152,28 @@ object ApexAqeListener {
 
   private val JoinNames = Set("SortMergeJoin", "ShuffledHashJoin", "BroadcastHashJoin", "BroadcastNestedLoopJoin")
   private val AqeReadName = "AQEShuffleRead"
+  // Spark's display name for the driver metric that counts hot partitions split
+  // (exact match — must NOT catch "number of skewed partition splits"). Identical
+  // on 3.5 / 4.0 / 4.1 (AQEShuffleReadExec.metrics).
+  private val SkewedPartitionsMetric = "number of skewed partitions"
 
   /** Structural summary of a plan snapshot — node names + AQE-read descriptors only. */
-  final case class PlanShape(joins: List[String], reads: List[String], signature: String) {
+  final case class PlanShape(joins: List[String], reads: List[String], skewAccumIds: Set[Long], signature: String) {
     def nonEmpty: Boolean = signature.nonEmpty
   }
 
-  private final case class Trans(kind: String, detail: String, before: String, after: String, confidence: String)
+  private final case class Trans(kind: String, detail: String, before: String, after: String, confidence: String,
+                                 skewAccumIds: Set[Long] = Set.empty, readCount: Int = 0)
+
+  /** A skew_split parked until Spark posts numSkewedPartitions for its reads. */
+  private final case class PendingSkew(accumIds: Set[Long], prevAccumIds: Set[Long],
+                                       readCount: Int, before: String, after: String)
 
   /** Walk a SparkPlanInfo tree collecting join node names + AQEShuffleRead descriptors. */
   private[apex] def extract(info: SparkPlanInfo): PlanShape = {
     val joins = mutable.ArrayBuffer.empty[String]
     val reads = mutable.ArrayBuffer.empty[String]
+    val skewIds = mutable.Set.empty[Long]
     val sig   = new StringBuilder
     def walk(n: SparkPlanInfo): Unit = {
       val name = n.nodeName
@@ -121,6 +182,8 @@ object ApexAqeListener {
       if (name == AqeReadName) {
         val d = descriptorOf(n.simpleString)
         reads += d
+        if (d.contains("skewed"))
+          skewIds ++= n.metrics.filter(_.name == SkewedPartitionsMetric).map(_.accumulatorId)
         sig.append('[').append(d).append(']')
       }
       sig.append('(')
@@ -128,7 +191,7 @@ object ApexAqeListener {
       sig.append(')')
     }
     walk(info)
-    PlanShape(joins.toList, reads.toList, sig.toString)
+    PlanShape(joins.toList, reads.toList, skewIds.toSet, sig.toString)
   }
 
   /** Classify an AQEShuffleRead from its simpleString descriptor (verified strings). */
@@ -157,9 +220,15 @@ object ApexAqeListener {
     Seq(("skewed", PlanTransition.SkewSplit), ("coalesced", PlanTransition.Coalesce), ("local", PlanTransition.LocalRead))
       .foreach { case (key, kind) =>
         val added = count(cur.reads, key) - count(prev.reads, key)
-        if (added > 0)
+        if (added > 0) {
+          // For skew: the accumulator ids of the reads this re-plan made skewed, so the
+          // listener can report the true PARTITION count once Spark posts it. (A read
+          // node persists across snapshots with a stable id → set difference = new.)
+          val newIds = if (kind == PlanTransition.SkewSplit) cur.skewAccumIds -- prev.skewAccumIds else Set.empty[Long]
           out += Trans(kind, s"AQEShuffleRead $key x$added",
-            s"${count(prev.reads, key)} $key", s"${count(cur.reads, key)} $key", PlanTransition.High)
+            s"${count(prev.reads, key)} $key", s"${count(cur.reads, key)} $key", PlanTransition.High,
+            skewAccumIds = newIds, readCount = added)
+        }
       }
 
     // No specific structural signal → treat as a no-op re-plan and drop (avoids noise
