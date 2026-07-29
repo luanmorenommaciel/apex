@@ -70,34 +70,33 @@ now. Production events are near-real-time, so this is a test-only concern.
 
 ## Status — what has actually been observed live
 
-**Recorded run: 2026-07-24.** All four pathologies passed and the six-lane gate passed against
-`app-20260724014653-0000` — 17 events and fingerprints, 3 deterministic findings, **0 LLM
-calls**, `analyze_run` confirmed read-only. Full detail in
-[`CANONICAL_GATE.md`](CANONICAL_GATE.md).
+**PASSED against current code: 2026-07-29, `app-20260729180235-0044`, exit 0.**
 
-**That evidence is stale for v0.1, and deliberately labelled as such.** It predates:
+All six lanes green on a freshly-submitted real Spark job. Committed evidence:
+[`evidence/six-lane-gate-app-20260729180235-0044.json`](evidence/six-lane-gate-app-20260729180235-0044.json)
+· full narrative in [`CANONICAL_GATE.md`](CANONICAL_GATE.md).
 
-- **the telemetry-loss fix** — a container-alias collision was silently dropping 50–70% of
-  applications, so that run was measured on **partial data**
-- **engine's threshold rewrite** — 127 findings → 65; the finding counts in the recorded run are
-  from the superseded fixed-threshold logic
-- **serve's symptom/verdict split** — the recorded run could render a symptom contradicting its
-  own findings
-- **the `memory` and `verify` lanes**, which did not exist
-- **contract v0.4** and cross-lane rules 1–5
+| Lane | Observed |
+|---|---|
+| dev | `submitted_job_observed: true` — 10,000,000 joined rows |
+| jar | 20 stage events · 20 plan fingerprints |
+| collect | 20 OTLP stage rows |
+| infra | 20 ClickHouse stage rows |
+| engine | `deterministic` · **`llm_calls: 0`** · 2 findings · 0 rejections · idempotent |
+| serve | `analyze_run` · **`read_only: true`** · agrees with engine |
 
-The gate itself is unchanged in contract and has 4 unit tests covering its invariants
-(`make test-root`), and every hop it exercises is independently green. But **a re-run against
-the current code is required before v0.1 is signed off**, and the numbers in `CANONICAL_GATE.md`
-should be read as "the gate mechanism works," not as "these are Apex's current findings."
+Transport arithmetic balances exactly: **+22 raw spans = 20 `apex.stage` + 1
+`apex.plan_transition` + 1 `apex.job_conf`**, each reshaped into its contract table by a
+Materialized View. Nothing lost, nothing invented.
 
-Re-running it is the last outstanding item for v0.1:
+`make verify-ddl` was green immediately before the run — all 7 contract tables matching their DDL
+sources exactly.
 
-```bash
-cd infra && make apply-ddl && docker compose up -d --wait
-cd ../dev  && ./scripts/e2e_canonical.sh          # note the emitted job_id
-cd ..      && make verify-e2e JOB=<that-job-id>
-```
+**Two non-blocking findings** came out of the run (a stage-blind AQE promotion in serve's advisory
+`symptoms[]`, and a volume floor that excluded the genuinely-skewed stage by a 5% margin). Neither
+touches `findings[]` or the gate's assertions. Both are written up in
+[`CANONICAL_GATE.md`](CANONICAL_GATE.md#findings-from-this-run--two-open-neither-blocking-the-gate).
 
-`CANONICAL_GATE.md` is currently written in Portuguese and uses PowerShell examples; it will be
-replaced by the output of that re-run.
+The earlier 2026-07-24 run is **superseded** — it predated the telemetry-loss fix (so it was
+measured on partial data), engine's threshold rewrite, serve's symptom/verdict split, contract
+v0.4, and the `memory` and `verify` lanes.

@@ -108,7 +108,10 @@ See **[docs/e2e/README.md](docs/e2e/README.md)** for how the three end-to-end en
 
 ## Status
 
-**v0.1** — all eight lanes implemented, 400 tests green, contract at v0.4.
+**v0.1** — all eight lanes implemented, 400 tests green, contract at v0.4, and the **canonical
+six-lane gate PASSED live** against a real Spark job on 2026-07-29
+([evidence](docs/e2e/evidence/six-lane-gate-app-20260729180235-0044.json) ·
+[narrative](docs/e2e/CANONICAL_GATE.md)).
 
 Known limits, stated plainly:
 
@@ -116,7 +119,7 @@ Known limits, stated plainly:
 - **`memory/`'s corpus is one environment.** Its confidence numbers are directionally right and magnitude-uncertain until there is cross-host history.
 - **ZEST cold-start seeding is built but not seeded** — the upstream dataset returns `403 AccessDenied`, verified by a live probe kept in the code so the claim stays falsifiable.
 - **Spark 3.5 on JDK 21** is not officially supported by Spark, though both 3.5 cells pass there. Local builds prefer JDK 17, the only version supported by every cell; CI matrixes 17 and 21.
-- **The live six-lane gate's recorded run predates the v0.1 correctness work.** See [docs/e2e/README.md](docs/e2e/README.md) for exactly what that means.
+- **`serve`'s advisory `symptoms[]` promotes AQE corroboration stage-blind.** A `skew_split` is execution-scoped, so a balanced stage in a job that had skew elsewhere can be labelled critical. `findings[]` — the adjudicated output — is unaffected. Tracked in [docs/e2e/CANONICAL_GATE.md](docs/e2e/CANONICAL_GATE.md).
 
 ## License
 
