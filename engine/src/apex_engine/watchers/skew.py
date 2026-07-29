@@ -192,7 +192,7 @@ def evaluate(stage: StageAggregate, ctx: JobContext | None = None) -> Finding | 
         finding_type=FindingType.SKEW_ON_JOIN if join.supports_join_skew else FindingType.TASK_SKEW,
         severity=severity,
         confidence_score=confidence_score,
-        evidence=_evidence(stage, tail, join, floor, gain_pct, ctx, within_noise),
+        evidence=_evidence(stage, tail, join, gain_pct, within_noise),
         impact=_impact(tail, gain_pct, floor, within_noise),
         fix=_fix(ctx, join.supports_join_skew, attribution),
         detected_by=NAME,
@@ -246,7 +246,18 @@ def _confidence(width_source: str, strong: bool, slots_unknown: bool, floor_know
     return score if floor_known else round(score - NO_FLOOR_PENALTY, 2)
 
 
-def _evidence(stage, tail, join, floor, gain_pct, ctx, within_noise: bool) -> str:
+def _evidence(stage, tail, join, gain_pct, within_noise: bool) -> str:
+    """The STABLE core of the claim — everything the signature may derive from.
+
+    `evidence` is persisted and is part of the dedup signature
+    (`clickhouse._signature`), so it may only carry what re-analysis of THIS job
+    reproduces byte-for-byte. The measured floor (pct, sample count) and the
+    ratio spread are functions of OTHER runs and move every time a sibling run
+    lands; rendered here they made one finding sign differently on each
+    re-analysis, and `persist_new_findings` accumulated rows instead of
+    converging. They live in `details` (exclude=True, never persisted) — already
+    populated in `evaluate` — never in this string.
+    """
     parts = [
         f"p99/p50 = {tail.ratio:.2f}x on stage {stage.stage_id} "
         f"(p99={stage.task_duration_p99_ms:.0f}ms, p50={stage.task_duration_p50_ms:.0f}ms, "
@@ -258,23 +269,16 @@ def _evidence(stage, tail, join, floor, gain_pct, ctx, within_noise: bool) -> st
     if within_noise:
         # Rule 2: the number is NOT rendered — it is below the measured floor and
         # therefore unresolvable, which is a statement about verifiability only.
+        # The floor FIGURE is not quoted either: it moves as history grows.
         parts.append(
-            f"the predicted win is BELOW this shape's measured run-to-run floor "
-            f"({floor}), so no replay could confirm it and the figure is withheld"
+            "the predicted win is BELOW this shape's measured run-to-run floor, "
+            "so no replay could confirm it and the figure is withheld"
         )
     elif gain_pct is not None:
         basis = "at this width" if tail.headroom_frac is not None else "at ANY width"
         parts.append(
             f"an ideal rebalance could remove at most {gain_pct:.1f}% of this stage's "
             f"wall time (upper bound {basis})"
-        )
-    parts.append(f"noise floor {floor}")
-    spread = ctx.ratio_spread(stage)
-    if len(spread) >= 2:
-        parts.append(
-            "the same shape ran at "
-            + ", ".join(f"{r:.2f}x" for r in spread)
-            + " across those runs, so the ratio is a draw from a spread, not a fixed property"
         )
     return "; ".join(parts)
 

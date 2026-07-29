@@ -250,8 +250,13 @@ def test_a_win_below_the_measured_floor_is_reported_without_the_number():
     assert finding.severity.value == "info"
     assert finding.details["gain_within_noise"] is True
     assert "BELOW this shape's measured run-to-run floor" in finding.evidence
-    assert "%" in finding.evidence.split("BELOW")[1][:200]  # the FLOOR is quoted...
     assert "could remove at most" not in finding.evidence   # ...the WIN is not
+    # ...and neither is the FLOOR figure: pct/samples are volatile measured
+    # context (they move every time a sibling run lands), so they live in
+    # details — never in the evidence the dedup signature is derived from.
+    assert "measured over" not in finding.evidence
+    assert finding.details["noise_floor_pct"] is not None
+    assert finding.details["noise_floor_samples"] == 5
 
 
 def test_a_win_above_the_measured_floor_is_asserted():

@@ -16,6 +16,8 @@ from __future__ import annotations
 import pytest
 
 from apex_engine import Confidence, FindingType, Severity, analyze
+from apex_engine.clickhouse import _signature
+from apex_engine.context import ShapeSample
 from apex_engine.gate import should_escalate
 from apex_engine.jobconf import JobConf
 from apex_engine.schema import Finding, PlanTransition, StageAggregate
@@ -242,3 +244,68 @@ def test_engine_runs_the_full_deterministic_tier_without_crewai_installed(monkey
     assert result["llm_calls"] == 0
     assert result["crew"] == "unavailable:crewai_not_installed"
     assert len(result["findings"]) == 2  # nothing lost
+
+
+# --- re-analysis converges, even as shape history grows --------------------
+
+class HistoryStore(FakeStore):
+    """A store whose shape history can GROW between analyze() calls, and which
+    dedups by the real persisted signature — the two properties the
+    identity-drift regression needs."""
+
+    def __init__(self, stages: list[dict], conf=CLUSTER_CONF):
+        super().__init__(stages, conf=conf)
+        self.samples: list[ShapeSample] = []
+        self.signatures: set = set()
+
+    def shape_history(self, fingerprints):
+        return [s for s in self.samples if s.plan_fingerprint in fingerprints]
+
+    def job_confs(self, job_ids):
+        return {j: JobConf(job_id=j, app_id="app-1", conf=dict(self.conf), present=True)
+                for j in job_ids}
+
+    def persist_new_findings(self, job_id, findings):
+        findings = list(findings)
+        fresh = [f for f in findings if _signature(f) not in self.signatures]
+        self.signatures.update(_signature(f) for f in fresh)
+        self.persisted.extend(fresh)
+        return {"mode": "inserted" if fresh else ("already_present" if findings else "no_findings"),
+                "written_rows": len(fresh), "skipped_existing": len(findings) - len(fresh)}
+
+
+def _sibling(run: str, p99: float) -> ShapeSample:
+    """One more run of the SEVERE_SKEW shape at the same config and scale."""
+    return ShapeSample(job_id=run, stage_id=0, plan_fingerprint="fp",
+                       task_count=50, task_duration_p50_ms=21,
+                       task_duration_p99_ms=p99, bytes_touched=112_930_867)
+
+
+def test_a_new_sibling_run_between_analyses_does_not_duplicate_a_finding():
+    """Identity must not be derived from something that quietly moves.
+
+    The dedup signature includes `evidence`, which used to quote the measured
+    floor (pct + sample count) and the ratio spread — all functions of OTHER
+    runs. Seeding one sibling between two analyses moved those numbers, moved
+    the signature, and a second row landed for the same finding. The volatile
+    context now lives in `details` (never persisted), and re-analysis converges.
+    """
+    store = HistoryStore([{**SEVERE_SKEW, "plan_fingerprint": "fp"}])
+    # the smallest history a floor can be measured over (MIN_SAMPLES_FOR_FLOOR)
+    store.samples = [_sibling("run-1", 448), _sibling("run-2", 460), _sibling("run-3", 451)]
+
+    first = analyze("job-1", store, use_crew=False)
+    assert first["written_rows"] == 1
+    assert first["findings"][0].details["noise_floor_samples"] == 3
+
+    store.samples.append(_sibling("run-4", 475))  # a new run of the same shape lands
+
+    second = analyze("job-1", store, use_crew=False)
+    # the volatile context DID move — without that, this test proves nothing
+    assert second["findings"][0].details["noise_floor_samples"] == 4
+    assert (second["findings"][0].details["ratio_spread"]
+            != first["findings"][0].details["ratio_spread"])
+    # ...and the finding's identity did NOT: one row, not two
+    assert second["written_rows"] == 0
+    assert second["persistence"]["skipped_existing"] == 1
+    assert len(store.persisted) == 1
