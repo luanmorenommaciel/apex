@@ -179,4 +179,4 @@ SparkSession.builder \
 
 ---
 
-*The full, authoritative version of this contract (with every field's type + Spark source) is the original `LANE-0-CONTRACT.md`. This top-level copy is the always-visible summary; the `contract/` dir holds the enforceable artifacts. Keep them in sync on any change.*
+*This file is the authoritative contract. [`contract/`](contract/) holds the enforceable artifacts — the DDL each lane mirrors and the `sample_event.json` fixture — and `make verify-ddl` asserts the store matches them byte-for-byte. An earlier `LANE-0-CONTRACT.md` described contract v0.1 and was removed at v0.4; it had been superseded field-by-field and kept only as a trap for anyone who read it.*

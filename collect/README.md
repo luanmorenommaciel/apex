@@ -2,7 +2,7 @@
 
 **Role:** config-only OpenTelemetry Collector (`otelcol-contrib` **v0.156.0**, no custom Go build).
 OTLP `:4318` → `memory_limiter` → PII scrub → ClickHouse `apex`.
-**Obeys:** [`../CONTRACT.md`](../CONTRACT.md) (v0.2) · **Full brief:** [`../docs/lanes/COLLECT.md`](../docs/lanes/COLLECT.md)
+**Obeys:** [`../CONTRACT.md`](../CONTRACT.md) (v0.4) · **Full brief:** [`../docs/lanes/COLLECT.md`](../docs/lanes/COLLECT.md)
 **Exit criterion (met):** ingests Spark telemetry on `:4318`, hashes/drops the named PII fields, and lands rows queryable by `job_id` end-to-end.
 
 O comando de reprodução e os gates desta branch estão em

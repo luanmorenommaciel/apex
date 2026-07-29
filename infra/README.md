@@ -5,7 +5,7 @@ The **real, persistent ClickStack** the whole Apex pipeline stores into and visu
 [`../contract/`](../contract/) owns the *schema*. This lane applies the frozen contract DDL and
 adds partitioning/TTL, a job-level rollup, the reshape MVs, and skew detection.
 
-**Obeys:** [../CONTRACT.md](../CONTRACT.md) (v0.2 + Port Map + TTL note) · **Full brief:** [../docs/lanes/INFRA.md](../docs/lanes/INFRA.md)
+**Obeys:** [../CONTRACT.md](../CONTRACT.md) (v0.4 + Port Map + TTL note) · **Full brief:** [../docs/lanes/INFRA.md](../docs/lanes/INFRA.md)
 
 **Exit criterion (proven):** a `curl`'d OTLP/HTTP span → `apex.spark_events` (via MV) → a HyperDX
 tile **and** the skew query both return it, all threaded by `job_id`.
