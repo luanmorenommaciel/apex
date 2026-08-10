@@ -10,3 +10,8 @@ __pycache__/
 out/calibration-*.json
 !out/calibration-20260728T193824Z.json
 !out/calibration-20260728T194104Z.json
+
+# Docker Compose file-based secrets (local dev credential values) — never commit
+# the actual secret files, only the README explaining how to regenerate them.
+secrets/*
+!secrets/README.md
