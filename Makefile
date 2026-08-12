@@ -21,6 +21,22 @@ PY_LANES := engine serve memory verify
 UV       := uv
 JDK_MIN  := 17   # Spark 4.x floor; find-jdk.sh prefers 21 then 17
 
+# Package shortcuts (bootstrap/doctor/smoke/...) delegate to a platform-specific
+# launcher — same orchestration on Windows and macOS, one command surface here.
+ifeq ($(OS),Windows_NT)
+PACKAGE_RUN := pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/apex.ps1
+PACKAGE_INSTALL_HINT := @echo "Install Docker Desktop, Python 3.11+, uv and PowerShell 7, then run make bootstrap."
+else
+PACKAGE_UNAME_S := $(shell uname -s)
+ifeq ($(PACKAGE_UNAME_S),Darwin)
+PACKAGE_RUN := ./scripts/apex.sh
+PACKAGE_INSTALL_HINT := $(PACKAGE_RUN) install
+else
+PACKAGE_RUN := echo "Apex package shortcuts support macOS and Windows; use the lane-level commands on $(PACKAGE_UNAME_S)." && false
+PACKAGE_INSTALL_HINT := @echo "Apex package shortcuts support macOS and Windows; use the lane-level commands on $(PACKAGE_UNAME_S)."
+endif
+endif
+
 # ANSI, but only when stdout is a TTY (keeps CI logs clean).
 ifneq (,$(findstring xterm,$(TERM)))
   G := \033[0;32m
@@ -31,7 +47,8 @@ ifneq (,$(findstring xterm,$(TERM)))
 endif
 
 .PHONY: help test test-py test-jar test-jar-cell test-root jdk \
-        $(addprefix test-,$(PY_LANES)) verify-e2e verify-ddl clean lanes
+        $(addprefix test-,$(PY_LANES)) verify-e2e verify-ddl clean lanes \
+        install bootstrap doctor smoke e2e tail-outlier pilot-clean status down
 
 help: ## Show this help
 	@printf "$(B)Apex$(N) — agentic performance intelligence for Apache Spark\n\n"
@@ -133,3 +150,37 @@ clean: ## Remove Python caches and build artifacts (does NOT touch docker volume
 	@find . -type d -name .pytest_cache -prune -exec rm -rf {} + 2>/dev/null || true
 	@rm -rf jar/target jar/project/target
 	@echo "clean"
+
+## ---------------------------------------------------------------------------
+## package — one-command local operational surface (Windows: pwsh, macOS: bash)
+## ---------------------------------------------------------------------------
+## `e2e` here runs the full canonical pathology suite + product gates against a
+## freshly bootstrapped local package — a different scope from `verify-e2e`
+## above, which runs the six-lane gate against one job you already submitted.
+
+install: ## Install package prerequisites (macOS) or print Windows prerequisites
+	$(PACKAGE_INSTALL_HINT)
+
+bootstrap: ## Build and start the full six-lane local package
+	$(PACKAGE_RUN) bootstrap
+
+doctor: ## Verify the local package runtime
+	$(PACKAGE_RUN) doctor
+
+smoke: ## Run the one-pathology product gate
+	$(PACKAGE_RUN) smoke
+
+e2e: ## Run all canonical pathologies and product gates
+	$(PACKAGE_RUN) e2e
+
+tail-outlier: ## Run the 200-task tail-outlier regression
+	$(PACKAGE_RUN) tail-outlier
+
+pilot-clean: ## Run the fail-closed clean-machine pilot
+	$(PACKAGE_RUN) pilot-clean
+
+status: ## Show package service status
+	$(PACKAGE_RUN) status
+
+down: ## Stop the package while preserving volumes
+	$(PACKAGE_RUN) down
