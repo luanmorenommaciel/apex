@@ -606,11 +606,22 @@ function Get-SkewJobId {
     return $match.Matches[0].Groups[1].Value
 }
 
+function Sync-DevEnvForCanonicalScript {
+    # dev/scripts/e2e_canonical.ps1 is a lane-level script: it reads dev/.env
+    # directly (no -EnvFile parameter) and hardcodes its own 2 compose files
+    # (no -AdditionalComposeFile support). It never runs `compose up` — only
+    # `exec` into containers this package already started correctly configured
+    # — so it just needs dev/.env to exist and match the running stack's real
+    # generated MinIO credential for its own gate check and ClickHouse asserts.
+    Copy-Item -LiteralPath $script:DevEnv -Destination (Join-Path $script:Root 'dev/.env') -Force
+}
+
 function Invoke-ProductGate {
     param([switch]$Full)
 
     Invoke-Doctor
     Set-CanonicalProcessEnvironment
+    Sync-DevEnvForCanonicalScript
 
     $scenarioArguments = if ($Full) {
         @()
@@ -620,10 +631,7 @@ function Invoke-ProductGate {
     $canonicalArguments = @(
         '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
         (Join-Path $script:Root 'dev/scripts/e2e_canonical.ps1')
-    ) + $scenarioArguments + @(
-        '-EnvFile', $script:DevEnv,
-        '-AdditionalComposeFile', (Join-Path $script:Root 'dev/docker-compose.package.yml')
-    )
+    ) + $scenarioArguments
     Invoke-Checked -FilePath $script:PowerShellExe -Arguments $canonicalArguments
 
     $jobId = Get-SkewJobId
@@ -667,17 +675,22 @@ function Stop-Package {
 }
 
 function Invoke-TailOutlierGate {
+    # BLOCKED: dev/jobs/tail_outlier.py and the 'tail_outlier' scenario in
+    # dev/scripts/e2e_canonical.ps1's own ValidateSet don't exist in this
+    # repo yet (proposed separately, not merged). Refuse loudly rather than
+    # let PowerShell's parameter-validation error stand in for a real message.
+    throw "tail-outlier: dev/jobs/tail_outlier.py and the 'tail_outlier' " +
+        "scenario are not available in this repo yet."
+
     Assert-RuntimeConfiguration
     Invoke-Doctor
     Set-CanonicalProcessEnvironment
+    Sync-DevEnvForCanonicalScript
 
     $canonicalScript = Join-Path $script:Root 'dev/scripts/e2e_canonical.ps1'
-    $packageOverlay = Join-Path $script:Root 'dev/docker-compose.package.yml'
     Invoke-Checked -FilePath $script:PowerShellExe -Arguments @(
         '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $canonicalScript,
-        '-Scenario', 'tail_outlier',
-        '-EnvFile', $script:DevEnv,
-        '-AdditionalComposeFile', $packageOverlay
+        '-Scenario', 'tail_outlier'
     )
 
     $scenarioLog = Join-Path $script:Root 'dev/out/e2e-canonical-tail_outlier.log'
