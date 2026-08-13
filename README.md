@@ -60,7 +60,7 @@ Stage 29 is the honest edge, and it is documented rather than hidden: it *is* th
 
 ## Quick start
 
-**Prerequisites:** Docker, [`uv`](https://docs.astral.sh/uv/), and **JDK 17** (`brew install openjdk@17`).
+**Prerequisites:** Docker, [`uv`](https://docs.astral.sh/uv/), [`sbt`](https://www.scala-sbt.org/) (`brew install sbt`), and **JDK 17** (`brew install openjdk@17`).
 
 ```bash
 git clone https://github.com/luanmorenommaciel/apex && cd apex
