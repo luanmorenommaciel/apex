@@ -66,7 +66,7 @@ Stage 29 is the honest edge, and it is documented rather than hidden: it *is* th
 git clone https://github.com/luanmorenommaciel/apex && cd apex
 
 # 1 — stand up the store you own (ClickHouse + HyperDX)
-cd infra && make apply-ddl && docker compose up -d --wait
+cd infra && docker compose up -d --wait && make apply-ddl
 
 # 2 — build the capture plugin
 cd ../jar && sbt -java-home "$(../scripts/find-jdk.sh 17)" assembly
