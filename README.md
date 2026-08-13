@@ -66,7 +66,10 @@ Stage 29 is the honest edge, and it is documented rather than hidden: it *is* th
 git clone https://github.com/luanmorenommaciel/apex && cd apex
 
 # 1 — stand up the store you own (ClickHouse + HyperDX)
-cd infra && docker compose up -d --wait && make apply-ddl
+cd infra
+cp .env.example .env            # then set HYPERDX_API_KEY=$(openssl rand -hex 32)
+# if 8123/9000/4318 are taken on your host, uncomment the shifted band in .env
+docker compose up -d --wait && make apply-ddl
 
 # 2 — build the capture plugin
 cd ../jar && sbt -java-home "$(../scripts/find-jdk.sh 17)" assembly
