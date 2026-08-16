@@ -56,6 +56,35 @@ teste do outro.
 
 ---
 
+## Versões — as mesmas do `main`, de propósito
+
+Todo teste registrado aqui rodou contra **exatamente os mesmos pins que o
+`main` declara**. Nenhuma versão foi trocada para fazer um teste passar, e
+nenhuma divergiu por acidente — o que vale dizer explicitamente, porque um
+resultado obtido em versão diferente da que o time roda não transfere.
+
+| Componente | Versão | Fixada em |
+|---|---|---|
+| **ClickHouse** | `clickhouse/clickhouse-server:24.8` | `infra/docker-compose.yml` |
+| Spark | `apache/spark:4.0.1-scala2.13-java17-python3-ubuntu` (`SPARK_VERSION=4.0.1`) | `dev/.env.example` |
+| MongoDB | `mongo:5.0.14-focal` | `infra/docker-compose.yml` |
+| OTel Collector | `otel/opentelemetry-collector-contrib:0.156.0` | `infra/docker-compose.yml` |
+| HyperDX | `hyperdx/hyperdx:2` | `infra/docker-compose.yml` |
+| JDK (suíte `jar`) | 17 — imagem `sbtscala/scala-sbt:eclipse-temurin-jammy-17.0.10_7_1.10.4_3.5.2` | pin do próprio projeto |
+
+O patch exato do ClickHouse observado nos testes foi **24.8.14.39** (a tag
+`24.8` resolve para ele hoje). Onde a versão importa para o resultado, o
+[`error-cases.md`](error-cases.md) cita a saída literal do servidor.
+
+**Sobre o `26.1`:** ele aparece em uma linha do `error-cases.md` como
+*comparação histórica*, não como ambiente de teste desta branch. O `24.8` é o
+que roda aqui. Se o time decidir subir a versão do ClickHouse, o Caso 6.1 —
+onde o `24.8` recusa `async_insert=1` com dedup em MV dependente (Code 344) —
+é o primeiro a reexecutar, porque é o único achado registrado que depende
+diretamente da versão.
+
+---
+
 ## Antes de tudo: subir a infra
 
 O pacote operacional que instala e sobe o stack completo é o **PR #76**
