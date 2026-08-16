@@ -13,6 +13,23 @@ Legenda da coluna **método**:
 O critério que separa os dois, e por que a distinção importa, está em
 [`METHODOLOGY.md`](METHODOLOGY.md).
 
+## De onde vieram estes problemas
+
+A maioria não foi encontrada lendo o `main` isoladamente. Foi encontrada
+**comparando o `main` contra uma versão baseline independente do APEX**
+(`gustocezar/apex-workspace`, branch `release/apex-v1-final-augusto` @
+`7f53d22`), construída antes deste trabalho — e testando o que a diferença
+entre as duas expunha.
+
+Isso explica o formato de vários casos abaixo: em #58, #60, #61 e #65 o achado
+veio de rodar o teste de um lado contra a implementação do outro. Detalhes de
+acesso e a convenção `fork`/`upstream` estão em
+[`README.md`](README.md#procedência--de-onde-veio-o-que-foi-testado).
+
+Três issues fogem desse padrão, e vale marcar: **#71**, **#72** e os 6 defeitos
+do **#62** foram achados testando o `main` (ou o próprio código novo) contra
+infraestrutura real, sem envolver o baseline.
+
 ---
 
 ## Tabela mestra

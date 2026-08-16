@@ -19,6 +19,43 @@ PR. Nada aqui depende de código que não esteja no `main` ou num PR aberto.
 
 ---
 
+## Procedência — de onde veio o que foi testado
+
+Boa parte do que virou PR não nasceu do zero: veio **portada de uma versão
+baseline independente do APEX**, construída antes deste trabalho e usada aqui
+como fonte de comparação contra o `main`.
+
+Sem isso registrado, a leitura fica errada — parece que tudo se originou no
+`main`, quando na verdade o método foi *comparar duas implementações reais* e
+testar o que a diferença entre elas expunha.
+
+| | |
+|---|---|
+| **Baseline (fonte)** | `github.com/gustocezar/apex-workspace` |
+| Branch de release | `release/apex-v1-final-augusto` @ `7f53d22` (2026-08-05) |
+| Branch equivalente | `base-project-e2e-augusto` (mesmo commit) |
+| **Upstream (alvo)** | `github.com/luanmorenommaciel/apex` |
+| Base usada | `main` @ `50d596e` |
+| Worktree local de teste | `apex-luan-e2e-baseline`, checkout de `origin/main` |
+
+> **O repositório do baseline é privado hoje.** Quem não tiver acesso não
+> consegue abrir os links acima. Para o time reproduzir a comparação (e não só
+> os testes, que são autocontidos nesta branch), o acesso precisa ser
+> concedido — decisão de quem é dono do repositório.
+
+Nos documentos deste diretório, os dois lados aparecem como **`fork`** (o
+baseline acima) e **`upstream`** (o `main`). Onde o `error-cases.md` cita um
+caminho `<fork>/...`, é a árvore do baseline; `<upstream>/...` é este
+repositório.
+
+Os testes desta branch **não dependem** do baseline: os scripts e SQLs
+necessários estão todos versionados aqui. O baseline é necessário apenas para
+refazer a *comparação* entre as duas implementações — por exemplo o caso do
+`ApexAqeListener` (#65), onde o ponto era justamente que cada lado falha no
+teste do outro.
+
+---
+
 ## Antes de tudo: subir a infra
 
 O pacote operacional que instala e sobe o stack completo é o **PR #76**
