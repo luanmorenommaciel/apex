@@ -94,8 +94,8 @@ units:
         terminal: true
         expected_duration_sec: 30
       - id: eval_2
-        description: SQL is server-side bound and no literal is an f-string
-        command: ( cd serve && uv run python -c "import re,pathlib; src=pathlib.Path('src/apex_mcp/ch.py').read_text(); assert not re.search(r'f\"\"\"', src), 'f-string SQL literal found'; assert '{job_id:String}' in src, 'server-side binding placeholder missing'; print('SQL bound, no f-string literals')" )
+        description: user-controlled values reach SQL only through server-side binding
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_every_query_uses_server_side_binding" "tests/test_ch.py::test_store_health_sql_is_bound_not_interpolated" )
         verifies: [B-1]
         terminal: true
         expected_duration_sec: 10
