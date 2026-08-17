@@ -263,3 +263,45 @@ class FixSuggestion(BaseModel):
     requires_human_approval: Literal[True] = True
     warnings: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+
+
+# --------------------------------------------------------------------------
+# apex_status
+# --------------------------------------------------------------------------
+class ServerStatus(BaseModel):
+    """What the server can truthfully say about itself.
+
+    Answerable while ClickHouse is down — that is the point of the tool, so
+    ``connected`` is the only required field and everything else degrades to a
+    default rather than to an exception.
+
+    Deliberately carries no credential-shaped field. The endpoint a user
+    configured is theirs to read back; the secret behind it is not. Likewise
+    ``using_defaults`` names variables and never their values, which is what
+    makes it safe to include ``CLICKHOUSE_PASSWORD`` in that list at all.
+    """
+
+    connected: bool
+    server_version: str = ""
+    database: str = ""
+    run_count: int = 0
+    job_count: int = 0
+    latest_ingest_ts: str | None = None
+    latest_ingest_age_seconds: float | None = None
+    contract_tables: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description=(
+            "Per contract table, the required columns MISSING on this cluster. "
+            "An empty list means the table conforms."
+        ),
+    )
+    using_defaults: list[str] = Field(
+        default_factory=list,
+        description=(
+            "CLICKHOUSE_* variables that were never set, so a built-in default "
+            "was used. Variable NAMES only — never their values."
+        ),
+    )
+    tools: list[str] = Field(default_factory=list)
+    degraded_reason: str | None = None
+    remediation: str | None = None
