@@ -53,9 +53,9 @@ findings_columns() at ch.py:214 probes system.columns for one hardcoded table. P
 ## Success Criteria
 
 ```bash
-# eval_1: the ClickHouse layer suite passes with the new probe tests
+# eval_1: the new probe tests exist and pass
 eval_1() {
-  ( cd serve && uv run --extra dev pytest tests/test_ch.py -q )
+  ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_table_columns_probes_spark_events" "tests/test_ch.py::test_table_columns_rejects_unlisted_table" )
 }
 
 # eval_2: the pre-existing additive-column test was not rewritten to pass
@@ -70,7 +70,7 @@ eval_2() {
 ```yaml
 success_criteria:
   - id: eval_1
-    description: "the ClickHouse layer suite passes with the new probe tests"
+    description: "the new probe tests exist and pass"
     runnable: bash
     check_type: deterministic
     verifies: [B-1, B-2, B-3]

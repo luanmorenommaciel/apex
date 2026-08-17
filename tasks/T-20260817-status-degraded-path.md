@@ -54,9 +54,9 @@ get_client() is lazy by design at ch.py:302, so the server lists tools with the 
 ## Success Criteria
 
 ```bash
-# eval_1: the degraded-path tests pass
+# eval_1: the degraded-path tests exist and pass
 eval_1() {
-  ( cd serve && uv run --extra dev pytest tests/test_status.py -q -k degraded )
+  ( cd serve && uv run --extra dev pytest "tests/test_status.py::test_status_degrades_when_store_unreachable" "tests/test_status.py::test_status_propagates_unexpected_exception" )
 }
 
 # eval_2: a sentinel password never reaches a degraded response
@@ -71,7 +71,7 @@ eval_2() {
 ```yaml
 success_criteria:
   - id: eval_1
-    description: "the degraded-path tests pass"
+    description: "the degraded-path tests exist and pass"
     runnable: bash
     check_type: deterministic
     verifies: [B-1, B-2, B-3]

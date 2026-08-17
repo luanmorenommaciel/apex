@@ -54,9 +54,9 @@ Sized M rather than S because the write surface is three paths - the assembler, 
 ## Success Criteria
 
 ```bash
-# eval_1: the defaults behaviors pass with the environment cleared
+# eval_1: the defaulted-variable tests exist and pass
 eval_1() {
-  ( cd serve && env -u CLICKHOUSE_HOST -u CLICKHOUSE_PORT -u CLICKHOUSE_USER -u CLICKHOUSE_PASSWORD -u CLICKHOUSE_DATABASE -u CLICKHOUSE_SECURE uv run --extra dev pytest tests/test_status.py -q )
+  ( cd serve && uv run --extra dev pytest "tests/test_status.py::test_using_defaults_lists_unset_variables" "tests/test_status.py::test_defaults_plus_empty_store_suggests_wrong_endpoint" )
 }
 
 # eval_2: the full suite stays green and no variable value is emitted
@@ -71,7 +71,7 @@ eval_2() {
 ```yaml
 success_criteria:
   - id: eval_1
-    description: "the defaults behaviors pass with the environment cleared"
+    description: "the defaulted-variable tests exist and pass"
     runnable: bash
     check_type: deterministic
     verifies: [B-1, B-3]

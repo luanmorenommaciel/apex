@@ -53,9 +53,9 @@ conftest already provides FakeClient; extend it rather than repointing fixtures 
 ## Success Criteria
 
 ```bash
-# eval_1: the tool-surface suite passes with the store-down case
+# eval_1: the store-down end-to-end test exists and passes
 eval_1() {
-  ( cd serve && uv run --extra dev pytest tests/test_server_tools.py -q )
+  ( cd serve && uv run --extra dev pytest "tests/test_server_tools.py::test_apex_status_answers_while_store_is_down" )
 }
 
 # eval_2: the whole suite stays green with a sentinel password exported
@@ -70,7 +70,7 @@ eval_2() {
 ```yaml
 success_criteria:
   - id: eval_1
-    description: "the tool-surface suite passes with the store-down case"
+    description: "the store-down end-to-end test exists and passes"
     runnable: bash
     check_type: deterministic
     verifies: [B-1, B-2]

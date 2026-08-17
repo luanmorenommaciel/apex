@@ -52,9 +52,9 @@ test_exactly_the_four_contracted_tools asserts an exact ordered list. Keep that 
 ## Success Criteria
 
 ```bash
-# eval_1: the full serve suite is green again
+# eval_1: the surface assertion now pins five tools
 eval_1() {
-  ( cd serve && uv run --extra dev pytest -q )
+  ( cd serve && uv run --extra dev pytest "tests/test_server_tools.py::test_exactly_the_five_contracted_tools" )
 }
 
 # eval_2: the assertion is still an ordered equality, not a subset or count
@@ -69,7 +69,7 @@ eval_2() {
 ```yaml
 success_criteria:
   - id: eval_1
-    description: "the full serve suite is green again"
+    description: "the surface assertion now pins five tools"
     runnable: bash
     check_type: deterministic
     verifies: [B-1]

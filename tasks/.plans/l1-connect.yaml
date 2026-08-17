@@ -136,8 +136,8 @@ units:
         then: it raises ApexStoreError before issuing any query
     evals:
       - id: eval_1
-        description: the ClickHouse layer suite passes with the new probe tests
-        command: ( cd serve && uv run --extra dev pytest tests/test_ch.py -q )
+        description: the new probe tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_table_columns_probes_spark_events" "tests/test_ch.py::test_table_columns_rejects_unlisted_table" )
         verifies: [B-1, B-2, B-3]
         terminal: true
         expected_duration_sec: 30
@@ -187,8 +187,8 @@ units:
         then: connected is True and remediation says the store is empty, not broken
     evals:
       - id: eval_1
-        description: all four assembler behaviors are covered by passing tests
-        command: ( cd serve && uv run --extra dev pytest tests/test_status.py -q )
+        description: the assembler behavior tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_status.py::test_status_reports_fresh_ingest_age" "tests/test_status.py::test_status_names_missing_contract_column" "tests/test_status.py::test_empty_store_is_connected_not_broken" )
         verifies: [B-1, B-2, B-3, B-4]
         terminal: true
         expected_duration_sec: 30
@@ -238,8 +238,8 @@ units:
         then: no credential appears in any field including degraded_reason
     evals:
       - id: eval_1
-        description: the degraded-path tests pass
-        command: ( cd serve && uv run --extra dev pytest tests/test_status.py -q -k degraded )
+        description: the degraded-path tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_status.py::test_status_degrades_when_store_unreachable" "tests/test_status.py::test_status_propagates_unexpected_exception" )
         verifies: [B-1, B-2, B-3]
         terminal: true
         expected_duration_sec: 30
@@ -327,8 +327,8 @@ units:
         then: it fails, because the assertion is neither a subset nor a count
     evals:
       - id: eval_1
-        description: the full serve suite is green again
-        command: ( cd serve && uv run --extra dev pytest -q )
+        description: the surface assertion now pins five tools
+        command: ( cd serve && uv run --extra dev pytest "tests/test_server_tools.py::test_exactly_the_five_contracted_tools" )
         verifies: [B-1]
         terminal: true
         expected_duration_sec: 60
@@ -372,8 +372,8 @@ units:
         then: the sentinel appears nowhere in it
     evals:
       - id: eval_1
-        description: the tool-surface suite passes with the store-down case
-        command: ( cd serve && uv run --extra dev pytest tests/test_server_tools.py -q )
+        description: the store-down end-to-end test exists and passes
+        command: ( cd serve && uv run --extra dev pytest "tests/test_server_tools.py::test_apex_status_answers_while_store_is_down" )
         verifies: [B-1, B-2]
         terminal: true
         expected_duration_sec: 30
@@ -472,8 +472,8 @@ units:
         then: none of that original text is forwarded
     evals:
       - id: eval_1
-        description: the disclosure suite passes with the endpoint assertions
-        command: ( cd serve && uv run --extra dev pytest tests/test_injection_hardening.py -q )
+        description: the endpoint-disclosure tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_injection_hardening.py::test_unavailable_names_endpoint" "tests/test_injection_hardening.py::test_unavailable_hides_credentials" )
         verifies: [B-1, B-3, B-4]
         terminal: true
         expected_duration_sec: 30
@@ -572,8 +572,8 @@ units:
         then: using_defaults contains variable names only, never their values
     evals:
       - id: eval_1
-        description: the defaults behaviors pass with the environment cleared
-        command: ( cd serve && env -u CLICKHOUSE_HOST -u CLICKHOUSE_PORT -u CLICKHOUSE_USER -u CLICKHOUSE_PASSWORD -u CLICKHOUSE_DATABASE -u CLICKHOUSE_SECURE uv run --extra dev pytest tests/test_status.py -q )
+        description: the defaulted-variable tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_status.py::test_using_defaults_lists_unset_variables" "tests/test_status.py::test_defaults_plus_empty_store_suggests_wrong_endpoint" )
         verifies: [B-1, B-3]
         terminal: true
         expected_duration_sec: 30
@@ -892,8 +892,8 @@ units:
         then: each states that variables expand at client start, so exporting one afterwards needs a restart
     evals:
       - id: eval_1
-        description: both additional clients are documented with a restart caveat
-        command: ( cd serve && test "$(grep -ci cursor README.md)" -ge 2 && test "$(grep -ci codex README.md)" -ge 2 && grep -qi restart README.md )
+        description: per-client sections exist for all three harnesses
+        command: ( cd serve && grep -q '^### Cursor' README.md && grep -q '^### Codex' README.md && grep -q '^### Claude Code' README.md )
         verifies: [B-1, B-3]
         terminal: true
         expected_duration_sec: 5

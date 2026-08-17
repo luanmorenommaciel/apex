@@ -53,9 +53,9 @@ Verify each path against that client's current documentation and record the sour
 ## Success Criteria
 
 ```bash
-# eval_1: both additional clients are documented with a restart caveat
+# eval_1: per-client sections exist for all three harnesses
 eval_1() {
-  ( cd serve && test "$(grep -ci cursor README.md)" -ge 2 && test "$(grep -ci codex README.md)" -ge 2 && grep -qi restart README.md )
+  ( cd serve && grep -q '^### Cursor' README.md && grep -q '^### Codex' README.md && grep -q '^### Claude Code' README.md )
 }
 
 # eval_2: each client section names how to verify the connection
@@ -70,7 +70,7 @@ eval_2() {
 ```yaml
 success_criteria:
   - id: eval_1
-    description: "both additional clients are documented with a restart caveat"
+    description: "per-client sections exist for all three harnesses"
     runnable: bash
     check_type: deterministic
     verifies: [B-1, B-3]

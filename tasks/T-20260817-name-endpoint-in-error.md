@@ -54,9 +54,9 @@ This pulls against the security rail at ch.py:274. The endpoint is configuration
 ## Success Criteria
 
 ```bash
-# eval_1: the disclosure suite passes with the endpoint assertions
+# eval_1: the endpoint-disclosure tests exist and pass
 eval_1() {
-  ( cd serve && uv run --extra dev pytest tests/test_injection_hardening.py -q )
+  ( cd serve && uv run --extra dev pytest "tests/test_injection_hardening.py::test_unavailable_names_endpoint" "tests/test_injection_hardening.py::test_unavailable_hides_credentials" )
 }
 
 # eval_2: neither sentinel credential escapes with both exported
@@ -71,7 +71,7 @@ eval_2() {
 ```yaml
 success_criteria:
   - id: eval_1
-    description: "the disclosure suite passes with the endpoint assertions"
+    description: "the endpoint-disclosure tests exist and pass"
     runnable: bash
     check_type: deterministic
     verifies: [B-1, B-3, B-4]

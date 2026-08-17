@@ -54,9 +54,9 @@ The required-column set already exists at serve/tools/read_only_gate.py:33-59. L
 ## Success Criteria
 
 ```bash
-# eval_1: all four assembler behaviors are covered by passing tests
+# eval_1: the assembler behavior tests exist and pass
 eval_1() {
-  ( cd serve && uv run --extra dev pytest tests/test_status.py -q )
+  ( cd serve && uv run --extra dev pytest "tests/test_status.py::test_status_reports_fresh_ingest_age" "tests/test_status.py::test_status_names_missing_contract_column" "tests/test_status.py::test_empty_store_is_connected_not_broken" )
 }
 
 # eval_2: the assembler performs no I/O
@@ -71,7 +71,7 @@ eval_2() {
 ```yaml
 success_criteria:
   - id: eval_1
-    description: "all four assembler behaviors are covered by passing tests"
+    description: "the assembler behavior tests exist and pass"
     runnable: bash
     check_type: deterministic
     verifies: [B-1, B-2, B-3, B-4]
