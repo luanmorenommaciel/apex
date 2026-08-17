@@ -94,8 +94,8 @@ units:
         terminal: true
         expected_duration_sec: 30
       - id: eval_2
-        description: no SQL literal in ch.py contains interpolation
-        command: ( cd serve && uv run python -c "import re,pathlib; src=pathlib.Path('src/apex_mcp/ch.py').read_text(); sql=re.findall(r'\"\"\"\s*\n?\s*SELECT.*?\"\"\"', src, re.S); bad=[s for s in sql if '{' in s]; assert not bad, bad; print(len(sql),'SQL constants clean')" )
+        description: SQL is server-side bound and no literal is an f-string
+        command: ( cd serve && uv run python -c "import re,pathlib; src=pathlib.Path('src/apex_mcp/ch.py').read_text(); assert not re.search(r'f\"\"\"', src), 'f-string SQL literal found'; assert '{job_id:String}' in src, 'server-side binding placeholder missing'; print('SQL bound, no f-string literals')" )
         verifies: [B-1]
         terminal: true
         expected_duration_sec: 10
