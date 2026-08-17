@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-17T14:44:07Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-08-17T14:44:09Z
+signed_off_sig: hmac-sha256-v2:5153084e:bfea9eeb592d87dbf929a0f02126c7058736f863f1579391855d361e21dad2c5
 ---
 
 # Add ReadStore.store_health for counts and freshness
