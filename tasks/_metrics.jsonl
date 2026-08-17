@@ -1,2 +1,4 @@
 {"schema_version":1,"ts":"2026-08-17T14:38:03Z","task":"T-20260817-serverstatus-model","event":"accepted","author":"sidymar"}
 {"schema_version":1,"ts":"2026-08-17T14:44:09Z","task":"T-20260817-store-health-query","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-17T17:50:59Z","task":"T-20260817-serverstatus-model","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-17T17:51:00Z","task":"T-20260817-store-health-query","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}

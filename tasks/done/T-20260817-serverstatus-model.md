@@ -1,7 +1,7 @@
 ---
 id: T-20260817-serverstatus-model
 title: "Add the ServerStatus Pydantic model"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S

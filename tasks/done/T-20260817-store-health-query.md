@@ -1,7 +1,7 @@
 ---
 id: T-20260817-store-health-query
 title: "Add ReadStore.store_health for counts and freshness"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S
