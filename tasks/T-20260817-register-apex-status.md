@@ -55,12 +55,12 @@ The four-tools test is expected to fail after this task and is repaired by its o
 ```bash
 # eval_1: the tool is listed read-only with the correct annotations
 eval_1() {
-  cd serve && uv run python -c "import asyncio; from apex_mcp.server import create_server; from apex_mcp.ch import ReadStore; from tests.conftest import FakeClient; s=create_server(ReadStore(FakeClient())); t={x.name:x for x in asyncio.run(s.list_tools())}; assert 'apex_status' in t, sorted(t); a=t['apex_status'].annotations; assert a.readOnlyHint and a.openWorldHint is False, a"
+  ( cd serve && uv run python -c "import asyncio; from apex_mcp.server import create_server; from apex_mcp.ch import ReadStore; from tests.conftest import FakeClient; s=create_server(ReadStore(FakeClient())); t={x.name:x for x in asyncio.run(s.list_tools())}; assert 'apex_status' in t, sorted(t); a=t['apex_status'].annotations; assert a.readOnlyHint and a.openWorldHint is False, a" )
 }
 
 # eval_2: the module docstring no longer claims four tools
 eval_2() {
-  cd serve && ! grep -n 'Four tools' src/apex_mcp/server.py
+  ( cd serve && ! grep -n 'Four tools' src/apex_mcp/server.py )
 }
 
 ```

@@ -55,12 +55,12 @@ The repository is now Apache-2.0 licensed, which settles the licence question th
 ```bash
 # eval_1: metadata is complete and the pin survived
 eval_1() {
-  cd serve && uv run python -c "import tomllib,pathlib; p=tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']; need={'readme','license','authors','keywords','classifiers','urls'}; missing=need-p.keys(); assert not missing, missing; assert p['dependencies'][0].startswith('mcp[cli]>=1.27,<2'), p['dependencies'][0]"
+  ( cd serve && uv run python -c "import tomllib,pathlib; p=tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']; need={'readme','license','authors','keywords','classifiers','urls'}; missing=need-p.keys(); assert not missing, missing; assert p['dependencies'][0].startswith('mcp[cli]>=1.27,<2'), p['dependencies'][0]" )
 }
 
 # eval_2: the built wheel and sdist pass twine check
 eval_2() {
-  cd serve && rm -rf dist && uv build >/dev/null && uvx twine check dist/* | grep -q PASSED
+  ( cd serve && rm -rf dist && uv build >/dev/null && uvx twine check dist/* | grep -q PASSED )
 }
 
 ```

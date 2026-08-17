@@ -54,12 +54,12 @@ Requires PyPI credentials and a confirmed distribution name. Build from a clean 
 ```bash
 # eval_1: a clean uvx install from real PyPI launches with a silent stdout
 eval_1() {
-  cd /tmp && uvx apex-mcp </dev/null >/tmp/p-stdout.bin 2>/tmp/p-stderr.txt; test ! -s /tmp/p-stdout.bin
+  ( cd /tmp && uvx apex-mcp </dev/null >/tmp/p-stdout.bin 2>/tmp/p-stderr.txt; test ! -s /tmp/p-stdout.bin )
 }
 
 # eval_2: the published release is recorded in the lane validation record
 eval_2() {
-  cd serve && grep -qiE 'published|pypi release' VALIDATION.md
+  ( cd serve && grep -qiE 'published|pypi release' VALIDATION.md )
 }
 
 ```

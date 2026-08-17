@@ -54,12 +54,12 @@ test_exactly_the_four_contracted_tools asserts an exact ordered list. Keep that 
 ```bash
 # eval_1: the full serve suite is green again
 eval_1() {
-  cd serve && uv run --extra dev pytest -q
+  ( cd serve && uv run --extra dev pytest -q )
 }
 
 # eval_2: the assertion is still an ordered equality, not a subset or count
 eval_2() {
-  cd serve && ! grep -nE '(issubset|len\(tools\)|set\(\[t\.name)' tests/test_server_tools.py
+  ( cd serve && ! grep -nE '(issubset|len\(tools\)|set\(\[t\.name)' tests/test_server_tools.py )
 }
 
 ```

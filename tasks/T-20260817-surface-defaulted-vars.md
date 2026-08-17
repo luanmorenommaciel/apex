@@ -56,12 +56,12 @@ Sized M rather than S because the write surface is three paths - the assembler, 
 ```bash
 # eval_1: the defaults behaviors pass with the environment cleared
 eval_1() {
-  cd serve && env -u CLICKHOUSE_HOST -u CLICKHOUSE_PORT -u CLICKHOUSE_USER -u CLICKHOUSE_PASSWORD -u CLICKHOUSE_DATABASE -u CLICKHOUSE_SECURE uv run --extra dev pytest tests/test_status.py -q
+  ( cd serve && env -u CLICKHOUSE_HOST -u CLICKHOUSE_PORT -u CLICKHOUSE_USER -u CLICKHOUSE_PASSWORD -u CLICKHOUSE_DATABASE -u CLICKHOUSE_SECURE uv run --extra dev pytest tests/test_status.py -q )
 }
 
 # eval_2: the full suite stays green and no variable value is emitted
 eval_2() {
-  cd serve && CLICKHOUSE_PASSWORD='sentinel-pw-do-not-leak' uv run --extra dev pytest -q
+  ( cd serve && CLICKHOUSE_PASSWORD='sentinel-pw-do-not-leak' uv run --extra dev pytest -q )
 }
 
 ```

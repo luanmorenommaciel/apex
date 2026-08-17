@@ -55,12 +55,12 @@ Requires a TestPyPI API token, so the upload step is human-gated. Use a devN suf
 ```bash
 # eval_1: a clean install from TestPyPI launches with a silent stdout
 eval_1() {
-  cd /tmp && uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ apex-mcp </dev/null >/tmp/tp-stdout.bin 2>/tmp/tp-stderr.txt; test ! -s /tmp/tp-stdout.bin
+  ( cd /tmp && uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ apex-mcp </dev/null >/tmp/tp-stdout.bin 2>/tmp/tp-stderr.txt; test ! -s /tmp/tp-stdout.bin )
 }
 
 # eval_2: the rehearsal outcome is recorded in the lane validation record
 eval_2() {
-  cd serve && grep -qi 'testpypi' VALIDATION.md
+  ( cd serve && grep -qi 'testpypi' VALIDATION.md )
 }
 
 ```

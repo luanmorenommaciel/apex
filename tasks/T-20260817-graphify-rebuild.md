@@ -55,12 +55,12 @@ The graph was built on 2026-07-27 and this leg was scoped from a graph query. Us
 ```bash
 # eval_1: the new symbols are present in the graph
 eval_1() {
-  cd /opt/projects/dataship/git/apex && graphify query "apex_status ServerStatus resolve_settings store_health" --budget 800 | grep -q apex_status
+  ( graphify query "apex_status ServerStatus resolve_settings store_health" --budget 800 | grep -q apex_status )
 }
 
 # eval_2: the rebuild was an update and did not truncate pre-existing nodes
 eval_2() {
-  cd /opt/projects/dataship/git/apex && graphify query "suggest_fix" --budget 400 | grep -q suggest_fix
+  ( graphify query "suggest_fix" --budget 400 | grep -q suggest_fix )
 }
 
 ```

@@ -56,12 +56,12 @@ get_client() is lazy by design at ch.py:302, so the server lists tools with the 
 ```bash
 # eval_1: the degraded-path tests pass
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_status.py -q -k degraded
+  ( cd serve && uv run --extra dev pytest tests/test_status.py -q -k degraded )
 }
 
 # eval_2: a sentinel password never reaches a degraded response
 eval_2() {
-  cd serve && CLICKHOUSE_PASSWORD='sentinel-pw-do-not-leak' uv run --extra dev pytest tests/test_status.py -q
+  ( cd serve && CLICKHOUSE_PASSWORD='sentinel-pw-do-not-leak' uv run --extra dev pytest tests/test_status.py -q )
 }
 
 ```

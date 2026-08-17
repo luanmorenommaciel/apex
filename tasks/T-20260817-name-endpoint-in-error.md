@@ -56,12 +56,12 @@ This pulls against the security rail at ch.py:274. The endpoint is configuration
 ```bash
 # eval_1: the disclosure suite passes with the endpoint assertions
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_injection_hardening.py -q
+  ( cd serve && uv run --extra dev pytest tests/test_injection_hardening.py -q )
 }
 
 # eval_2: neither sentinel credential escapes with both exported
 eval_2() {
-  cd serve && CLICKHOUSE_PASSWORD='sentinel-pw-do-not-leak' CLICKHOUSE_USER='sentinel-user' uv run --extra dev pytest -q
+  ( cd serve && CLICKHOUSE_PASSWORD='sentinel-pw-do-not-leak' CLICKHOUSE_USER='sentinel-user' uv run --extra dev pytest -q )
 }
 
 ```

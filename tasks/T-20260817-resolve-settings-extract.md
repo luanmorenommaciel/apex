@@ -56,12 +56,12 @@ The six os.getenv calls are inline inside the lru_cached factory at ch.py:302-32
 ```bash
 # eval_1: the ClickHouse layer suite passes with the settings tests
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_ch.py -q
+  ( cd serve && uv run --extra dev pytest tests/test_ch.py -q )
 }
 
 # eval_2: password is not a field on the settings dataclass
 eval_2() {
-  cd serve && uv run python -c "from apex_mcp.ch import resolve_settings as r; s=r(); assert not hasattr(s,'password'), 'password must not be a settings field'; assert hasattr(s,'defaulted')"
+  ( cd serve && uv run python -c "from apex_mcp.ch import resolve_settings as r; s=r(); assert not hasattr(s,'password'), 'password must not be a settings field'; assert hasattr(s,'defaulted')" )
 }
 
 ```

@@ -56,12 +56,12 @@ This repo already carries two hand-maintained copies of one schema in infra/sql 
 ```bash
 # eval_1: the parity test passes
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_config_parity.py -q
+  ( cd serve && uv run --extra dev pytest tests/test_config_parity.py -q )
 }
 
 # eval_2: the root config is a regular file whose server block matches serve
 eval_2() {
-  cd /opt/projects/dataship/git/apex && test -f .mcp.json && test ! -L .mcp.json && python3 -c "import json; a=json.load(open('.mcp.json')); b=json.load(open('serve/.mcp.json')); assert a['mcpServers']==b['mcpServers']"
+  ( test -f .mcp.json && test ! -L .mcp.json && python3 -c "import json; a=json.load(open('.mcp.json')); b=json.load(open('serve/.mcp.json')); assert a['mcpServers']==b['mcpServers']" )
 }
 
 ```

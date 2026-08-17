@@ -55,12 +55,12 @@ Verify each path against that client's current documentation and record the sour
 ```bash
 # eval_1: both additional clients are documented with a restart caveat
 eval_1() {
-  cd serve && test "$(grep -ci cursor README.md)" -ge 2 && test "$(grep -ci codex README.md)" -ge 2 && grep -qi restart README.md
+  ( cd serve && test "$(grep -ci cursor README.md)" -ge 2 && test "$(grep -ci codex README.md)" -ge 2 && grep -qi restart README.md )
 }
 
 # eval_2: each client section names how to verify the connection
 eval_2() {
-  cd serve && grep -qiE 'mcp list|/mcp' README.md
+  ( cd serve && grep -qiE 'mcp list|/mcp' README.md )
 }
 
 ```

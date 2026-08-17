@@ -56,12 +56,12 @@ Keep the suggest_fix assertions untouched; they pin the lane's headline safety c
 ```bash
 # eval_1: the stdio gate passes end to end
 eval_1() {
-  cd serve && uv run python tools/mcp_stdio_gate.py
+  ( cd serve && uv run python tools/mcp_stdio_gate.py )
 }
 
 # eval_2: the gate no longer claims a four-tool surface
 eval_2() {
-  cd serve && ! grep -n 'four contracted tools' tools/mcp_stdio_gate.py
+  ( cd serve && ! grep -n 'four contracted tools' tools/mcp_stdio_gate.py )
 }
 
 ```

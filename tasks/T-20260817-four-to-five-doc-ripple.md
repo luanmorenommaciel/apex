@@ -55,12 +55,12 @@ Thirteen sites assert the four-tool surface across code, tests, gates and three 
 ```bash
 # eval_1: no document or gate still claims a four-tool surface
 eval_1() {
-  ! grep -rniE 'four tools|exactly 4 tools|four contracted|all four' serve/ docs/lanes/SERVE.md --include='*.md' --include='*.py'
+  ( ! grep -rniE 'four tools|exactly 4 tools|four contracted|all four' serve/ docs/lanes/SERVE.md --include='*.md' --include='*.py' )
 }
 
 # eval_2: the recorded test count equals the count the suite actually reports
 eval_2() {
-  cd /opt/projects/dataship/git/apex/serve && n=$(uv run --extra dev pytest 2>&1 | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+') && grep -q "$n passed" VALIDATION.md
+  ( cd serve && n=$(uv run --extra dev pytest 2>&1 | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+') && grep -q "$n passed" VALIDATION.md )
 }
 
 ```

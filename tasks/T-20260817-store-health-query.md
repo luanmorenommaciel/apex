@@ -55,12 +55,12 @@ ReadStore at ch.py:197 exposes only job_id-keyed reads. Route the new read throu
 ```bash
 # eval_1: the ClickHouse layer suite passes including the empty-table case
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_ch.py -q
+  ( cd serve && uv run --extra dev pytest tests/test_ch.py -q )
 }
 
 # eval_2: no SQL literal in ch.py contains interpolation
 eval_2() {
-  cd serve && uv run python -c "import re,pathlib; src=pathlib.Path('src/apex_mcp/ch.py').read_text(); sql=re.findall(r'\"\"\"\s*\n?\s*SELECT.*?\"\"\"', src, re.S); bad=[s for s in sql if '{' in s]; assert not bad, bad; print(len(sql),'SQL constants clean')"
+  ( cd serve && uv run python -c "import re,pathlib; src=pathlib.Path('src/apex_mcp/ch.py').read_text(); sql=re.findall(r'\"\"\"\s*\n?\s*SELECT.*?\"\"\"', src, re.S); bad=[s for s in sql if '{' in s]; assert not bad, bad; print(len(sql),'SQL constants clean')" )
 }
 
 ```

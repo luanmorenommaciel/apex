@@ -56,12 +56,12 @@ The gate already performs an independent DESCRIBE at read_only_gate.py:73. Compa
 ```bash
 # eval_1: the live gate passes and its status block agrees with DESCRIBE
 eval_1() {
-  cd serve && uv run python tools/read_only_gate.py > /tmp/gate.json && uv run python -c "import json; g=json.load(open('/tmp/gate.json')); assert g['status']=='passed', g; s=g['status_tool']; assert s['connected'] and s['run_count']>0, s; assert s['contract_tables']==g['describe_missing'], (s['contract_tables'], g['describe_missing'])"
+  ( cd serve && uv run python tools/read_only_gate.py > /tmp/gate.json && uv run python -c "import json; g=json.load(open('/tmp/gate.json')); assert g['status']=='passed', g; s=g['status_tool']; assert s['connected'] and s['run_count']>0, s; assert s['contract_tables']==g['describe_missing'], (s['contract_tables'], g['describe_missing'])" )
 }
 
 # eval_2: the reported ingest age is small and positive for freshly seeded rows
 eval_2() {
-  cd serve && uv run python -c "import json; s=json.load(open('/tmp/gate.json'))['status_tool']; a=s['latest_ingest_age_seconds']; assert a is not None and 0 <= a < 3600, a"
+  ( cd serve && uv run python -c "import json; s=json.load(open('/tmp/gate.json'))['status_tool']; a=s['latest_ingest_age_seconds']; assert a is not None and 0 <= a < 3600, a" )
 }
 
 ```

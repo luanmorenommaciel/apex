@@ -55,12 +55,12 @@ findings_columns() at ch.py:214 probes system.columns for one hardcoded table. P
 ```bash
 # eval_1: the ClickHouse layer suite passes with the new probe tests
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_ch.py -q
+  ( cd serve && uv run --extra dev pytest tests/test_ch.py -q )
 }
 
 # eval_2: the pre-existing additive-column test was not rewritten to pass
 eval_2() {
-  cd serve && test -z "$(git diff HEAD -- tests/test_ch.py | grep '^-' | grep -v '^---')"
+  ( cd serve && test -z "$(git diff HEAD -- tests/test_ch.py | grep '^-' | grep -v '^---')" )
 }
 
 ```

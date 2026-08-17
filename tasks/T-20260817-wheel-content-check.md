@@ -55,12 +55,12 @@ The wheel target already names packages = src/apex_mcp, but nothing asserts it. 
 ```bash
 # eval_1: the packaging test passes
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_packaging.py -q
+  ( cd serve && uv run --extra dev pytest tests/test_packaging.py -q )
 }
 
 # eval_2: the artifact itself contains no test, tool or script path
 eval_2() {
-  cd serve && rm -rf dist && uv build >/dev/null && uv run python -c "import glob,zipfile; n=zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist(); bad=[x for x in n if not (x.startswith('apex_mcp/') or '.dist-info/' in x)]; assert not bad, bad; assert not [x for x in n if any(p in x for p in ('tests/','tools/','scripts/'))]; print(len(n),'entries in-package')"
+  ( cd serve && rm -rf dist && uv build >/dev/null && uv run python -c "import glob,zipfile; n=zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist(); bad=[x for x in n if not (x.startswith('apex_mcp/') or '.dist-info/' in x)]; assert not bad, bad; assert not [x for x in n if any(p in x for p in ('tests/','tools/','scripts/'))]; print(len(n),'entries in-package')" )
 }
 
 ```

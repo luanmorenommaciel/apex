@@ -56,12 +56,12 @@ The required-column set already exists at serve/tools/read_only_gate.py:33-59. L
 ```bash
 # eval_1: all four assembler behaviors are covered by passing tests
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_status.py -q
+  ( cd serve && uv run --extra dev pytest tests/test_status.py -q )
 }
 
 # eval_2: the assembler performs no I/O
 eval_2() {
-  cd serve && ! grep -nE '(get_client|clickhouse_connect|ReadStore\()' src/apex_mcp/diagnose.py
+  ( cd serve && ! grep -nE '(get_client|clickhouse_connect|ReadStore\()' src/apex_mcp/diagnose.py )
 }
 
 ```

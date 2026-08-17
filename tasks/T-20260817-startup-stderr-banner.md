@@ -56,12 +56,12 @@ stdout is the JSON-RPC channel. Nothing in src/apex_mcp may print().
 ```bash
 # eval_1: the tool-surface suite passes with the banner test
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_server_tools.py -q
+  ( cd serve && uv run --extra dev pytest tests/test_server_tools.py -q )
 }
 
 # eval_2: a live launch writes zero bytes to stdout and leaks no password to stderr
 eval_2() {
-  cd serve && CLICKHOUSE_PASSWORD='sentinel-pw-do-not-leak' uv run apex-mcp </dev/null >/tmp/apex-stdout.bin 2>/tmp/apex-stderr.txt; test ! -s /tmp/apex-stdout.bin && ! grep -q 'sentinel-pw' /tmp/apex-stderr.txt && grep -qi 'clickhouse' /tmp/apex-stderr.txt
+  ( cd serve && CLICKHOUSE_PASSWORD='sentinel-pw-do-not-leak' uv run apex-mcp </dev/null >/tmp/apex-stdout.bin 2>/tmp/apex-stderr.txt; test ! -s /tmp/apex-stdout.bin && ! grep -q 'sentinel-pw' /tmp/apex-stderr.txt && grep -qi 'clickhouse' /tmp/apex-stderr.txt )
 }
 
 ```

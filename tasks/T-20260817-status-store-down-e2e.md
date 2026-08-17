@@ -55,12 +55,12 @@ conftest already provides FakeClient; extend it rather than repointing fixtures 
 ```bash
 # eval_1: the tool-surface suite passes with the store-down case
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_server_tools.py -q
+  ( cd serve && uv run --extra dev pytest tests/test_server_tools.py -q )
 }
 
 # eval_2: the whole suite stays green with a sentinel password exported
 eval_2() {
-  cd serve && CLICKHOUSE_PASSWORD='sentinel-pw-do-not-leak' uv run --extra dev pytest -q
+  ( cd serve && CLICKHOUSE_PASSWORD='sentinel-pw-do-not-leak' uv run --extra dev pytest -q )
 }
 
 ```

@@ -54,12 +54,12 @@ Sized M because the write surface is three paths. Runs only after the upload suc
 ```bash
 # eval_1: no config or document still references the --from fallback
 eval_1() {
-  ! grep -rn -- '--from' .mcp.json serve/.mcp.json serve/README.md
+  ( ! grep -rn -- '--from' .mcp.json serve/.mcp.json serve/README.md )
 }
 
 # eval_2: both configs invoke the published console script directly
 eval_2() {
-  cd /opt/projects/dataship/git/apex && python3 -c "import json; a=json.load(open('.mcp.json')); b=json.load(open('serve/.mcp.json')); assert a['mcpServers']['apex']['args']==['apex-mcp'], a['mcpServers']['apex']['args']; assert a['mcpServers']==b['mcpServers']"
+  ( python3 -c "import json; a=json.load(open('.mcp.json')); b=json.load(open('serve/.mcp.json')); assert a['mcpServers']['apex']['args']==['apex-mcp'], a['mcpServers']['apex']['args']; assert a['mcpServers']==b['mcpServers']" )
 }
 
 ```

@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-17T14:37:36Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v2:5153084e:6c4ab6b63d1720dcb81b48fe50a648da6cd90e13147ff84b432c37b98a8035fd
 ---
 
 # Add the ServerStatus Pydantic model
@@ -55,17 +56,17 @@ models.py already holds Diagnosis, RunComparison, KbHits and FixSuggestion and h
 ```bash
 # eval_1: the status model test file passes
 eval_1() {
-  cd serve && uv run --extra dev pytest tests/test_status.py -q
+  ( cd serve && uv run --extra dev pytest tests/test_status.py -q )
 }
 
 # eval_2: the model exposes the contracted field set
 eval_2() {
-  cd serve && uv run python -c "from apex_mcp.models import ServerStatus; k=set(ServerStatus(connected=False).model_dump()); need={'connected','database','run_count','latest_ingest_age_seconds','contract_tables','using_defaults','degraded_reason','remediation','tools'}; assert need <= k, need - k"
+  ( cd serve && uv run python -c "from apex_mcp.models import ServerStatus; k=set(ServerStatus(connected=False).model_dump()); need={'connected','database','run_count','latest_ingest_age_seconds','contract_tables','using_defaults','degraded_reason','remediation','tools'}; assert need <= k, need - k" )
 }
 
 # eval_3: no credential-shaped field exists on the model
 eval_3() {
-  cd serve && ! grep -nE '^\s+(password|dsn|secret)\s*:' src/apex_mcp/models.py
+  ( cd serve && ! grep -nE '^\s+(password|dsn|secret)\s*:' src/apex_mcp/models.py )
 }
 
 ```
