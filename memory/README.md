@@ -4,7 +4,7 @@
 isolation; this one answers *"I have seen this plan shape N times before, and
 here is the configuration that actually worked."*
 **Language:** Python (stdlib + pydantic; `clickhouse-connect` only at the
-boundary) · **Obeys:** [../CONTRACT.md](../CONTRACT.md) (v0.4)
+boundary) · **Obeys:** [../CONTRACT.md](../CONTRACT.md) (v0.5)
 
 **Exit criterion (met):** given a `job_id` in ClickHouse, `recall()` returns its
 similar historical runs, a config recommendation and a predicted delta, each

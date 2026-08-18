@@ -5,7 +5,7 @@
 **AQE runtime decisions** (skew splits, join switches, coalesces), shipping each as an
 **OTLP span** over a **bounded, non-blocking** queue.
 
-**Obeys:** [`../CONTRACT.md`](../CONTRACT.md) (v0.4) · **Full brief:** [`../docs/lanes/JAR.md`](../docs/lanes/JAR.md)
+**Obeys:** [`../CONTRACT.md`](../CONTRACT.md) (v0.5) · **Full brief:** [`../docs/lanes/JAR.md`](../docs/lanes/JAR.md)
 **Language:** Scala (sbt) · **Emits:** OTLP/HTTP spans to a collector on `:4318`
 
 It beats sparkMeasure/DataFlint on one axis they don't cover: those aggregate `TaskEnd`

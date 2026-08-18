@@ -61,8 +61,13 @@ amostra foi usada. `task_count` permanece sendo o numero de tasks do stage.
 ENGINE e gate DEV compartilham a politica de skew em
 `apex_engine/skew_policy.py`. Eventos historicos sem volume mantem a politica
 anterior. Quando a distribuicao de shuffle read existe, um hidden-tail vira
-`critical` somente se `max/p50` de duracao for maior que 10, `max/p50` de
-bytes for maior que 5 e o maximo superar o piso local documentado.
+`critical` somente se o stage for tail-bound (CONTRACT Rule 1:
+`p99/p50 > (n_tasks − 1) / (slots − 1)`) e o maximo superar o piso local
+documentado.
+
+> **Nota sobre limiares:** CONTRACT Rule 1 proibe limiares fixos como 5× ou 10× — o
+> limiar correto depende de `n_tasks` e `slots`. Quaisquer limiares fixos em codigo
+> legado devem ser revisados para usar a formula fechada.
 
 Historicamente, a guarda criava uma descontinuidade deliberada em
 `n=99 -> 100`: em amostras
@@ -83,7 +88,9 @@ diagnostica conservadora ate essa extensao existir. O precedente
 aberto do projeto sparkMeasure sobre metricas de tasks nao bem-sucedidas
 explicam por que o Apex mantem uma camada propria de contadores e amostras.
 O piso de `256 KiB` foi calibrado somente para o fixture local; nao substitui
-calibracao por perfil de workload em producao.
+calibracao por perfil de workload em producao. Este piso e um valor medido
+para o ambiente de teste, nao um limiar magico — o principio de CONTRACT
+Rule 2 (medir, nao hardcodar) aplica-se aqui.
 
 ## Ciclo de vida do listener
 

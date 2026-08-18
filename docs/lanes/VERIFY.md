@@ -1,6 +1,6 @@
 # Lane 8 — Fix Verification (verify)
 
-> **Branch:** `feat/apex-verify` · **Language:** Python · **Depends on:** [`CONTRACT.md`](../../CONTRACT.md) v0.4
+> **Branch:** `feat/apex-verify` · **Language:** Python · **Depends on:** [`CONTRACT.md`](../../CONTRACT.md) v0.5
 > **Status: AS-BUILT.** This brief documents the lane as shipped in v0.1, not work to be done.
 > Implementation: [`../../verify/`](../../verify/) · 105 tests · [`../../verify/README.md`](../../verify/README.md)
 

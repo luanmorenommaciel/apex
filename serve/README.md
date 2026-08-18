@@ -5,7 +5,7 @@ capability to any MCP client (Claude Code / Cursor / Codex). It reads the shared
 `apex` ClickHouse database and exposes **four tools** — three read-only, plus one
 confidence-gated proposal tool that **never applies anything**.
 
-**Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.4) · DDL in [../contract/](../contract/) ·
+**Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.5) · DDL in [../contract/](../contract/) ·
 **Lane brief:** [../docs/lanes/SERVE.md](../docs/lanes/SERVE.md)
 
 ## The four tools

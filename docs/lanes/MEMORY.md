@@ -1,6 +1,6 @@
 # Lane 7 — Cross-Job Plan Memory (memory)
 
-> **Branch:** `feat/apex-memory` · **Language:** Python · **Depends on:** [`CONTRACT.md`](../../CONTRACT.md) v0.4
+> **Branch:** `feat/apex-memory` · **Language:** Python · **Depends on:** [`CONTRACT.md`](../../CONTRACT.md) v0.5
 > **Status: AS-BUILT.** This brief documents the lane as shipped in v0.1, not work to be done.
 > Implementation: [`../../memory/`](../../memory/) · 47 tests · [`../../memory/README.md`](../../memory/README.md)
 

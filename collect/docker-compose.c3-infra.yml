@@ -1,9 +1,10 @@
 # Optional C3 overlay: retain collect's isolated smoke database but route its
 # collector into infra's canonical ClickHouse over the Docker network.
+# Uses same insert settings as infra: async_insert=0 + dedup for retry safety.
 services:
   otel-collector:
     environment:
-      CLICKHOUSE_ENDPOINT: tcp://apex-infra-clickhouse:9000?compress=lz4&async_insert=1
+      CLICKHOUSE_ENDPOINT: tcp://apex-infra-clickhouse:9000?compress=lz4&async_insert=0&deduplicate_blocks_in_dependent_materialized_views=1
     networks:
       apex: {}
       apex-infra: {}
