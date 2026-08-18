@@ -94,6 +94,16 @@ _FINDINGS_ADDITIVE = {
     ),
 }
 
+# The one read not keyed by job_id: a new user has no job_id yet, and a
+# reachable-but-empty store must be distinguishable from a broken one.
+HEALTH_SQL = """
+SELECT
+  count()           AS row_count,
+  uniqExact(job_id) AS job_count,
+  max(ts)           AS latest_ts
+FROM apex.spark_events
+"""
+
 COLUMNS_SQL = """
 SELECT name FROM system.columns
 WHERE database = {database:String} AND table = {table:String}
@@ -210,6 +220,26 @@ class ReadStore:
         # Validate BEFORE the column probe, so a bad job_id costs no round trip.
         job_id = _require_job_id(job_id)
         return self._query(_findings_sql(self.findings_columns()), {"job_id": job_id})
+
+    def store_health(self) -> dict[str, Any]:
+        """Row count, distinct jobs and newest ts across apex.spark_events.
+
+        ``latest_ts`` is normalised to None on an empty table: ClickHouse
+        returns the zero DateTime for max() over no rows, and 1970 presented as
+        a freshness reading is worse than saying nothing.
+
+        The timestamp is the EMITTER's clock, not ingestion time — a Spark host
+        with skewed time shows up here as skewed freshness.
+        """
+        rows = self._query(HEALTH_SQL, {})
+        row = rows[0] if rows else {}
+        row_count = int(row.get("row_count") or 0)
+        latest = row.get("latest_ts")
+        return {
+            "row_count": row_count,
+            "job_count": int(row.get("job_count") or 0),
+            "latest_ts": latest if row_count else None,
+        }
 
     def findings_columns(self) -> set[str]:
         """Which apex.findings columns this deployment actually has.

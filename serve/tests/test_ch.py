@@ -118,3 +118,74 @@ def test_blank_job_id_never_reaches_the_database():
     with pytest.raises(ApexStoreError, match="job_id_required"):
         ReadStore(client).findings("")
     assert client.calls == []
+
+
+# --------------------------------------------------------------------------
+# store_health — the one read not keyed by job_id
+# --------------------------------------------------------------------------
+class OperationalError(Exception):
+    """Name-shaped like the driver's, since _sanitize routes on the class name."""
+
+
+class _HealthClient:
+    """Local double: FakeClient routes on job_id, and health has none.
+
+    Defined here rather than in conftest so this task stays inside its
+    declared blast radius.
+    """
+
+    def __init__(self, rows: list[dict] | None = None, raises: Exception | None = None):
+        self.rows = rows if rows is not None else []
+        self.raises = raises
+        self.calls: list[tuple[str, dict]] = []
+
+    def query(self, query: str, parameters: dict | None = None):
+        self.calls.append((query, parameters or {}))
+        if self.raises:
+            raise self.raises
+        return type("R", (), {"named_results": lambda _self: list(self.rows)})()
+
+
+def test_store_health_reports_counts_and_freshness():
+    store = ReadStore(
+        _HealthClient([{"row_count": 17, "job_count": 3, "latest_ts": "2026-08-17T10:00:00"}])
+    )
+
+    health = store.store_health()
+
+    assert health["row_count"] == 17
+    assert health["job_count"] == 3
+    assert health["latest_ts"] == "2026-08-17T10:00:00"
+
+
+def test_store_health_on_empty_table_is_zeros_and_no_timestamp():
+    """ClickHouse returns the zero DateTime for max() over no rows; 1970 is
+    not a freshness reading, so an empty store reports None instead."""
+    store = ReadStore(
+        _HealthClient([{"row_count": 0, "job_count": 0, "latest_ts": "1970-01-01T00:00:00"}])
+    )
+
+    health = store.store_health()
+
+    assert health == {"row_count": 0, "job_count": 0, "latest_ts": None}
+
+
+def test_store_health_on_unreachable_store_raises_sanitized():
+    store = ReadStore(_HealthClient(raises=OperationalError("connect refused to 10.0.0.5")))
+
+    with pytest.raises(ApexStoreError) as excinfo:
+        store.store_health()
+
+    assert "clickhouse_unavailable" in str(excinfo.value)
+    assert "10.0.0.5" not in str(excinfo.value)
+
+
+def test_store_health_sql_is_bound_not_interpolated():
+    store = ReadStore(_HealthClient([{"row_count": 0, "job_count": 0, "latest_ts": None}]))
+    store.store_health()
+
+    sql, parameters = store._client.calls[0]  # noqa: SLF001 — asserting the wire
+    assert "{" not in sql
+    assert parameters == {}
+    assert "apex.spark_events" in sql
+
