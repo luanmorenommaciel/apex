@@ -33,5 +33,24 @@ for f in sql/*.sql; do
     echo "❌ apply-ddl stopped at $f — fix the DDL and re-run (earlier files are idempotent)"
     exit 1
   fi
+
+  # Defense-in-depth (apex #72): `CREATE MATERIALIZED VIEW ... TO <table>` succeeds
+  # even when <table> doesn't exist yet — ClickHouse gives no error at DDL time. Left
+  # unchecked, the gap surfaces later as a total, silent-at-bootstrap INSERT failure on
+  # the MV's source table. Verify every target table this file declared actually exists,
+  # right after applying it, so a broken ordering fails loudly here instead of on the
+  # first real span.
+  for target in $(grep -oiE 'MATERIALIZED VIEW[^;]*\bTO\b[[:space:]]+[A-Za-z0-9_.]+' "$f" \
+                    | grep -oE '[A-Za-z0-9_.]+$'); do
+    exists=$(docker exec -i "$CONTAINER" clickhouse-client \
+        --user "$CH_USER" --password "$CH_PASS" \
+        --query "EXISTS TABLE $target" 2>/dev/null | tr -d '[:space:]')
+    if [ "$exists" != "1" ]; then
+      echo "❌ apply-ddl: $f creates a MATERIALIZED VIEW targeting '$target', but that table does not exist"
+      echo "   Every insert into the view's source table will now fail until '$target' exists."
+      echo "   Fix: make sure the migration creating '$target' sorts before $f, then re-run."
+      exit 1
+    fi
+  done
 done
 echo "✅ apply-ddl complete — sql/ fully applied to $CONTAINER"
