@@ -91,7 +91,29 @@ Then point any MCP client at `serve/` and ask about the run:
 claude mcp add --scope project apex -- uvx --from ./serve apex-mcp
 ```
 
-> **Try it without a Spark cluster.** `cd dev && make up && make run-pathology JOB=skew_join` builds a Spark + Delta + MinIO lab and generates a job with a *known* pathology, so you can watch the whole pipeline work before pointing it at anything real.
+> **Try it without a Spark cluster.** `cd dev && make up && make run-pathology JOB=skew_join` builds a Spark + Delta + MinIO lab and generates a job with a *known* pathology, so you can exercise the plugin and the History Server locally. On its own this does **not** export telemetry anywhere real — `dev`'s Spark cluster only reaches ClickHouse once it's wired to `collect`/`infra`, below.
+
+### Prove it end-to-end: `dev` → `collect` → `infra`
+
+To watch a pathology's telemetry actually land in the canonical ClickHouse from step 1 — not just complete in the Spark UI — wire the three lanes together and run the built-in gate:
+
+```bash
+# infra/ already up from step 1. Connect collect/'s collector to it
+# (instead of collect's own throwaway ClickHouse):
+cd collect
+docker compose -f docker-compose.yml -f docker-compose.c3-infra.yml \
+  --env-file .env.example --env-file .env.c3-infra.example up -d
+
+# dev/'s pathology lab, wired to that same collector:
+cd ../dev
+cp .env.example .env
+export APEX_CANONICAL_CH_PASSWORD=apex_local_dev   # matches infra/.env's CLICKHOUSE_PASSWORD
+make e2e
+```
+
+`make e2e` runs all four pathologies (`skew_join`, `spill`, `bad_shuffle`, `driver_oom`) and asserts each one's specific signal against `apex.spark_events` in the real ClickHouse — not against Spark's own stats.
+
+> **Memory.** This brings up 11+ containers at once (2× ClickHouse, 2 Spark JVMs, HyperDX, MongoDB, 2 OTel Collectors). Give Docker Desktop **8 GB+** (Settings → Resources → Memory). Under ~4 GB the OOM killer takes down ClickHouse or a Spark executor mid-run (`exit code 137`) — it reads like a pipeline bug but is a resource limit.
 
 ---
 
