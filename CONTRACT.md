@@ -4,10 +4,18 @@
 > It defines the data shapes that flow between stages so each directory can be built independently and still fuse.
 > A stage may **add** a field; it may never rename or repurpose one. Breaking changes = version bump + a note here.
 
-**Status:** contract **v0.4** · **Consumed by:** `dev` · `jar` · `collect` · `infra` · `engine` · `serve` · `memory` · `verify`
+**Status:** contract **v0.5** · **Consumed by:** `dev` · `jar` · `collect` · `infra` · `engine` · `serve` · `memory` · `verify`
 **Artifacts:** [`contract/sample_event.json`](contract/) · [`spark_events`](contract/spark_events.ddl.sql) · [`findings`](contract/findings.ddl.sql) · [`plan_transitions`](contract/plan_transitions.ddl.sql) · [`job_conf`](contract/job_conf.ddl.sql) · `memory/sql/030_plan_memory.sql` · `memory/sql/031_run_outcomes.sql` · `verify/ddl/fix_verifications.ddl.sql`
 
 **Changelog:**
+- **v0.5** — ADDITIVE: ~15 OTLP keys for retry-safe task analysis. All columns default to 0 for historical events; consumers must treat `sample_count=0` as "no sample available" (0-on-empty semantics).
+  - **Tail-outlier visibility:** `task_duration_max_ms` (maximum task duration) + `task_duration_sample_count` (attempts with duration available).
+  - **Retry-safe successful-task sample:** `successful_task_duration_p50_ms`, `successful_task_duration_p99_ms`, `successful_task_duration_max_ms`, `successful_task_sample_count` — one successful attempt per logical partition, excluding retries/speculation.
+  - **Shuffle-read distribution:** `successful_task_shuffle_read_bytes_p50`, `successful_task_shuffle_read_bytes_max`, `successful_task_shuffle_read_bytes_sample_count`.
+  - **Task-termination counters:** `task_attempt_count` (all `onTaskEnd` events), `task_failed_attempt_count` (`TaskInfo.failed=true`), `task_counted_failure_attempt_count` (scheduler budget via `countTowardsTaskFailures`), `task_killed_attempt_count` (`TaskInfo.killed=true`), `task_speculative_attempt_count`.
+  - **Executor runtime:** `executor_run_time_ms` (Spark's measured executor wall-clock runtime).
+  - **Convention:** unfinished task durations do not enter percentiles; only tasks with a measured duration feed `task_duration_*` / `successful_task_duration_*`. Absence of duration is not represented by zero — check `sample_count`. ENGINE prefers `successful_*` when `successful_task_sample_count > 0` and falls back to legacy fields for historical events.
+  - Affects: `jar` (emits), `collect`+`infra` (store), `engine`/`memory`/`verify` (read).
 - **v0.4** — ADDITIVE: `apex.job_conf` (one row per `job_id`, `conf Map(String,String)` of an **allowlisted** resolved `spark.*` subset). Emitted at **first `onJobStart`**, NOT `onApplicationStart` — at ApplicationStart no SparkSession exists, so `spark.sql.*` defaults cannot be resolved and you would lose `adaptive.enabled` on exactly the keys the no-op gate depends on. **Allowlist only, never a whole-conf dump** (SparkConf can hold s3a keys / JDBC passwords / tokens). Resource keys (`spark.executor.*`/`spark.driver.*`) are present **iff explicitly set** — never synthesized, because a fabricated default poisons "the config that worked". Affects: `jar` (emits), `collect`+`infra` (route/store), `engine`/`memory`/`verify` (read).
 - **v0.3** — ADDITIVE: `apex.plan_memory` + `apex.run_outcomes` (cross-job plan-similarity memory: fuzzy structural index + per-run outcome evidence) and `apex.fix_verifications` (predicted/replayed fix outcomes). No existing table changed.
 - **v0.2** — ADDITIVE: `plan_transition` event + `apex.plan_transitions` (AQE runtime-decision capture). Existing tables unchanged.
@@ -67,7 +75,9 @@ dev  ──[job_id]──►  jar  ──[job_id]──►  collect  ──[job_
 One event **per completed stage**, OTLP/HTTP to the collector on `:4318`. Fields (snake_case, exact):
 
 - **Identity:** `job_id`, `app_id`, `app_name`, `stage_id`, `stage_attempt`, `ts` (epoch millis).
-- **Stage metrics** (from `stageInfo.taskMetrics`): `shuffle_read_bytes`, `shuffle_write_bytes`, `spill_disk_bytes`, `spill_mem_bytes`, `gc_time_ms`, `input_bytes`, `output_bytes`, `peak_execution_mem_bytes`, `task_count`, `task_duration_p50_ms`, `task_duration_p99_ms`.
+- **Stage metrics** (from `stageInfo.taskMetrics`): `shuffle_read_bytes`, `shuffle_write_bytes`, `spill_disk_bytes`, `spill_mem_bytes`, `gc_time_ms`, `executor_run_time_ms` *(v0.5)*, `input_bytes`, `output_bytes`, `peak_execution_mem_bytes`, `task_count`, `task_duration_p50_ms`, `task_duration_p99_ms`, `task_duration_max_ms` *(v0.5)*, `task_duration_sample_count` *(v0.5)*.
+- **Successful-task sample** *(v0.5, retry-safe)*: `successful_task_duration_p50_ms`, `successful_task_duration_p99_ms`, `successful_task_duration_max_ms`, `successful_task_sample_count`, `successful_task_shuffle_read_bytes_p50`, `successful_task_shuffle_read_bytes_max`, `successful_task_shuffle_read_bytes_sample_count`.
+- **Task-termination counters** *(v0.5)*: `task_attempt_count`, `task_failed_attempt_count`, `task_counted_failure_attempt_count`, `task_killed_attempt_count`, `task_speculative_attempt_count`.
 - **Plan:** `plan_fingerprint` (SHA-256 of the **normalized LOGICAL** plan — **not** physical), `plan_json` (redacted Catalyst **tree-string**, NOT JSON — e.g. `Filter (order_ts#2 >= null)`; both listeners converged on this; don't parse it as JSON downstream).
   - ⚠️ **`optimizedPlan.canonicalized` is NOT sufficient alone** (verified empirically, jar T7): it does **not** normalize literal *values*, so `id > 100` and `id > 900` hash differently — which fails the "same query, different literals → same fingerprint" requirement and would break `compare_runs` regression detection. **Every listener (jar Scala AND dev Python) MUST apply a literal-normalization pass on top of the canonicalized logical plan before hashing.** Still purely logical, never physical. Cross-version stable (verified identical Spark 3.5 ↔ 4.0).
 

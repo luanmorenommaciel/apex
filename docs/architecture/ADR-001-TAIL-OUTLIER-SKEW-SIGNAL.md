@@ -22,9 +22,11 @@ O ENGINE tratara os sinais assim:
 
 | Sinal | Decisao |
 |---|---|
-| `p99/p50 > 10` | mantem finding critico atual |
+| `p99/p50 > (n_tasks − 1) / (slots − 1)` | finding critico quando tail-bound (CONTRACT Rule 1) |
 | AQE `skew_split` | mantem evidencia forte/critica atual |
 | `max/p50` elevado com `task_count >= 100` | candidato de cauda extrema; nao sobe sozinho para critico |
+
+> **Nota:** Um limite fixo como `p99/p50 > 10` e incorreto — a clausula tail-bound depende de `n_tasks` e `slots` e deve ser computada por stage (CONTRACT Rule 1).
 
 `max/p50` nao e chamado de p99 nem substitui o sinal de distribuicao. A
 severidade final exige calibracao contra execucao real e, quando disponivel,

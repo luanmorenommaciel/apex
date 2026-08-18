@@ -6,7 +6,7 @@
 [![Spark](https://img.shields.io/badge/Spark-3.5%20%7C%204.0%20%7C%204.1-e25a1c.svg)](#compatibility)
 [![Scala](https://img.shields.io/badge/Scala-2.12%20%7C%202.13-dc322f.svg)](#compatibility)
 [![Tests](https://img.shields.io/badge/tests-401-brightgreen.svg)](#verify-everything)
-[![Contract](https://img.shields.io/badge/contract-v0.4-fabd2f.svg)](CONTRACT.md)
+[![Contract](https://img.shields.io/badge/contract-v0.5-fabd2f.svg)](CONTRACT.md)
 
 Apex captures Spark telemetry from inside the JVM, lands it in ClickHouse you own, reasons over it with deterministic detectors, and answers questions through an MCP server — so you ask *"why was this job slow?"* in your editor and get an answer backed by measurements.
 
@@ -155,7 +155,7 @@ flowchart LR
 | [`memory/`](memory/) | **recall** | "We've seen this plan shape before — here's what worked" | Python |
 | [`verify/`](verify/) | **refute** | Predicts a fix's effect, replays it, reports what can be certified | Python |
 
-**No lane imports another lane's code.** Every arrow above is a ClickHouse table defined by [`CONTRACT.md`](CONTRACT.md) — the frozen interface, now at v0.4 with **seven cross-lane rules**, each discovered by an implementation contradicting the spec. That's what let all eight lanes be built concurrently with **zero merge conflicts**.
+**No lane imports another lane's code.** Every arrow above is a ClickHouse table defined by [`CONTRACT.md`](CONTRACT.md) — the frozen interface, now at v0.5 with **seven cross-lane rules**, each discovered by an implementation contradicting the spec. That's what let all eight lanes be built concurrently with **zero merge conflicts**.
 
 ### Privacy: diagnosable, without your data
 
