@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-19T17:50:12Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-08-19T17:50:13Z
+signed_off_sig: hmac-sha256-v2:5153084e:8a5bf102a175ae774610ca6b4fe369b5a1b1348aa3da5a58d31b7719c098dd0e
 ---
 
 # Register the list_runs tool
