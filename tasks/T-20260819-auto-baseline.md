@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-19T17:54:42Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-08-19T17:55:41Z
+signed_off_sig: hmac-sha256-v2:5153084e:138ff8c08cdbce355380c4045e4eafe96e05d999048da1fb1457d0b332842852
 ---
 
 # Let compare_runs pick its own baseline
