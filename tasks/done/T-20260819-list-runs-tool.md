@@ -1,7 +1,7 @@
 ---
 id: T-20260819-list-runs-tool
 title: "Register the list_runs tool"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: XS
