@@ -1,7 +1,7 @@
 ---
 id: T-20260819-auto-baseline
 title: "Let compare_runs pick its own baseline"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M
