@@ -50,5 +50,5 @@ CREATE TABLE IF NOT EXISTS apex.spark_events (
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(ts)
 ORDER BY (job_id, stage_id, stage_attempt)
-SETTINGS non_replicated_deduplication_window = 100
-TTL toDateTime(ts) + INTERVAL 90 DAY;
+TTL toDateTime(ts) + INTERVAL 90 DAY
+SETTINGS non_replicated_deduplication_window = 100;
