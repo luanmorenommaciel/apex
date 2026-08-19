@@ -1,7 +1,7 @@
 ---
 id: T-20260819-run-summary-models
 title: "Add RunSummary and RunList models"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S
