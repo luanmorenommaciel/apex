@@ -42,3 +42,24 @@ def test_run_list_defaults_to_empty_not_null():
 
     assert payload["runs"] == []
     assert payload["returned"] == 0
+
+
+def test_timestamps_from_the_driver_are_coerced_to_strings():
+    """The driver returns datetime objects, not strings.
+
+    Every fake in this suite supplied strings, so the mismatch survived unit
+    tests and only surfaced when a real ClickHouse fed the model. This is the
+    regression guard.
+    """
+    from datetime import datetime
+
+    run = RunSummary.model_validate(
+        {
+            "job_id": "job-1",
+            "first_ts": datetime(2026, 8, 19, 19, 7, 54),
+            "last_ts": datetime(2026, 8, 19, 19, 12, 0),
+        }
+    )
+
+    assert run.first_ts == "2026-08-19T19:07:54"
+    assert isinstance(run.last_ts, str)
