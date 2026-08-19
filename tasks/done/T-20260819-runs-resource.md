@@ -1,7 +1,7 @@
 ---
 id: T-20260819-runs-resource
 title: "Expose apex://runs as an MCP resource"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S

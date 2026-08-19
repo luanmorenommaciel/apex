@@ -13,3 +13,4 @@
 {"schema_version":1,"ts":"2026-08-19T17:52:09Z","task":"T-20260819-runs-injection-hardening","event":"accepted","author":"sidymar"}
 {"schema_version":1,"ts":"2026-08-19T17:52:24Z","task":"T-20260819-runs-injection-hardening","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
 {"schema_version":1,"ts":"2026-08-19T17:53:17Z","task":"T-20260819-runs-resource","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T17:53:33Z","task":"T-20260819-runs-resource","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
