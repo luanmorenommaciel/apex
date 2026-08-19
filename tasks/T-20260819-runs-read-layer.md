@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-19T15:17:50Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-08-19T15:18:44Z
+signed_off_sig: hmac-sha256-v2:5153084e:237bc8401630e9ba258c4b5034007ef414a5008f093c836dcbbfd1956330b1cb
 ---
 
 # Add ReadStore.runs for bounded run discovery
