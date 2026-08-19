@@ -1,7 +1,7 @@
 ---
 id: T-20260819-runs-gates
 title: "Assert run discovery in both live gates"
-status: blocked
+status: ready
 format_version: 3
 profile: standard
 effort: S
@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-19T19:07:20Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-08-19T19:11:59Z
+signed_off_sig: hmac-sha256-v2:5153084e:a8ba6935c5a49ace024f9f9598cedbb5578d3018d46fdfe80995d84dcc3c5292
 ---
 
 # Assert run discovery in both live gates
