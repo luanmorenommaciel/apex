@@ -6,12 +6,14 @@ stack (ClickHouse `127.0.0.1:8123`, database `apex`) holding the real P0 run
 
 ## Scope
 
-`apex-mcp` — stdio MCP server, four tools:
+`apex-mcp` — stdio MCP server, five tools and one resource:
 
 | Tool | Kind |
 |---|---|
+| `list_runs(limit, since_hours, app_name)` | read-only |
 | `analyze_run(job_id)` | read-only |
-| `compare_runs(baseline_job_id, current_job_id)` | read-only |
+| `compare_runs(current_job_id, baseline_job_id?)` | read-only |
+| `apex://runs` *(resource)* | read-only |
 | `search_kb(query, top_k)` | read-only |
 | `suggest_fix(job_id, finding_id?, min_confidence)` | proposal only — writes nothing |
 
@@ -24,13 +26,13 @@ calls an LLM.
 ```bash
 cd serve
 uv sync --extra dev
-uv run --extra dev pytest                  # 87 passed
+uv run --extra dev pytest                  # 123 passed
 uv run python tools/read_only_gate.py      # live: contract + argMax + 4 tools
 uv run python tools/mcp_stdio_gate.py      # real MCP client over stdio
 uv build                                   # wheel + sdist
 ```
 
-### Unit + safety suite — `87 passed`
+### Unit + safety suite — `123 passed`
 
 | File | Covers |
 |---|---|
@@ -64,7 +66,7 @@ Server spawned over stdio and driven by the official `mcp` client:
 - the three read tools carry `readOnlyHint=true` / `openWorldHint=false`;
   `suggest_fix` carries `readOnlyHint=false`, `destructiveHint=false`,
   `idempotentHint=true`;
-- all four return schema-valid structured output;
+- all five return schema-valid structured output;
 - `suggest_fix` reports `applied=false`, `requires_human_approval=true`.
 
 ### Real P0 data — `analyze_run('app-20260724160310-0000')`
@@ -136,3 +138,53 @@ constructed.
   embedding path stays a pluggable interface, unimplemented in v1.
 - Stage linkage for `plan_transitions` is by `(job_id, execution_id)` per the
   contract; per-`stage_id` linkage is a later contract enhancement.
+
+---
+
+## L2 — run discovery, recorded 2026-08-19
+
+Branch `serve/l2-discover`, against a **freshly provisioned** infra stack
+(ClickHouse `127.0.0.1:8123`, database `apex`, volume recreated so `infra/sql/`
+applied in full).
+
+### Unit suite — `123 passed`
+
+### `tools/read_only_gate.py` — live ClickHouse, `status: passed`
+
+```json
+"runs": {"listed": 6, "seeded_found": 2, "newest_first": true,
+         "hostile_app_name_rows": 0, "app_name_filter_rows": 6}
+```
+
+- Both seeded runs are returned by `list_runs`, aggregated one row per `job_id`.
+- Results are newest-first without the caller re-sorting.
+- `app_name` of `' OR 1=1 --` binds and returns **0 rows** against the real parser.
+- Contract conformance: `findings` carries `app_id` + `confidence_score`;
+  `spark_events` carries all 15 contract v0.5 columns.
+
+### `tools/mcp_stdio_gate.py` — real MCP client, `status: passed`
+
+- lists exactly `analyze_run`, `compare_runs`, `list_runs`, `search_kb`, `suggest_fix`;
+- exposes `apex://runs` as a **resource** and not as a tool;
+- reading the resource returns a `RunList` whose `untrusted_fields` names
+  `runs[].app_name`;
+- the gate now **discovers its own subject** through `list_runs` rather than
+  requiring a hardcoded `job_id`.
+
+### Two defects only a live database could find
+
+Both units passed their entire unit suite before these surfaced, because
+`FakeClient` never parses SQL and every fake supplied string timestamps:
+
+1. `RUNS_SQL` aliased `argMax(app_name, ts) AS app_name`, so the unqualified
+   `app_name` in `WHERE` resolved to the aggregate — ClickHouse rejected it with
+   `ILLEGAL_AGGREGATION`. Every filtered `list_runs` failed against any real database.
+2. `RunSummary.first_ts` / `last_ts` were typed `str`, but the driver returns
+   `datetime`, so every real row failed validation.
+
+### Known limits
+
+- `mcp_stdio_gate.py` needs at least one run present; with an empty database it
+  reports that rather than inventing a subject.
+- Auto-baseline costs up to 10 extra stage queries, because `RUNS_SQL` does not
+  carry `plan_fingerprint`.

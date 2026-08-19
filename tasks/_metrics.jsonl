@@ -20,3 +20,4 @@
 {"schema_version":1,"ts":"2026-08-19T19:05:47Z","task":"T-20260819-runs-gates","event":"status_change","from":"blocked","to":"ready","reason":"ClickHouse available; DDL fixed"}
 {"schema_version":1,"ts":"2026-08-19T19:11:59Z","task":"T-20260819-runs-gates","event":"accepted","author":"sidymar"}
 {"schema_version":1,"ts":"2026-08-19T19:12:21Z","task":"T-20260819-runs-gates","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T19:15:05Z","task":"T-20260819-discover-docs","event":"accepted","author":"sidymar"}
