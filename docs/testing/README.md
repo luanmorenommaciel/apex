@@ -15,7 +15,14 @@ testes por conta própria, leia nesta ordem:
 5. [`scripts/`](scripts/) — os scripts executáveis de cada reprodução
 
 Base: `origin/main` em `50d596e`, a mesma das branches `candidate/*` que viraram
-PR. Nada aqui depende de código que não esteja no `main` ou num PR aberto.
+PR. Nada aqui depende de código que não esteja no `main`.
+
+> **Atualização 19/08:** os 8 PRs desta jornada (#66-#70, #74-#76) foram
+> revisados, aprovados e **mergeados em 18/08**. As issues ligadas a eles
+> fecharam automaticamente. Seguem abertas apenas #59, #65 e #71 — as três
+> que dependem de decisão do mantenedor, não de código. A linhagem em
+> [`LINEAGE.md`](LINEAGE.md) descreve o caminho até o PR; o destino final de
+> todos eles é o `main`.
 
 ---
 
@@ -87,12 +94,13 @@ diretamente da versão.
 
 ## Antes de tudo: subir a infra
 
-O pacote operacional que instala e sobe o stack completo é o **PR #76**
-(issue #62). Enquanto ele não é mergeado, use a branch dele:
+O pacote operacional que instala e sobe o stack completo **já está no `main`**
+(PR #76, issue #62, mergeado em 18/08). Nada de branch extra:
 
 ```bash
-git fetch origin
-git checkout candidate/local-operational-package
+git checkout main && git pull
+make install       # macOS: instala pwsh, uv, Python 3.11 e Docker Desktop
+                   # Windows: imprime os pré-requisitos, não instala
 make bootstrap     # constrói e sobe as seis raias
 make doctor        # verifica que subiu de verdade
 make smoke         # roda o gate de produto de uma patologia
