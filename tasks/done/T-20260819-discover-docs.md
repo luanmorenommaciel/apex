@@ -1,7 +1,7 @@
 ---
 id: T-20260819-discover-docs
 title: "Document run discovery across the lane docs"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M
