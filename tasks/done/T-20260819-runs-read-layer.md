@@ -1,7 +1,7 @@
 ---
 id: T-20260819-runs-read-layer
 title: "Add ReadStore.runs for bounded run discovery"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S
