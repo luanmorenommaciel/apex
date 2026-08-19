@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-19T17:50:58Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-08-19T17:50:59Z
+signed_off_sig: hmac-sha256-v2:5153084e:4b71b5a80b32b642068598c5b8d87f0ec70d36dc967e58b0df64305583e2876e
 ---
 
 # Re-pin the tool surface assertion at five

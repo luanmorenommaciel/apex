@@ -1,4 +1,4 @@
-"""The MCP tool surface: exactly four tools, correct annotations, no stdout."""
+"""The MCP tool surface: exactly five tools, correct annotations, no stdout."""
 
 from __future__ import annotations
 
@@ -35,9 +35,12 @@ def _tools(server):
     return asyncio.run(server.list_tools())
 
 
-def test_exactly_the_four_contracted_tools(server):
+def test_exactly_the_five_contracted_tools(server):
+    """Exact and ordered on purpose. A subset check would let a tool appear by
+    accident, and an unnoticed tool on a server a model can call is a security
+    event, not a cosmetic one."""
     assert [t.name for t in _tools(server)] == [
-        "analyze_run", "compare_runs", "search_kb", "suggest_fix",
+        "analyze_run", "compare_runs", "list_runs", "search_kb", "suggest_fix",
     ]
 
 
