@@ -130,6 +130,60 @@ tasks:
   effort: S
   last_validated: 2026-08-17T17:51:00Z
   validator_version: 2
+- id: T-20260819-auto-baseline
+  path: tasks/T-20260819-auto-baseline.md
+  status: ready
+  effort: M
+  last_validated: 2026-08-17T17:51:00Z
+  validator_version: 2
+- id: T-20260819-discover-docs
+  path: tasks/T-20260819-discover-docs.md
+  status: ready
+  effort: M
+  last_validated: 2026-08-17T17:51:00Z
+  validator_version: 2
+- id: T-20260819-list-runs-tool
+  path: tasks/T-20260819-list-runs-tool.md
+  status: ready
+  effort: XS
+  last_validated: 2026-08-17T17:51:00Z
+  validator_version: 2
+- id: T-20260819-run-summary-models
+  path: tasks/T-20260819-run-summary-models.md
+  status: ready
+  effort: S
+  last_validated: 2026-08-17T17:51:00Z
+  validator_version: 2
+- id: T-20260819-runs-gates
+  path: tasks/T-20260819-runs-gates.md
+  status: ready
+  effort: S
+  last_validated: 2026-08-17T17:51:00Z
+  validator_version: 2
+- id: T-20260819-runs-injection-hardening
+  path: tasks/T-20260819-runs-injection-hardening.md
+  status: ready
+  effort: XS
+  last_validated: 2026-08-17T17:51:00Z
+  validator_version: 2
+- id: T-20260819-runs-read-layer
+  path: tasks/T-20260819-runs-read-layer.md
+  status: ready
+  effort: S
+  last_validated: 2026-08-17T17:51:00Z
+  validator_version: 2
+- id: T-20260819-runs-resource
+  path: tasks/T-20260819-runs-resource.md
+  status: ready
+  effort: S
+  last_validated: 2026-08-17T17:51:00Z
+  validator_version: 2
+- id: T-20260819-tool-surface-five
+  path: tasks/T-20260819-tool-surface-five.md
+  status: ready
+  effort: XS
+  last_validated: 2026-08-17T17:51:00Z
+  validator_version: 2
 - id: T-20260817-serverstatus-model
   path: tasks/done/T-20260817-serverstatus-model.md
   status: done
@@ -165,14 +219,23 @@ ready_queue:
   - T-20260817-table-columns-probe
   - T-20260817-testpypi-rehearsal
   - T-20260817-wheel-content-check
+  - T-20260819-auto-baseline
+  - T-20260819-discover-docs
+  - T-20260819-list-runs-tool
+  - T-20260819-run-summary-models
+  - T-20260819-runs-gates
+  - T-20260819-runs-injection-hardening
+  - T-20260819-runs-read-layer
+  - T-20260819-runs-resource
+  - T-20260819-tool-surface-five
 
 in_progress:
 
 blocked:
 
 stats:
-  total: 23
-  ready: 21
+  total: 32
+  ready: 30
   in_progress: 0
   blocked: 0
   done: 2

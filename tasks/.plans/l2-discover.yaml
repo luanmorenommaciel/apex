@@ -1,0 +1,443 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: l2-discover
+  source: docs/lanes/SERVE-LEGS.md
+units:
+  - id: T-20260819-runs-read-layer
+    title: Add ReadStore.runs for bounded run discovery
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/src/apex_mcp/ch.py, serve/tests/test_ch.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: Every existing tool demands a job_id the user has no way to obtain from Apex, so the lane can diagnose a run but cannot help you find one.
+    goal: One bounded read returning recent runs aggregated per job_id, filterable by app_name.
+    context: spark_events is ORDER BY (job_id, stage_id, stage_attempt) PARTITION BY toYYYYMM(ts), so a time-ordered listing is a full scan unless bounded. The since window must reach the WHERE clause as a bound parameter so partitions prune. app_name is user-controlled and must bind, never interpolate.
+    behaviors:
+      - id: B-1
+        given: a store holding several runs
+        when: runs() is called
+        then: it returns one row per job_id with app_id, app_name, first and last ts, and stage count
+      - id: B-2
+        given: an app_name filter
+        when: runs() is called
+        then: only that application's runs come back, and the filter binds server-side
+      - id: B-3
+        given: a limit
+        when: runs() is called
+        then: at most that many rows return, newest first
+      - id: B-4
+        given: an app_name containing a quote or SQL fragment
+        when: runs() is called
+        then: it binds and returns zero rows rather than erroring or widening the query
+    evals:
+      - id: eval_1
+        description: the run-discovery tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_runs_aggregates_one_row_per_job" "tests/test_ch.py::test_runs_filters_by_app_name" "tests/test_ch.py::test_runs_binds_hostile_app_name" )
+        verifies: [B-1, B-2, B-4]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the whole ClickHouse layer suite stays green
+        command: ( cd serve && uv run --extra dev pytest tests/test_ch.py )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_3
+        description: the runs SQL bounds by ts so partitions can prune
+        command: ( cd serve && uv run python -c "from apex_mcp import ch; s=ch.RUNS_SQL; assert 'GROUP BY job_id' in s, s; assert 'ts >=' in s or 'ts>' in s, 'unbounded scan: no ts predicate'; assert '{' in s, 'no bound parameter'" )
+        verifies: [B-1, B-3]
+        terminal: true
+        expected_duration_sec: 15
+    anti_patterns:
+      - Interpolating app_name or limit into the SQL; both are user-controlled.
+      - An unbounded scan with no ts predicate, which defeats partition pruning on a MergeTree keyed by job_id.
+      - Returning per-stage rows and expecting the caller to aggregate.
+    do_not_touch:
+      - serve/src/apex_mcp/server.py
+      - serve/src/apex_mcp/models.py
+      - serve/src/apex_mcp/diagnose.py
+
+  - id: T-20260819-run-summary-models
+    title: Add RunSummary and RunList models
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/src/apex_mcp/models.py]
+    creates_paths: [serve/tests/test_runs.py]
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: FastMCP derives each tool's output schema from its return annotation, and schema-constrained output is the lane's stated mitigation against tool poisoning.
+    goal: Type the run-discovery payload, marking app_name as observed and therefore untrusted.
+    context: models.py has no intra-package runtime import and must keep none. app_name originates in the observed Spark job, so it belongs in UNTRUSTED_FIELDS alongside the existing finding text.
+    behaviors:
+      - id: B-1
+        given: a RunSummary
+        when: constructed with only job_id
+        then: it validates and every other field defaults
+      - id: B-2
+        given: RunList
+        when: model_json_schema() is called
+        then: it renders with runs as an array of RunSummary
+      - id: B-3
+        given: any RunList
+        when: it is serialized
+        then: untrusted_fields names app_name, because a Spark job author controls that string
+    evals:
+      - id: eval_1
+        description: the run model tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_runs.py::test_run_summary_defaults_from_job_id" "tests/test_runs.py::test_run_list_schema_renders" "tests/test_runs.py::test_app_name_is_marked_untrusted" )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: models.py still has no intra-package runtime import
+        command: ( cd serve && ! grep -nE '^from \.(ch|diagnose|server)|^from apex_mcp\.(ch|diagnose|server)' src/apex_mcp/models.py )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Returning a bare dict instead of a model.
+      - Omitting app_name from the untrusted set because it looks like metadata; the Spark job author sets it.
+      - Importing ch or diagnose into models.py.
+    do_not_touch:
+      - serve/src/apex_mcp/ch.py
+      - serve/src/apex_mcp/server.py
+
+  - id: T-20260819-list-runs-tool
+    title: Register the list_runs tool
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260819-runs-read-layer, T-20260819-run-summary-models]
+    touches_paths: [serve/src/apex_mcp/server.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: This is the commit where the lane stops requiring a job_id from outside the system.
+    goal: Expose list_runs(limit, since_hours, app_name) as a fifth read-only tool.
+    context: One tool with filters covers the leg's list_runs, find_run and latest_run features - three tools differing only by a WHERE clause would be API bloat and three injection surfaces instead of one. The four-tools assertion is expected to fail after this unit and is repaired by its own follow-up; any other failure means this unit broke something.
+    behaviors:
+      - id: B-1
+        given: a built server
+        when: list_tools() is called
+        then: list_runs is present with readOnlyHint True and openWorldHint False
+      - id: B-2
+        given: list_runs is invoked with no arguments
+        when: the store has runs
+        then: it returns schema-valid RunList, newest first, under the default limit
+      - id: B-3
+        given: list_runs is invoked with app_name
+        when: the store has runs from several applications
+        then: only the named application's runs return
+      - id: B-4
+        given: the module docstring
+        when: read
+        then: it describes five tools and still states that stdout is the JSON-RPC channel
+    evals:
+      - id: eval_1
+        description: list_runs is registered read-only with the right annotations
+        command: ( cd serve && uv run python -c "import asyncio; from apex_mcp.server import create_server; from apex_mcp.ch import ReadStore; from tests.conftest import FakeClient; s=create_server(ReadStore(FakeClient())); t={x.name:x for x in asyncio.run(s.list_tools())}; assert 'list_runs' in t, sorted(t); a=t['list_runs'].annotations; assert a.readOnlyHint and a.openWorldHint is False, a" )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 20
+      - id: eval_2
+        description: the module docstring no longer claims four tools
+        command: ( cd serve && ! grep -n 'Four tools' src/apex_mcp/server.py )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Repairing the failing four-tools assertion in this unit; that is the follow-up, and merging them hides the surface change.
+      - Adding separate find_run and latest_run tools; app_name and limit already express both.
+      - Annotating with anything but READ_ONLY.
+    do_not_touch:
+      - serve/tests/test_server_tools.py
+      - serve/src/apex_mcp/ch.py
+
+  - id: T-20260819-tool-surface-five
+    title: Re-pin the tool surface assertion at five
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260819-list-runs-tool]
+    touches_paths: [serve/tests/test_server_tools.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: An accidental tool on a server a model can call is a security event; the exact ordered assertion is the control that catches one.
+    goal: Move the ordered tool-name assertion from four names to five, keeping it an equality.
+    context: L1's register-apex-status unit also moves this assertion, to a different five. Whichever leg lands second reconciles the list; the assertion must stay exact either way.
+    behaviors:
+      - id: B-1
+        given: the built server
+        when: list_tools() is called
+        then: the assertion compares against an exact ordered list of five names including list_runs
+      - id: B-2
+        given: a sixth tool were added
+        when: the suite runs
+        then: it fails, because the assertion is neither a subset nor a count
+    evals:
+      - id: eval_1
+        description: the renamed surface assertion exists and passes
+        command: ( cd serve && uv run --extra dev pytest "tests/test_server_tools.py::test_exactly_the_five_contracted_tools" )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the assertion is still an ordered equality, not a subset or a count
+        command: ( cd serve && ! grep -nE '(issubset|len\(_tools|set\(\[t\.name)' tests/test_server_tools.py )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Relaxing the assertion to a subset or a count so it stops needing maintenance; the maintenance is the control.
+      - Bundling any source change into this unit.
+    do_not_touch:
+      - serve/src/apex_mcp
+
+  - id: T-20260819-runs-injection-hardening
+    title: Harden run discovery against a hostile app_name
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260819-runs-read-layer]
+    touches_paths: [serve/tests/test_injection_hardening.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: app_name is set by the observed Spark job and now reaches a WHERE clause and a returned payload - a new user-influenced path into both SQL and the model's context.
+    goal: Prove a hostile app_name neither reaches SQL nor rides out as instructions.
+    context: The existing suite patches subprocess, os and write-mode open to fail if called. Extend that discipline to the discovery path rather than writing a parallel harness.
+    behaviors:
+      - id: B-1
+        given: an app_name carrying an instruction-override payload
+        when: it is returned by list_runs
+        then: the text appears only in typed data fields, verbatim, and in no string Apex generates
+      - id: B-2
+        given: that same payload
+        when: run discovery executes
+        then: no subprocess, os or write-mode open call is made
+      - id: B-3
+        given: an app_name containing a SQL fragment
+        when: it reaches the store
+        then: it binds as a parameter and returns zero rows
+    evals:
+      - id: eval_1
+        description: the discovery hardening tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_injection_hardening.py::test_hostile_app_name_stays_data" "tests/test_injection_hardening.py::test_hostile_app_name_triggers_no_action" )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the full disclosure and injection suite stays green
+        command: ( cd serve && uv run --extra dev pytest tests/test_injection_hardening.py )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 30
+    anti_patterns:
+      - Sanitising or escaping app_name instead of binding it; escaping is what binding exists to replace.
+      - Asserting on the payload's exact wording rather than on where it is allowed to appear.
+    do_not_touch:
+      - serve/src/apex_mcp
+
+  - id: T-20260819-runs-resource
+    title: Expose apex://runs as an MCP resource
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260819-tool-surface-five]
+    touches_paths: [serve/src/apex_mcp/server.py, serve/tests/test_server_tools.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: Apex uses one of MCP's primitives. A resource lets a client browse recent runs without spending a tool call, which is what orientation should cost.
+    goal: Serve the recent-run list as a readable resource alongside the tool.
+    context: This is the lane's first resource, so it also establishes that resources inherit the same read-only discipline and untrusted-field marking as tools.
+    behaviors:
+      - id: B-1
+        given: a built server
+        when: list_resources() is called
+        then: apex://runs is present with a name and a mime type
+      - id: B-2
+        given: apex://runs
+        when: it is read
+        then: it returns the same run data the tool returns, serialized as JSON
+      - id: B-3
+        given: the store is unreachable
+        when: apex://runs is read
+        then: it fails with the sanitized code and leaks no credential
+    evals:
+      - id: eval_1
+        description: the resource tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_server_tools.py::test_runs_resource_is_listed" "tests/test_server_tools.py::test_runs_resource_returns_run_data" )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the full tool-surface suite stays green with a sentinel password exported
+        command: ( cd serve && CLICKHOUSE_PASSWORD=sentinel-pw-do-not-leak uv run --extra dev pytest tests/test_server_tools.py )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 30
+    anti_patterns:
+      - Letting the resource bypass ReadStore and query the client directly.
+      - Returning free text instead of the same typed payload the tool returns.
+      - Changing the tool count; a resource is not a tool and must not appear in list_tools().
+    do_not_touch:
+      - serve/src/apex_mcp/ch.py
+      - serve/src/apex_mcp/models.py
+
+  - id: T-20260819-auto-baseline
+    title: Let compare_runs pick its own baseline
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260819-runs-resource]
+    touches_paths: [serve/src/apex_mcp/diagnose.py, serve/src/apex_mcp/server.py, serve/tests/test_diagnose.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: compare_runs needs two job_ids the user must already hold, which is the same wall list_runs just removed for analyze_run.
+    goal: Make baseline_job_id optional, defaulting to the most recent prior run of the same app_name with the same plan_fingerprint.
+    context: Same fingerprint matters - comparing across a plan change measures the plan, not the regression. When no such run exists, say so rather than silently comparing against something else.
+    behaviors:
+      - id: B-1
+        given: a current job_id and no baseline
+        when: compare_runs is called
+        then: it selects the most recent prior run with the same app_name and plan_fingerprint
+      - id: B-2
+        given: no prior run shares that fingerprint
+        when: compare_runs is called with no baseline
+        then: it returns a stated no-baseline result rather than comparing against an unrelated run
+      - id: B-3
+        given: an explicit baseline_job_id
+        when: compare_runs is called
+        then: that baseline is used unchanged, exactly as today
+      - id: B-4
+        given: the chosen baseline
+        when: the result is read
+        then: the payload names which run was selected and why
+    evals:
+      - id: eval_1
+        description: the auto-baseline tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_diagnose.py::test_auto_baseline_picks_same_fingerprint" "tests/test_diagnose.py::test_auto_baseline_refuses_across_plan_change" "tests/test_diagnose.py::test_explicit_baseline_is_unchanged" )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the whole diagnosis suite stays green
+        command: ( cd serve && uv run --extra dev pytest tests/test_diagnose.py )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 30
+    anti_patterns:
+      - Falling back to any recent run when no fingerprint matches; a silent wrong baseline is worse than none.
+      - Making baseline selection implicit in the payload, so a user cannot tell what was compared.
+      - Changing the behavior of an explicitly supplied baseline.
+    do_not_touch:
+      - serve/src/apex_mcp/ch.py
+      - serve/tests/test_server_tools.py
+
+  - id: T-20260819-runs-gates
+    title: Assert run discovery in both live gates
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260819-auto-baseline]
+    touches_paths: [serve/tools/read_only_gate.py, serve/tools/mcp_stdio_gate.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: A FakeClient returns whatever rows the test author typed; only a real database proves the aggregation, the binding and the partition-bounded scan.
+    goal: Prove list_runs and apex://runs against live ClickHouse and over real stdio.
+    context: The read-only gate seeds its own disposable rows and deletes only those; this addition must not weaken that.
+    behaviors:
+      - id: B-1
+        given: the live gate's seeded runs
+        when: list_runs is called
+        then: it returns them newest first with correct per-job aggregation
+      - id: B-2
+        given: an app_name of a quote-bearing SQL fragment
+        when: list_runs is called live
+        then: it binds and returns zero rows
+      - id: B-3
+        given: the server spawned over stdio
+        when: the official client lists tools and resources
+        then: it sees five tools and the apex://runs resource
+      - id: B-4
+        given: the gate completes
+        when: it prints its JSON
+        then: a runs block is included and the overall result is passed
+    evals:
+      - id: eval_1
+        description: the live gate passes and reports the runs block
+        command: ( cd serve && uv run python tools/read_only_gate.py > /tmp/l2gate.json && uv run python -c "import json; g=json.load(open('/tmp/l2gate.json')); assert g['status']=='passed', g; r=g['runs']; assert r['listed']>0 and r['hostile_app_name_rows']==0, r" )
+        verifies: [B-1, B-2, B-4]
+        terminal: true
+        expected_duration_sec: 180
+      - id: eval_2
+        description: the stdio gate sees five tools and the runs resource
+        command: ( cd serve && uv run python tools/mcp_stdio_gate.py )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 180
+    anti_patterns:
+      - Building the expected run set from ReadStore.runs(); that is the code under test.
+      - Leaving fixture rows behind, or widening the gate's delete beyond its own rows.
+      - Softening the stdio assertion to contains rather than an exact surface.
+    do_not_touch:
+      - serve/src/apex_mcp
+
+  - id: T-20260819-discover-docs
+    title: Document run discovery across the lane docs
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260819-runs-gates]
+    touches_paths: [serve/README.md, serve/VALIDATION.md, docs/lanes/SERVE-LEGS.md]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: VALIDATION.md records what was observed, so leaving it at four tools makes it a false record rather than a stale one.
+    goal: Reflect the fifth tool, the first resource and the auto-baseline in every lane document.
+    context: SERVE-LEGS.md lists find_run and latest_run as separate features; record that one filtered tool covers them and why, so the decision survives the session that made it.
+    behaviors:
+      - id: B-1
+        given: serve/README.md
+        when: read
+        then: the tool table lists list_runs, the resource is documented, and no prose says four tools
+      - id: B-2
+        given: serve/VALIDATION.md
+        when: read
+        then: it records the run-discovery gate result and a test count copied from an actual run
+      - id: B-3
+        given: docs/lanes/SERVE-LEGS.md
+        when: read
+        then: L2 marks F2.1 to F2.5 delivered, and states that one filtered tool subsumed find_run and latest_run
+    evals:
+      - id: eval_1
+        description: no lane document still claims a four-tool surface
+        command: ( ! grep -rniE 'four tools|exactly 4 tools' serve/ docs/lanes/SERVE.md docs/lanes/SERVE-LEGS.md --include=*.md )
+        verifies: [B-1, B-3]
+        terminal: true
+        expected_duration_sec: 10
+      - id: eval_2
+        description: the recorded test count equals what the suite actually reports
+        command: ( cd serve && n=$(uv run --extra dev pytest 2>&1 | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+') && grep -q "$n passed" VALIDATION.md )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Writing a test count from memory instead of copying it from a run.
+      - Recording gate results without rerunning the gates.
+      - Marking L2 features delivered that this plan did not build.
+    do_not_touch:
+      - serve/src/apex_mcp
+      - serve/tests
