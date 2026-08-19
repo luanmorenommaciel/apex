@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-19T17:51:57Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-08-19T17:52:09Z
+signed_off_sig: hmac-sha256-v2:5153084e:7a97b0e297c4b38e742bb960506aa173085dd1d174083f4dd69cbac83a32735d
 ---
 
 # Harden run discovery against a hostile app_name
