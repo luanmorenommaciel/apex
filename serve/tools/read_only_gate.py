@@ -164,7 +164,14 @@ def main() -> int:
     )
     assert diagnosis.status == "degraded"
     assert diagnosis.worst_stage_id == 2
-    assert any(s.ground_truth for s in diagnosis.symptoms), "skew_split not applied"
+    # An AQE skew split is keyed to an EXECUTION, not a stage, so it is carried
+    # as a note and must NOT adjudicate any stage-scoped symptom. This gate
+    # asserted the opposite until now — the behaviour it demanded was removed
+    # deliberately (see diagnose._apply_ground_truth).
+    assert diagnosis.aqe_ground_truth, "skew_split not reported as an execution-scoped note"
+    assert not any(s.ground_truth for s in diagnosis.symptoms), (
+        "an execution-scoped AQE signal must not adjudicate a stage-scoped symptom"
+    )
 
     self_comparison = diagnose.compare(
         BEFORE_JOB_ID, BEFORE_JOB_ID,
