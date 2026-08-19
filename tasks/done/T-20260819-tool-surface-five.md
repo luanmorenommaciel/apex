@@ -1,7 +1,7 @@
 ---
 id: T-20260819-tool-surface-five
 title: "Re-pin the tool surface assertion at five"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: XS
