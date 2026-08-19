@@ -55,7 +55,7 @@ SERVE-LEGS.md lists find_run and latest_run as separate features; record that on
 ```bash
 # eval_1: no lane document still claims a four-tool surface
 eval_1() {
-  ( ! grep -rniE 'four tools|exactly 4 tools' serve/ docs/lanes/SERVE.md docs/lanes/SERVE-LEGS.md --include=*.md )
+  ( ! grep -rniE 'four tools|exactly 4 tools' serve/README.md serve/VALIDATION.md docs/lanes/SERVE-LEGS.md )
 }
 
 # eval_2: the recorded test count equals what the suite actually reports

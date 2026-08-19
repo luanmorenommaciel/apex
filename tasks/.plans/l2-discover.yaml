@@ -424,7 +424,7 @@ units:
     evals:
       - id: eval_1
         description: no lane document still claims a four-tool surface
-        command: ( ! grep -rniE 'four tools|exactly 4 tools' serve/ docs/lanes/SERVE.md docs/lanes/SERVE-LEGS.md --include=*.md )
+        command: ( ! grep -rniE 'four tools|exactly 4 tools' serve/README.md serve/VALIDATION.md docs/lanes/SERVE-LEGS.md )
         verifies: [B-1, B-3]
         terminal: true
         expected_duration_sec: 10
@@ -441,3 +441,50 @@ units:
     do_not_touch:
       - serve/src/apex_mcp
       - serve/tests
+
+  - id: T-20260819-serve-brief-five-tools
+    title: Update the SERVE lane brief to the five-tool surface
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260819-discover-docs]
+    touches_paths: [docs/lanes/SERVE.md]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: The lane brief still states the server exposes four tools, which is now simply false; a brief that contradicts the code is worse than no brief.
+    goal: Bring SERVE.md's mission statement and T11 accept criterion to the current surface.
+    context: Split out of discover-docs because that unit's write surface was already at its M budget of three paths. The T1-T14 checklist records what L1 shipped and is history - only the counts that claim a present-tense surface change.
+    behaviors:
+      - id: B-1
+        given: the mission statement
+        when: read
+        then: it names five tools including list_runs, and the apex://runs resource
+      - id: B-2
+        given: the T11 accept criterion
+        when: read
+        then: it says five rather than four, with a note pointing at the leg that changed it
+      - id: B-3
+        given: the T1 to T14 checklist
+        when: read
+        then: it is otherwise unchanged, because it records what L1 shipped
+    evals:
+      - id: eval_1
+        description: the lane brief no longer claims a four-tool surface
+        command: ( ! grep -rniE 'four tools|exactly 4 tools' docs/lanes/SERVE.md )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 5
+      - id: eval_2
+        description: the brief names list_runs and the resource, and keeps its checklist
+        command: ( grep -q 'list_runs' docs/lanes/SERVE.md && grep -q 'apex://runs' docs/lanes/SERVE.md && test "$(grep -c '^- \[ \] \*\*T' docs/lanes/SERVE.md)" -ge 14 )
+        verifies: [B-1, B-3]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Rewriting the T1-T14 checklist; it is a record of what L1 shipped, not a live plan.
+      - Editing the Key decisions table, which remains accurate.
+    do_not_touch:
+      - serve/src/apex_mcp
+      - serve/README.md
+      - serve/VALIDATION.md
