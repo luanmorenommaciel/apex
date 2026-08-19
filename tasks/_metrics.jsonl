@@ -4,3 +4,4 @@
 {"schema_version":1,"ts":"2026-08-17T17:51:00Z","task":"T-20260817-store-health-query","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
 {"schema_version":1,"ts":"2026-08-19T15:18:44Z","task":"T-20260819-runs-read-layer","event":"accepted","author":"sidymar"}
 {"schema_version":1,"ts":"2026-08-19T15:18:57Z","task":"T-20260819-runs-read-layer","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T17:49:31Z","task":"T-20260819-run-summary-models","event":"accepted","author":"sidymar"}
