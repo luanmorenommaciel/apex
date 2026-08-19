@@ -16,3 +16,4 @@
 {"schema_version":1,"ts":"2026-08-19T17:53:33Z","task":"T-20260819-runs-resource","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
 {"schema_version":1,"ts":"2026-08-19T17:55:41Z","task":"T-20260819-auto-baseline","event":"accepted","author":"sidymar"}
 {"schema_version":1,"ts":"2026-08-19T17:56:00Z","task":"T-20260819-auto-baseline","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T17:56:30Z","task":"T-20260819-runs-gates","event":"status_change","from":"ready","to":"blocked","reason":"live ClickHouse required; docker unavailable in this environment"}

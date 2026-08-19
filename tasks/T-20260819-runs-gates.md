@@ -1,7 +1,7 @@
 ---
 id: T-20260819-runs-gates
 title: "Assert run discovery in both live gates"
-status: ready
+status: blocked
 format_version: 3
 profile: standard
 effort: S
