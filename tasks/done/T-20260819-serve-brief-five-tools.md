@@ -1,7 +1,7 @@
 ---
 id: T-20260819-serve-brief-five-tools
 title: "Update the SERVE lane brief to the five-tool surface"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: XS
