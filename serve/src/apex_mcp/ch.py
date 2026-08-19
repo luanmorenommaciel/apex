@@ -100,6 +100,9 @@ _FINDINGS_ADDITIVE = {
 # Run discovery. spark_events is ORDER BY (job_id, stage_id, stage_attempt)
 # PARTITION BY toYYYYMM(ts), so a newest-first listing is a full scan unless it
 # is bounded on ts — the `since` predicate is what lets partitions prune.
+# The table alias `e` is load-bearing: the SELECT projects `argMax(app_name, ts)
+# AS app_name`, and an unqualified `app_name` in WHERE resolves to that alias,
+# which ClickHouse rejects as an aggregate in WHERE (ILLEGAL_AGGREGATION).
 # app_name is set by the observed Spark job, so it BINDS; the empty-string test
 # expresses "no filter" without building two different statements.
 RUNS_SQL = """
@@ -112,9 +115,9 @@ SELECT
   uniqExact(stage_id)            AS stage_count,
   sum(spill_disk_bytes)          AS spill_disk_bytes,
   max(task_duration_p99_ms)      AS worst_p99_ms
-FROM apex.spark_events
-WHERE ts >= {since:DateTime}
-  AND ({app_name:String} = '' OR app_name = {app_name:String})
+FROM apex.spark_events AS e
+WHERE e.ts >= {since:DateTime}
+  AND ({app_name:String} = '' OR e.app_name = {app_name:String})
 GROUP BY job_id
 ORDER BY last_ts DESC
 LIMIT {limit:UInt32}
