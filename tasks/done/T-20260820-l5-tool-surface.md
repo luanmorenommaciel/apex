@@ -1,7 +1,7 @@
 ---
 id: T-20260820-l5-tool-surface
 title: "Re-pin the tool surface for verify_fix"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: XS
@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-20T14:43:18Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-08-20T14:43:38Z
+signed_off_sig: hmac-sha256-v2:5153084e:6eaa06978c1ce40d28ca9ff49b950c294d0d721eb8e4e2eec0675c60335bd83f
 ---
 
 # Re-pin the tool surface for verify_fix

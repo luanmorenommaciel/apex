@@ -1,7 +1,7 @@
 ---
 id: T-20260820-verifications-read-layer
 title: "Read apex.fix_verifications from the serve store"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S
@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-20T14:43:02Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-08-20T14:43:34Z
+signed_off_sig: hmac-sha256-v2:5153084e:d1c00fab67020d479c8a1dda305f794efc0bdeb9a041f6d6807e18196c88ceda
 ---
 
 # Read apex.fix_verifications from the serve store

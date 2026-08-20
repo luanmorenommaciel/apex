@@ -1,7 +1,7 @@
 ---
 id: T-20260820-verify-fix-tool
 title: "Add verify_fix"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: XS
@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-08-20T14:43:16Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-08-20T14:43:36Z
+signed_off_sig: hmac-sha256-v2:5153084e:0d5711012e33d9ed250f3cf6fe58adc747297c746235ed52563846202b11616b
 ---
 
 # Add verify_fix
