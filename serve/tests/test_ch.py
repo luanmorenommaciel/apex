@@ -296,16 +296,20 @@ class _MemoryClient:
         outcomes: list[dict] | None = None,
         tables: tuple[str, ...] = ("plan_memory", "run_outcomes"),
         raises: Exception | None = None,
+        tables_raises: Exception | None = None,
     ) -> None:
         self.plans = plans or []
         self.outcomes = outcomes or []
         self.tables = tables
         self.raises = raises
+        self.tables_raises = tables_raises
         self.calls: list[tuple[str, dict]] = []
 
     def query(self, query: str, parameters: dict | None = None):
         self.calls.append((query, parameters or {}))
         if "system.tables" in query:
+            if self.tables_raises:
+                raise self.tables_raises
             rows = [{"name": name} for name in self.tables]
             return type("R", (), {"named_results": lambda _s: rows})()
         if self.raises:
@@ -382,13 +386,33 @@ def test_similar_plans_ranks_by_cosine_distance():
 
 def test_similar_plans_reads_the_embedding_width_instead_of_assuming_one():
     """The encoder's width is the memory lane's to change; serve matches on the
-    shape's own `dim` rather than hardcoding a number."""
+    shape's own `dim` rather than hardcoding a number.
+
+    The match rides on the JOIN key, not a scalar sub-select — see
+    test_similar_plans_joins_the_queried_shape_rather_than_sub_selecting_it.
+    """
     client = _MemoryClient(plans=[])
     ReadStore(client).similar_plans(FP_SELF)
 
     sql, parameters = client.calls[-1]
-    assert "dim = (SELECT dim FROM self_plan)" in sql
+    assert "p.dim = s.dim" in sql
     assert not any(key.startswith("dim") for key in parameters)
+
+
+def test_similar_plans_joins_the_queried_shape_rather_than_sub_selecting_it():
+    """Proven live on ClickHouse 24.8: a scalar sub-select is constant-folded
+    BEFORE the WHERE clause runs, so reading the queried shape that way raises
+    code 125 ("scalar subquery returned empty result of type Array(Float32)
+    which cannot be Nullable") for any fingerprint absent from plan_memory.
+
+    A plan shape nobody has run before is an ordinary answer, not an error, so
+    the shape is INNER JOINed: no match simply yields no rows.
+    """
+    sql = ch.SIMILAR_PLANS_SQL
+
+    assert "INNER JOIN" in sql
+    assert "(SELECT embedding FROM" not in sql
+    assert "cosineDistance(p.embedding, s.embedding)" in sql
 
 
 def test_similar_plans_clamps_a_caller_supplied_top_k():
@@ -463,15 +487,49 @@ def test_plan_memory_absent_tables_degrade(caplog):
     assert all("apex.run_outcomes" not in sql for sql, _ in client.calls)
 
 
-def test_plan_memory_schema_error_mid_read_degrades_instead_of_raising(caplog):
-    """B-3 — the probe can pass and the read still hit a half-applied schema."""
+def test_schema_error_degrades_only_when_the_tables_really_are_gone(caplog):
+    """B-3 — the probe can pass and the read still hit a dropped table."""
     client = _MemoryClient(raises=TableError("apex.run_outcomes doesn't exist"))
     store = ReadStore(client)
+    store.memory_tables_present()          # probe while they are still there
+    client.tables = ()                     # ...and now they are not
 
     with caplog.at_level("WARNING", logger="apex_mcp.ch"):
         assert store.prior_outcomes([FP_SELF]) == []
 
     assert "degraded to empty" in caplog.text
+
+
+def test_a_schema_shaped_error_on_present_tables_still_raises():
+    """The masking bug, as a test.
+
+    `_sanitize` routes on the exception's CLASS NAME, and the driver's generic
+    class is `DatabaseError` — so nearly every server-side fault arrives
+    labelled `clickhouse_schema_missing`. Trusting that label swallowed a real
+    code 125 for an entire live session and reported it as "no prior runs".
+    Absence is now confirmed by re-probing, not inferred from the message.
+    """
+    client = _MemoryClient(raises=TableError("some other server-side fault"))
+    store = ReadStore(client)
+
+    with pytest.raises(ApexStoreError):
+        store.prior_outcomes([FP_SELF])
+
+
+def test_an_unreachable_store_raises_from_the_probe_too():
+    """The probe runs before every recall, so degrading there short-circuits
+    the guard in _recall entirely. Proven live: an unreachable ClickHouse
+    answered "cross-run memory is unavailable on this deployment", which is a
+    confident architectural claim about a store that never replied.
+    """
+    client = _MemoryClient(tables_raises=OperationalError("connect refused to 10.0.0.5"))
+    store = ReadStore(client)
+
+    with pytest.raises(ApexStoreError) as excinfo:
+        store.similar_plans(FP_SELF)
+
+    assert "clickhouse_unavailable" in str(excinfo.value)
+    assert "10.0.0.5" not in str(excinfo.value)
 
 
 def test_memory_read_still_raises_when_the_store_is_down():
