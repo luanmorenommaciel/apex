@@ -142,8 +142,14 @@ cd serve
 uv sync --extra dev
 uv run --extra dev pytest                  # unit + safety suite (fakes, no DB)
 uv run python tools/read_only_gate.py      # live gate: contract + 4 tools + argMax
+uv run python tools/recall_gate.py         # live gate: cross-run memory (v0.3 tables)
 uv run python tools/mcp_stdio_gate.py      # real MCP client over stdio
 ```
+
+The live gates need a ClickHouse carrying the contract schema — `cd infra &&
+docker compose up -d clickhouse` applies `infra/sql/*.sql` on first boot.
+`recall_gate.py` additionally needs the v0.3 additive tables (`030`/`031`); it
+asserts they are present before seeding rather than failing obscurely later.
 
 See [`VALIDATION.md`](VALIDATION.md) for recorded results.
 
