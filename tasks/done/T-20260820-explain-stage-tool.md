@@ -1,7 +1,7 @@
 ---
 id: T-20260820-explain-stage-tool
 title: "Add explain_stage for drill-down"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: XS

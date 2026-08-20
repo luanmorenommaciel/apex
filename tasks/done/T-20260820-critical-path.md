@@ -1,7 +1,7 @@
 ---
 id: T-20260820-critical-path
 title: "Frame the bottleneck as a path, not a list"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S

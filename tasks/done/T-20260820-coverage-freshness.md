@@ -1,7 +1,7 @@
 ---
 id: T-20260820-coverage-freshness
 title: "Report what the diagnosis actually saw"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S

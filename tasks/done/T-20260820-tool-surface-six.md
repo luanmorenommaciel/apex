@@ -1,7 +1,7 @@
 ---
 id: T-20260820-tool-surface-six
 title: "Re-pin the tool surface at six"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: XS
