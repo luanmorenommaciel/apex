@@ -131,38 +131,38 @@ tasks:
   last_validated: 2026-08-19T19:16:39Z
   validator_version: 2
 - id: T-20260820-l6-docs
-  path: tasks/T-20260820-l6-docs.md
-  status: ready
+  path: tasks/done/T-20260820-l6-docs.md
+  status: done
   effort: M
   last_validated: 2026-08-19T19:16:39Z
   validator_version: 2
 - id: T-20260820-l6-tool-surface
-  path: tasks/T-20260820-l6-tool-surface.md
-  status: ready
+  path: tasks/done/T-20260820-l6-tool-surface.md
+  status: done
   effort: XS
   last_validated: 2026-08-19T19:16:39Z
   validator_version: 2
 - id: T-20260820-noise-floor-honesty
-  path: tasks/T-20260820-noise-floor-honesty.md
-  status: ready
+  path: tasks/done/T-20260820-noise-floor-honesty.md
+  status: done
   effort: S
   last_validated: 2026-08-19T19:16:39Z
   validator_version: 2
 - id: T-20260820-plan-memory-read-layer
-  path: tasks/T-20260820-plan-memory-read-layer.md
-  status: ready
+  path: tasks/done/T-20260820-plan-memory-read-layer.md
+  status: done
   effort: S
   last_validated: 2026-08-19T19:16:39Z
   validator_version: 2
 - id: T-20260820-recall-models
-  path: tasks/T-20260820-recall-models.md
-  status: ready
+  path: tasks/done/T-20260820-recall-models.md
+  status: done
   effort: S
   last_validated: 2026-08-19T19:16:39Z
   validator_version: 2
 - id: T-20260820-recall-runs-tool
-  path: tasks/T-20260820-recall-runs-tool.md
-  status: ready
+  path: tasks/done/T-20260820-recall-runs-tool.md
+  status: done
   effort: XS
   last_validated: 2026-08-19T19:16:39Z
   validator_version: 2
@@ -261,12 +261,6 @@ ready_queue:
   - T-20260817-table-columns-probe
   - T-20260817-testpypi-rehearsal
   - T-20260817-wheel-content-check
-  - T-20260820-l6-docs
-  - T-20260820-l6-tool-surface
-  - T-20260820-noise-floor-honesty
-  - T-20260820-plan-memory-read-layer
-  - T-20260820-recall-models
-  - T-20260820-recall-runs-tool
 
 in_progress:
 
@@ -274,8 +268,8 @@ blocked:
 
 stats:
   total: 39
-  ready: 27
+  ready: 21
   in_progress: 0
   blocked: 0
-  done: 12
+  done: 18
   parked: 0

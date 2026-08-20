@@ -1,7 +1,7 @@
 ---
 id: T-20260820-recall-models
 title: "Type the recall payload"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S
@@ -24,12 +24,12 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar.prexede@gmail.com
+signed_off_at: "2026-08-20T00:00:00Z"
+accepted: true
+accepted_by: sidymar.prexede@gmail.com
+accepted_at: "2026-08-20T00:00:00Z"
 ---
 
 # Type the recall payload
