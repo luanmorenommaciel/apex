@@ -24,3 +24,15 @@
 {"schema_version":1,"ts":"2026-08-19T19:16:06Z","task":"T-20260819-discover-docs","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
 {"schema_version":1,"ts":"2026-08-19T19:16:23Z","task":"T-20260819-serve-brief-five-tools","event":"accepted","author":"sidymar"}
 {"schema_version":1,"ts":"2026-08-19T19:16:39Z","task":"T-20260819-serve-brief-five-tools","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-20T14:43:34Z","task":"T-20260820-verifications-read-layer","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-20T14:43:35Z","task":"T-20260820-verification-models","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-20T14:43:36Z","task":"T-20260820-verify-fix-tool","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-20T14:43:38Z","task":"T-20260820-l5-tool-surface","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-20T14:43:40Z","task":"T-20260820-suggest-fix-provenance","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-20T14:43:42Z","task":"T-20260820-l5-docs","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-20T14:44:30Z","task":"T-20260820-verifications-read-layer","event":"status_change","from":"ready","to":"done"}
+{"schema_version":1,"ts":"2026-08-20T14:44:31Z","task":"T-20260820-verification-models","event":"status_change","from":"ready","to":"done"}
+{"schema_version":1,"ts":"2026-08-20T14:44:33Z","task":"T-20260820-verify-fix-tool","event":"status_change","from":"ready","to":"done"}
+{"schema_version":1,"ts":"2026-08-20T14:44:34Z","task":"T-20260820-l5-tool-surface","event":"status_change","from":"ready","to":"done"}
+{"schema_version":1,"ts":"2026-08-20T14:44:35Z","task":"T-20260820-suggest-fix-provenance","event":"status_change","from":"ready","to":"done"}
+{"schema_version":1,"ts":"2026-08-20T14:44:36Z","task":"T-20260820-l5-docs","event":"status_change","from":"ready","to":"done"}
