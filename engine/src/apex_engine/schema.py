@@ -164,6 +164,16 @@ class StageAggregate(BaseModel):
     task_attempt_count: int = Field(default=0, ge=0)
     task_failed_attempt_count: int = Field(default=0, ge=0)
     task_counted_failure_attempt_count: int = Field(default=0, ge=0)
+    task_speculative_attempt_count: int = Field(default=0, ge=0)
+    # Raw fields the tail-outlier watcher needs (CONTRACT.md v0.5). Same
+    # 0-on-empty semantics as the retry-safe counters above. No computed
+    # fallback property here yet — that is a separate, later unit, and
+    # skew_ratio below is untouched by this addition.
+    task_duration_max_ms: float = Field(default=0.0, ge=0)
+    successful_task_duration_max_ms: float = Field(default=0.0, ge=0)
+    successful_task_sample_count: int = Field(default=0, ge=0)
+    successful_task_shuffle_read_bytes_max: int = Field(default=0, ge=0)
+    successful_task_shuffle_read_bytes_sample_count: int = Field(default=0, ge=0)
 
     @property
     def skew_ratio(self) -> float:

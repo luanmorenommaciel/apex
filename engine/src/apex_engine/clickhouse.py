@@ -77,7 +77,15 @@ SELECT
   -- the way executor_run_time_ms above still needs one.
   argMax(task_attempt_count, ts)                       AS task_attempt_count,
   argMax(task_failed_attempt_count, ts)                AS task_failed_attempt_count,
-  argMax(task_counted_failure_attempt_count, ts)       AS task_counted_failure_attempt_count
+  argMax(task_counted_failure_attempt_count, ts)       AS task_counted_failure_attempt_count,
+  argMax(task_speculative_attempt_count, ts)           AS task_speculative_attempt_count,
+  -- raw fields the tail-outlier watcher needs; also DEFAULT 0 typed columns,
+  -- no Map fallback required, same reasoning as the retry-safe counters above.
+  argMax(task_duration_max_ms, ts)                     AS task_duration_max_ms,
+  argMax(successful_task_duration_max_ms, ts)          AS successful_task_duration_max_ms,
+  argMax(successful_task_sample_count, ts)             AS successful_task_sample_count,
+  argMax(successful_task_shuffle_read_bytes_max, ts)   AS successful_task_shuffle_read_bytes_max,
+  argMax(successful_task_shuffle_read_bytes_sample_count, ts) AS successful_task_shuffle_read_bytes_sample_count
 FROM apex.spark_events
 WHERE job_id = {job_id:String}
 GROUP BY job_id, stage_id
