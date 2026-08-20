@@ -385,6 +385,67 @@ def analyze(
     )
 
 
+# --------------------------------------------------------------------------
+# detail levels — one analysis, three widths
+# --------------------------------------------------------------------------
+# The real P0 run answers "why was this slow" with 17 stages and every finding
+# in one payload. The default answer should be the verdict; the bulk is
+# available on request. Crucially this TRIMS one already-computed Diagnosis —
+# it never re-analyses, so two callers asking at different widths can never be
+# given different verdicts.
+DETAIL_LEVELS = ("summary", "stages", "full")
+
+
+def trim(diagnosis: Diagnosis, detail: str = "full") -> Diagnosis:
+    """Narrow one diagnosis to ``summary`` | ``stages`` | ``full``.
+
+    ``full`` is the identity — it returns the very object it was handed, so
+    the widest level is unchanged by construction rather than by a copy that
+    has to be kept in step.
+
+    An emptied array is NOT the same claim as an empty run, so every trimmed
+    level appends a note stating what was dropped and how much of it there
+    was. Without that, ``findings: []`` at summary reads as "engine found
+    nothing" — which is the opposite of the truth for the run that motivated
+    this.
+    """
+    if detail not in DETAIL_LEVELS:
+        raise ValueError(
+            f"detail must be one of {', '.join(DETAIL_LEVELS)} — got {detail!r}"
+        )
+    if detail == "full":
+        return diagnosis
+
+    dropped = (
+        f"{len(diagnosis.findings)} finding(s) and "
+        f"{len(diagnosis.plan_transitions)} plan transition(s)"
+    )
+    if detail == "stages":
+        note = (
+            f"detail=stages — {dropped} were observed and TRIMMED from this "
+            f"payload, not absent. Re-request with detail=full to see them."
+        )
+        keep_stages, keep_symptoms = list(diagnosis.stages), list(diagnosis.symptoms)
+    else:
+        note = (
+            f"detail=summary — {len(diagnosis.stages)} stage row(s), "
+            f"{len(diagnosis.symptoms)} symptom(s), {dropped} were observed "
+            f"and TRIMMED from this payload, not absent. Re-request with "
+            f"detail=stages or detail=full to see them."
+        )
+        keep_stages, keep_symptoms = [], []
+
+    return diagnosis.model_copy(
+        update={
+            "stages": keep_stages,
+            "symptoms": keep_symptoms,
+            "findings": [],
+            "plan_transitions": [],
+            "notes": [*diagnosis.notes, note],
+        }
+    )
+
+
 # ==========================================================================
 # compare_runs
 # ==========================================================================
