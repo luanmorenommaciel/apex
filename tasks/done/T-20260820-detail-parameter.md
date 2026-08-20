@@ -1,7 +1,7 @@
 ---
 id: T-20260820-detail-parameter
 title: "Give analyze_run a detail level"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M
