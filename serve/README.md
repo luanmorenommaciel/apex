@@ -2,13 +2,13 @@
 
 **Role:** `apex-mcp`, a Python **stdio MCP server** exposing Apex's Spark-diagnosis
 capability to any MCP client (Claude Code / Cursor / Codex). It reads the shared
-`apex` ClickHouse database and exposes **five tools** — four read-only, plus one
+`apex` ClickHouse database and exposes **six tools** — five read-only, plus one
 confidence-gated proposal tool that **never applies anything** — and one **resource**.
 
 **Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.5) · DDL in [../contract/](../contract/) ·
 **Lane brief:** [../docs/lanes/SERVE.md](../docs/lanes/SERVE.md)
 
-## The five tools
+## The six tools
 
 | Tool | Input | Returns | MCP annotation |
 |---|---|---|---|
@@ -16,6 +16,7 @@ confidence-gated proposal tool that **never applies anything** — and one **res
 | `analyze_run` | `job_id` | `Diagnosis` — bottleneck stage, symptom, AQE ground truth | `readOnlyHint=true` |
 | `compare_runs` | `current_job_id`, `baseline_job_id?` | `RunComparison` — regressions, plan changes, finding deltas. Omit the baseline and Apex picks the newest prior run with an identical plan shape | `readOnlyHint=true` |
 | `search_kb` | `query`, `top_k=5` | `KbHits` — matches in findings + redacted plan text | `readOnlyHint=true` |
+| `verify_fix` | `job_id`, `finding_id?` | `FixVerdict` — what the **verify lane** predicted, measured and allowed for this run's fixes | `readOnlyHint=true` |
 | `suggest_fix` | `job_id`, `finding_id?`, `min_confidence=0.75` | `FixSuggestion` — unified diff + PR body, **`applied=False`** | `readOnlyHint=false`, `destructiveHint=false` |
 
 ## The resource
@@ -50,6 +51,42 @@ instead of scanning everything.
 a human applies it. `applied` and `requires_human_approval` are `Literal` types,
 so a suggestion claiming otherwise cannot be constructed at all.
 
+## Did the fix work?
+
+`verify_fix` is an **MCP surface over the verify lane**, not a second opinion.
+That lane predicts and replays proposed fixes and writes the result to
+`apex.fix_verifications` (contract v0.3, additive). Serve reads that table and
+reports it; it re-predicts nothing.
+
+```
+verify_fix(job_id="app-...")                        # every verified fix for the run
+verify_fix(job_id="app-...", finding_id="f-...")    # one finding
+```
+
+**Deltas are SIGNED: negative means FASTER.** `predicted_delta_pct` and its
+interval bounds follow that convention everywhere, and the bounds are ordered
+numerically — because negative is faster, `predicted_low_pct` is the *most*
+improvement and `predicted_high_pct` the least. `measured_delta_pct` is
+nullable on purpose: `null` means the prediction was never replayed, while
+`0.0` means it was replayed and nothing changed.
+
+Three answers are kept distinct, because collapsing them loses the point:
+
+| Answer | Means |
+|---|---|
+| `status="not_assessed"` | the verify lane has not looked at this run — an absence of evidence, **not** a clean bill of health |
+| `blocked=true` | the safety gate **refused to execute**. Not the same as a weakly-supported prediction, so it is its own field |
+| low `confidence` | a prediction that is real but weakly supported |
+
+`suggest_fix` now discloses the same thing for the finding it targets: the
+predicted range, any measurement, and — if the verify lane refused the fix —
+a leading warning and **no diff**. It still proposes the same recipe; it just
+no longer hands over an applyable artifact for a fix that was refused.
+
+Both degrade quietly on a cluster where `apex.fix_verifications` has not been
+applied yet: the table is probed once, and its absence reports
+`not_assessed` rather than failing the call.
+
 ## Install
 
 ```bash
@@ -64,7 +101,7 @@ claude mcp add --scope user --transport stdio apex \
   -- uvx apex-mcp
 
 claude mcp list      # → apex: uvx apex-mcp - ✔ Connected
-# then restart the client; /mcp lists the five tools
+# then restart the client; /mcp lists the six tools
 ```
 
 Until `apex-mcp` is published to PyPI, point `uvx` at this directory:
@@ -126,6 +163,13 @@ See [`VALIDATION.md`](VALIDATION.md) for recorded results.
 - **Additive contract columns are probed, not assumed.** `app_id` and
   `confidence_score` are projected only when `apex.findings` actually has them,
   so a cluster that has not applied the ALTER yet still serves.
+- **Additive contract *tables* are probed the same way.** `apex.fix_verifications`
+  is v0.3; `ReadStore.table_exists()` checks `system.columns` once and caches, so
+  a pre-v0.3 cluster degrades to "not assessed" instead of erroring.
+- **Lanes integrate through ClickHouse, not imports.** serve reads the verify
+  lane's verdicts out of `apex.fix_verifications` exactly the way it reads the
+  engine lane's findings out of `apex.findings`. serve still depends only on
+  `mcp`, `clickhouse-connect` and `pydantic`.
 
 ## Security
 

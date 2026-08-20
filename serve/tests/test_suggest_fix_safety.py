@@ -23,7 +23,7 @@ MB = 1 << 20
 
 
 def _suggest(job_id="job-1", finding_id=None, min_confidence=0.75, findings=None,
-             stages=None, transitions=None) -> FixSuggestion:
+             stages=None, transitions=None, verifications=None) -> FixSuggestion:
     return diagnose.suggest_fix(
         job_id,
         finding_id,
@@ -31,7 +31,50 @@ def _suggest(job_id="job-1", finding_id=None, min_confidence=0.75, findings=None
         findings if findings is not None else [],
         stages if stages is not None else [stage_row(4, p50_ms=20, p99_ms=460)],
         transitions or [],
+        verifications or [],
     )
+
+
+def verification_row(
+    *,
+    finding_id: str = "finding-1",
+    method: str = "predicted",
+    safe: int = 1,
+    safety_verdict: str = "allow",
+    safety_detail: str = "",
+    measured_delta_pct: float | None = None,
+    replay_reps: int = 0,
+    proposed_config: str = '{"spark.sql.adaptive.skewJoin.enabled": "true"}',
+) -> dict:
+    """One apex.fix_verifications row, shaped like the v0.3 DDL."""
+    return {
+        "verification_id": "v-1",
+        "finding_id": finding_id,
+        "job_id": "job-1",
+        "app_id": "app-job-1",
+        "proposed_config": proposed_config,
+        "method": method,
+        "predictor": "amdahl_tail_share",
+        "predicted_delta_pct": -18.0,
+        "predicted_low_pct": -25.0,
+        "predicted_high_pct": -8.0,
+        "measured_delta_pct": measured_delta_pct,
+        "baseline_ms": None,
+        "treatment_ms": None,
+        "noise_floor_pct": None,
+        "replay_reps": replay_reps,
+        "bench": "dev:skew_join" if replay_reps else "",
+        "shape_fidelity": 0.8 if replay_reps else 0.0,
+        "safe": safe,
+        "safety_verdict": safety_verdict,
+        "safety_detail": safety_detail,
+        "confidence": "MEDIUM",
+        "confidence_score": 0.62,
+        "evidence": "tail share 0.41; amdahl bound",
+        "caveats": "single bench shape",
+        "verify_version": "0.3.0",
+        "verified_at": "2026-08-20T10:00:00.000",
+    }
 
 
 # -- the gate is structural, not conventional ------------------------------
@@ -194,3 +237,165 @@ def test_hunk_header_line_count_matches_the_body():
     lines = suggestion.proposed_diff.splitlines()
     declared = int(lines[2].split("+1,")[1].split(" ")[0])
     assert declared == len(lines) - 3
+
+
+# -- provenance: what verify already concluded -----------------------------
+# suggest_fix used to propose a diff with no idea the same fix had already been
+# predicted, measured, or refused as unsafe. These tests pin the disclosure —
+# and pin that disclosing is ALL it does, except for withholding the diff on a
+# refusal.
+_VERIFIED_FINDING = finding_row(finding_id="finding-1", confidence_score=0.99)
+
+
+def test_suggestion_reports_prior_verification():
+    """B-1 — the predicted range and any measurement reach the caller."""
+    suggestion = _suggest(
+        findings=[_VERIFIED_FINDING],
+        verifications=[
+            verification_row(method="replayed", measured_delta_pct=-11.0,
+                             replay_reps=5)
+        ],
+    )
+
+    assert suggestion.verification is not None
+    assert suggestion.verification.predicted_delta_pct == -18.0
+    assert suggestion.verification.measured_delta_pct == -11.0
+
+    notes = " ".join(suggestion.notes)
+    assert "predicted 18.0% faster" in notes
+    assert "range 25.0% faster to 8.0% faster" in notes
+    assert "measured 11.0% faster" in notes
+    assert "5 rep(s)" in notes
+
+
+def test_an_unreplayed_prediction_is_labelled_as_unmeasured():
+    suggestion = _suggest(
+        findings=[_VERIFIED_FINDING], verifications=[verification_row()]
+    )
+
+    assert suggestion.verification.measured_delta_pct is None
+    assert any("never replayed" in note for note in suggestion.notes)
+
+
+def test_refused_fix_is_not_presented_as_ready():
+    """B-2 — proposing a fix verify refused is the worst output this lane can
+    produce, so the refusal leads the warnings and no diff is handed over."""
+    suggestion = _suggest(
+        findings=[_VERIFIED_FINDING],
+        verifications=[
+            verification_row(
+                method="refused", safe=0, safety_verdict="block_size",
+                safety_detail="optimizedPlan.stats.sizeInBytes=8.0 EiB (unknown)",
+            )
+        ],
+    )
+
+    assert suggestion.warnings[0].startswith("REFUSED BY THE VERIFY LANE")
+    assert "block_size" in suggestion.warnings[0]
+    assert suggestion.advisory_only is True
+    assert suggestion.proposed_diff == ""
+    assert suggestion.pr_body == ""
+    # the recipe is still named — the user must be able to see WHAT was refused
+    assert suggestion.proposed_config
+
+
+def test_a_refusal_is_not_collapsed_into_low_confidence():
+    """The confidence gate and the safety gate mean different things."""
+    suggestion = _suggest(
+        findings=[_VERIFIED_FINDING],
+        verifications=[verification_row(safe=0, safety_verdict="block_ast")],
+    )
+
+    assert suggestion.gated is False          # confidence was never the problem
+    assert suggestion.confidence == 0.99
+    assert suggestion.advisory_only is True   # but it is still not ready to apply
+    assert "not a low confidence score" in suggestion.warnings[0]
+
+
+def test_unverified_finding_output_is_unchanged():
+    """B-3 — a finding the verify lane never looked at behaves exactly as before."""
+    without = _suggest(findings=[_VERIFIED_FINDING])
+    with_empty = _suggest(findings=[_VERIFIED_FINDING], verifications=[])
+
+    assert without.model_dump() == with_empty.model_dump()
+    assert without.verification is None
+    assert without.proposed_diff
+    assert without.advisory_only is False
+
+
+def test_a_verification_for_a_different_finding_is_not_attached():
+    """Verifications are keyed to a finding; the wrong one must not leak in."""
+    suggestion = _suggest(
+        findings=[_VERIFIED_FINDING],
+        verifications=[verification_row(finding_id="some-other-finding")],
+    )
+
+    assert suggestion.verification is None
+    assert suggestion.proposed_diff
+
+
+def test_a_verification_of_a_different_overlay_says_so():
+    """A verdict on other settings does not transfer to these ones."""
+    suggestion = _suggest(
+        findings=[_VERIFIED_FINDING],
+        verifications=[
+            verification_row(proposed_config='{"spark.executor.memory": "8g"}')
+        ],
+    )
+
+    assert any("DIFFERENT overlay" in note for note in suggestion.notes)
+
+
+def test_the_heuristic_path_carries_no_verification():
+    """No finding means no finding_id to key a verification to."""
+    suggestion = _suggest(findings=[], verifications=[verification_row()])
+
+    assert suggestion.source == "spark_events_heuristic"
+    assert suggestion.verification is None
+
+
+def test_a_gated_suggestion_still_discloses_its_verification():
+    suggestion = _suggest(
+        findings=[finding_row(finding_id="finding-1", confidence_score=0.40)],
+        min_confidence=0.75,
+        verifications=[verification_row()],
+    )
+
+    assert suggestion.gated is True
+    assert suggestion.verification is not None
+
+
+@pytest.mark.parametrize(
+    "verifications",
+    [
+        [],
+        [verification_row()],
+        [verification_row(method="replayed", measured_delta_pct=0.0, replay_reps=3)],
+        [verification_row(method="refused", safe=0, safety_verdict="block_size")],
+        [verification_row(finding_id="unrelated")],
+    ],
+)
+def test_disclosure_never_weakens_the_never_applies_guarantee(verifications):
+    """B-4 — the whole safety argument survives every disclosure path."""
+    suggestion = _suggest(findings=[_VERIFIED_FINDING], verifications=verifications)
+
+    assert suggestion.applied is False
+    assert suggestion.requires_human_approval is True
+
+
+def test_disclosing_a_verification_leaves_the_working_tree_untouched():
+    """B-4 — reading a verdict is still a read."""
+    before = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+        capture_output=True, text=True, check=True,
+    ).stdout
+    _suggest(findings=[_VERIFIED_FINDING], verifications=[verification_row()])
+    _suggest(
+        findings=[_VERIFIED_FINDING],
+        verifications=[verification_row(safe=0, safety_verdict="block_size")],
+    )
+    after = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert before == after

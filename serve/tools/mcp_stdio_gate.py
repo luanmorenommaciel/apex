@@ -2,7 +2,7 @@
 
 Verifies what only a real client can verify:
   * the server survives `initialize` over stdio (no stray stdout byte),
-  * it lists exactly the five contracted tools with the right annotations,
+  * it lists exactly the six contracted tools with the right annotations,
   * it exposes apex://runs as a resource and NOT as a tool,
   * every tool returns schema-valid structured output,
   * `suggest_fix` reports `applied=False` / `requires_human_approval=True`.
@@ -30,6 +30,7 @@ EXPECTED_TOOLS = [
     {"name": "compare_runs", "readOnlyHint": True},
     {"name": "list_runs", "readOnlyHint": True},
     {"name": "search_kb", "readOnlyHint": True},
+    {"name": "verify_fix", "readOnlyHint": True},
     {"name": "suggest_fix", "readOnlyHint": False},
 ]
 

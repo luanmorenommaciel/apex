@@ -269,3 +269,174 @@ def test_runs_clamps_a_caller_supplied_limit():
 
     _, parameters = client.calls[0]
     assert parameters["limit"] == ReadStore.MAX_RUNS
+
+
+# --------------------------------------------------------------------------
+# verifications() — the v0.3 ADDITIVE table the verify lane owns
+# --------------------------------------------------------------------------
+class _VerificationsClient:
+    """Serves the fix_verifications read plus its table probe.
+
+    Local to this module rather than in conftest, so this task stays inside
+    its declared blast radius. ``columns_rows`` is what ``system.columns``
+    returns for the probe: an empty list means the table does not exist on
+    this deployment, which is the whole point of B-3.
+    """
+
+    def __init__(
+        self,
+        rows: list[dict] | None = None,
+        columns_rows: list[dict] | None = None,
+    ) -> None:
+        self.rows = rows if rows is not None else []
+        self.columns_rows = (
+            columns_rows
+            if columns_rows is not None
+            else [{"name": "verification_id"}, {"name": "finding_id"}]
+        )
+        self.calls: list[tuple[str, dict]] = []
+
+    def query(self, query: str, parameters: dict | None = None):
+        self.calls.append((query, parameters or {}))
+        payload = (
+            self.columns_rows if "system.columns" in query else list(self.rows)
+        )
+        return type("R", (), {"named_results": lambda _self: list(payload)})()
+
+    @property
+    def reads(self) -> list[tuple[str, dict]]:
+        """Calls that are not the table probe."""
+        return [c for c in self.calls if "system.columns" not in c[0]]
+
+
+def _verification_row(
+    verification_id: str = "v-1",
+    finding_id: str = "finding-1",
+    *,
+    method: str = "predicted",
+    verified_at: str = "2026-08-20T10:00:00.000",
+) -> dict:
+    return {
+        "verification_id": verification_id,
+        "finding_id": finding_id,
+        "job_id": "job-1",
+        "app_id": "app-job-1",
+        "proposed_config": '{"spark.sql.shuffle.partitions": "200"}',
+        "method": method,
+        "predictor": "partition_sizing",
+        "predicted_delta_pct": -18.0,
+        "predicted_low_pct": -25.0,
+        "predicted_high_pct": -8.0,
+        "measured_delta_pct": None,
+        "baseline_ms": None,
+        "treatment_ms": None,
+        "noise_floor_pct": None,
+        "replay_reps": 0,
+        "bench": "",
+        "shape_fidelity": 0.0,
+        "safe": 1,
+        "safety_verdict": "allow",
+        "safety_detail": "",
+        "confidence": "MEDIUM",
+        "confidence_score": 0.62,
+        "evidence": "tail share 0.41; partition sizing model",
+        "caveats": "not replayed",
+        "verify_version": "0.3.0",
+        "verified_at": verified_at,
+    }
+
+
+def test_verifications_returns_rows_newest_first():
+    """B-1 — the verdict fields the user needs, ordered by the store."""
+    client = _VerificationsClient(
+        [
+            _verification_row("v-new", verified_at="2026-08-20T10:00:00.000"),
+            _verification_row("v-old", verified_at="2026-08-19T10:00:00.000"),
+        ]
+    )
+    store = ReadStore(client)
+
+    rows = store.verifications("job-1")
+
+    assert [r["verification_id"] for r in rows] == ["v-new", "v-old"]
+    first = rows[0]
+    for column in (
+        "method", "predictor", "predicted_delta_pct", "predicted_low_pct",
+        "predicted_high_pct", "measured_delta_pct", "safety_verdict",
+        "confidence", "confidence_score",
+    ):
+        assert column in first, column
+    sql, parameters = client.reads[0]
+    assert "ORDER BY verified_at DESC" in sql
+    assert parameters["job_id"] == "job-1"
+
+
+def test_verifications_filters_by_finding_id():
+    """B-2 — the narrowing reaches the query as a bound parameter."""
+    client = _VerificationsClient([_verification_row(finding_id="finding-7")])
+    store = ReadStore(client)
+
+    store.verifications("job-1", finding_id="finding-7")
+
+    sql, parameters = client.reads[0]
+    assert parameters["finding_id"] == "finding-7"
+    assert "{finding_id:String}" in sql
+    assert "finding-7" not in sql
+
+
+def test_verifications_without_a_finding_id_binds_the_empty_no_filter():
+    """One statement, one bound parameter — no unbound second query text."""
+    client = _VerificationsClient([])
+    ReadStore(client).verifications("job-1")
+
+    _, parameters = client.reads[0]
+    assert parameters["finding_id"] == ""
+
+
+def test_verifications_absent_table_degrades():
+    """B-3 — the v0.3 tables are additive; an older cluster must not error."""
+    client = _VerificationsClient([_verification_row()], columns_rows=[])
+    store = ReadStore(client)
+
+    assert store.verifications("job-1") == []
+    assert client.reads == []  # probed, then gave up — never queried the table
+
+
+def test_verifications_probes_the_absent_table_only_once():
+    client = _VerificationsClient([], columns_rows=[])
+    store = ReadStore(client)
+
+    store.verifications("job-1")
+    store.verifications("job-1")
+    store.verifications("job-2")
+
+    probes = [c for c in client.calls if "system.columns" in c[0]]
+    assert len(probes) == 1
+    assert probes[0][1] == {"database": "apex", "table": "fix_verifications"}
+
+
+def test_verifications_binds_hostile_finding_id():
+    """B-4 — a SQL fragment binds as data; it never reaches the statement."""
+    hostile = "' OR 1=1 --"
+    client = _VerificationsClient([])
+    store = ReadStore(client)
+
+    assert store.verifications("job-1", finding_id=hostile) == []
+    sql, parameters = client.reads[0]
+    assert parameters["finding_id"] == hostile
+    assert hostile not in sql
+
+
+def test_verifications_blank_job_id_never_reaches_the_database():
+    client = _VerificationsClient([])
+    with pytest.raises(ApexStoreError, match="job_id_required"):
+        ReadStore(client).verifications("")
+    assert client.calls == []
+
+
+def test_verifications_clamps_a_caller_supplied_limit():
+    client = _VerificationsClient([])
+    ReadStore(client).verifications("job-1", limit=10_000)
+
+    _, parameters = client.reads[0]
+    assert parameters["limit"] == ReadStore.MAX_VERIFICATIONS

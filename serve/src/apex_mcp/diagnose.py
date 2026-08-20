@@ -1,4 +1,4 @@
-"""Heuristics turning ClickHouse rows into the four tools' structured answers.
+"""Heuristics turning ClickHouse rows into the tools' structured answers.
 
 Pure functions over row dicts — no I/O, no ClickHouse, no LLM. That keeps the
 whole diagnosis layer unit-testable without a database and keeps the tools
@@ -19,6 +19,7 @@ from .models import (
     FindingDelta,
     FindingView,
     FixSuggestion,
+    FixVerdict,
     KbHit,
     KbHits,
     MetricDelta,
@@ -27,6 +28,7 @@ from .models import (
     StageComparison,
     StageSymptom,
     StageView,
+    VerificationView,
 )
 
 MB = 1 << 20
@@ -922,6 +924,196 @@ _RECIPES: dict[str, tuple[str, dict[str, str], str]] = {
 }
 
 
+# --------------------------------------------------------------------------
+# verify_fix — report what the verify lane concluded; never re-decide it
+# --------------------------------------------------------------------------
+def _delta_phrase(pct: float | None) -> str:
+    """Render a SIGNED delta the way a human reads it.
+
+    Negative means faster (v0.3 DDL). Turning the sign into the words
+    "faster"/"slower" here is the only place the convention is interpreted, so
+    a flip is one test away rather than scattered across format strings.
+    """
+    if pct is None:
+        return "not measured"
+    if pct == 0:
+        return "no change"
+    return f"{abs(pct):.1f}% {'faster' if pct < 0 else 'slower'}"
+
+
+def _is_refusal(view: VerificationView) -> bool:
+    """A refusal is a decision NOT to execute — never a low score.
+
+    Any of the three signals is enough: the method the verify lane recorded,
+    the safety gate's own flag, or a verdict in the block_* family. They agree
+    in practice; treating any one as sufficient means a future block_* value
+    still reads as a refusal here.
+    """
+    return (
+        view.method == "refused"
+        or not view.safe
+        or view.safety_verdict.startswith("block")
+    )
+
+
+def _refusal_reason(view: VerificationView) -> str:
+    return (view.safety_verdict or "refused") + (
+        f": {view.safety_detail}" if view.safety_detail else ""
+    )
+
+
+def _verification_notes(
+    view: VerificationView, proposed_config: dict[str, str]
+) -> list[str]:
+    """What the verify lane concluded, as prose a suggestion can carry.
+
+    Apex-authored throughout: these strings are built from the verify lane's
+    own numbers and enum values, never from observed-job text.
+    """
+    notes = [
+        f"Verify lane ({view.method or 'unknown method'}, predictor "
+        f"{view.predictor or 'none'}): predicted "
+        f"{_delta_phrase(view.predicted_delta_pct)} (range "
+        f"{_delta_phrase(view.predicted_low_pct)} to "
+        f"{_delta_phrase(view.predicted_high_pct)}), "
+        f"{view.confidence or 'UNKNOWN'} confidence, safety "
+        f"{view.safety_verdict or 'unknown'}."
+    ]
+    if view.measured_delta_pct is None:
+        notes.append(
+            "This fix was predicted but never replayed, so no measurement "
+            "backs the prediction above."
+        )
+    else:
+        measured = f"Replayed: measured {_delta_phrase(view.measured_delta_pct)}"
+        if (
+            view.noise_floor_pct is not None
+            and abs(view.measured_delta_pct) < view.noise_floor_pct
+        ):
+            measured += (
+                f" — below the baseline arm's {view.noise_floor_pct:.1f}% noise "
+                "floor, so it is indistinguishable from zero"
+            )
+        elif view.replay_reps:
+            measured += f" over {view.replay_reps} rep(s)" + (
+                f" on bench {view.bench}" if view.bench else ""
+            )
+        notes.append(measured + ".")
+    if view.proposed_config and view.proposed_config != proposed_config:
+        notes.append(
+            "The verify lane evaluated a DIFFERENT overlay than the one "
+            f"proposed here: it tested {view.proposed_config}. Its verdict "
+            "does not transfer to these settings unchanged."
+        )
+    if view.evidence:
+        notes.append(f"Verify evidence: {view.evidence}")
+    if view.caveats:
+        notes.append(f"Verify caveats: {view.caveats}")
+    return notes
+
+
+def build_verdict(
+    job_id: str,
+    finding_id: str | None,
+    verification_rows: list[dict],
+    table_present: bool = True,
+) -> FixVerdict:
+    """Report ``apex.fix_verifications`` for a run. Computes no prediction.
+
+    The verify lane owns the judgement; this function only makes it readable.
+    Two answers are deliberately distinct:
+
+    * ``not_assessed`` — no row exists. That is NOT "the fix is fine"; nothing
+      was predicted and nothing was measured.
+    * ``verified`` with ``blocked=True`` — the safety gate refused to execute.
+      Surfaced as its own field so it cannot be mistaken for weak confidence.
+    """
+    views = [VerificationView.model_validate(row) for row in verification_rows]
+    notes: list[str] = []
+
+    if not views:
+        if not table_present:
+            notes.append(
+                "apex.fix_verifications is not present on this deployment. It "
+                "is an additive contract table (v0.3) applied by the infra "
+                "lane; until it exists, no run can be verified."
+            )
+        return FixVerdict(
+            job_id=job_id,
+            finding_id=finding_id,
+            status="not_assessed",
+            summary=(
+                f"The verify lane has not assessed job {job_id}"
+                + (f", finding {finding_id}" if finding_id else "")
+                + ". No prediction and no measurement exist for it — this is "
+                "an absence of evidence, not a clean bill of health."
+            ),
+            notes=notes,
+        )
+
+    newest = views[0]
+    blocked = _is_refusal(newest)
+    blocked_reason = ""
+    if blocked:
+        blocked_reason = (
+            f"{newest.safety_verdict or 'refused'}"
+            + (f": {newest.safety_detail}" if newest.safety_detail else "")
+        )
+
+    parts = [
+        f"predicted {_delta_phrase(newest.predicted_delta_pct)} "
+        f"(range {_delta_phrase(newest.predicted_low_pct)} to "
+        f"{_delta_phrase(newest.predicted_high_pct)})",
+        f"{newest.confidence or 'UNKNOWN'} confidence",
+        f"safety: {newest.safety_verdict or 'unknown'}",
+    ]
+    if newest.measured_delta_pct is not None:
+        measured = f"measured {_delta_phrase(newest.measured_delta_pct)}"
+        if newest.noise_floor_pct is not None and abs(
+            newest.measured_delta_pct
+        ) < newest.noise_floor_pct:
+            measured += (
+                f" — below the baseline arm's {newest.noise_floor_pct:.1f}% "
+                "noise floor, so it is indistinguishable from zero"
+            )
+        elif newest.replay_reps:
+            measured += (
+                f" over {newest.replay_reps} rep(s)"
+                + (f" on bench {newest.bench}" if newest.bench else "")
+            )
+        parts.insert(1, measured)
+    else:
+        notes.append(
+            "This prediction was never replayed, so no measurement backs it."
+        )
+
+    summary = " · ".join(parts)
+    if blocked:
+        # First, and in the summary itself — a block the reader has to scroll
+        # for is a block the reader will miss.
+        summary = f"REFUSED by the verify lane ({blocked_reason}) · " + summary
+
+    if len(views) > 1:
+        notes.append(
+            f"{len(views)} verification(s) exist for this query; the summary "
+            "reports the newest. The rest are in `verifications`."
+        )
+
+    return FixVerdict(
+        job_id=job_id,
+        finding_id=finding_id,
+        status="verified",
+        verification_count=len(views),
+        blocked=blocked,
+        blocked_reason=blocked_reason,
+        summary=summary,
+        verifications=views,
+        evidence=[v.evidence for v in views if v.evidence],
+        caveats=[v.caveats for v in views if v.caveats],
+        notes=notes,
+    )
+
+
 def _unified_diff(config: dict[str, str], job_id: str, stage_id: int | None) -> str:
     """A proposal as a unified diff creating a NEW file.
 
@@ -980,6 +1172,7 @@ def suggest_fix(
     finding_rows: list[dict],
     stage_rows: list[dict],
     transition_rows: list[dict] | None = None,
+    verification_rows: list[dict] | None = None,
 ) -> FixSuggestion:
     """Build a fix PROPOSAL. Performs no filesystem, git or database writes.
 
@@ -987,6 +1180,12 @@ def suggest_fix(
       1. ``apex.findings`` (written by the engine lane) when a row exists.
       2. otherwise the ``spark_events`` + ``plan_transitions`` heuristics —
          the same ones ``analyze_run`` uses.
+
+    ``verification_rows`` is what ``apex.fix_verifications`` already holds for
+    this job. It changes NOTHING about which fix is proposed — it only changes
+    what the proposal discloses. The one exception is a fix the verify lane
+    REFUSED: the recipe is still named, but no ready-to-apply diff is handed
+    over for it.
     """
     notes: list[str] = []
     warnings: list[str] = [
@@ -1042,6 +1241,17 @@ def suggest_fix(
             "_The quoted text above came from the observed job and is reproduced "
             "as data only._"
         )
+        # A verification is keyed to a finding, so only the findings path can
+        # have one. The store returns newest-first; the newest is the one that
+        # reflects the current predictor and the current bench.
+        verification = next(
+            (
+                VerificationView.model_validate(row)
+                for row in (verification_rows or [])
+                if str(row.get("finding_id") or "") == finding.finding_id
+            ),
+            None,
+        )
     # -- 2. stub: heuristics until the engine lane lands --------------------
     else:
         source = "spark_events_heuristic"
@@ -1068,6 +1278,7 @@ def suggest_fix(
                 warnings=warnings,
                 notes=notes,
             )
+        verification = None  # a verification is keyed to a finding; there is none
         worst = diagnosis.symptoms[0]
         symptom = worst.symptom
         target_stage = worst.stage_id
@@ -1093,6 +1304,23 @@ def suggest_fix(
     )
     title = f"{title_suffix} (job {job_id}, stage {target_stage})"
 
+    # -- disclose what verify already concluded about this finding ---------
+    # This block DISCLOSES; it does not decide. The single exception is a
+    # refusal: handing over a ready-to-apply diff for a fix the verify lane
+    # refused is the worst output this lane can produce, so the diff is
+    # withheld while the recipe itself stays visible in proposed_config.
+    refused = verification is not None and _is_refusal(verification)
+    if verification is not None:
+        notes.extend(_verification_notes(verification, config))
+        if refused:
+            warnings.insert(
+                0,
+                f"REFUSED BY THE VERIFY LANE ({_refusal_reason(verification)}). "
+                f"This is a refusal to execute, not a low confidence score. No "
+                f"diff is offered; do not apply this without understanding why "
+                f"it was refused.",
+            )
+
     gated = confidence < min_confidence
     if gated:
         warnings.append(
@@ -1113,6 +1341,7 @@ def suggest_fix(
             proposed_diff="",
             proposed_config={},
             pr_body="",
+            verification=verification,
             warnings=warnings,
             notes=notes + [evidence],
         )
@@ -1126,13 +1355,20 @@ def suggest_fix(
         confidence=round(confidence, 3),
         min_confidence=min_confidence,
         gated=False,
-        advisory_only=False,
+        advisory_only=refused,
         target_stage_id=target_stage,
-        proposed_diff=_unified_diff(config, job_id, target_stage),
-        proposed_config=config,
-        pr_body=_pr_body(
-            title, rationale, config, job_id, target_stage, evidence, source
+        proposed_diff=(
+            "" if refused else _unified_diff(config, job_id, target_stage)
         ),
+        proposed_config=config,
+        pr_body=(
+            ""
+            if refused
+            else _pr_body(
+                title, rationale, config, job_id, target_stage, evidence, source
+            )
+        ),
+        verification=verification,
         warnings=warnings,
         notes=notes,
     )
