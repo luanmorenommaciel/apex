@@ -1,0 +1,287 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: l3-understand
+  source: docs/lanes/SERVE-LEGS.md
+units:
+  - id: T-20260820-detail-parameter
+    title: Give analyze_run a detail level
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/src/apex_mcp/diagnose.py, serve/src/apex_mcp/server.py, serve/tests/test_diagnose.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: The real P0 run returns 17 stages plus every finding in one payload. The default answer to "why was this slow" should be three lines, not a data dump the reader has to triage.
+    goal: analyze_run takes detail=summary|stages|full, defaulting to summary.
+    context: analyze() already computes everything; this trims what leaves. Nothing may be recomputed per level - the same diagnosis must underlie all three, or two callers get different answers to the same question.
+    behaviors:
+      - id: B-1
+        given: no detail argument
+        when: analyze_run is called
+        then: the payload carries status, worst stage, primary symptom, summary and aqe_ground_truth, and omits the per-stage and per-finding arrays
+      - id: B-2
+        given: detail=stages
+        when: analyze_run is called
+        then: the stage array is included and findings are still omitted
+      - id: B-3
+        given: detail=full
+        when: analyze_run is called
+        then: the payload is byte-identical to today's response
+      - id: B-4
+        given: any detail level
+        when: the worst stage and primary symptom are read
+        then: they are the same across all three, because trimming never re-runs the analysis
+    evals:
+      - id: eval_1
+        description: the detail-level tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_diagnose.py::test_summary_omits_stage_and_finding_arrays" "tests/test_diagnose.py::test_stages_level_includes_stages_not_findings" "tests/test_diagnose.py::test_full_level_is_unchanged_from_today" )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: every level agrees on the verdict
+        command: ( cd serve && uv run --extra dev pytest "tests/test_diagnose.py::test_verdict_is_identical_across_detail_levels" )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 30
+    anti_patterns:
+      - Recomputing the diagnosis per level; trim one result, never analyse three times.
+      - Making summary the only tested path while stages and full drift.
+      - Dropping aqe_ground_truth from summary - it is the note that stops a user misreading skew.
+    do_not_touch:
+      - serve/src/apex_mcp/ch.py
+      - serve/tests/test_server_tools.py
+
+  - id: T-20260820-coverage-freshness
+    title: Report what the diagnosis actually saw
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-detail-parameter]
+    touches_paths: [serve/src/apex_mcp/models.py, serve/src/apex_mcp/diagnose.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: A bare healthy verdict and a healthy verdict that says what it saw are different claims. W1 in the weaknesses doc is exactly this failure - a dropped job_id is indistinguishable from a clean run.
+    goal: Every Diagnosis carries stage count observed, findings observed, and how old the newest event is.
+    context: analyze() already returns status=not_found for zero stages. This adds the weaker case - telemetry arrived, but thin or stale - which currently reads as full confidence.
+    behaviors:
+      - id: B-1
+        given: any diagnosis
+        when: it is read
+        then: it reports stages observed, findings observed and the age of the newest event
+      - id: B-2
+        given: a run whose newest event is hours old
+        when: the diagnosis is read
+        then: the age is reported as a number and is never judged stale or fresh by Apex
+      - id: B-3
+        given: a healthy verdict on a single observed stage
+        when: the diagnosis is read
+        then: the coverage makes the thinness visible rather than implying a full picture
+    evals:
+      - id: eval_1
+        description: the coverage tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_diagnose.py::test_diagnosis_reports_coverage" "tests/test_diagnose.py::test_thin_coverage_is_visible_on_a_healthy_verdict" )
+        verifies: [B-1, B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: Apex reports the age and does not judge it
+        command: ( cd serve && uv run --extra dev pytest "tests/test_diagnose.py::test_ingest_age_is_reported_not_judged" )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 30
+    anti_patterns:
+      - Calling a run stale past a threshold; a nightly batch and a streaming job disagree, and a false stale is worse than none.
+      - Computing coverage from a second query rather than from the rows already in hand.
+    do_not_touch:
+      - serve/src/apex_mcp/ch.py
+      - serve/src/apex_mcp/server.py
+
+  - id: T-20260820-explain-stage-tool
+    title: Add explain_stage for drill-down
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-detail-parameter]
+    touches_paths: [serve/src/apex_mcp/server.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: Once summary is the default, the user needs somewhere to go for one stage rather than re-requesting the whole run at full detail.
+    goal: explain_stage(job_id, stage_id) returns one stage's metrics, symptoms and findings.
+    context: The sixth tool. L1's register-apex-status also moves the surface assertion, to a different six; whichever leg lands second reconciles. The five-tools assertion is expected to fail after this unit and is repaired by its own follow-up.
+    behaviors:
+      - id: B-1
+        given: a built server
+        when: list_tools() is called
+        then: explain_stage is present with readOnlyHint True and openWorldHint False
+      - id: B-2
+        given: a job_id and a stage_id that exists
+        when: explain_stage is called
+        then: it returns that stage's metrics, its symptoms and any findings scoped to it
+      - id: B-3
+        given: a stage_id absent from the run
+        when: explain_stage is called
+        then: it says the stage was not observed rather than returning an empty success
+    evals:
+      - id: eval_1
+        description: explain_stage is registered read-only with the right annotations
+        command: ( cd serve && uv run python -c "import asyncio; from apex_mcp.server import create_server; from apex_mcp.ch import ReadStore; from tests.conftest import FakeClient; s=create_server(ReadStore(FakeClient())); t={x.name:x for x in asyncio.run(s.list_tools())}; assert 'explain_stage' in t, sorted(t); a=t['explain_stage'].annotations; assert a.readOnlyHint and a.openWorldHint is False, a" )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 20
+      - id: eval_2
+        description: a missing stage is stated, not silently empty
+        command: ( cd serve && ! grep -n 'Five tools' src/apex_mcp/server.py )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Repairing the failing surface assertion here; that is the follow-up.
+      - Returning an empty stage object for an unknown stage_id.
+    do_not_touch:
+      - serve/tests/test_server_tools.py
+      - serve/src/apex_mcp/diagnose.py
+
+  - id: T-20260820-tool-surface-six
+    title: Re-pin the tool surface at six
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-explain-stage-tool]
+    touches_paths: [serve/tests/test_server_tools.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: An unnoticed tool on a server a model can call is a security event; the exact ordered assertion is the control that catches one.
+    goal: Move the ordered tool-name assertion from five names to six, keeping it an equality.
+    context: Deliberately its own commit so the surface change is legible in git log.
+    behaviors:
+      - id: B-1
+        given: the built server
+        when: list_tools() is called
+        then: the assertion compares against an exact ordered list of six names including explain_stage
+      - id: B-2
+        given: a seventh tool were added
+        when: the suite runs
+        then: it fails, because the assertion is neither a subset nor a count
+    evals:
+      - id: eval_1
+        description: the six-tool assertion exists and passes
+        command: ( cd serve && uv run --extra dev pytest "tests/test_server_tools.py::test_exactly_the_six_contracted_tools" )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the assertion is still an ordered equality
+        command: ( cd serve && ! grep -nE '(issubset|len\(_tools|set\(\[t\.name)' tests/test_server_tools.py )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Relaxing the assertion so it stops needing maintenance; the maintenance is the control.
+      - Bundling any source change into this unit.
+    do_not_touch:
+      - serve/src/apex_mcp
+
+  - id: T-20260820-critical-path
+    title: Frame the bottleneck as a path, not a list
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-coverage-freshness]
+    touches_paths: [serve/src/apex_mcp/diagnose.py, serve/tests/test_diagnose.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: analyze() already sums p99 as tail time to rank stages, then throws the shape away. "Stage 4 is 61% of the tail" is actionable; a sorted list of seventeen stages is homework.
+    goal: Report each stage's share of total tail time and the smallest set covering most of it.
+    context: p99 is the closest stand-in for stage wall time the contract gives, and this is a SHARE OF TAIL, not a true DAG critical path - stages may overlap. Say so in the field description so nobody reads it as scheduling truth.
+    behaviors:
+      - id: B-1
+        given: a diagnosis with several stages
+        when: it is read
+        then: each stage carries its share of total tail time
+      - id: B-2
+        given: one stage dominating the tail
+        when: the diagnosis is read
+        then: the smallest set of stages covering most of the tail names that stage alone
+      - id: B-3
+        given: stages of equal duration
+        when: the diagnosis is read
+        then: no stage is singled out, because there is no bottleneck to name
+      - id: B-4
+        given: the payload
+        when: the tail-share field is read
+        then: its description states this is share of tail, not a scheduling critical path
+    evals:
+      - id: eval_1
+        description: the tail-share tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_diagnose.py::test_stage_carries_share_of_tail" "tests/test_diagnose.py::test_dominant_stage_is_named_alone" "tests/test_diagnose.py::test_even_stages_name_no_bottleneck" )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the field does not claim to be a scheduling critical path
+        command: ( cd serve && uv run python -c "import json; from apex_mcp.models import Diagnosis; s=json.dumps(Diagnosis.model_json_schema()); assert 'share of tail' in s.lower() or 'not a scheduling' in s.lower(), 'tail-share field lacks its caveat'" )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 15
+    anti_patterns:
+      - Calling it a critical path; stages overlap and p99 is a stand-in, so the honest name is share of tail.
+      - Naming a bottleneck when the distribution is flat.
+    do_not_touch:
+      - serve/src/apex_mcp/ch.py
+      - serve/src/apex_mcp/server.py
+
+  - id: T-20260820-l3-docs
+    title: Document readability across the lane docs
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-tool-surface-six, T-20260820-critical-path]
+    touches_paths: [serve/README.md, serve/VALIDATION.md, docs/lanes/SERVE-LEGS.md]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: VALIDATION records what was observed, so leaving it at five tools makes it a false record rather than a stale one.
+    goal: Reflect the detail levels, explain_stage, coverage and tail share in every lane document.
+    context: Do not touch docs/lanes/SERVE.md here - that write surface belongs to its own unit, as L2 learned when an eval reached outside its blast radius.
+    behaviors:
+      - id: B-1
+        given: serve/README.md
+        when: read
+        then: the tool table lists explain_stage and the detail levels are documented
+      - id: B-2
+        given: serve/VALIDATION.md
+        when: read
+        then: it records a test count copied from an actual run
+      - id: B-3
+        given: docs/lanes/SERVE-LEGS.md
+        when: read
+        then: L3 marks F3.1 to F3.4 delivered
+    evals:
+      - id: eval_1
+        description: no owned document still claims a five-tool surface
+        command: ( ! grep -rniE 'five tools|exactly 5 tools' serve/README.md serve/VALIDATION.md docs/lanes/SERVE-LEGS.md )
+        verifies: [B-1, B-3]
+        terminal: true
+        expected_duration_sec: 10
+      - id: eval_2
+        description: the recorded test count equals what the suite reports
+        command: ( cd serve && n=$(uv run --extra dev pytest 2>&1 | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+') && grep -q "$n passed" VALIDATION.md )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Writing a test count from memory instead of copying it from a run.
+      - Editing docs/lanes/SERVE.md, which is outside this unit's declared write surface.
+    do_not_touch:
+      - serve/src/apex_mcp
+      - serve/tests
+      - docs/lanes/SERVE.md
