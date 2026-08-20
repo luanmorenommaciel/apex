@@ -148,3 +148,207 @@ def test_recall_timestamps_accept_driver_datetimes():
 
     assert run.observed_at == "2026-08-19T09:00:00"
     assert plan.last_seen == "2026-08-19T09:00:00"
+
+
+# --------------------------------------------------------------------------
+# recall_similar_runs through the tool layer
+#
+# The models above constrain what CAN be said; these assert what the tool
+# actually says on the three deployments that behave differently.
+# --------------------------------------------------------------------------
+import asyncio
+
+from apex_mcp.ch import ReadStore
+from apex_mcp.server import create_server
+
+FP_NEAR = "b" * 64
+
+
+class _RecallClient:
+    """Routes on the table each statement names."""
+
+    def __init__(
+        self,
+        *,
+        stages: list[dict] | None = None,
+        plans: list[dict] | None = None,
+        outcomes: list[dict] | None = None,
+        tables: tuple[str, ...] = ("plan_memory", "run_outcomes"),
+    ) -> None:
+        self.stages = stages or []
+        self.plans = plans or []
+        self.outcomes = outcomes or []
+        self.tables = tables
+
+    def query(self, query: str, parameters: dict | None = None):
+        if "system.tables" in query:
+            rows = [{"name": name} for name in self.tables]
+        elif "apex.plan_memory" in query:
+            rows = list(self.plans)
+        elif "apex.run_outcomes" in query:
+            rows = list(self.outcomes)
+        else:
+            rows = list(self.stages)
+        return type("R", (), {"named_results": lambda _s: rows})()
+
+
+def _stage(fingerprint: str, task_count: int, p50_ms: int) -> dict:
+    return {
+        "stage_id": 4,
+        "stage_attempt": 0,
+        "app_id": "app-1",
+        "app_name": "nightly_etl",
+        "task_count": task_count,
+        "shuffle_read_bytes": 0,
+        "shuffle_write_bytes": 0,
+        "spill_disk_bytes": 0,
+        "spill_mem_bytes": 0,
+        "gc_time_ms": 0,
+        "input_bytes": 0,
+        "output_bytes": 0,
+        "peak_execution_mem_bytes": 0,
+        "p50_ms": p50_ms,
+        "p99_ms": p50_ms,
+        "plan_fingerprint": fingerprint,
+    }
+
+
+def _outcome(job_id: str, fingerprint: str = FP, wall_clock_ms: int = 600_000) -> dict:
+    return {
+        "job_id": job_id,
+        "app_id": f"app-{job_id}",
+        "app_name": "nightly_etl",
+        "plan_fingerprint": fingerprint,
+        "conf_shuffle_partitions": None,
+        "conf_executor_instances": None,
+        "conf_executor_cores": None,
+        "conf_executor_memory_mb": None,
+        "conf_driver_cores": None,
+        "conf_driver_memory_mb": None,
+        "conf_extra": {},
+        "config_source": "unknown",
+        "stage_count": 4,
+        "task_count": 200,
+        "wall_clock_ms": wall_clock_ms,
+        "task_time_ms": wall_clock_ms * 3,
+        "shuffle_read_bytes": 0,
+        "shuffle_write_bytes": 0,
+        "spill_disk_bytes": 0,
+        "spill_mem_bytes": 0,
+        "gc_time_ms": 0,
+        "input_bytes": 0,
+        "output_bytes": 0,
+        "peak_execution_mem_bytes": 0,
+        "max_skew_ratio": 1.1,
+        "aqe_skew_splits": 0,
+        "aqe_coalesces": 1,
+        "finding_count": 0,
+        "worst_severity": "",
+        "outcome_source": "apex",
+        "observed_at": "2026-08-12T09:00:00",
+    }
+
+
+def _recall(client: _RecallClient, **arguments) -> dict:
+    server = create_server(ReadStore(client))
+    result = asyncio.run(
+        server.call_tool("recall_similar_runs", {"job_id": "job-current", **arguments})
+    )
+    return result[1] if isinstance(result, tuple) else result
+
+
+def test_recall_returns_prior_runs_with_similarity_and_wall_clock():
+    """B-2 — prior runs of the shape, with their configs and outcomes."""
+    payload = _recall(
+        _RecallClient(
+            stages=[_stage(FP, task_count=200, p50_ms=300)],
+            plans=[
+                {
+                    "plan_fingerprint": FP_NEAR,
+                    "similarity": 0.93,
+                    "node_count": 12,
+                    "join_count": 1,
+                    "agg_count": 1,
+                    "exchange_count": 2,
+                    "scan_count": 2,
+                    "last_seen": "2026-08-19T09:00:00",
+                }
+            ],
+            outcomes=[_outcome("job-old"), _outcome("job-older", wall_clock_ms=700_000)],
+        )
+    )
+
+    assert payload["status"] == "recalled"
+    assert payload["plan_fingerprint"] == FP
+    assert [r["job_id"] for r in payload["prior_runs"]] == ["job-old", "job-older"]
+    assert payload["prior_runs"][0]["wall_clock_ms"] == 600_000
+    assert payload["prior_runs"][0]["match"] == "exact"
+    assert payload["prior_runs"][0]["similarity"] == 1.0
+    # The exact tier is listed first and needs no embedding.
+    assert payload["similar_plans"][0]["match"] == "exact"
+    assert payload["similar_plans"][1]["plan_fingerprint"] == FP_NEAR
+    assert "prior_runs[].app_name" in payload["untrusted_fields"]
+
+
+def test_recall_without_a_floor_calls_no_configuration_better():
+    """The floor rule, end to end: a 14% spread and no verdict."""
+    payload = _recall(
+        _RecallClient(
+            stages=[_stage(FP, task_count=200, p50_ms=300)],
+            outcomes=[_outcome("job-old"), _outcome("job-older", wall_clock_ms=700_000)],
+        )
+    )
+
+    assert payload["summary"]["compared"] is False
+    assert payload["summary"]["faster_job_id"] is None
+    assert "better" not in payload["summary"]["claim"].lower()
+
+
+def test_recall_on_an_unseen_shape_says_so():
+    """B-3 — nothing matched, and the nearest unrelated shape is not offered."""
+    payload = _recall(
+        _RecallClient(stages=[_stage(FP, task_count=200, p50_ms=300)], outcomes=[])
+    )
+
+    assert payload["status"] == "no_prior_runs"
+    assert payload["prior_runs"] == []
+    assert any("not returned in its place" in note for note in payload["notes"])
+
+
+def test_recall_reports_memory_unavailable_on_an_older_deployment():
+    """B-4 — no v0.3 tables is "no history to read", not "no history"."""
+    payload = _recall(
+        _RecallClient(stages=[_stage(FP, task_count=200, p50_ms=300)], tables=())
+    )
+
+    assert payload["status"] == "memory_unavailable"
+    assert payload["prior_runs"] == []
+    assert any("not present" in note for note in payload["notes"])
+
+
+def test_recall_without_a_plan_shape_does_not_recall_a_null_fingerprint():
+    """The all-zero fixture fingerprint is not a plan shape; recalling on it
+    would return every degenerate run in the store as a perfect match."""
+    payload = _recall(
+        _RecallClient(stages=[_stage("0" * 64, task_count=200, p50_ms=300)])
+    )
+
+    assert payload["status"] == "no_plan_shape"
+    assert payload["similar_plans"] == []
+
+
+def test_recall_picks_the_shape_the_run_spent_its_time_in():
+    """Many trivial stages must not outrank the one that costs money."""
+    payload = _recall(
+        _RecallClient(
+            stages=[
+                _stage(FP_NEAR, task_count=1, p50_ms=1),
+                _stage(FP_NEAR, task_count=1, p50_ms=1),
+                _stage(FP_NEAR, task_count=1, p50_ms=1),
+                _stage(FP, task_count=200, p50_ms=3000),
+            ],
+            outcomes=[_outcome("job-old")],
+        )
+    )
+
+    assert payload["plan_fingerprint"] == FP
