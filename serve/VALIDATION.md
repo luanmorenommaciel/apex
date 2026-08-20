@@ -6,7 +6,8 @@ stack (ClickHouse `127.0.0.1:8123`, database `apex`) holding the real P0 run
 
 ## Scope
 
-`apex-mcp` — stdio MCP server, five tools and one resource:
+`apex-mcp` — stdio MCP server. As first recorded here: five tools and one
+resource (`verify_fix` was added later; see the L5 section at the end):
 
 | Tool | Kind |
 |---|---|
@@ -188,3 +189,63 @@ Both units passed their entire unit suite before these surfaced, because
   reports that rather than inventing a subject.
 - Auto-baseline costs up to 10 extra stage queries, because `RUNS_SQL` does not
   carry `plan_fingerprint`.
+
+---
+
+## L5 — fix verification, recorded 2026-08-20
+
+Branch `serve/l5-fix`. L5 turned out **not** to be a build: the verify lane
+already predicts, replays and safety-gates proposed fixes, and already writes
+`apex.fix_verifications` (contract v0.3, additive). This leg is the MCP surface
+over that table.
+
+### Scope added
+
+| Surface | Kind |
+|---|---|
+| `verify_fix(job_id, finding_id?)` | read-only — reports `apex.fix_verifications` |
+| `suggest_fix(...).verification` | the same verdict, attached to the proposal it concerns |
+
+The tool surface is now **six tools**, re-pinned as an exact ordered equality in
+`tests/test_server_tools.py::test_exactly_the_six_contracted_tools` and in
+`tools/mcp_stdio_gate.py`'s `EXPECTED_TOOLS`.
+
+### Unit + safety suite — `179 passed`
+
+```bash
+cd serve
+uv run --extra dev pytest                  # 179 passed
+```
+
+| File | Covers (added this leg) |
+|---|---|
+| `tests/test_ch.py` | `verifications()` binding, newest-first ordering, absent-table degradation, hostile `finding_id`, limit clamp |
+| `tests/test_verify_view.py` | `VerificationView` / `FixVerdict` shape, the SIGNED-delta convention in the published schema, null vs `0.0` measurement |
+| `tests/test_verify_fix.py` | the tool's annotations, predicted/replayed/refused rendering, `not_assessed`, noise-floor suppression |
+| `tests/test_suggest_fix_safety.py` | provenance disclosure, refusal withholding the diff, unverified output byte-identical to before, `applied=False` across every disclosure path |
+
+### Properties asserted
+
+- **serve depends on no other lane.** `grep -nE 'apex_verify|apex_memory'` over
+  `src/apex_mcp/*.py` and `pyproject.toml` returns nothing; the contract table
+  is the integration surface.
+- **A safety block is not a low confidence score.** `FixVerdict.blocked` and
+  `blocked_reason` are separate fields, the refusal leads the summary, and
+  `suggest_fix` puts it first in `warnings` and withholds the diff.
+- **`not_assessed` is not an empty success.** No verification row yields a
+  summary saying the verify lane has not looked at this run.
+- **Negative means faster, everywhere.** Every delta field's *published schema
+  description* states the convention, and the interval bounds are documented as
+  numerically ordered (`low` = most improvement).
+- **v0.3 is additive.** `ReadStore.table_exists()` probes `system.columns` once
+  and caches; a cluster without `apex.fix_verifications` reports `not_assessed`
+  rather than failing the call.
+
+### Not run for this leg
+
+`tools/read_only_gate.py` and `tools/mcp_stdio_gate.py` were **not** executed —
+they need a live ClickHouse with `apex.fix_verifications` applied, which this
+worktree does not have. `EXPECTED_TOOLS` in the stdio gate was updated to the
+six-tool surface, but that update is unexercised until the gate is run against
+a cluster with the v0.3 DDL applied. The L2 lesson stands: `FakeClient` does not
+parse SQL, so `VERIFICATIONS_SQL` has not yet been validated by a real parser.
