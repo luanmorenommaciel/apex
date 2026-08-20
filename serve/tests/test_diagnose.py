@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import pytest
+
 from apex_mcp import diagnose
+from apex_mcp.models import PriorRun, RunConfig
 from tests.conftest import (
     FINGERPRINT_A,
     FINGERPRINT_B,
@@ -338,3 +341,163 @@ def test_auto_baseline_refuses_when_the_current_run_has_no_fingerprint():
 
     assert chosen is None
     assert "no plan_fingerprint" in reason
+
+
+# --------------------------------------------------------------------------
+# Cross-run recall — never call a configuration better without a floor
+#
+# The whole value of cross-run memory is distinguishing "this config is better"
+# from "this run happened to be faster". Ranking a shape's prior runs by wall
+# clock builds a machine for confusing the two, so the word "better" is only
+# reachable through a floor the caller measured.
+# --------------------------------------------------------------------------
+def _prior_run(
+    job_id: str,
+    wall_clock_ms: int,
+    *,
+    shuffle_partitions: int | None = None,
+    config_source: str = "unknown",
+) -> PriorRun:
+    config = RunConfig(
+        shuffle_partitions=shuffle_partitions,
+        executor_instances=4,
+        executor_cores=4,
+        executor_memory_mb=8192,
+        driver_cores=2,
+        driver_memory_mb=4096,
+    ) if shuffle_partitions is not None else RunConfig()
+    return PriorRun(
+        job_id=job_id,
+        wall_clock_ms=wall_clock_ms,
+        config=config,
+        config_source=config_source,
+    )
+
+
+def test_no_floor_means_no_better_claim():
+    """B-1 — runs are measurements; nothing is called better."""
+    summary = diagnose.summarise_recall(
+        [_prior_run("job-fast", 60_000), _prior_run("job-slow", 120_000)]
+    )
+
+    assert summary.compared is False
+    assert summary.faster_job_id is None
+    assert summary.noise_floor_pct is None
+    assert "better" not in summary.claim.lower()
+    assert "measurements" in summary.claim
+    assert any("noise floor" in note for note in summary.notes)
+
+
+def test_difference_inside_floor_is_indistinguishable():
+    """B-3 — a 10% spread under a 20% floor is run-to-run variation."""
+    summary = diagnose.summarise_recall(
+        [_prior_run("job-a", 100_000), _prior_run("job-b", 110_000)],
+        noise_floor_pct=0.20,
+    )
+
+    assert summary.compared is False
+    assert summary.faster_job_id is None
+    assert "indistinguishable" in summary.claim
+    assert "20.0%" in summary.claim
+    assert "better" not in summary.claim.lower()
+    assert any("not proof of zero change" in note for note in summary.notes)
+
+
+def test_single_prior_run_draws_no_comparison():
+    """B-4 — one run cannot measure its own dispersion."""
+    summary = diagnose.summarise_recall(
+        [_prior_run("job-only", 60_000)], noise_floor_pct=0.05
+    )
+
+    assert summary.compared is False
+    assert summary.pct_difference is None
+    assert "cannot measure its own dispersion" in summary.claim
+    assert "better" not in summary.claim.lower()
+
+
+def test_cleared_floor_is_named():
+    """B-2 — above the floor a verdict is allowed, and the floor is named."""
+    summary = diagnose.summarise_recall(
+        [
+            _prior_run("job-fast", 60_000, shuffle_partitions=200, config_source="observed"),
+            _prior_run("job-slow", 120_000, shuffle_partitions=800, config_source="observed"),
+        ],
+        noise_floor_pct=0.15,
+    )
+
+    assert summary.compared is True
+    assert summary.faster_job_id == "job-fast"
+    assert summary.slower_job_id == "job-slow"
+    assert summary.noise_floor_pct == pytest.approx(0.15)
+    assert "15.0%" in summary.claim
+    assert "clears" in summary.claim
+    assert summary.attributable_to_config is True
+    assert "better" in summary.claim
+
+
+def test_a_real_difference_with_one_config_is_not_credited_to_tuning():
+    """CONTRACT.md rule 3 — clearing the floor is necessary, not sufficient.
+
+    Byte-identical work across four runs still spanned 18.65% on this system.
+    With one captured configuration there is no experiment in the history, so
+    the difference is real and still not attributable.
+    """
+    summary = diagnose.summarise_recall(
+        [
+            _prior_run("job-fast", 60_000, shuffle_partitions=200, config_source="observed"),
+            _prior_run("job-slow", 120_000, shuffle_partitions=200, config_source="observed"),
+        ],
+        noise_floor_pct=0.15,
+    )
+
+    assert summary.compared is True
+    assert summary.attributable_to_config is False
+    assert "better" not in summary.claim.lower()
+    assert any("NOT creditable to configuration" in note for note in summary.notes)
+
+
+def test_uncaptured_configs_are_not_two_configurations():
+    """Two runs whose configs were never captured are one absence, twice."""
+    summary = diagnose.summarise_recall(
+        [_prior_run("job-fast", 60_000), _prior_run("job-slow", 120_000)],
+        noise_floor_pct=0.15,
+    )
+
+    assert summary.compared is True
+    assert summary.attributable_to_config is False
+    assert any("CONTRACT.md rule 3" in note for note in summary.notes)
+
+
+def test_recall_is_never_summarised_by_sorting_on_wall_clock():
+    """The anti-pattern stated as a test: the fastest run is not promoted to
+    "the best configuration" just for being first in a sorted list."""
+    runs = [
+        _prior_run("job-fast", 10_000),
+        _prior_run("job-mid", 11_000),
+        _prior_run("job-slow", 12_000),
+    ]
+
+    summary = diagnose.summarise_recall(runs, noise_floor_pct=0.30)
+
+    assert summary.compared is False
+    assert summary.faster_job_id is None
+    assert "indistinguishable" in summary.claim
+
+
+def test_zero_wall_clock_runs_are_not_fast_runs():
+    """A missing duration reads as 0ms and would win every ranking."""
+    summary = diagnose.summarise_recall(
+        [_prior_run("job-unmeasured", 0), _prior_run("job-real", 60_000)],
+        noise_floor_pct=0.05,
+    )
+
+    assert summary.compared is False
+    assert "cannot measure its own dispersion" in summary.claim
+
+
+def test_no_prior_runs_says_so():
+    summary = diagnose.summarise_recall([], noise_floor_pct=0.05)
+
+    assert summary.compared is False
+    assert summary.claim == ""
+    assert any("No prior runs" in note for note in summary.notes)
