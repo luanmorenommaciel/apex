@@ -1,4 +1,4 @@
-"""The MCP tool surface: exactly five tools, correct annotations, no stdout."""
+"""The MCP tool surface: exactly six tools, correct annotations, no stdout."""
 
 from __future__ import annotations
 
@@ -36,18 +36,24 @@ def _tools(server):
     return asyncio.run(server.list_tools())
 
 
-def test_exactly_the_five_contracted_tools(server):
+def test_exactly_the_six_contracted_tools(server):
     """Exact and ordered on purpose. A subset check would let a tool appear by
     accident, and an unnoticed tool on a server a model can call is a security
-    event, not a cosmetic one."""
+    event, not a cosmetic one.
+
+    Equality, not a count and not a superset test: adding a seventh tool must
+    fail here and be reconciled deliberately, which is the only reason this
+    assertion is worth maintaining."""
     assert [t.name for t in _tools(server)] == [
-        "analyze_run", "compare_runs", "list_runs", "search_kb", "suggest_fix",
+        "analyze_run", "compare_runs", "list_runs", "search_kb", "verify_fix",
+        "suggest_fix",
     ]
 
 
 def test_read_tools_are_annotated_read_only(server):
     by_name = {t.name: t for t in _tools(server)}
-    for name in ("analyze_run", "compare_runs", "search_kb"):
+    for name in ("analyze_run", "compare_runs", "list_runs", "search_kb",
+                 "verify_fix"):
         annotations = by_name[name].annotations
         assert annotations is not None
         # camelCase — ToolAnnotations has no `read_only_hint` field, and
