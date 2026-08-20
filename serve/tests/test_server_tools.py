@@ -1,4 +1,4 @@
-"""The MCP tool surface: exactly five tools, correct annotations, no stdout."""
+"""The MCP tool surface: exactly six tools, correct annotations, no stdout."""
 
 from __future__ import annotations
 
@@ -36,18 +36,24 @@ def _tools(server):
     return asyncio.run(server.list_tools())
 
 
-def test_exactly_the_five_contracted_tools(server):
+def test_exactly_the_six_contracted_tools(server):
     """Exact and ordered on purpose. A subset check would let a tool appear by
     accident, and an unnoticed tool on a server a model can call is a security
-    event, not a cosmetic one."""
+    event, not a cosmetic one.
+
+    Equality is the control, and maintaining it is the point: a seventh tool
+    fails here and has to be justified in a diff, which is exactly what should
+    happen. Relaxing this to a count or a subset would buy less maintenance
+    and lose the alarm."""
     assert [t.name for t in _tools(server)] == [
-        "analyze_run", "compare_runs", "list_runs", "search_kb", "suggest_fix",
+        "analyze_run", "explain_stage", "compare_runs", "list_runs",
+        "search_kb", "suggest_fix",
     ]
 
 
 def test_read_tools_are_annotated_read_only(server):
     by_name = {t.name: t for t in _tools(server)}
-    for name in ("analyze_run", "compare_runs", "search_kb"):
+    for name in ("analyze_run", "explain_stage", "compare_runs", "search_kb"):
         annotations = by_name[name].annotations
         assert annotations is not None
         # camelCase — ToolAnnotations has no `read_only_hint` field, and
@@ -62,6 +68,45 @@ def test_suggest_fix_is_the_only_non_read_only_tool(server):
     assert suggest.annotations.readOnlyHint is False
     assert suggest.annotations.destructiveHint is False
     assert suggest.annotations.idempotentHint is True
+
+
+def test_explain_stage_states_an_unobserved_stage(server):
+    """An empty success is the same payload as a genuinely clean stage.
+
+    Telling those apart is the whole point of the coverage work, so a
+    stage_id the run never produced has to say so.
+    """
+    result = asyncio.run(
+        server.call_tool("explain_stage", {"job_id": "j", "stage_id": 999})
+    )
+    payload = result[1] if isinstance(result, tuple) else result
+
+    assert payload["status"] == "not_found"
+    assert "not observed" in payload["summary"]
+    assert "[4]" in payload["summary"]  # the ids that WERE observed
+    assert payload["stages"] == []
+
+
+def test_explain_stage_narrows_to_the_one_stage(server):
+    """Metrics, symptoms and findings for that stage — and nothing else."""
+    result = asyncio.run(
+        server.call_tool("explain_stage", {"job_id": "j", "stage_id": 4})
+    )
+    payload = result[1] if isinstance(result, tuple) else result
+
+    assert [s["stage_id"] for s in payload["stages"]] == [4]
+    assert all(s["stage_id"] == 4 for s in payload["symptoms"])
+    assert all(f["stage_id"] == 4 for f in payload["findings"])
+    # the summary describes the STAGE, not the run. This fixture's stage 4
+    # moves no shuffle volume, so the skew measurement is gated off and the
+    # stage is clean — which must still read as a stated verdict.
+    assert payload["summary"].startswith("stage 4 ")
+    assert payload["worst_stage_id"] == 4
+    assert payload["status"] == "healthy"
+    # coverage still describes the run, and says so rather than implying
+    # this stage is all there was
+    assert payload["coverage"]["stages_observed"] == 1
+    assert any("describes the RUN" in note for note in payload["notes"])
 
 
 def test_tool_annotations_use_camel_case_field_names():
@@ -81,6 +126,7 @@ def test_every_tool_declares_a_structured_output_schema(server):
 def test_tools_return_schema_valid_payloads(server):
     for name, arguments in (
         ("analyze_run", {"job_id": "j"}),
+        ("explain_stage", {"job_id": "j", "stage_id": 4}),
         ("compare_runs", {"baseline_job_id": "base", "current_job_id": "j"}),
         ("search_kb", {"query": "skew", "top_k": 3}),
         ("suggest_fix", {"job_id": "j"}),

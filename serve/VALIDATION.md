@@ -6,12 +6,13 @@ stack (ClickHouse `127.0.0.1:8123`, database `apex`) holding the real P0 run
 
 ## Scope
 
-`apex-mcp` — stdio MCP server, five tools and one resource:
+`apex-mcp` — stdio MCP server, six tools and one resource:
 
 | Tool | Kind |
 |---|---|
 | `list_runs(limit, since_hours, app_name)` | read-only |
-| `analyze_run(job_id)` | read-only |
+| `analyze_run(job_id, detail)` | read-only |
+| `explain_stage(job_id, stage_id)` | read-only |
 | `compare_runs(current_job_id, baseline_job_id?)` | read-only |
 | `apex://runs` *(resource)* | read-only |
 | `search_kb(query, top_k)` | read-only |
@@ -188,3 +189,95 @@ Both units passed their entire unit suite before these surfaced, because
   reports that rather than inventing a subject.
 - Auto-baseline costs up to 10 extra stage queries, because `RUNS_SQL` does not
   carry `plan_fingerprint`.
+
+---
+
+## L3 — diagnosis readability, recorded 2026-08-20
+
+Branch `serve/l3-understand`, against the live infra stack (ClickHouse
+`127.0.0.1:8123`, database `apex`). Delivers F3.1–F3.4 of
+[`SERVE-LEGS.md`](../docs/lanes/SERVE-LEGS.md).
+
+### Unit suite — `144 passed`
+
+Copied from the run, not from memory:
+
+```
+$ cd serve && uv run --extra dev pytest
+144 passed in 0.83s
+```
+
+21 new tests over the L2 baseline of 123: detail levels, coverage, share of tail,
+and `explain_stage` through the tool layer.
+
+### `tools/read_only_gate.py` — live ClickHouse, `status: passed`
+
+```json
+"latest_attempt_per_stage": {"argMax": "ok", "attempts_seeded": 2,
+                             "attempt_selected": 1, "p99_ms": 110},
+"runs": {"listed": 6, "seeded_found": 2, "newest_first": true,
+         "hostile_app_name_rows": 0, "app_name_filter_rows": 6},
+"external_llm_calls": 0
+```
+
+Contract DDL conformance verified for `spark_events`, `findings` and
+`plan_transitions`; a `job_id` of `' OR 1=1 --` binds and returns 0 rows;
+`suggest_fix` → `confidence=0.91`, `applied=false`, gated at `min_confidence=0.999`.
+
+### `tools/mcp_stdio_gate.py` — real MCP client, `status: passed`
+
+The gate was re-pinned at six tools and taught the new contract rather than
+patched past it. Observed on live data:
+
+```json
+"tools": ["analyze_run", "explain_stage", "compare_runs",
+          "list_runs", "search_kb", "suggest_fix"],
+"analyze_run": {
+  "detail_default": "summary",
+  "summary_stages": 0, "full_stages": 2,
+  "verdict_identical_across_levels": true,
+  "status": "degraded", "worst_stage_id": 2, "primary_symptom": "disk_spill",
+  "tail_dominant_stage_ids": [2],
+  "coverage": {"stages_observed": 2, "findings_observed": 1,
+               "plan_transitions_observed": 1,
+               "newest_event_ts": null, "newest_event_age_seconds": null}
+},
+"explain_stage": {"stage_id": 2, "symptoms": 1, "findings": 1,
+                  "unobserved_stage_status": "not_found"}
+```
+
+- `analyze_run` was called **twice** — at the default and at `detail="full"` — and
+  `status`, `worst_stage_id`, `primary_symptom` and `summary` were asserted
+  **identical** across both. The trim is a trim: only the arrays differ.
+- The default returned **0 stages and 0 findings**, with a `TRIMMED` note and a
+  `coverage.stages_observed` equal to the full payload's stage count. An emptied
+  array is never mistaken for an empty run.
+- `explain_stage` on a real `stage_id` returned exactly that stage; on `99999` it
+  returned `status="not_found"` with `"not observed"` in the summary, not an empty
+  success.
+- `summary` on the seeded run: *"stage 2 is the bottleneck: disk_spill (critical)
+  — spilled 1.0 GiB in memory / 512.0 MiB on disk across 50 task(s) · this stage
+  is ~98% of the run's tail time"*, and `tail_dominant_stage_ids: [2]` — the
+  bottleneck is readable at summary width, without the stage array.
+
+### What the live gate caught that no unit test did
+
+Two surfaces pinned the five-tool contract, and only one was inside a declared
+write surface. `tools/mcp_stdio_gate.py` failed on the tool list and again on
+`assert diagnosis["stages"]`, because `analyze_run` now defaults to `summary`. The
+unit suite was green throughout — it does not spawn the server as a subprocess and
+drive it with a real MCP client.
+
+### Known limits
+
+- **`coverage.newest_event_age_seconds` is `null` on the live path.** `STAGES_SQL`
+  resolves every column with `argMax(col, ts)` and projects no `ts` of its own, so
+  no row reaching `analyze()` carries an event time. Null reads **UNKNOWN, not
+  fresh**, and a note in the payload says exactly that. Closing it means projecting
+  a `ts` in `ch.py`, which is outside the write surface of the unit that surfaced
+  it. Freshness is otherwise proven only against fakes.
+- `tail_share` is built on `p99_ms`, the closest stand-in for stage wall time the
+  contract carries. It is a **share of tail**, not a scheduling critical path —
+  stages overlap, and the field descriptions say so.
+- The tail-dominance thresholds (60% cover, 1.5x an even split) are argued in
+  `diagnose.py`, not measured. They decide only what gets *named*, never a severity.

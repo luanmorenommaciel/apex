@@ -2,21 +2,70 @@
 
 **Role:** `apex-mcp`, a Python **stdio MCP server** exposing Apex's Spark-diagnosis
 capability to any MCP client (Claude Code / Cursor / Codex). It reads the shared
-`apex` ClickHouse database and exposes **five tools** — four read-only, plus one
+`apex` ClickHouse database and exposes **six tools** — five read-only, plus one
 confidence-gated proposal tool that **never applies anything** — and one **resource**.
 
 **Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.5) · DDL in [../contract/](../contract/) ·
 **Lane brief:** [../docs/lanes/SERVE.md](../docs/lanes/SERVE.md)
 
-## The five tools
+## The six tools
 
 | Tool | Input | Returns | MCP annotation |
 |---|---|---|---|
 | `list_runs` | `limit=20`, `since_hours=168`, `app_name?` | `RunList` — recent runs newest-first; **this is where a `job_id` comes from** | `readOnlyHint=true` |
-| `analyze_run` | `job_id` | `Diagnosis` — bottleneck stage, symptom, AQE ground truth | `readOnlyHint=true` |
+| `analyze_run` | `job_id`, `detail="summary"` | `Diagnosis` — bottleneck stage, symptom, AQE ground truth | `readOnlyHint=true` |
+| `explain_stage` | `job_id`, `stage_id` | `Diagnosis` narrowed to one stage — its metrics, symptoms and findings | `readOnlyHint=true` |
 | `compare_runs` | `current_job_id`, `baseline_job_id?` | `RunComparison` — regressions, plan changes, finding deltas. Omit the baseline and Apex picks the newest prior run with an identical plan shape | `readOnlyHint=true` |
 | `search_kb` | `query`, `top_k=5` | `KbHits` — matches in findings + redacted plan text | `readOnlyHint=true` |
 | `suggest_fix` | `job_id`, `finding_id?`, `min_confidence=0.75` | `FixSuggestion` — unified diff + PR body, **`applied=False`** | `readOnlyHint=false`, `destructiveHint=false` |
+
+## Reading a diagnosis
+
+The real P0 run has 17 stages. `analyze_run` therefore answers at three widths, and
+**defaults to the narrowest**:
+
+| `detail` | Carries |
+|---|---|
+| `summary` *(default)* | the verdict — status, worst stage, primary symptom, the one-line summary, the tail-dominant stages, `coverage` and any AQE ground truth |
+| `stages` | adds every stage's metrics and every symptom |
+| `full` | adds engine's findings and the AQE plan transitions |
+
+```
+analyze_run(job_id="app-…")                    # why was this slow — three lines
+explain_stage(job_id="app-…", stage_id=4)      # then drill into the one stage
+analyze_run(job_id="app-…", detail="full")     # everything, when you want it
+```
+
+The analysis is **the same at every level**: `diagnose.trim()` narrows one
+already-computed `Diagnosis` and never re-runs it, so two callers cannot be handed
+different verdicts for the same run. `full` is the identity.
+
+An array emptied by trimming is **not** the same claim as an empty run, so every
+narrowed level appends a note naming what was dropped and how much of it there was —
+otherwise `findings: []` at summary reads as "engine found nothing".
+
+### What the diagnosis actually saw
+
+Every `Diagnosis` carries a `coverage`: stages observed, findings observed,
+transitions observed, and the age of the newest event. A bare "healthy" and a
+"healthy, having seen one stage and no findings" are different claims.
+
+The age is **reported, never judged**. Apex owns no staleness threshold — a nightly
+batch and a streaming job disagree about what an hour means, and a false "stale" is
+worse than no claim at all. `null` means no row carried a timestamp; it reads
+UNKNOWN, not fresh.
+
+### Share of tail — not a critical path
+
+Each `StageView` carries `tail_share`, its `p99` as a fraction of the run's summed
+`p99`, and the `Diagnosis` carries `tail_dominant_stage_ids` — the smallest set of
+stages owning most of it. "Stage 4 is 61% of the tail" is actionable; a sorted list of
+seventeen stages is homework. A run whose tail is spread evenly names **nothing**,
+because there is no bottleneck to name.
+
+It is called a share of tail and never a critical path on purpose: stages can overlap,
+and `p99` is a per-task percentile standing in for stage wall time, which the contract
+does not carry. Reading it as scheduling truth would be wrong in both directions.
 
 ## The resource
 
@@ -64,7 +113,7 @@ claude mcp add --scope user --transport stdio apex \
   -- uvx apex-mcp
 
 claude mcp list      # → apex: uvx apex-mcp - ✔ Connected
-# then restart the client; /mcp lists the five tools
+# then restart the client; /mcp lists the six tools
 ```
 
 Until `apex-mcp` is published to PyPI, point `uvx` at this directory:
@@ -98,7 +147,7 @@ when ClickHouse is down; the failure surfaces per call as a sanitized message.
 cd serve
 uv sync --extra dev
 uv run --extra dev pytest                  # unit + safety suite (fakes, no DB)
-uv run python tools/read_only_gate.py      # live gate: contract + 4 tools + argMax
+uv run python tools/read_only_gate.py      # live gate: contract + read tools + argMax
 uv run python tools/mcp_stdio_gate.py      # real MCP client over stdio
 ```
 

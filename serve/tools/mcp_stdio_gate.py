@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED_TOOLS = [
     {"name": "analyze_run", "readOnlyHint": True},
+    {"name": "explain_stage", "readOnlyHint": True},
     {"name": "compare_runs", "readOnlyHint": True},
     {"name": "list_runs", "readOnlyHint": True},
     {"name": "search_kb", "readOnlyHint": True},
@@ -107,7 +108,13 @@ async def main() -> int:
             assert suggest.annotations.destructiveHint is False
             assert suggest.annotations.idempotentHint is True
 
+            # The DEFAULT answer, deliberately trimmed to the verdict.
             analyze = await session.call_tool("analyze_run", {"job_id": job_id})
+            # ...and the same analysis at full width, to prove the trim is a
+            # trim: the verdict must be identical, only the arrays differ.
+            analyze_full = await session.call_tool(
+                "analyze_run", {"job_id": job_id, "detail": "full"}
+            )
             compare = await session.call_tool(
                 "compare_runs",
                 {"baseline_job_id": baseline_id, "current_job_id": job_id},
@@ -119,6 +126,7 @@ async def main() -> int:
 
             for name, result in (
                 ("analyze_run", analyze),
+                ("analyze_run(detail=full)", analyze_full),
                 ("compare_runs", compare),
                 ("search_kb", search),
                 ("suggest_fix", fix),
@@ -126,12 +134,43 @@ async def main() -> int:
                 assert not result.isError, f"{name} returned an error result"
 
             diagnosis = _payload(analyze)
+            full = _payload(analyze_full)
             comparison = _payload(compare)
             hits = _payload(search)
             suggestion = _payload(fix)
 
             assert diagnosis["job_id"] == job_id
-            assert diagnosis["stages"], "no stage telemetry for the gate job_id"
+            assert full["stages"], "no stage telemetry for the gate job_id"
+
+            # The default is the verdict, not the data dump.
+            assert diagnosis["stages"] == [], "summary leaked the stage array"
+            assert diagnosis["findings"] == [], "summary leaked the finding array"
+            # An emptied array must never read as an empty run.
+            assert any("TRIMMED" in note for note in diagnosis["notes"])
+            # Coverage survives the trim — that is what keeps [] legible.
+            assert diagnosis["coverage"]["stages_observed"] == len(full["stages"])
+            # Trimming NEVER re-runs the analysis, so the verdict is identical.
+            for field in ("status", "worst_stage_id", "primary_symptom", "summary"):
+                assert diagnosis[field] == full[field], field
+
+            # Drill-down: one stage, or a stated miss — never an empty success.
+            explained = _payload(
+                await session.call_tool(
+                    "explain_stage",
+                    {"job_id": job_id, "stage_id": full["stages"][0]["stage_id"]},
+                )
+            )
+            assert [s["stage_id"] for s in explained["stages"]] == [
+                full["stages"][0]["stage_id"]
+            ]
+            absent = _payload(
+                await session.call_tool(
+                    "explain_stage", {"job_id": job_id, "stage_id": 99_999}
+                )
+            )
+            assert absent["status"] == "not_found", absent["status"]
+            assert "not observed" in absent["summary"]
+
             assert suggestion["applied"] is False
             assert suggestion["requires_human_approval"] is True
 
@@ -143,11 +182,23 @@ async def main() -> int:
                 "tools": tool_metadata,
                 "analyze_run": {
                     "status": diagnosis["status"],
+                    "detail_default": "summary",
                     "stage_count": diagnosis["stage_count"],
                     "worst_stage_id": diagnosis["worst_stage_id"],
                     "primary_symptom": diagnosis["primary_symptom"],
                     "summary": diagnosis["summary"],
+                    "tail_dominant_stage_ids": diagnosis["tail_dominant_stage_ids"],
+                    "coverage": diagnosis["coverage"],
                     "aqe_ground_truth": diagnosis["aqe_ground_truth"],
+                    "summary_stages": len(diagnosis["stages"]),
+                    "full_stages": len(full["stages"]),
+                    "verdict_identical_across_levels": True,
+                },
+                "explain_stage": {
+                    "stage_id": explained["stages"][0]["stage_id"],
+                    "symptoms": len(explained["symptoms"]),
+                    "findings": len(explained["findings"]),
+                    "unobserved_stage_status": absent["status"],
                 },
                 "compare_runs": {
                     "status": comparison["status"],

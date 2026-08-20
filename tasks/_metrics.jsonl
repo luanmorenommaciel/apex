@@ -24,3 +24,9 @@
 {"schema_version":1,"ts":"2026-08-19T19:16:06Z","task":"T-20260819-discover-docs","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
 {"schema_version":1,"ts":"2026-08-19T19:16:23Z","task":"T-20260819-serve-brief-five-tools","event":"accepted","author":"sidymar"}
 {"schema_version":1,"ts":"2026-08-19T19:16:39Z","task":"T-20260819-serve-brief-five-tools","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-20T14:45:00Z","task":"T-20260820-detail-parameter","event":"status_change","from":"ready","to":"done","reason":"evals green; sign-off gate not run"}
+{"schema_version":1,"ts":"2026-08-20T14:45:00Z","task":"T-20260820-coverage-freshness","event":"status_change","from":"ready","to":"done","reason":"evals green; sign-off gate not run"}
+{"schema_version":1,"ts":"2026-08-20T14:45:00Z","task":"T-20260820-explain-stage-tool","event":"status_change","from":"ready","to":"done","reason":"evals green; sign-off gate not run"}
+{"schema_version":1,"ts":"2026-08-20T14:45:00Z","task":"T-20260820-tool-surface-six","event":"status_change","from":"ready","to":"done","reason":"evals green; sign-off gate not run"}
+{"schema_version":1,"ts":"2026-08-20T14:45:00Z","task":"T-20260820-critical-path","event":"status_change","from":"ready","to":"done","reason":"evals green; sign-off gate not run"}
+{"schema_version":1,"ts":"2026-08-20T14:45:00Z","task":"T-20260820-l3-docs","event":"status_change","from":"ready","to":"done","reason":"evals green; sign-off gate not run"}
