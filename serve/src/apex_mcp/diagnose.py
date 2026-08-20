@@ -1,4 +1,4 @@
-"""Heuristics turning ClickHouse rows into the four tools' structured answers.
+"""Heuristics turning ClickHouse rows into the tools' structured answers.
 
 Pure functions over row dicts — no I/O, no ClickHouse, no LLM. That keeps the
 whole diagnosis layer unit-testable without a database and keeps the tools
@@ -19,6 +19,7 @@ from .models import (
     FindingDelta,
     FindingView,
     FixSuggestion,
+    FixVerdict,
     KbHit,
     KbHits,
     MetricDelta,
@@ -27,6 +28,7 @@ from .models import (
     StageComparison,
     StageSymptom,
     StageView,
+    VerificationView,
 )
 
 MB = 1 << 20
@@ -922,6 +924,140 @@ _RECIPES: dict[str, tuple[str, dict[str, str], str]] = {
 }
 
 
+# --------------------------------------------------------------------------
+# verify_fix — report what the verify lane concluded; never re-decide it
+# --------------------------------------------------------------------------
+def _delta_phrase(pct: float | None) -> str:
+    """Render a SIGNED delta the way a human reads it.
+
+    Negative means faster (v0.3 DDL). Turning the sign into the words
+    "faster"/"slower" here is the only place the convention is interpreted, so
+    a flip is one test away rather than scattered across format strings.
+    """
+    if pct is None:
+        return "not measured"
+    if pct == 0:
+        return "no change"
+    return f"{abs(pct):.1f}% {'faster' if pct < 0 else 'slower'}"
+
+
+def _is_refusal(view: VerificationView) -> bool:
+    """A refusal is a decision NOT to execute — never a low score.
+
+    Any of the three signals is enough: the method the verify lane recorded,
+    the safety gate's own flag, or a verdict in the block_* family. They agree
+    in practice; treating any one as sufficient means a future block_* value
+    still reads as a refusal here.
+    """
+    return (
+        view.method == "refused"
+        or not view.safe
+        or view.safety_verdict.startswith("block")
+    )
+
+
+def build_verdict(
+    job_id: str,
+    finding_id: str | None,
+    verification_rows: list[dict],
+    table_present: bool = True,
+) -> FixVerdict:
+    """Report ``apex.fix_verifications`` for a run. Computes no prediction.
+
+    The verify lane owns the judgement; this function only makes it readable.
+    Two answers are deliberately distinct:
+
+    * ``not_assessed`` — no row exists. That is NOT "the fix is fine"; nothing
+      was predicted and nothing was measured.
+    * ``verified`` with ``blocked=True`` — the safety gate refused to execute.
+      Surfaced as its own field so it cannot be mistaken for weak confidence.
+    """
+    views = [VerificationView.model_validate(row) for row in verification_rows]
+    notes: list[str] = []
+
+    if not views:
+        if not table_present:
+            notes.append(
+                "apex.fix_verifications is not present on this deployment. It "
+                "is an additive contract table (v0.3) applied by the infra "
+                "lane; until it exists, no run can be verified."
+            )
+        return FixVerdict(
+            job_id=job_id,
+            finding_id=finding_id,
+            status="not_assessed",
+            summary=(
+                f"The verify lane has not assessed job {job_id}"
+                + (f", finding {finding_id}" if finding_id else "")
+                + ". No prediction and no measurement exist for it — this is "
+                "an absence of evidence, not a clean bill of health."
+            ),
+            notes=notes,
+        )
+
+    newest = views[0]
+    blocked = _is_refusal(newest)
+    blocked_reason = ""
+    if blocked:
+        blocked_reason = (
+            f"{newest.safety_verdict or 'refused'}"
+            + (f": {newest.safety_detail}" if newest.safety_detail else "")
+        )
+
+    parts = [
+        f"predicted {_delta_phrase(newest.predicted_delta_pct)} "
+        f"(range {_delta_phrase(newest.predicted_low_pct)} to "
+        f"{_delta_phrase(newest.predicted_high_pct)})",
+        f"{newest.confidence or 'UNKNOWN'} confidence",
+        f"safety: {newest.safety_verdict or 'unknown'}",
+    ]
+    if newest.measured_delta_pct is not None:
+        measured = f"measured {_delta_phrase(newest.measured_delta_pct)}"
+        if newest.noise_floor_pct is not None and abs(
+            newest.measured_delta_pct
+        ) < newest.noise_floor_pct:
+            measured += (
+                f" — below the baseline arm's {newest.noise_floor_pct:.1f}% "
+                "noise floor, so it is indistinguishable from zero"
+            )
+        elif newest.replay_reps:
+            measured += (
+                f" over {newest.replay_reps} rep(s)"
+                + (f" on bench {newest.bench}" if newest.bench else "")
+            )
+        parts.insert(1, measured)
+    else:
+        notes.append(
+            "This prediction was never replayed, so no measurement backs it."
+        )
+
+    summary = " · ".join(parts)
+    if blocked:
+        # First, and in the summary itself — a block the reader has to scroll
+        # for is a block the reader will miss.
+        summary = f"REFUSED by the verify lane ({blocked_reason}) · " + summary
+
+    if len(views) > 1:
+        notes.append(
+            f"{len(views)} verification(s) exist for this query; the summary "
+            "reports the newest. The rest are in `verifications`."
+        )
+
+    return FixVerdict(
+        job_id=job_id,
+        finding_id=finding_id,
+        status="verified",
+        verification_count=len(views),
+        blocked=blocked,
+        blocked_reason=blocked_reason,
+        summary=summary,
+        verifications=views,
+        evidence=[v.evidence for v in views if v.evidence],
+        caveats=[v.caveats for v in views if v.caveats],
+        notes=notes,
+    )
+
+
 def _unified_diff(config: dict[str, str], job_id: str, stage_id: int | None) -> str:
     """A proposal as a unified diff creating a NEW file.
 
@@ -980,6 +1116,7 @@ def suggest_fix(
     finding_rows: list[dict],
     stage_rows: list[dict],
     transition_rows: list[dict] | None = None,
+    verification_rows: list[dict] | None = None,
 ) -> FixSuggestion:
     """Build a fix PROPOSAL. Performs no filesystem, git or database writes.
 
@@ -987,7 +1124,12 @@ def suggest_fix(
       1. ``apex.findings`` (written by the engine lane) when a row exists.
       2. otherwise the ``spark_events`` + ``plan_transitions`` heuristics —
          the same ones ``analyze_run`` uses.
+
+    ``verification_rows`` is what ``apex.fix_verifications`` already holds for
+    this job. It is accepted here so the tool layer has one call to make;
+    disclosing it in the suggestion is T-20260820-suggest-fix-provenance.
     """
+    _ = verification_rows
     notes: list[str] = []
     warnings: list[str] = [
         "This is a proposal. Nothing has been written to disk, git or "
