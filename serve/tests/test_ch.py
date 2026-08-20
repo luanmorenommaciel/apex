@@ -269,3 +269,239 @@ def test_runs_clamps_a_caller_supplied_limit():
 
     _, parameters = client.calls[0]
     assert parameters["limit"] == ReadStore.MAX_RUNS
+
+
+# --------------------------------------------------------------------------
+# Cross-run memory — apex.plan_memory + apex.run_outcomes (contract v0.3)
+#
+# These are ADDITIVE tables, so the double has to model three deployments: one
+# that carries them, one that does not, and one that raises the schema error
+# mid-read. FakeClient routes on job_id and neither table is keyed by one, so
+# the double lives here rather than in conftest.
+# --------------------------------------------------------------------------
+FP_SELF = "1" * 64
+FP_NEAR = "2" * 64
+FP_FAR = "3" * 64
+
+
+class TableError(Exception):
+    """Name-shaped like the driver's, so _sanitize routes it to schema_missing."""
+
+
+class _MemoryClient:
+    def __init__(
+        self,
+        *,
+        plans: list[dict] | None = None,
+        outcomes: list[dict] | None = None,
+        tables: tuple[str, ...] = ("plan_memory", "run_outcomes"),
+        raises: Exception | None = None,
+    ) -> None:
+        self.plans = plans or []
+        self.outcomes = outcomes or []
+        self.tables = tables
+        self.raises = raises
+        self.calls: list[tuple[str, dict]] = []
+
+    def query(self, query: str, parameters: dict | None = None):
+        self.calls.append((query, parameters or {}))
+        if "system.tables" in query:
+            rows = [{"name": name} for name in self.tables]
+            return type("R", (), {"named_results": lambda _s: rows})()
+        if self.raises:
+            raise self.raises
+        rows = self.outcomes if "apex.run_outcomes" in query else self.plans
+        return type("R", (), {"named_results": lambda _s: list(rows)})()
+
+
+def _plan_row(fingerprint: str, similarity: float) -> dict:
+    return {
+        "plan_fingerprint": fingerprint,
+        "similarity": similarity,
+        "node_count": 12,
+        "join_count": 1,
+        "agg_count": 1,
+        "exchange_count": 2,
+        "scan_count": 2,
+        "last_seen": "2026-08-19T09:00:00",
+    }
+
+
+def _outcome_row(job_id: str, wall_clock_ms: int, observed_at: str) -> dict:
+    return {
+        "job_id": job_id,
+        "app_id": f"app-{job_id}",
+        "app_name": "nightly_etl",
+        "plan_fingerprint": FP_SELF,
+        "conf_shuffle_partitions": 200,
+        "conf_executor_instances": 4,
+        "conf_executor_cores": 4,
+        "conf_executor_memory_mb": 8192,
+        "conf_driver_cores": 2,
+        "conf_driver_memory_mb": 4096,
+        "conf_extra": {},
+        "config_source": "observed",
+        "stage_count": 4,
+        "task_count": 200,
+        "wall_clock_ms": wall_clock_ms,
+        "task_time_ms": wall_clock_ms * 3,
+        "shuffle_read_bytes": 0,
+        "shuffle_write_bytes": 0,
+        "spill_disk_bytes": 0,
+        "spill_mem_bytes": 0,
+        "gc_time_ms": 0,
+        "input_bytes": 0,
+        "output_bytes": 0,
+        "peak_execution_mem_bytes": 0,
+        "max_skew_ratio": 1.2,
+        "aqe_skew_splits": 0,
+        "aqe_coalesces": 1,
+        "finding_count": 0,
+        "worst_severity": "",
+        "outcome_source": "apex",
+        "observed_at": observed_at,
+    }
+
+
+def test_similar_plans_ranks_by_cosine_distance():
+    """B-1 — neighbours come back ranked, gated on a minimum similarity."""
+    client = _MemoryClient(plans=[_plan_row(FP_NEAR, 0.94), _plan_row(FP_FAR, 0.83)])
+    store = ReadStore(client)
+
+    neighbours = store.similar_plans(FP_SELF, top_k=5)
+
+    assert [n["plan_fingerprint"] for n in neighbours] == [FP_NEAR, FP_FAR]
+    sql, parameters = client.calls[-1]
+    assert "cosineDistance" in sql
+    assert "ORDER BY similarity DESC" in sql
+    assert parameters["min_similarity"] == ch.MIN_SIMILARITY
+    assert parameters["top_k"] == 5
+    # The queried shape is excluded — a plan is not its own neighbour.
+    assert "plan_fingerprint != toFixedString" in sql
+
+
+def test_similar_plans_reads_the_embedding_width_instead_of_assuming_one():
+    """The encoder's width is the memory lane's to change; serve matches on the
+    shape's own `dim` rather than hardcoding a number."""
+    client = _MemoryClient(plans=[])
+    ReadStore(client).similar_plans(FP_SELF)
+
+    sql, parameters = client.calls[-1]
+    assert "dim = (SELECT dim FROM self_plan)" in sql
+    assert not any(key.startswith("dim") for key in parameters)
+
+
+def test_similar_plans_clamps_a_caller_supplied_top_k():
+    client = _MemoryClient(plans=[])
+    ReadStore(client).similar_plans(FP_SELF, top_k=10_000)
+
+    _, parameters = client.calls[-1]
+    assert parameters["top_k"] == ch.MAX_SIMILAR_PLANS
+
+
+def test_prior_outcomes_returns_configs_newest_first():
+    """B-2 — runs of the given shapes, with their config columns and wall clock."""
+    client = _MemoryClient(
+        outcomes=[
+            _outcome_row("job-new", 60_000, "2026-08-19T09:00:00"),
+            _outcome_row("job-old", 90_000, "2026-08-12T09:00:00"),
+        ]
+    )
+    store = ReadStore(client)
+
+    runs = store.prior_outcomes([FP_SELF, FP_NEAR], exclude_job_id="job-current")
+
+    assert [r["job_id"] for r in runs] == ["job-new", "job-old"]
+    assert runs[0]["conf_shuffle_partitions"] == 200
+    assert runs[0]["config_source"] == "observed"
+    assert runs[0]["wall_clock_ms"] == 60_000
+    sql, parameters = client.calls[-1]
+    assert "ORDER BY observed_at DESC" in sql
+    assert parameters["fingerprints"] == [FP_SELF, FP_NEAR]
+    assert parameters["exclude_job_id"] == "job-current"
+
+
+def test_prior_outcomes_never_orders_by_wall_clock():
+    """Ranking prior runs by duration would pre-declare a winner, which is the
+    one claim CONTRACT.md rule 2 forbids without a measured floor."""
+    assert "ORDER BY wall_clock_ms" not in ch.PRIOR_OUTCOMES_SQL
+    assert "ORDER BY task_time_ms" not in ch.PRIOR_OUTCOMES_SQL
+
+
+def test_plan_memory_binds_hostile_fingerprint():
+    """B-4 — a SQL fragment binds as data, matches nothing, and never raises."""
+    hostile = "' OR 1=1 --"
+    client = _MemoryClient(plans=[], outcomes=[])
+    store = ReadStore(client)
+
+    assert store.similar_plans(hostile) == []
+    assert store.prior_outcomes([hostile]) == []
+
+    for sql, parameters in client.calls:
+        assert hostile not in sql
+    bound = [p for _, p in client.calls if "fingerprint" in p or "fingerprints" in p]
+    assert bound[0]["fingerprint"] == hostile
+    assert bound[1]["fingerprints"] == [hostile]
+    # A value longer than 64 chars would make toFixedString THROW, so the
+    # statement caps it before the cast rather than trusting the caller.
+    assert "substring({fingerprint:String}, 1, 64)" in ch.SIMILAR_PLANS_SQL
+
+
+def test_plan_memory_absent_tables_degrade(caplog):
+    """B-3 — a deployment without the v0.3 tables returns empty and logs."""
+    client = _MemoryClient(tables=())
+    store = ReadStore(client)
+
+    with caplog.at_level("WARNING", logger="apex_mcp.ch"):
+        assert store.similar_plans(FP_SELF) == []
+        assert store.prior_outcomes([FP_SELF]) == []
+
+    assert store.memory_tables_present() is False
+    assert "cross-run memory unavailable" in caplog.text
+    # Absent means absent: neither read reached the table.
+    assert all("apex.plan_memory" not in sql for sql, _ in client.calls)
+    assert all("apex.run_outcomes" not in sql for sql, _ in client.calls)
+
+
+def test_plan_memory_schema_error_mid_read_degrades_instead_of_raising(caplog):
+    """B-3 — the probe can pass and the read still hit a half-applied schema."""
+    client = _MemoryClient(raises=TableError("apex.run_outcomes doesn't exist"))
+    store = ReadStore(client)
+
+    with caplog.at_level("WARNING", logger="apex_mcp.ch"):
+        assert store.prior_outcomes([FP_SELF]) == []
+
+    assert "degraded to empty" in caplog.text
+
+
+def test_memory_read_still_raises_when_the_store_is_down():
+    """Degrading on an OUTAGE would report "no prior runs" for a store that was
+    simply unreachable — a lie in the one place this lane cannot afford one."""
+    client = _MemoryClient(raises=OperationalError("connect refused to 10.0.0.5"))
+    store = ReadStore(client)
+
+    with pytest.raises(ApexStoreError) as excinfo:
+        store.prior_outcomes([FP_SELF])
+
+    assert "clickhouse_unavailable" in str(excinfo.value)
+    assert "10.0.0.5" not in str(excinfo.value)
+
+
+def test_memory_table_probe_happens_once_and_is_cached():
+    client = _MemoryClient(plans=[])
+    store = ReadStore(client)
+    store.similar_plans(FP_SELF)
+    store.similar_plans(FP_NEAR)
+    store.prior_outcomes([FP_SELF])
+
+    probes = [c for c in client.calls if "system.tables" in c[0]]
+    assert len(probes) == 1
+
+
+def test_memory_reads_short_circuit_on_empty_input():
+    client = _MemoryClient()
+    store = ReadStore(client)
+
+    assert store.similar_plans("") == []
+    assert store.prior_outcomes([]) == []
+    assert client.calls == []
