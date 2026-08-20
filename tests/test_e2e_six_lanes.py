@@ -4,6 +4,10 @@ import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
+from types import SimpleNamespace
+from unittest.mock import Mock
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,7 +17,12 @@ for source_dir in (ROOT, ROOT / "engine" / "src"):
         sys.path.insert(0, source)
 
 from apex_engine.schema import Confidence, Finding, FindingType, Severity, StageEvent
-from scripts.e2e_six_lanes import GateFailure, run_gate
+import scripts.e2e_six_lanes as e2e_six_lanes
+from scripts.e2e_six_lanes import (
+    GateFailure,
+    _validate_clickhouse_hostname,
+    run_gate,
+)
 
 
 class Result:
@@ -125,3 +134,126 @@ def test_gate_fails_on_mcp_finding_divergence():
         assert str(exc).startswith("mcp_finding_mismatch:")
     else:
         raise AssertionError("GateFailure was not raised")
+
+
+def test_expected_hostname_unset_or_empty_skips_query(monkeypatch):
+    client = Mock()
+
+    monkeypatch.delenv("CLICKHOUSE_EXPECTED_HOSTNAME", raising=False)
+    _validate_clickhouse_hostname(client)
+    monkeypatch.setenv("CLICKHOUSE_EXPECTED_HOSTNAME", "")
+    _validate_clickhouse_hostname(client)
+
+    client.query.assert_not_called()
+
+
+def test_matching_expected_hostname_allows_gate_to_run(monkeypatch):
+    client = Mock()
+    client.query.return_value = Result([{"hostName()": "apex-clickhouse"}])
+    gate_calls = []
+
+    async def fake_run_gate(**kwargs):
+        gate_calls.append(kwargs)
+        return {"status": "passed"}
+
+    monkeypatch.setenv("CLICKHOUSE_EXPECTED_HOSTNAME", "apex-clickhouse")
+    monkeypatch.setattr(e2e_six_lanes, "_parse_args", lambda: SimpleNamespace(job_id="job-1"))
+    monkeypatch.setattr(e2e_six_lanes, "_connect_clickhouse", lambda: client)
+    monkeypatch.setattr(e2e_six_lanes, "run_gate", fake_run_gate)
+
+    assert e2e_six_lanes.main() == 0
+    client.query.assert_called_once_with("SELECT hostName()")
+    assert len(gate_calls) == 1
+    assert gate_calls[0]["client"] is client
+
+
+def mock_main_dependencies(monkeypatch, client):
+    run_gate_mock = Mock()
+    monkeypatch.setattr(e2e_six_lanes, "_parse_args", lambda: SimpleNamespace(job_id="job-1"))
+    monkeypatch.setattr(e2e_six_lanes, "_connect_clickhouse", lambda: client)
+    monkeypatch.setattr(e2e_six_lanes, "run_gate", run_gate_mock)
+    return run_gate_mock
+
+
+def test_mismatched_expected_hostname_blocks_gate(monkeypatch):
+    client = Mock()
+    client.query.return_value = Result([{"hostName()": "other-clickhouse"}])
+
+    monkeypatch.setenv("CLICKHOUSE_EXPECTED_HOSTNAME", "apex-clickhouse")
+    run_gate_mock = mock_main_dependencies(monkeypatch, client)
+
+    assert e2e_six_lanes.main() == 1
+    run_gate_mock.assert_not_called()
+
+
+def test_hostname_query_error_blocks_main_before_run_gate(monkeypatch):
+    client = Mock()
+    client.query.side_effect = RuntimeError("hostname query failed")
+    monkeypatch.setenv("CLICKHOUSE_EXPECTED_HOSTNAME", "apex-clickhouse")
+    run_gate_mock = mock_main_dependencies(monkeypatch, client)
+
+    assert e2e_six_lanes.main() == 1
+    run_gate_mock.assert_not_called()
+
+
+def test_invalid_hostname_response_blocks_main_before_run_gate(monkeypatch):
+    client = Mock()
+    client.query.return_value = Result([])
+    monkeypatch.setenv("CLICKHOUSE_EXPECTED_HOSTNAME", "apex-clickhouse")
+    run_gate_mock = mock_main_dependencies(monkeypatch, client)
+
+    assert e2e_six_lanes.main() == 1
+    run_gate_mock.assert_not_called()
+
+
+def test_non_dict_hostname_response_blocks_main_before_run_gate(monkeypatch):
+    client = Mock()
+    client.query.return_value = Result([("hostName()", "apex-clickhouse")])
+    monkeypatch.setenv("CLICKHOUSE_EXPECTED_HOSTNAME", "apex-clickhouse")
+    run_gate_mock = mock_main_dependencies(monkeypatch, client)
+
+    assert e2e_six_lanes.main() == 1
+    run_gate_mock.assert_not_called()
+
+
+def test_none_hostname_blocks_main_before_run_gate(monkeypatch):
+    client = Mock()
+    client.query.return_value = Result([{"hostName()": None}])
+    monkeypatch.setenv("CLICKHOUSE_EXPECTED_HOSTNAME", "apex-clickhouse")
+    run_gate_mock = mock_main_dependencies(monkeypatch, client)
+
+    assert e2e_six_lanes.main() == 1
+    run_gate_mock.assert_not_called()
+
+
+def test_expected_hostname_rejects_invalid_responses(monkeypatch):
+    monkeypatch.setenv("CLICKHOUSE_EXPECTED_HOSTNAME", "apex-clickhouse")
+    invalid_responses = (
+        [],
+        [{"hostName()": "apex-clickhouse"}, {"hostName()": "apex-clickhouse"}],
+        [{}],
+        [{"hostName()": ""}],
+    )
+
+    for rows in invalid_responses:
+        client = Mock()
+        client.query.return_value = Result(rows)
+        with pytest.raises(GateFailure, match="^clickhouse_hostname_response_invalid$"):
+            _validate_clickhouse_hostname(client)
+
+
+def test_expected_hostname_query_error_is_sanitized(monkeypatch):
+    client = Mock()
+    client.query.side_effect = RuntimeError(
+        "https://admin:super-secret@clickhouse.example:8123 CLICKHOUSE_PASSWORD=super-secret"
+    )
+    monkeypatch.setenv("CLICKHOUSE_EXPECTED_HOSTNAME", "apex-clickhouse")
+
+    with pytest.raises(GateFailure) as failure:
+        _validate_clickhouse_hostname(client)
+
+    message = str(failure.value)
+    assert message == "clickhouse_hostname_query_failed"
+    assert "https://" not in message
+    assert "super-secret" not in message
+    assert "CLICKHOUSE_" not in message
