@@ -125,11 +125,51 @@ class PlanTransitionView(BaseModel):
     confidence: str = ""
 
 
+class Coverage(BaseModel):
+    """What the diagnosis actually SAW — the denominator behind the verdict.
+
+    "Healthy" and "healthy, having seen one stage and no findings" are
+    different claims, and until this existed they were the same payload: a
+    dropped job_id was indistinguishable from a genuinely clean run
+    (WEAKNESSES-AND-OPEN-QUESTIONS W1). ``analyze()`` already refuses the
+    zero-stage case outright; this is the weaker one it could not express —
+    telemetry arrived, but thin.
+
+    Counted from the rows already in hand, never from a second query: a
+    coverage number that disagreed with the payload it describes would be
+    worse than none.
+    """
+
+    stages_observed: int = 0
+    findings_observed: int = 0
+    plan_transitions_observed: int = 0
+    newest_event_ts: str | None = None
+    newest_event_age_seconds: float | None = Field(
+        default=None,
+        description=(
+            "Seconds between the newest observed event and the moment this "
+            "diagnosis was built. REPORTED, never judged: Apex has no "
+            "threshold for 'stale' because a nightly batch and a streaming "
+            "job disagree about what an hour means, and a false 'stale' is "
+            "worse than no claim at all. The caller knows its own cadence. "
+            "None means no row carried a timestamp, NOT that the data is "
+            "fresh."
+        ),
+    )
+
+
 class Diagnosis(BaseModel):
     job_id: str
     app_id: str | None = None
     app_name: str | None = None
     status: Literal["healthy", "degraded", "not_found"]
+    coverage: Coverage = Field(
+        default_factory=Coverage,
+        description=(
+            "What this diagnosis observed. Survives every detail level, so a "
+            "trimmed array can always be told apart from an empty one."
+        ),
+    )
     stage_count: int = 0
     worst_stage_id: int | None = None
     primary_symptom: Symptom = "healthy"

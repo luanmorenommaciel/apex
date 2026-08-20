@@ -14,7 +14,10 @@ hunks or markdown structure.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from .models import (
+    Coverage,
     Diagnosis,
     FindingDelta,
     FindingView,
@@ -295,27 +298,92 @@ def _apply_ground_truth(transitions: list[PlanTransitionView]) -> list[str]:
     return notes
 
 
+# --------------------------------------------------------------------------
+# coverage — what the verdict is actually standing on
+# --------------------------------------------------------------------------
+# Any of these may carry the event time depending on which query produced the
+# row. Checked in order; the first present wins.
+_TS_KEYS = ("ts", "last_ts", "latest_ts")
+
+
+def _row_ts(row: dict) -> datetime | None:
+    """Best-effort event time out of a row, as an aware UTC datetime.
+
+    A real ClickHouse driver hands back naive ``datetime`` in UTC; fakes and
+    JSON hand back ISO strings. Both are accepted, and anything unparseable is
+    None — an unreadable timestamp must not raise inside a diagnosis.
+    """
+    for key in _TS_KEYS:
+        value = row.get(key)
+        if value is None or value == "":
+            continue
+        if isinstance(value, datetime):
+            parsed = value
+        else:
+            try:
+                parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            except ValueError:
+                continue
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return None
+
+
+def _coverage(
+    stage_rows: list[dict],
+    findings: list[FindingView],
+    transitions: list[PlanTransitionView],
+    now: datetime | None = None,
+) -> Coverage:
+    """Count what was seen, from the rows already in hand.
+
+    The age is REPORTED and never judged — see ``Coverage``. Apex owns no
+    staleness threshold, so this function computes a number and stops.
+    """
+    newest = max(
+        (ts for ts in (_row_ts(row) for row in stage_rows) if ts is not None),
+        default=None,
+    )
+    age = None
+    if newest is not None:
+        moment = now or datetime.now(timezone.utc)
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=timezone.utc)
+        age = (moment - newest).total_seconds()
+
+    return Coverage(
+        stages_observed=len(stage_rows),
+        findings_observed=len(findings),
+        plan_transitions_observed=len(transitions),
+        newest_event_ts=newest.isoformat() if newest is not None else None,
+        newest_event_age_seconds=age,
+    )
+
+
 def analyze(
     job_id: str,
     stage_rows: list[dict],
     finding_rows: list[dict],
     transition_rows: list[dict] | None = None,
+    now: datetime | None = None,
 ) -> Diagnosis:
+    """Diagnose one run. ``now`` is injectable only so the age is testable."""
     stages = [stage_view(row) for row in stage_rows]
+    findings = [FindingView.model_validate(row) for row in finding_rows]
+    transitions = [
+        PlanTransitionView.model_validate(row) for row in (transition_rows or [])
+    ]
+    coverage = _coverage(stage_rows, findings, transitions, now)
+
     if not stages:
         return Diagnosis(
             job_id=job_id,
             status="not_found",
+            coverage=coverage,
             summary=(
                 "No stage telemetry exists for this job_id. Check the id, or "
                 "confirm the jar/collect lanes shipped this run."
             ),
         )
-
-    findings = [FindingView.model_validate(row) for row in finding_rows]
-    transitions = [
-        PlanTransitionView.model_validate(row) for row in (transition_rows or [])
-    ]
 
     # A stage completes when its slowest task does, so p99 is the closest
     # stand-in for stage wall time the contract gives us.
@@ -330,6 +398,13 @@ def analyze(
 
     first = stage_rows[0]
     notes: list[str] = []
+    if coverage.newest_event_age_seconds is None:
+        notes.append(
+            "No observed row carried an event timestamp, so "
+            "coverage.newest_event_age_seconds is null — that reads UNKNOWN, "
+            "not fresh. The per-stage read resolves each column with "
+            "argMax(col, ts) and projects no ts of its own."
+        )
     if not findings:
         notes.append(
             "apex.findings holds no rows for this job_id — the symptoms below "
@@ -345,11 +420,13 @@ def analyze(
             app_id=str(first.get("app_id") or "") or None,
             app_name=str(first.get("app_name") or "") or None,
             status="healthy",
+            coverage=coverage,
             stage_count=len(stages),
             primary_symptom="healthy",
             summary=(
-                f"{len(stages)} stage(s), no spill, no skew tail, no GC "
-                f"pressure above threshold."
+                f"{len(stages)} stage(s) observed: no spill, no skew tail, no "
+                f"GC pressure above threshold. This verdict covers only what "
+                f"was observed — see coverage."
             ),
             stages=stages,
             findings=findings,
@@ -372,6 +449,7 @@ def analyze(
         app_id=str(first.get("app_id") or "") or None,
         app_name=str(first.get("app_name") or "") or None,
         status="degraded",
+        coverage=coverage,
         stage_count=len(stages),
         worst_stage_id=worst.stage_id,
         primary_symptom=worst.symptom,
