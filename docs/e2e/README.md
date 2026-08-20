@@ -35,6 +35,9 @@ something the others do not, and the naming does not make that obvious. This pag
 **The normal sequence is generate → verify:** run `e2e_canonical`, take the `job_id` it prints,
 then run the gate against it.
 
+For an opt-in, pre-submit custody chain for a particular E2E run, see
+[Pre-submit provenance](PRE_SUBMIT_PROVENANCE.md).
+
 ## What the canonical gate asserts
 
 `scripts/e2e_six_lanes.py` validates one already-submitted Spark application. It does **not**
