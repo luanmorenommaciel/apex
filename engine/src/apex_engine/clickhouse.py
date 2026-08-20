@@ -82,8 +82,12 @@ SELECT
   -- raw fields the tail-outlier watcher needs; also DEFAULT 0 typed columns,
   -- no Map fallback required, same reasoning as the retry-safe counters above.
   argMax(task_duration_max_ms, ts)                     AS task_duration_max_ms,
+  argMax(task_duration_sample_count, ts)               AS task_duration_sample_count,
+  argMax(successful_task_duration_p50_ms, ts)          AS successful_task_duration_p50_ms,
+  argMax(successful_task_duration_p99_ms, ts)          AS successful_task_duration_p99_ms,
   argMax(successful_task_duration_max_ms, ts)          AS successful_task_duration_max_ms,
   argMax(successful_task_sample_count, ts)             AS successful_task_sample_count,
+  argMax(successful_task_shuffle_read_bytes_p50, ts)   AS successful_task_shuffle_read_bytes_p50,
   argMax(successful_task_shuffle_read_bytes_max, ts)   AS successful_task_shuffle_read_bytes_max,
   argMax(successful_task_shuffle_read_bytes_sample_count, ts) AS successful_task_shuffle_read_bytes_sample_count
 FROM apex.spark_events

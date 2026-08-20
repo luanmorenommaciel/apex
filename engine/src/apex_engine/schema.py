@@ -170,15 +170,49 @@ class StageAggregate(BaseModel):
     # fallback property here yet — that is a separate, later unit, and
     # skew_ratio below is untouched by this addition.
     task_duration_max_ms: float = Field(default=0.0, ge=0)
+    task_duration_sample_count: int = Field(default=0, ge=0)
+    successful_task_duration_p50_ms: float = Field(default=0.0, ge=0)
+    successful_task_duration_p99_ms: float = Field(default=0.0, ge=0)
     successful_task_duration_max_ms: float = Field(default=0.0, ge=0)
     successful_task_sample_count: int = Field(default=0, ge=0)
     successful_task_shuffle_read_bytes_max: int = Field(default=0, ge=0)
     successful_task_shuffle_read_bytes_sample_count: int = Field(default=0, ge=0)
+    # Missed by the raw-fields unit above; tail_outlier reads this directly
+    # as a plain value, not through a computed ratio.
+    successful_task_shuffle_read_bytes_p50: int = Field(default=0, ge=0)
 
     @property
     def skew_ratio(self) -> float:
         """p99/p50, guarded exactly like `nullIf(p50, 0)` in 005_skew.sql."""
         return self.task_duration_p99_ms / self.task_duration_p50_ms if self.task_duration_p50_ms else 0.0
+
+    @property
+    def duration_sample_source(self) -> str:
+        """Which population `effective_task_duration_*` is drawn from."""
+        return "successful_tasks" if self.successful_task_sample_count > 0 else "legacy_all_attempts"
+
+    @property
+    def duration_sample_count(self) -> int:
+        if self.successful_task_sample_count > 0:
+            return self.successful_task_sample_count
+        return self.task_duration_sample_count or self.task_count
+
+    @property
+    def effective_task_duration_p50_ms(self) -> float:
+        return self.successful_task_duration_p50_ms if self.successful_task_sample_count > 0 else self.task_duration_p50_ms
+
+    @property
+    def effective_task_duration_p99_ms(self) -> float:
+        return self.successful_task_duration_p99_ms if self.successful_task_sample_count > 0 else self.task_duration_p99_ms
+
+    @property
+    def effective_task_duration_max_ms(self) -> float:
+        return self.successful_task_duration_max_ms if self.successful_task_sample_count > 0 else self.task_duration_max_ms
+
+    @property
+    def tail_ratio(self) -> float:
+        """max/p50 over the effective (retry-safe when available) population."""
+        return self.effective_task_duration_max_ms / self.effective_task_duration_p50_ms if self.effective_task_duration_p50_ms else 0.0
 
     @property
     def spilled_bytes(self) -> int:
