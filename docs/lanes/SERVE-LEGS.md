@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Shipped** | `apex-mcp` — stdio MCP server, five tools (`analyze_run`, `compare_runs`, `list_runs`, `search_kb`, `suggest_fix`) and one resource (`apex://runs`) |
+| **Shipped** | `apex-mcp` — stdio MCP server, six tools (`analyze_run`, `compare_runs`, `list_runs`, `search_kb`, `recall_similar_runs`, `suggest_fix`) and one resource (`apex://runs`) |
 | **Proven** | contract DDL conformance, `argMax` latest-attempt, param binding vs `' OR 1=1 --`, injection hardening, `applied=False` as `Literal[False]`, cross-validated `21.62x` skew against the engine lane's independent watcher |
 | **Code** | `src/apex_mcp/{server,ch,models,diagnose}.py` — 1832 LOC · tests 1133 LOC · two live gates |
 
@@ -155,16 +155,72 @@ PR body already asks for a `compare_runs` re-check **by hand**.
 
 ---
 
-## L6 · Learn — memory across runs
+## L6 · Learn — memory across runs  ✅ **DELIVERED** (branch `serve/l6-learn`)
 
-**Today:** `search_kb` is LIKE/token search over `findings` + redacted `plan_json`
-(`ch.py:125-183`). The embedding path is a declared, unimplemented interface.
+**Was:** every tool on this server reasoned about exactly one run. `search_kb` is
+LIKE/token search over `findings` + redacted `plan_json`, which finds *text*, not
+*shapes* — it cannot answer "have we run this plan before, and what did it do".
 
-| # | Feature | Note |
+**The correction this leg records.** The earlier plan for L6 read *"implement the
+embedding backend"*. That work already exists, in the **memory lane**: a
+structural encoder, an L2-normalised embedding table, a measured similarity
+threshold and a measured per-shape noise floor. Building a second one here would
+have duplicated a lane with 47 tests and produced a second, disagreeing answer to
+the same question. **L6 is an MCP surface over the memory lane, not a
+reimplementation.**
+
+| # | Feature | Delivered as |
 |---|---|---|
-| F6.1 | Implement the embedding backend | the interface is already pluggable |
-| F6.2 | "This happened before, here is what fixed it" | auto-link finding → prior occurrence → applied remedy |
-| F6.3 | Fleet view: recurring symptoms across apps | the compounding-value feature |
+| F6.1 | Implement the embedding backend | ❌ **withdrawn** — the memory lane owns encoding; serve reads its output |
+| F6.2 | "This happened before, here is what fixed it" | ✅ `recall_similar_runs(job_id, top_k, noise_floor_pct?)` |
+| F6.3 | Fleet view: recurring symptoms across apps | deferred — needs run volume, and the read layer it would sit on now exists |
+
+**The integration surface is the contract, not an import.** serve reads
+`apex.plan_memory` (one row per plan shape, carrying an L2-normalised
+`embedding` and the decoded features that let a human say *why* two plans
+matched) and `apex.run_outcomes` (one row per shape per run: the six typed
+config columns, the wall clock, and how it went). It imports nothing from the
+memory lane, so this package still depends only on `mcp`, `clickhouse-connect`
+and `pydantic`. Similarity is computed **in ClickHouse** — the embedding is
+already normalised, so `1 - cosineDistance` is the cosine similarity and serve
+needs no encoder of its own. The embedding width is read from the queried
+shape's own `dim` rather than assumed; the encoder's width is the memory lane's
+to change.
+
+**Both tables are contract v0.3 ADDITIVE**, so a cluster that has not applied
+them is a normal older deployment. Every read degrades to empty and the tool
+answers `memory_unavailable` — *no history to read*, which is a different fact
+from *no history*. Only a missing schema degrades: a store that is **down**
+still raises, because answering "no prior runs" for an unreachable ClickHouse
+would be a lie in the one place this lane cannot afford one.
+
+**The floor rule is the whole leg.** Cross-run memory is worth having only if it
+distinguishes *this config is better* from *this run happened to be faster*.
+Rank a shape's prior runs by wall clock and the top row **looks** like the best
+configuration when nothing of the sort has been measured. So prior runs are
+reported as measurements, and `better` is reachable only through a
+caller-supplied `noise_floor_pct` measured for this shape at this scale
+(CONTRACT.md rule 2) — and then only when the history holds two distinct
+**captured** configurations to credit the difference to (rule 3). Below the
+floor the answer is "indistinguishable from run-to-run variation", which is not
+"no change".
+
+**Honest provenance.** `config_source` never defaults to `observed`. Apex
+captures no SparkConf today — the v0.3 DDL says so explicitly — so most
+`run_outcomes` rows are `unknown` and carry a `config_unavailable` note instead
+of six nulls a reader could skim as "defaults". Closing that gap is a jar-lane
+change, not this lane's.
+
+**Retrieval is two-tiered and says which tier it used.** EXACT
+`plan_fingerprint` equality needs no embedding at all and is the strongest
+evidence available; STRUCTURAL similarity means the plans are indistinguishable
+after redaction, which is weaker and is labelled. Neighbours below the
+similarity threshold are dropped rather than returned as the nearest available
+thing — when nothing matches, the honest answer is that nothing matches.
+
+**Follow-up:** the tool takes `noise_floor_pct` from the caller. The memory lane
+already computes a per-shape floor from its own history; wiring serve to read it
+would close the last manual step, and needs a contract surface for the figure.
 
 ---
 
@@ -192,7 +248,7 @@ Every new tool inherits the read-only annotation discipline and the param-bindin
 | 2 | **L1 Connect** | cheap, and it is the first thing a new user hits |
 | 3 | **L3 Understand** | payload volume is the loudest complaint once people can actually reach a run |
 | 4 | **L5 Fix** | `verify_fix` is a thin wrapper with outsized value |
-| 5 | **L6 Learn** | compounding, but needs run volume first |
+| 5 | **L6 Learn** ✅ | compounding, and delivered ahead of its slot once the memory lane made it a read rather than a build |
 | 6 | **L4 Correlate** | depends on contract/jar work outside this lane |
 
 **L1 is being built first by decision**, ahead of L2 — see [`L1_tasks.md`](L1_tasks.md).

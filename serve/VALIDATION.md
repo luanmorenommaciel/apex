@@ -188,3 +188,44 @@ Both units passed their entire unit suite before these surfaced, because
   reports that rather than inventing a subject.
 - Auto-baseline costs up to 10 extra stage queries, because `RUNS_SQL` does not
   carry `plan_fingerprint`.
+
+---
+
+## L6 — cross-run memory, recorded 2026-08-20
+
+Branch `serve/l6-learn`. `recall_similar_runs` joins the surface as the sixth
+tool and the first that reasons across runs rather than about one.
+
+### Unit + safety suite — `159 passed`
+
+| New coverage | Asserts |
+|---|---|
+| `tests/test_ch.py` (+11) | cosine ranking, the similarity gate, `dim` read rather than assumed, newest-first outcomes, hostile-fingerprint binding, absent-table degradation |
+| `tests/test_recall_view.py` (new, 16) | bounded similarity, Nullable config columns, `config_source` never defaulting to `observed`, and the tool end-to-end on three deployments |
+| `tests/test_diagnose.py` (+9) | the floor rule: no floor, inside the floor, a single run, a cleared floor, and CONTRACT rule 3 attributability |
+| `tests/test_server_tools.py` | the ordered six-tool surface, still an exact equality |
+
+### What is NOT yet proven live
+
+The recorded gates above (`read_only_gate.py`, `mcp_stdio_gate.py`) predate this
+leg and have not been re-run against a cluster carrying `apex.plan_memory` and
+`apex.run_outcomes`. **The two SQL statements this leg adds have never executed
+against a real ClickHouse.** L2 is the standing warning here: two defects
+survived a fully green unit suite because `FakeClient` does not parse SQL — a
+`WITH` clause referenced as a scalar sub-select, a `FixedString(64)` compared
+against a bound `String`, and `Nullable(Int32)` columns arriving as `None` are
+exactly the class of thing a fake cannot catch. Treat the read layer as
+unvalidated until a live gate covers it.
+
+### Known limits
+
+- `noise_floor_pct` is supplied by the caller. The memory lane computes a
+  per-shape floor from its own history; serve cannot read it without a contract
+  surface for the figure, so today the honest default is no floor and therefore
+  no verdict.
+- Apex captures no SparkConf, so `config_source` is `unknown` on every row the
+  memory lane can write today. Recall is fully useful as an OUTCOME store and
+  cannot yet say which configuration won. Closing that is a jar-lane change.
+- Similarity is a brute-force `cosineDistance` scan of `apex.plan_memory`. Exact
+  and cheap at a few thousand shapes; an ANN index would make it approximate,
+  which is a correctness-visible change and not just a speed knob.
