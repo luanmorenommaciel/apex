@@ -71,7 +71,13 @@ SELECT
             executor_run_time_ms,
             toInt64OrZero(attributes['executor_run_time_ms'])), ts) AS executor_run_time_ms,
   -- still a pure Map escape hatch; a missing key yields '' so the rule does not fire.
-  argMax(attributes['failure_reason'], ts)             AS failure_reason
+  argMax(attributes['failure_reason'], ts)             AS failure_reason,
+  -- retry-safe scheduler counters (CONTRACT.md v0.5): typed columns with
+  -- DEFAULT 0 since their own migration, so no Map fallback is needed here
+  -- the way executor_run_time_ms above still needs one.
+  argMax(task_attempt_count, ts)                       AS task_attempt_count,
+  argMax(task_failed_attempt_count, ts)                AS task_failed_attempt_count,
+  argMax(task_counted_failure_attempt_count, ts)       AS task_counted_failure_attempt_count
 FROM apex.spark_events
 WHERE job_id = {job_id:String}
 GROUP BY job_id, stage_id

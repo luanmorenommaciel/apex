@@ -41,6 +41,12 @@ class FindingType(str, Enum):
     AQE_REPLAN = "AQE_REPLAN"
     SPILL = "SPILL"
     DUPLICATE_SCAN = "DUPLICATE_SCAN"
+    # Reports scheduler retry-budget consumption as a fact. It does not
+    # classify the failed attempt's root cause as application code vs.
+    # infrastructure — `TaskFailedReason.countTowardsTaskFailures` says
+    # whether an attempt counted against the budget, not why it failed.
+    # Additive, same precedent as TASK_SKEW above.
+    RETRY_PRESSURE = "RETRY_PRESSURE"
 
 
 class Severity(str, Enum):
@@ -152,6 +158,12 @@ class StageAggregate(BaseModel):
     plan_json: str = ""
     executor_run_time_ms: int = Field(default=0, ge=0)
     failure_reason: str = ""
+    # Retry-safe scheduler counters (CONTRACT.md v0.5). Default 0 for rows
+    # written before these columns existed, matching the contract's
+    # 0-on-empty semantics rather than raising on historical data.
+    task_attempt_count: int = Field(default=0, ge=0)
+    task_failed_attempt_count: int = Field(default=0, ge=0)
+    task_counted_failure_attempt_count: int = Field(default=0, ge=0)
 
     @property
     def skew_ratio(self) -> float:
