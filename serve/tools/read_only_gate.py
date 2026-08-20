@@ -164,7 +164,14 @@ def main() -> int:
     )
     assert diagnosis.status == "degraded"
     assert diagnosis.worst_stage_id == 2
-    assert any(s.ground_truth for s in diagnosis.symptoms), "skew_split not applied"
+    # An AQE skew split is keyed to an EXECUTION, not a stage, so it is carried
+    # as a note and must NOT adjudicate any stage-scoped symptom. This gate
+    # asserted the opposite until now — the behaviour it demanded was removed
+    # deliberately (see diagnose._apply_ground_truth).
+    assert diagnosis.aqe_ground_truth, "skew_split not reported as an execution-scoped note"
+    assert not any(s.ground_truth for s in diagnosis.symptoms), (
+        "an execution-scoped AQE signal must not adjudicate a stage-scoped symptom"
+    )
 
     self_comparison = diagnose.compare(
         BEFORE_JOB_ID, BEFORE_JOB_ID,
@@ -203,6 +210,29 @@ def main() -> int:
     )
     assert gated.gated is True and gated.proposed_diff == ""
 
+    # -- run discovery: the read that needs no job_id ----------------------
+    # A FakeClient returns whatever the test author typed; only a real database
+    # proves the per-job aggregation and that app_name genuinely binds.
+    listed = store.runs(limit=50, since_hours=24 * 365 * 5)
+    seeded = {BEFORE_JOB_ID, AFTER_JOB_ID}
+    found = {r["job_id"] for r in listed} & seeded
+    assert found == seeded, f"run discovery missed seeded runs: {seeded - found}"
+
+    by_job = {r["job_id"]: r for r in listed}
+    assert by_job[AFTER_JOB_ID]["stage_count"] >= 1
+    assert by_job[AFTER_JOB_ID]["app_name"]
+
+    # newest-first, so the caller can trust the order without re-sorting
+    timestamps = [r["last_ts"] for r in listed]
+    assert timestamps == sorted(timestamps, reverse=True), "runs are not newest-first"
+
+    # app_name is observed data and reaches a WHERE clause: it must BIND.
+    hostile = store.runs(app_name="' OR 1=1 --")
+    assert hostile == [], "a hostile app_name widened the query instead of binding"
+
+    filtered = store.runs(app_name=by_job[AFTER_JOB_ID]["app_name"])
+    assert {r["job_id"] for r in filtered} >= {AFTER_JOB_ID}
+
     # -- cleanup: the gate removes only its own fixture rows ---------------
     for table in ("spark_events", "findings", "plan_transitions"):
         client.command(
@@ -213,6 +243,13 @@ def main() -> int:
 
     print(json.dumps({
         "gate": "serve-read-only",
+        "runs": {
+            "listed": len(listed),
+            "seeded_found": len(found),
+            "newest_first": True,
+            "hostile_app_name_rows": len(hostile),
+            "app_name_filter_rows": len(filtered),
+        },
         "contract": {
             "spark_events": "ok",
             "findings": "ok",

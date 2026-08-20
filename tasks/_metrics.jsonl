@@ -2,3 +2,25 @@
 {"schema_version":1,"ts":"2026-08-17T14:44:09Z","task":"T-20260817-store-health-query","event":"accepted","author":"sidymar"}
 {"schema_version":1,"ts":"2026-08-17T17:50:59Z","task":"T-20260817-serverstatus-model","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
 {"schema_version":1,"ts":"2026-08-17T17:51:00Z","task":"T-20260817-store-health-query","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T15:18:44Z","task":"T-20260819-runs-read-layer","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T15:18:57Z","task":"T-20260819-runs-read-layer","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T17:49:31Z","task":"T-20260819-run-summary-models","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T17:49:44Z","task":"T-20260819-run-summary-models","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T17:50:13Z","task":"T-20260819-list-runs-tool","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T17:50:42Z","task":"T-20260819-list-runs-tool","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T17:50:59Z","task":"T-20260819-tool-surface-five","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T17:51:11Z","task":"T-20260819-tool-surface-five","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T17:52:09Z","task":"T-20260819-runs-injection-hardening","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T17:52:24Z","task":"T-20260819-runs-injection-hardening","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T17:53:17Z","task":"T-20260819-runs-resource","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T17:53:33Z","task":"T-20260819-runs-resource","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T17:55:41Z","task":"T-20260819-auto-baseline","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T17:56:00Z","task":"T-20260819-auto-baseline","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T17:56:30Z","task":"T-20260819-runs-gates","event":"status_change","from":"ready","to":"blocked","reason":"live ClickHouse required; docker unavailable in this environment"}
+{"schema_version":1,"ts":"2026-08-19T19:05:47Z","task":"T-20260819-runs-gates","event":"status_change","from":"blocked","to":"ready","reason":"ClickHouse available; DDL fixed"}
+{"schema_version":1,"ts":"2026-08-19T19:11:59Z","task":"T-20260819-runs-gates","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T19:12:21Z","task":"T-20260819-runs-gates","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T19:15:05Z","task":"T-20260819-discover-docs","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T19:16:06Z","task":"T-20260819-discover-docs","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}
+{"schema_version":1,"ts":"2026-08-19T19:16:23Z","task":"T-20260819-serve-brief-five-tools","event":"accepted","author":"sidymar"}
+{"schema_version":1,"ts":"2026-08-19T19:16:39Z","task":"T-20260819-serve-brief-five-tools","event":"status_change","from":"ready","to":"done","reason":"accepted Tier 1"}

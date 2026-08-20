@@ -6,7 +6,7 @@
 
 ## Mission & exit criterion
 
-Build `apex-mcp` — a Python **stdio MCP server** (packaged as a `uvx`-installable console script) exposing Apex's Spark-diagnosis capabilities to any MCP client (Claude Code / Cursor / Codex). It reads the shared `apex` ClickHouse DB via `clickhouse-connect` and exposes **four tools**: three read-only (`analyze_run`, `compare_runs`, `search_kb`) and one **confidence-gated WRITE tool** (`suggest_fix`) that **NEVER auto-applies** — it returns a proposed unified diff + PR body as data and always requires human approval.
+Build `apex-mcp` — a Python **stdio MCP server** (packaged as a `uvx`-installable console script) exposing Apex's Spark-diagnosis capabilities to any MCP client (Claude Code / Cursor / Codex). It reads the shared `apex` ClickHouse DB via `clickhouse-connect` and exposes **five tools**: four read-only (`list_runs`, `analyze_run`, `compare_runs`, `search_kb`) and one **confidence-gated WRITE tool** (`suggest_fix`) that **NEVER auto-applies** — it returns a proposed unified diff + PR body as data and always requires human approval. It also serves one **resource**, `apex://runs`, so a client can find a `job_id` without spending a tool call. `list_runs` and the resource arrived with **L2 Discover** ([`SERVE-LEGS.md`](SERVE-LEGS.md)); everything below records the original L1 build.
 
 **Exit criterion:** a user runs one `claude mcp add --scope user --transport stdio apex -- uvx apex-mcp`, restarts the client, and can call `analyze_run("ax151sasadds114")` for a structured diagnosis sourced from ClickHouse — while `suggest_fix` returns a diff that is **never written to disk or git**.
 
@@ -70,7 +70,7 @@ flowchart TD
 - [ ] **T8** — `search_kb`. *Accept:* `'shuffle spill'` → ≥1 seeded hit, ranked.
 - [ ] **T9** — `suggest_fix` (gated, non-applying). *Accept:* `applied==False`, diff present, `git status` clean; low-confidence → advisory-only.
 - [ ] **T10** — Harden against injection + info disclosure. *Accept:* malicious finding text → data field only, no action; errors never expose the connection string.
-- [ ] **T11** — `main()` + stdio + stderr logging. *Accept:* Inspector connects, lists exactly 4 tools, no stdout noise.
+- [ ] **T11** — `main()` + stdio + stderr logging. *Accept:* Inspector connects, lists exactly 5 tools (4 at the time of writing; `list_runs` was added by L2) plus the `apex://runs` resource, no stdout noise.
 - [ ] **T12** — Registration docs (Claude Code / Cursor / Codex). *Accept:* `claude mcp list` → connected; `/mcp` lists 4; same `.mcp.json` loads in Cursor/Codex.
 - [ ] **T13** — E2E integration test via a real client. *Accept:* all 4 tools schema-valid; `suggest_fix` never auto-applied (git clean).
 - [ ] **T14** — Unit + safety suite. *Accept:* `uv run pytest` green; a test asserts `suggest_fix` leaves the tree unmodified + `applied==False`.

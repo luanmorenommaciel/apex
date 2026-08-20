@@ -1,7 +1,7 @@
 # SERVE lane — legs
 
 > **Companion to [`SERVE.md`](SERVE.md).** `SERVE.md` is the frozen build brief for what
-> already shipped (T1–T14, four tools). This file is the **forward plan**: the lane
+> already shipped (T1–T14). This file is the **forward plan**: the lane
 > decomposed into six legs of user-facing work, each broken into candidate features.
 > **Snapshot:** 2026-08-12 · branch `feat/base-project-e2e` · head `093c677` · 87 tests green.
 
@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Shipped** | `apex-mcp` — stdio MCP server, four tools: `analyze_run`, `compare_runs`, `search_kb`, `suggest_fix` |
+| **Shipped** | `apex-mcp` — stdio MCP server, five tools (`analyze_run`, `compare_runs`, `list_runs`, `search_kb`, `suggest_fix`) and one resource (`apex://runs`) |
 | **Proven** | contract DDL conformance, `argMax` latest-attempt, param binding vs `' OR 1=1 --`, injection hardening, `applied=False` as `Literal[False]`, cross-validated `21.62x` skew against the engine lane's independent watcher |
 | **Code** | `src/apex_mcp/{server,ch,models,diagnose}.py` — 1832 LOC · tests 1133 LOC · two live gates |
 
@@ -70,22 +70,42 @@ misconfigured user sees four healthy-looking tools that fail on every call.
 
 ---
 
-## L2 · Discover — "which run?"  ← **the unlock**
+## L2 · Discover — "which run?"  ✅ **DELIVERED** (branch `serve/l2-discover`)
 
-**Today:** nothing. Every entry point demands a `job_id` that must come from outside
-Apex. This is the single highest-leverage leg: no other leg is reachable without it.
+**Was:** nothing. Every entry point demanded a `job_id` that had to come from outside
+Apex. This was the single highest-leverage leg: no other leg was reachable without it.
 
-| # | Feature | Note |
+| # | Feature | Delivered as |
 |---|---|---|
-| F2.1 | `list_runs(limit, since, app_name?, status?)` | recent runs with health at a glance |
-| F2.2 | `find_run(app_name)` | "my nightly_etl" — `app_name` is already a column on `spark_events` |
-| F2.3 | `latest_run()` | "what just ran?" |
-| F2.4 | `apex://runs` as an MCP **resource** | browsable without spending a tool call |
-| F2.5 | Auto-baseline: last healthy run, same `app_name` + `plan_fingerprint` | makes `compare_runs` usable with one argument instead of two |
+| F2.1 | `list_runs(limit, since, app_name?, status?)` | ✅ `list_runs(limit, since_hours, app_name)` |
+| F2.2 | `find_run(app_name)` | ✅ **subsumed** — `list_runs(app_name=…)` |
+| F2.3 | `latest_run()` | ✅ **subsumed** — `list_runs(limit=1)` |
+| F2.4 | `apex://runs` as an MCP **resource** | ✅ the lane's first resource |
+| F2.5 | Auto-baseline: same `app_name` + `plan_fingerprint` | ✅ `compare_runs` with `baseline_job_id` optional |
 
-**Safety note:** `list_runs` / `find_run` introduce new *user-influenced* query surfaces.
-They inherit the server-side parameter binding discipline already enforced by
-`tests/test_ch.py`; no f-string may reach a `WHERE` clause.
+**Why three features became one tool.** `find_run` and `latest_run` differ from
+`list_runs` only by a `WHERE` clause and a `LIMIT`. Tool names are flat across every
+server a client has loaded, and each tool is another user-influenced surface on
+something a model can call. One filtered tool expresses all three; three tools would
+have been API bloat bought with three injection surfaces.
+
+**Auto-baseline refuses rather than guesses.** With no prior run sharing the current
+plan shape, `compare_runs` returns `not_comparable` and says why. Comparing across a
+plan change measures the plan, not the regression, and a silently wrong baseline
+produces a confident wrong answer — the exact failure this lane exists to prevent.
+
+**Safety.** `app_name` is set by the observed Spark job and now reaches both a `WHERE`
+clause and the model's context. It binds server-side, is echoed only inside typed
+fields, and never into a string Apex composes. Proven live: `' OR 1=1 --` returns 0 rows.
+
+**What the live gate caught that no fake could.** Two defects survived a green unit
+suite — a SQL alias collision that made every filtered query fail, and a
+`datetime`/`str` mismatch that made every real row fail validation. `FakeClient` does
+not parse SQL and every fake supplied string timestamps. See
+[`serve/VALIDATION.md`](../../serve/VALIDATION.md).
+
+**Follow-up:** `RUNS_SQL` does not carry `plan_fingerprint`, so auto-baseline costs up
+to 10 extra stage queries. Adding it collapses that to one.
 
 ---
 

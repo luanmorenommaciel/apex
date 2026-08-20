@@ -2,20 +2,49 @@
 
 **Role:** `apex-mcp`, a Python **stdio MCP server** exposing Apex's Spark-diagnosis
 capability to any MCP client (Claude Code / Cursor / Codex). It reads the shared
-`apex` ClickHouse database and exposes **four tools** — three read-only, plus one
-confidence-gated proposal tool that **never applies anything**.
+`apex` ClickHouse database and exposes **five tools** — four read-only, plus one
+confidence-gated proposal tool that **never applies anything** — and one **resource**.
 
 **Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.5) · DDL in [../contract/](../contract/) ·
 **Lane brief:** [../docs/lanes/SERVE.md](../docs/lanes/SERVE.md)
 
-## The four tools
+## The five tools
 
 | Tool | Input | Returns | MCP annotation |
 |---|---|---|---|
+| `list_runs` | `limit=20`, `since_hours=168`, `app_name?` | `RunList` — recent runs newest-first; **this is where a `job_id` comes from** | `readOnlyHint=true` |
 | `analyze_run` | `job_id` | `Diagnosis` — bottleneck stage, symptom, AQE ground truth | `readOnlyHint=true` |
-| `compare_runs` | `baseline_job_id`, `current_job_id` | `RunComparison` — regressions, plan changes, finding deltas | `readOnlyHint=true` |
+| `compare_runs` | `current_job_id`, `baseline_job_id?` | `RunComparison` — regressions, plan changes, finding deltas. Omit the baseline and Apex picks the newest prior run with an identical plan shape | `readOnlyHint=true` |
 | `search_kb` | `query`, `top_k=5` | `KbHits` — matches in findings + redacted plan text | `readOnlyHint=true` |
 | `suggest_fix` | `job_id`, `finding_id?`, `min_confidence=0.75` | `FixSuggestion` — unified diff + PR body, **`applied=False`** | `readOnlyHint=false`, `destructiveHint=false` |
+
+## The resource
+
+| URI | Returns |
+|---|---|
+| `apex://runs` | the same `RunList` as `list_runs` at its defaults, as JSON |
+
+Orientation should not cost a tool call: a client can populate a run picker from
+the resource before the user has asked anything. A resource is **not** a tool and
+does not appear in `list_tools()`.
+
+## Finding a run
+
+Every other tool needs a `job_id`. `list_runs` is where one comes from:
+
+```
+list_runs()                              # the 20 most recent runs, last 7 days
+list_runs(app_name="nightly_etl")        # one application
+list_runs(limit=1)                       # what just ran
+compare_runs(current_job_id="app-...")   # baseline chosen automatically
+```
+
+`since_hours` is not decoration — `apex.spark_events` is ordered by `job_id` and
+partitioned by month, so the bound is what lets ClickHouse prune partitions
+instead of scanning everything.
+
+`app_name` is chosen by whoever wrote the Spark job. It is returned inside
+`untrusted_fields` and bound server-side on the way in.
 
 `suggest_fix` writes **no file, no git, no PR**. It returns a proposal as data;
 a human applies it. `applied` and `requires_human_approval` are `Literal` types,
@@ -35,7 +64,7 @@ claude mcp add --scope user --transport stdio apex \
   -- uvx apex-mcp
 
 claude mcp list      # → apex: uvx apex-mcp - ✔ Connected
-# then restart the client; /mcp lists the four tools
+# then restart the client; /mcp lists the five tools
 ```
 
 Until `apex-mcp` is published to PyPI, point `uvx` at this directory:

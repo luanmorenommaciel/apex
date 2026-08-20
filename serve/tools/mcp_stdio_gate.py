@@ -2,7 +2,8 @@
 
 Verifies what only a real client can verify:
   * the server survives `initialize` over stdio (no stray stdout byte),
-  * it lists exactly the four contracted tools with the right annotations,
+  * it lists exactly the five contracted tools with the right annotations,
+  * it exposes apex://runs as a resource and NOT as a tool,
   * every tool returns schema-valid structured output,
   * `suggest_fix` reports `applied=False` / `requires_human_approval=True`.
 
@@ -27,9 +28,13 @@ ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_TOOLS = [
     {"name": "analyze_run", "readOnlyHint": True},
     {"name": "compare_runs", "readOnlyHint": True},
+    {"name": "list_runs", "readOnlyHint": True},
     {"name": "search_kb", "readOnlyHint": True},
     {"name": "suggest_fix", "readOnlyHint": False},
 ]
+
+# A resource is not a tool. It must appear here and NOT in EXPECTED_TOOLS.
+EXPECTED_RESOURCES = ["apex://runs"]
 
 
 def _payload(result) -> dict:  # noqa: ANN001
@@ -40,8 +45,11 @@ def _payload(result) -> dict:  # noqa: ANN001
 
 
 async def main() -> int:
-    job_id = os.getenv("APEX_GATE_JOB_ID", "app-20260724160310-0000")
-    baseline_id = os.getenv("APEX_GATE_BASELINE_ID", job_id)
+    # Unset by default: the gate discovers its own subject through list_runs
+    # rather than hardcoding a fixture id that exists on exactly one machine.
+    # An override still wins, for pointing the gate at a specific production run.
+    job_id = os.getenv("APEX_GATE_JOB_ID", "")
+    baseline_id = os.getenv("APEX_GATE_BASELINE_ID", "")
 
     environment = {
         **os.environ,
@@ -69,6 +77,30 @@ async def main() -> int:
                 for tool in listed.tools
             ]
             assert tool_metadata == EXPECTED_TOOLS, tool_metadata
+
+            # Discover a subject with the very capability under test. Before
+            # list_runs existed this gate could only run where a known job_id
+            # had been seeded by hand.
+            if not job_id:
+                discovered = _payload(
+                    await session.call_tool("list_runs", {"limit": 5})
+                )["runs"]
+                assert discovered, (
+                    "list_runs returned nothing — seed a run, or set "
+                    "APEX_GATE_JOB_ID"
+                )
+                job_id = discovered[0]["job_id"]
+                baseline_id = baseline_id or discovered[-1]["job_id"]
+
+            # The lane's first resource. Orientation must not cost a tool call,
+            # and a resource must never inflate the tool surface a model sees.
+            resources = await session.list_resources()
+            resource_uris = sorted(str(r.uri) for r in resources.resources)
+            assert resource_uris == EXPECTED_RESOURCES, resource_uris
+            runs_doc = await session.read_resource("apex://runs")
+            runs_payload = json.loads(runs_doc.contents[0].text)
+            assert "runs" in runs_payload and "untrusted_fields" in runs_payload, runs_payload
+            assert "runs[].app_name" in runs_payload["untrusted_fields"]
 
             suggest = next(t for t in listed.tools if t.name == "suggest_fix")
             assert suggest.annotations is not None

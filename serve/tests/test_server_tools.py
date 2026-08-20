@@ -1,9 +1,10 @@
-"""The MCP tool surface: exactly four tools, correct annotations, no stdout."""
+"""The MCP tool surface: exactly five tools, correct annotations, no stdout."""
 
 from __future__ import annotations
 
 import ast
 import asyncio
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -35,9 +36,12 @@ def _tools(server):
     return asyncio.run(server.list_tools())
 
 
-def test_exactly_the_four_contracted_tools(server):
+def test_exactly_the_five_contracted_tools(server):
+    """Exact and ordered on purpose. A subset check would let a tool appear by
+    accident, and an unnoticed tool on a server a model can call is a security
+    event, not a cosmetic one."""
     assert [t.name for t in _tools(server)] == [
-        "analyze_run", "compare_runs", "search_kb", "suggest_fix",
+        "analyze_run", "compare_runs", "list_runs", "search_kb", "suggest_fix",
     ]
 
 
@@ -166,3 +170,63 @@ def test_logging_is_configured_to_stderr():
         assert all(stream is sys.stderr for stream in streams)
     finally:
         root.handlers = saved
+
+
+# --------------------------------------------------------------------------
+# apex://runs — the lane's first MCP resource
+# --------------------------------------------------------------------------
+class _RunsOnlyClient:
+    """Serves run-discovery rows; FakeClient routes on job_id and runs has none."""
+
+    def __init__(self, rows: list[dict]) -> None:
+        self.rows = rows
+
+    def query(self, query: str, parameters: dict | None = None):
+        return type("R", (), {"named_results": lambda _self: list(self.rows)})()
+
+
+def _server_with_runs():
+    return create_server(
+        ReadStore(
+            _RunsOnlyClient(
+                [
+                    {
+                        "job_id": "job-recent",
+                        "app_id": "app-1",
+                        "app_name": "nightly_etl",
+                        "first_ts": "2026-08-19T09:00:00",
+                        "last_ts": "2026-08-19T09:12:00",
+                        "stage_count": 7,
+                        "spill_disk_bytes": 2048,
+                        "worst_p99_ms": 460,
+                    }
+                ]
+            )
+        )
+    )
+
+
+def test_runs_resource_is_listed(server):
+    """B-1 — a client can discover it without knowing the URI in advance."""
+    resources = asyncio.run(server.list_resources())
+
+    by_uri = {str(r.uri): r for r in resources}
+    assert "apex://runs" in by_uri, sorted(by_uri)
+    assert by_uri["apex://runs"].mimeType == "application/json"
+    assert by_uri["apex://runs"].name
+
+
+def test_runs_resource_returns_run_data():
+    """B-2 — the same typed payload the tool returns, as JSON."""
+    contents = list(asyncio.run(_server_with_runs().read_resource("apex://runs")))
+
+    payload = json.loads(contents[0].content)
+    assert payload["returned"] == 1
+    assert payload["runs"][0]["job_id"] == "job-recent"
+    assert payload["runs"][0]["stage_count"] == 7
+    assert "runs[].app_name" in payload["untrusted_fields"]
+
+
+def test_runs_resource_is_not_a_tool(server):
+    """A resource must not inflate the tool surface the model sees."""
+    assert "runs_resource" not in [t.name for t in _tools(server)]

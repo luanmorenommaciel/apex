@@ -189,3 +189,83 @@ def test_store_health_sql_is_bound_not_interpolated():
     assert parameters == {}
     assert "apex.spark_events" in sql
 
+
+
+# --------------------------------------------------------------------------
+# runs() — the read that does not need a job_id
+# --------------------------------------------------------------------------
+def _run_row(job_id: str = "job-1", app_name: str = "nightly_etl", stages: int = 4) -> dict:
+    return {
+        "job_id": job_id,
+        "app_id": f"app-{job_id}",
+        "app_name": app_name,
+        "first_ts": "2026-08-19T09:00:00",
+        "last_ts": "2026-08-19T09:12:00",
+        "stage_count": stages,
+        "spill_disk_bytes": 0,
+        "worst_p99_ms": 410,
+    }
+
+
+def test_runs_aggregates_one_row_per_job():
+    """B-1 — one row per job_id, not one per stage."""
+    client = _HealthClient([_run_row("job-a"), _run_row("job-b")])
+    store = ReadStore(client)
+
+    runs = store.runs()
+
+    assert [r["job_id"] for r in runs] == ["job-a", "job-b"]
+    assert runs[0]["stage_count"] == 4
+    sql, _ = client.calls[0]
+    assert "GROUP BY job_id" in sql
+    assert "ORDER BY last_ts DESC" in sql
+
+
+def test_runs_filters_by_app_name():
+    """B-2 — the filter reaches the query as a bound parameter."""
+    client = _HealthClient([_run_row(app_name="nightly_etl")])
+    store = ReadStore(client)
+
+    store.runs(app_name="nightly_etl")
+
+    sql, parameters = client.calls[0]
+    assert parameters["app_name"] == "nightly_etl"
+    assert "{app_name:String}" in sql
+    assert "nightly_etl" not in sql
+
+
+def test_runs_binds_hostile_app_name():
+    """B-4 — a SQL fragment binds as data; it never reaches the statement."""
+    hostile = "' OR 1=1 --"
+    client = _HealthClient([])
+    store = ReadStore(client)
+
+    runs = store.runs(app_name=hostile)
+
+    assert runs == []
+    sql, parameters = client.calls[0]
+    assert parameters["app_name"] == hostile
+    assert hostile not in sql
+
+
+def test_runs_bounds_the_scan_on_ts():
+    """B-3 — without a ts predicate this is a full scan on a job_id-sorted table."""
+    client = _HealthClient([])
+    store = ReadStore(client)
+
+    store.runs(since_hours=24)
+
+    sql, parameters = client.calls[0]
+    assert "ts >= {since:DateTime}" in sql
+    assert parameters["since"]
+
+
+def test_runs_clamps_a_caller_supplied_limit():
+    """B-3 — a caller must not be able to ask for the whole table."""
+    client = _HealthClient([])
+    store = ReadStore(client)
+
+    store.runs(limit=10_000)
+
+    _, parameters = client.calls[0]
+    assert parameters["limit"] == ReadStore.MAX_RUNS
