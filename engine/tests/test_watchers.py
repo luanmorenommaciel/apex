@@ -3,7 +3,7 @@
 from apex_engine import FindingType, Severity, StageAggregate
 from apex_engine.context import JobContext
 from apex_engine.jobconf import operator_width
-from apex_engine.watchers import code, cost, memory, shuffle, skew
+from apex_engine.watchers import code, cost, memory, retry_pressure, shuffle, skew
 from apex_engine.watchers.base import GIB, MIB
 
 # Redacted tree-strings copied in shape from real rows in this store.
@@ -236,3 +236,36 @@ def test_code_flags_a_genuinely_rescanned_source():
     assert len(findings) == 1
     assert findings[0].type is FindingType.DUPLICATE_SCAN
     assert findings[0].details["stage_ids"] == [0, 1, 2]
+
+
+# --- T10 retry_pressure -----------------------------------------------------
+
+def test_retry_pressure_flags_counted_failures_at_info():
+    """B-1: a counted failure produces an INFO finding citing counted-vs-observed."""
+    finding = retry_pressure.evaluate(
+        stage(task_attempt_count=62, task_failed_attempt_count=5, task_counted_failure_attempt_count=3)
+    )
+    assert finding.type is FindingType.RETRY_PRESSURE
+    assert finding.severity is Severity.INFO
+    assert finding.details["task_attempt_count"] == 62
+    assert finding.details["task_failed_attempt_count"] == 5
+    assert finding.details["task_counted_failure_attempt_count"] == 3
+    assert "3" in finding.evidence and "62" in finding.evidence
+
+
+def test_retry_pressure_ignores_failures_that_never_counted():
+    """B-2: killed/speculative attempts can be > 0 without ever hitting the
+    scheduler's budget — that is not retry pressure."""
+    assert retry_pressure.evaluate(
+        stage(task_attempt_count=10, task_failed_attempt_count=4, task_counted_failure_attempt_count=0)
+    ) is None
+
+
+def test_retry_pressure_is_silent_and_registered_on_a_clean_job():
+    """B-3: reachable through STAGE_WATCHERS / run_all_offline, and produces
+    nothing when no stage has a counted failure."""
+    from apex_engine.watchers import STAGE_WATCHERS, run_all_offline
+
+    assert retry_pressure in STAGE_WATCHERS
+    findings = run_all_offline([stage(task_counted_failure_attempt_count=0)])
+    assert not any(f.type is FindingType.RETRY_PRESSURE for f in findings)
