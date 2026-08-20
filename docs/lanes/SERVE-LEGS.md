@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Shipped** | `apex-mcp` — stdio MCP server, five tools (`analyze_run`, `compare_runs`, `list_runs`, `search_kb`, `suggest_fix`) and one resource (`apex://runs`) |
+| **Shipped** | `apex-mcp` — stdio MCP server, six tools (`analyze_run`, `explain_stage`, `compare_runs`, `list_runs`, `search_kb`, `suggest_fix`) and one resource (`apex://runs`) |
 | **Proven** | contract DDL conformance, `argMax` latest-attempt, param binding vs `' OR 1=1 --`, injection hardening, `applied=False` as `Literal[False]`, cross-validated `21.62x` skew against the engine lane's independent watcher |
 | **Code** | `src/apex_mcp/{server,ch,models,diagnose}.py` — 1832 LOC · tests 1133 LOC · two live gates |
 
@@ -111,17 +111,47 @@ to 10 extra stage queries. Adding it collapses that to one.
 
 ## L3 · Understand — diagnosis readability
 
-**Today:** `analyze_run` is strong — `status="not_found"` is already distinct from
-`"healthy"` (`diagnose.py:279`), AQE ground truth is narrated, `untrusted_fields` marks
-observed text as data. The UX problem is **volume**: the real P0 run returns 17 stages
-plus every finding in one payload.
+**Was:** `analyze_run` was already strong — `status="not_found"` distinct from
+`"healthy"`, AQE ground truth narrated, `untrusted_fields` marking observed text as
+data. The UX problem was **volume**: the real P0 run returned 17 stages plus every
+finding in one payload.
 
-| # | Feature | Note |
+| # | Feature | Delivered as |
 |---|---|---|
-| F3.1 | `detail` level — `summary` / `stages` / `full` | the default answer should be three lines, not 17 stages |
-| F3.2 | Coverage + freshness in the payload | turns "healthy" into "healthy, **and here is what I actually saw**" |
-| F3.3 | `explain_stage(job_id, stage_id)` | drill-down instead of one fat response |
-| F3.4 | Critical-path framing | `analyze()` already sums `p99_ms` as tail time — surface it as a path, not a list |
+| F3.1 | `detail` level — `summary` / `stages` / `full` | ✅ `analyze_run(job_id, detail="summary")`, defaulting to the verdict |
+| F3.2 | Coverage + freshness in the payload | ✅ `Diagnosis.coverage` on every verdict path |
+| F3.3 | `explain_stage(job_id, stage_id)` | ✅ the lane's sixth tool |
+| F3.4 | Critical-path framing | ✅ `StageView.tail_share` + `Diagnosis.tail_dominant_stage_ids` |
+
+**One analysis, three widths.** `diagnose.trim()` narrows an already-computed
+`Diagnosis`; it never re-analyses. Two callers asking at different detail levels
+therefore cannot be handed different verdicts for the same run, and `full` is
+literally the identity, so the widest payload cannot drift from `analyze()`'s own
+output.
+
+**A trimmed array is not an empty one.** Every narrowed level appends a note naming
+what was dropped and how much of it there was. Without it, `findings: []` at summary
+reads as "engine found nothing" — the opposite of the truth for the run that motivated
+the work. `coverage` survives every level for the same reason.
+
+**"Healthy" now says what it saw.** `Diagnosis.coverage` reports stages observed,
+findings observed, transitions observed and the age of the newest event. That closes
+W1, where a dropped `job_id` and a genuinely clean run produced the same confident
+verdict. The age is **reported and never judged**: a nightly batch and a streaming job
+disagree about what an hour means, so Apex owns no staleness threshold and a false
+"stale" would be worse than no claim.
+
+**Share of tail, not a critical path.** `analyze()` already summed `p99_ms` to rank
+stages and then threw the shape away. It is surfaced as each stage's share of the tail
+plus the smallest set owning most of it — and deliberately **not** called a critical
+path, in the field descriptions and in the note. Stages overlap, and `p99` is a
+per-task percentile standing in for stage wall time the contract does not carry. A
+flat run names nothing rather than nominating whichever stage came first in a tie.
+
+**Follow-up:** `STAGES_SQL` resolves each column with `argMax(col, ts)` and projects no
+`ts`, so `coverage.newest_event_age_seconds` is `null` on the live path today. Null
+reads UNKNOWN, not fresh, and the payload says so. Projecting a `ts` in `ch.py` closes
+it — outside the write surface of the unit that surfaced it.
 
 ---
 
