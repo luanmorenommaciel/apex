@@ -1,6 +1,6 @@
 ---
 id: T-20260820-effective-duration-properties
-title: "Add the effective_* fallback properties, plus the p50 shuffle field they need"
+title: "Add the effective_* fallback properties, plus the raw fields they and tail_outlier need"
 status: ready
 format_version: 3
 profile: standard
@@ -32,44 +32,46 @@ accepted_by: (none)
 accepted_at: (none)
 ---
 
-# Add the effective_* fallback properties, plus the p50 shuffle field they need
+# Add the effective_* fallback properties, plus the raw fields they and tail_outlier need
 
-> **Why:** the `tail_outlier` watcher needs a duration/sample source that prefers the retry-safe `successful_task_*` fields when present and falls back to the legacy all-attempts fields otherwise — and it reads `successful_task_shuffle_read_bytes_p50` directly, a raw field its predecessor unit missed.
+> **Why:** `tail_outlier` needs a duration/sample source that prefers the retry-safe `successful_task_*` fields when present, falling back to the legacy all-attempts fields otherwise — and it reads four raw fields directly that its predecessor unit missed.
 
 ## Goal
 
 Add computed properties to `StageAggregate` that pick `successful_task_*`
 duration fields when a real sample exists, falling back to the legacy
 `task_duration_*` fields when it does not — purely additive, zero change to
-any existing property or watcher. Also land the one raw field
-`T-20260820-tail-outlier-raw-fields` missed:
-`successful_task_shuffle_read_bytes_p50`, which `tail_outlier` reads
-directly rather than through a computed property.
+any existing property or watcher. Also land the four raw fields
+`T-20260820-tail-outlier-raw-fields` missed: `task_duration_sample_count`,
+`successful_task_duration_p50_ms`, `successful_task_duration_p99_ms`, and
+`successful_task_shuffle_read_bytes_p50`.
 
 ## Context
 
 `successful_task_sample_count > 0` means at least one non-retry, non-
 speculative attempt was measured for that stage; when it is `0`, the legacy
 `task_duration_p50_ms` / `p99_ms` (all attempts, including retries) are the
-only signal available. This is precisely the same measured-vs-proxy
-distinction `memory.py`'s `_runtime_basis()` already applies to
-`executor_run_time_ms` — same shape, new field family.
+only signal available. This is the same measured-vs-proxy distinction
+`memory.py`'s `_runtime_basis()` already applies to `executor_run_time_ms`.
 
-`successful_task_shuffle_read_bytes_p50` came from the same migration batch
-as the fields the predecessor unit landed, but was left out of that unit's
-scope by mistake — `tail_outlier.py` (the source this contribution adapts)
-reads it as a raw stage attribute for its finding details, not through a
-computed ratio, so it belongs here as a plain field, not a property.
+The four raw fields came from the same migration batch as the fields the
+predecessor unit landed but were left out of that unit's scope by mistake —
+found by reading the full `tail_outlier.py` this contribution adapts from
+and cross-checking every field it touches, directly or through a property,
+against what is currently reachable. `task_killed_attempt_count` exists on
+the schema too but is deliberately excluded: nothing in this contribution
+reads it.
 
 **Explicitly not in scope:**
 - `skew_ratio` keeps reading the legacy fields directly, exactly as it does
-  today. Whether it should switch to routing through the new `effective_*`
-  properties is a real design question — it would change an existing,
-  already-shipped watcher's output for any stage that has retry data — and
-  is a separate decision, not a side effect of this unit.
+  today. The source `tail_outlier.py` this contribution adapts from *does*
+  expect a retry-safe `skew_ratio` (its own SQL computes it that way, and
+  `evaluate()` gates on it to avoid double-reporting what the skew watcher
+  already would) — so building the watcher itself needs that decision made
+  first. This unit stops short of it on purpose: the properties here are
+  useful and inert on their own, and do not force the decision.
 - A `shuffle_read_volume_ratio` computed property was considered (the
-  baseline this adapts from has one) and dropped: nothing in `tail_outlier`
-  or any other consumer reads it, so it would be unused surface.
+  baseline this adapts from has one) and dropped: nothing reads it.
 
 ## Behavior
 
@@ -77,7 +79,7 @@ computed ratio, so it belongs here as a plain field, not a property.
 - **B-2** — GIVEN `successful_task_sample_count == 0` WHEN the same three properties are read THEN they fall back to `task_duration_p50_ms` / `p99_ms` / `task_duration_max_ms`
 - **B-3** — GIVEN either state WHEN `duration_sample_source` is read THEN it returns `"successful_tasks"` or `"legacy_all_attempts"` matching which branch fired, and `duration_sample_count` returns the sample count actually backing the duration figures
 - **B-4** — GIVEN this unit lands WHEN `skew_ratio`'s source is inspected THEN it is byte-for-byte unchanged from before this unit
-- **B-5** — GIVEN a `spark_events` row with `successful_task_shuffle_read_bytes_p50` populated WHEN `stage_aggregates()` runs THEN the returned `StageAggregate` carries that value, defaulting to `0` for historical rows
+- **B-5** — GIVEN a `spark_events` row with the four raw fields populated WHEN `stage_aggregates()` runs THEN the returned `StageAggregate` carries all four, defaulting to `0` for historical rows
 
 ## Success Criteria
 
@@ -117,12 +119,15 @@ assert s.duration_sample_count == 50
 " )
 }
 
-# eval_3: tail_ratio is guarded against div-by-zero, and the p50 shuffle field is reachable
+# eval_3: tail_ratio guarded against div-by-zero; all four raw fields reachable
 eval_3() {
   ( cd engine && uv run --extra dev python -c "
 from apex_engine import StageAggregate
 s = StageAggregate.model_validate({'job_id': 'j', 'stage_id': 1})
 assert s.tail_ratio == 0.0
+assert s.task_duration_sample_count == 0
+assert s.successful_task_duration_p50_ms == 0
+assert s.successful_task_duration_p99_ms == 0
 assert s.successful_task_shuffle_read_bytes_p50 == 0
 s2 = StageAggregate.model_validate({
     'job_id': 'j', 'stage_id': 1,
@@ -130,9 +135,11 @@ s2 = StageAggregate.model_validate({
     'successful_task_sample_count': 5, 'successful_task_shuffle_read_bytes_p50': 4096,
 })
 assert s2.tail_ratio == 10.0
-assert s2.successful_task_shuffle_read_bytes_p50 == 4096
 " )
-  ( cd engine && grep -q 'successful_task_shuffle_read_bytes_p50' src/apex_engine/clickhouse.py )
+  ( cd engine && for col in task_duration_sample_count successful_task_duration_p50_ms \
+      successful_task_duration_p99_ms successful_task_shuffle_read_bytes_p50; do
+      grep -q "$col" src/apex_engine/clickhouse.py || exit 1
+    done )
 }
 
 # eval_4: skew_ratio's existing definition is untouched, and full suite is green
@@ -161,7 +168,7 @@ success_criteria:
     terminal: true
     expected_duration_sec: 15
   - id: eval_3
-    description: "tail_ratio guarded against div-by-zero; p50 shuffle field reachable"
+    description: "tail_ratio guarded against div-by-zero; four raw fields reachable"
     runnable: bash
     check_type: deterministic
     verifies: [B-1, B-5]
@@ -199,19 +206,19 @@ eval_1 && eval_2 && eval_3 && eval_4
 
 ## Rollback Plan
 
-Pure code revert — new `@property` methods plus one raw field and one SQL
-column, no state, no DDL, no migration. Revert the two touched files; `git
+Pure code revert — new `@property` methods plus four raw fields and four SQL
+columns, no state, no DDL, no migration. Revert the two touched files; `git
 status` returns to clean.
 
 ## Observability Hooks
 
-(none — pure computed properties and one additive raw field, no runtime surface)
+(none — pure computed properties and additive raw fields, no runtime surface)
 
 ## Anti-Patterns
 
 - Changing `skew_ratio` to route through `effective_task_duration_p50_ms` /
-  `p99_ms` in this unit — real design question, separate decision, not a
-  side effect of adding new properties.
+  `p99_ms` in this unit — real design question, blocks the `tail_outlier`
+  watcher itself, but is not a side effect of adding these properties.
 - Silently changing div-by-zero behavior on any *existing* property while
   touching this file.
 - Adding `shuffle_read_volume_ratio` or any other computed property nothing
@@ -221,7 +228,11 @@ status` returns to clean.
 
 - `skew_ratio` — must remain byte-for-byte identical (eval_4 checks this)
 - `engine/src/apex_engine/watchers/` — no watcher in this unit
+- `task_killed_attempt_count` — exists on the schema, deliberately not
+  landed here; nothing in this contribution reads it
 
 ## Open Questions
 
-(none — this task is fully specified)
+- Whether `skew_ratio` should route through `effective_task_duration_p50_ms`
+  / `p99_ms` — real design question, blocks building `tail_outlier` itself,
+  needs a maintainer decision, not resolved by this unit.
