@@ -23,6 +23,7 @@ SRC = Path(__file__).resolve().parents[1] / "src"
 CONTRACTED_TOOLS = [
     "analyze_run",
     "compare_runs",
+    "explain_stage",
     "list_runs",
     "search_kb",
     "suggest_fix",
@@ -249,3 +250,42 @@ def test_runs_resource_returns_run_data():
 def test_runs_resource_is_not_a_tool(server):
     """A resource must not inflate the tool surface the model sees."""
     assert "runs_resource" not in [t.name for t in _tools(server)]
+
+def test_explain_stage_narrows_to_the_one_stage(server):
+    """Metrics, symptoms and findings for that stage — and nothing else."""
+    result = asyncio.run(
+        server.call_tool("explain_stage", {"job_id": "j", "stage_id": 4})
+    )
+    payload = result[1] if isinstance(result, tuple) else result
+
+    assert [s["stage_id"] for s in payload["stages"]] == [4]
+    assert all(s["stage_id"] == 4 for s in payload["symptoms"])
+    assert all(f["stage_id"] == 4 for f in payload["findings"])
+    # the summary describes the STAGE, not the run. This fixture's stage 4
+    # moves no shuffle volume, so the skew measurement is gated off and the
+    # stage is clean — which must still read as a stated verdict.
+    assert payload["summary"].startswith("stage 4 ")
+    assert payload["worst_stage_id"] == 4
+    assert payload["status"] == "healthy"
+    # coverage still describes the run, and says so rather than implying
+    # this stage is all there was
+    assert payload["coverage"]["stages_observed"] == 1
+    assert any("describes the RUN" in note for note in payload["notes"])
+
+
+def test_explain_stage_states_an_unobserved_stage(server):
+    """An empty success is the same payload as a genuinely clean stage.
+
+    Telling those apart is the whole point of the coverage work, so a
+    stage_id the run never produced has to say so.
+    """
+    result = asyncio.run(
+        server.call_tool("explain_stage", {"job_id": "j", "stage_id": 999})
+    )
+    payload = result[1] if isinstance(result, tuple) else result
+
+    assert payload["status"] == "not_found"
+    assert "not observed" in payload["summary"]
+    assert "[4]" in payload["summary"]  # the ids that WERE observed
+    assert payload["stages"] == []
+
