@@ -10,6 +10,7 @@ Six tools:
   explain_stage (read-only)  one stage of one run: metrics, symptoms, findings
   compare_runs  (read-only)  two runs aligned by stage_id + plan_fingerprint
   search_kb     (read-only)  token search over findings + redacted plan text
+  verify_fix    (read-only)  what the verify lane concluded -> FixVerdict
   suggest_fix   (NOT read-only, and still writes nothing) -> FixSuggestion
 """
 
@@ -26,7 +27,15 @@ from mcp.types import ToolAnnotations
 
 from . import ch, diagnose
 from .ch import ApexStoreError, ReadStore
-from .models import Diagnosis, FixSuggestion, KbHits, RunComparison, RunList, RunSummary
+from .models import (
+    Diagnosis,
+    FixSuggestion,
+    FixVerdict,
+    KbHits,
+    RunComparison,
+    RunList,
+    RunSummary,
+)
 
 log = logging.getLogger("apex_mcp")
 
@@ -328,6 +337,32 @@ def create_server(store: ReadStore) -> FastMCP:
         except Exception as exc:  # noqa: BLE001
             raise _fail(exc) from None
 
+    @mcp.tool(annotations=READ_ONLY)
+    def verify_fix(job_id: str, finding_id: str | None = None) -> FixVerdict:
+        """Report what Apex's verify lane concluded about this run's fixes.
+
+        Reads apex.fix_verifications: the predicted runtime change and its
+        interval, any replayed measurement, the safety gate's verdict and the
+        confidence tier. Pass `finding_id` to narrow to one finding.
+
+        Deltas are SIGNED — negative means FASTER.
+
+        This tool reports a judgement; it does not make one. Apex does not
+        re-predict here, and nothing is executed by calling it. Read-only.
+
+        `status='not_assessed'` means the verify lane has not looked at this
+        run. That is an absence of evidence, not a clean bill of health.
+        """
+        try:
+            return diagnose.build_verdict(
+                job_id,
+                finding_id,
+                store.verifications(job_id, finding_id or ""),
+                table_present=store.table_exists("fix_verifications"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise _fail(exc) from None
+
     @mcp.tool(annotations=PROPOSAL_ONLY)
     def suggest_fix(
         job_id: str, finding_id: str | None = None, min_confidence: float = 0.75
@@ -348,6 +383,7 @@ def create_server(store: ReadStore) -> FastMCP:
                 store.findings(job_id),
                 store.stages(job_id),
                 store.plan_transitions(job_id),
+                store.verifications(job_id, finding_id or ""),
             )
         except Exception as exc:  # noqa: BLE001
             raise _fail(exc) from None
