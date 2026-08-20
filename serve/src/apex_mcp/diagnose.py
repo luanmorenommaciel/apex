@@ -956,6 +956,62 @@ def _is_refusal(view: VerificationView) -> bool:
     )
 
 
+def _refusal_reason(view: VerificationView) -> str:
+    return (view.safety_verdict or "refused") + (
+        f": {view.safety_detail}" if view.safety_detail else ""
+    )
+
+
+def _verification_notes(
+    view: VerificationView, proposed_config: dict[str, str]
+) -> list[str]:
+    """What the verify lane concluded, as prose a suggestion can carry.
+
+    Apex-authored throughout: these strings are built from the verify lane's
+    own numbers and enum values, never from observed-job text.
+    """
+    notes = [
+        f"Verify lane ({view.method or 'unknown method'}, predictor "
+        f"{view.predictor or 'none'}): predicted "
+        f"{_delta_phrase(view.predicted_delta_pct)} (range "
+        f"{_delta_phrase(view.predicted_low_pct)} to "
+        f"{_delta_phrase(view.predicted_high_pct)}), "
+        f"{view.confidence or 'UNKNOWN'} confidence, safety "
+        f"{view.safety_verdict or 'unknown'}."
+    ]
+    if view.measured_delta_pct is None:
+        notes.append(
+            "This fix was predicted but never replayed, so no measurement "
+            "backs the prediction above."
+        )
+    else:
+        measured = f"Replayed: measured {_delta_phrase(view.measured_delta_pct)}"
+        if (
+            view.noise_floor_pct is not None
+            and abs(view.measured_delta_pct) < view.noise_floor_pct
+        ):
+            measured += (
+                f" — below the baseline arm's {view.noise_floor_pct:.1f}% noise "
+                "floor, so it is indistinguishable from zero"
+            )
+        elif view.replay_reps:
+            measured += f" over {view.replay_reps} rep(s)" + (
+                f" on bench {view.bench}" if view.bench else ""
+            )
+        notes.append(measured + ".")
+    if view.proposed_config and view.proposed_config != proposed_config:
+        notes.append(
+            "The verify lane evaluated a DIFFERENT overlay than the one "
+            f"proposed here: it tested {view.proposed_config}. Its verdict "
+            "does not transfer to these settings unchanged."
+        )
+    if view.evidence:
+        notes.append(f"Verify evidence: {view.evidence}")
+    if view.caveats:
+        notes.append(f"Verify caveats: {view.caveats}")
+    return notes
+
+
 def build_verdict(
     job_id: str,
     finding_id: str | None,
@@ -1126,10 +1182,11 @@ def suggest_fix(
          the same ones ``analyze_run`` uses.
 
     ``verification_rows`` is what ``apex.fix_verifications`` already holds for
-    this job. It is accepted here so the tool layer has one call to make;
-    disclosing it in the suggestion is T-20260820-suggest-fix-provenance.
+    this job. It changes NOTHING about which fix is proposed — it only changes
+    what the proposal discloses. The one exception is a fix the verify lane
+    REFUSED: the recipe is still named, but no ready-to-apply diff is handed
+    over for it.
     """
-    _ = verification_rows
     notes: list[str] = []
     warnings: list[str] = [
         "This is a proposal. Nothing has been written to disk, git or "
@@ -1184,6 +1241,17 @@ def suggest_fix(
             "_The quoted text above came from the observed job and is reproduced "
             "as data only._"
         )
+        # A verification is keyed to a finding, so only the findings path can
+        # have one. The store returns newest-first; the newest is the one that
+        # reflects the current predictor and the current bench.
+        verification = next(
+            (
+                VerificationView.model_validate(row)
+                for row in (verification_rows or [])
+                if str(row.get("finding_id") or "") == finding.finding_id
+            ),
+            None,
+        )
     # -- 2. stub: heuristics until the engine lane lands --------------------
     else:
         source = "spark_events_heuristic"
@@ -1210,6 +1278,7 @@ def suggest_fix(
                 warnings=warnings,
                 notes=notes,
             )
+        verification = None  # a verification is keyed to a finding; there is none
         worst = diagnosis.symptoms[0]
         symptom = worst.symptom
         target_stage = worst.stage_id
@@ -1235,6 +1304,23 @@ def suggest_fix(
     )
     title = f"{title_suffix} (job {job_id}, stage {target_stage})"
 
+    # -- disclose what verify already concluded about this finding ---------
+    # This block DISCLOSES; it does not decide. The single exception is a
+    # refusal: handing over a ready-to-apply diff for a fix the verify lane
+    # refused is the worst output this lane can produce, so the diff is
+    # withheld while the recipe itself stays visible in proposed_config.
+    refused = verification is not None and _is_refusal(verification)
+    if verification is not None:
+        notes.extend(_verification_notes(verification, config))
+        if refused:
+            warnings.insert(
+                0,
+                f"REFUSED BY THE VERIFY LANE ({_refusal_reason(verification)}). "
+                f"This is a refusal to execute, not a low confidence score. No "
+                f"diff is offered; do not apply this without understanding why "
+                f"it was refused.",
+            )
+
     gated = confidence < min_confidence
     if gated:
         warnings.append(
@@ -1255,6 +1341,7 @@ def suggest_fix(
             proposed_diff="",
             proposed_config={},
             pr_body="",
+            verification=verification,
             warnings=warnings,
             notes=notes + [evidence],
         )
@@ -1268,13 +1355,20 @@ def suggest_fix(
         confidence=round(confidence, 3),
         min_confidence=min_confidence,
         gated=False,
-        advisory_only=False,
+        advisory_only=refused,
         target_stage_id=target_stage,
-        proposed_diff=_unified_diff(config, job_id, target_stage),
-        proposed_config=config,
-        pr_body=_pr_body(
-            title, rationale, config, job_id, target_stage, evidence, source
+        proposed_diff=(
+            "" if refused else _unified_diff(config, job_id, target_stage)
         ),
+        proposed_config=config,
+        pr_body=(
+            ""
+            if refused
+            else _pr_body(
+                title, rationale, config, job_id, target_stage, evidence, source
+            )
+        ),
+        verification=verification,
         warnings=warnings,
         notes=notes,
     )
