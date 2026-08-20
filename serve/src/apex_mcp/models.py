@@ -83,6 +83,17 @@ class StageView(BaseModel):
     p99_ms: float = 0.0
     p99_p50_ratio: float = 0.0
     plan_fingerprint: str = ""
+    tail_share: float = Field(
+        default=0.0,
+        description=(
+            "This stage's p99 as a fraction of the run's summed p99 — its "
+            "SHARE OF TAIL. It is NOT a scheduling critical path: stages can "
+            "overlap, and p99 is a per-task percentile standing in for stage "
+            "wall time, which contract v0.2 does not carry. Read it as 'how "
+            "much of the tail this stage owns', never as 'this stage is on "
+            "the critical path'."
+        ),
+    )
 
 
 class StageSymptom(BaseModel):
@@ -178,6 +189,17 @@ class Diagnosis(BaseModel):
     stages: list[StageView] = Field(default_factory=list)
     findings: list[FindingView] = Field(default_factory=list)
     plan_transitions: list[PlanTransitionView] = Field(default_factory=list)
+    tail_dominant_stage_ids: list[int] = Field(
+        default_factory=list,
+        description=(
+            "The smallest set of stages that between them own most of the "
+            "run's tail time — 'stage 4 is 61% of the tail' rather than a "
+            "sorted list of seventeen stages to read. EMPTY when the tail is "
+            "spread evenly, because then there is no bottleneck to name. "
+            "Share of tail, not a scheduling critical path: see "
+            "StageView.tail_share."
+        ),
+    )
     aqe_ground_truth: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
     untrusted_fields: list[str] = Field(

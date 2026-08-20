@@ -59,6 +59,14 @@ SHUFFLE_ABS_FLOOR_BYTES = 10 * MB
 MIN_TASKS_FOR_RATIO = 4
 SKEW_MIN_BYTES_PER_TASK = 1 * MB
 
+# --- share of tail ---------------------------------------------------------
+# "Most of the tail" and "concentrated enough to be a bottleneck". A stage only
+# counts as dominant if it owns at least TAIL_CONCENTRATION times what an even
+# split would give it — otherwise a flat run would nominate an arbitrary
+# majority of its own stages and call them the bottleneck.
+TAIL_COVER = 0.60
+TAIL_CONCENTRATION = 1.5
+
 _CONFIDENCE_SCALE = {"HIGH": 0.9, "MEDIUM": 0.7, "LOW": 0.4}
 
 
@@ -299,6 +307,49 @@ def _apply_ground_truth(transitions: list[PlanTransitionView]) -> list[str]:
 
 
 # --------------------------------------------------------------------------
+# share of tail — the shape analyze() already computed and threw away
+# --------------------------------------------------------------------------
+def _tail_dominant(stages: list[StageView]) -> list[int]:
+    """The smallest set of stages owning most of the tail — or nothing.
+
+    analyze() already sums p99 to rank stages and then discards the shape.
+    "Stage 4 is 61% of the tail" is actionable; a sorted list of seventeen
+    stages is homework.
+
+    Returns [] when the tail is spread evenly. Naming a bottleneck on a flat
+    distribution is worse than naming none: it sends the reader to optimize a
+    stage that is merely first in a tie.
+
+    This is a SHARE OF TAIL and not a DAG critical path — stages can overlap
+    and p99 is a stand-in for stage wall time. The field descriptions say so
+    where a client will actually read them.
+    """
+    if len(stages) < 2:
+        return []  # one stage owns 100% of its own tail; that says nothing
+
+    ranked = sorted(stages, key=lambda s: s.tail_share, reverse=True)
+
+    # Two separate questions, in order. First: is there a bottleneck at all?
+    # Only the leader is tested, and only against what an even split would
+    # have given it — a flat run must name nothing rather than nominate
+    # whichever stage happens to be first in a tie.
+    if ranked[0].tail_share < (1.0 / len(stages)) * TAIL_CONCENTRATION:
+        return []
+
+    # Then: which stages make it up? Accumulate to TAIL_COVER without
+    # re-testing concentration, so the set genuinely covers most of the tail
+    # instead of stopping at one stage that owns 40% of it.
+    chosen: list[int] = []
+    covered = 0.0
+    for stage in ranked:
+        chosen.append(stage.stage_id)
+        covered += stage.tail_share
+        if covered >= TAIL_COVER:
+            break
+    return chosen
+
+
+# --------------------------------------------------------------------------
 # coverage — what the verdict is actually standing on
 # --------------------------------------------------------------------------
 # Any of these may carry the event time depending on which query produced the
@@ -391,13 +442,26 @@ def analyze(
     symptoms: list[StageSymptom] = []
     for stage in stages:
         share = (stage.p99_ms / total_tail_ms) if total_tail_ms else 0.0
+        stage.tail_share = round(share, 4)
         symptoms.extend(stage_symptoms(stage, share))
+
+    dominant = _tail_dominant(stages)
 
     aqe_notes = _apply_ground_truth(transitions)
     symptoms.sort(key=lambda s: s.score, reverse=True)
 
     first = stage_rows[0]
     notes: list[str] = []
+    if dominant:
+        owned = sum(
+            stage.tail_share for stage in stages if stage.stage_id in dominant
+        )
+        notes.append(
+            f"stage(s) {dominant} own ~{owned:.0%} of this run's tail time. "
+            f"That is a SHARE OF TAIL, not a scheduling critical path: stages "
+            f"can overlap and p99 stands in for stage wall time, which the "
+            f"contract does not carry."
+        )
     if coverage.newest_event_age_seconds is None:
         notes.append(
             "No observed row carried an event timestamp, so "
@@ -421,6 +485,7 @@ def analyze(
             app_name=str(first.get("app_name") or "") or None,
             status="healthy",
             coverage=coverage,
+            tail_dominant_stage_ids=dominant,
             stage_count=len(stages),
             primary_symptom="healthy",
             summary=(
@@ -450,6 +515,7 @@ def analyze(
         app_name=str(first.get("app_name") or "") or None,
         status="degraded",
         coverage=coverage,
+        tail_dominant_stage_ids=dominant,
         stage_count=len(stages),
         worst_stage_id=worst.stage_id,
         primary_symptom=worst.symptom,
