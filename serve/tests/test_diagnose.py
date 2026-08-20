@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 from apex_mcp import diagnose
-from apex_mcp.models import Coverage
+from apex_mcp.models import Coverage, Diagnosis
 from tests.conftest import (
     FINGERPRINT_A,
     FINGERPRINT_B,
@@ -151,6 +152,91 @@ def test_findings_absence_is_stated_not_hidden():
     assert any("apex.findings holds no rows" in note for note in result.notes)
 
 
+
+
+
+# -- share of tail ---------------------------------------------------------
+def test_stage_carries_share_of_tail():
+    """B-1 — analyze() already sums p99 to rank stages; keep the shape."""
+    rows = [
+        stage_row(1, p99_ms=800),
+        stage_row(2, p99_ms=150),
+        stage_row(3, p99_ms=50),
+    ]
+
+    result = diagnose.analyze("job-1", rows, [], [])
+
+    by_id = {s.stage_id: s for s in result.stages}
+    assert by_id[1].tail_share == 0.8
+    assert by_id[2].tail_share == 0.15
+    assert by_id[3].tail_share == 0.05
+    assert sum(s.tail_share for s in result.stages) == 1.0
+
+
+def test_dominant_stage_is_named_alone():
+    """B-2 — "stage 1 is 80% of the tail" beats a sorted list to read."""
+    rows = [
+        stage_row(1, p99_ms=800),
+        stage_row(2, p99_ms=150),
+        stage_row(3, p99_ms=50),
+    ]
+
+    result = diagnose.analyze("job-1", rows, [], [])
+
+    assert result.tail_dominant_stage_ids == [1]
+    assert any("80%" in note for note in result.notes)
+
+
+def test_even_stages_name_no_bottleneck():
+    """B-3 — no bottleneck exists, so naming one sends the reader to optimize
+    a stage that is merely first in a tie."""
+    rows = [stage_row(n, p99_ms=100) for n in (1, 2, 3, 4)]
+
+    result = diagnose.analyze("job-1", rows, [], [])
+
+    assert result.tail_dominant_stage_ids == []
+    assert all(s.tail_share == 0.25 for s in result.stages)
+    assert not any("tail time" in note for note in result.notes)
+
+
+def test_a_single_stage_is_not_its_own_bottleneck():
+    """One stage owns 100% of its own tail, which says nothing at all."""
+    result = diagnose.analyze("job-1", [stage_row(1, p99_ms=500)], [], [])
+
+    assert result.tail_dominant_stage_ids == []
+
+
+def test_two_stages_share_the_tail_when_neither_dominates():
+    """The set is the SMALLEST covering most of the tail, not always one."""
+    rows = [
+        stage_row(1, p99_ms=400),
+        stage_row(2, p99_ms=350),
+        stage_row(3, p99_ms=150),
+        stage_row(4, p99_ms=100),
+    ]
+
+    result = diagnose.analyze("job-1", rows, [], [])
+
+    assert result.tail_dominant_stage_ids == [1, 2]
+
+
+def test_tail_share_survives_to_the_summary_level():
+    """The point of the unit: the bottleneck is readable without the stages."""
+    rows = [stage_row(1, p99_ms=800), stage_row(2, p99_ms=200)]
+
+    summary = diagnose.trim(diagnose.analyze("job-1", rows, [], []), "summary")
+
+    assert summary.stages == []
+    assert summary.tail_dominant_stage_ids == [1]
+
+
+def test_the_tail_share_field_does_not_claim_a_scheduling_critical_path():
+    """B-4 — p99 stands in for wall time and stages overlap, so the honest
+    name is share of tail. A client reading the schema must see that."""
+    schema = json.dumps(Diagnosis.model_json_schema()).lower()
+
+    assert "share of tail" in schema
+    assert "not a scheduling critical path" in schema
 
 
 # -- coverage: what the verdict is standing on -----------------------------
