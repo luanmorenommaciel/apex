@@ -2,13 +2,13 @@
 
 **Role:** `apex-mcp`, a Python **stdio MCP server** exposing Apex's Spark-diagnosis
 capability to any MCP client (Claude Code / Cursor / Codex). It reads the shared
-`apex` ClickHouse database and exposes **five tools** — four read-only, plus one
+`apex` ClickHouse database and exposes **six tools** — five read-only, plus one
 confidence-gated proposal tool that **never applies anything** — and one **resource**.
 
 **Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.5) · DDL in [../contract/](../contract/) ·
 **Lane brief:** [../docs/lanes/SERVE.md](../docs/lanes/SERVE.md)
 
-## The five tools
+## The six tools
 
 | Tool | Input | Returns | MCP annotation |
 |---|---|---|---|
@@ -16,6 +16,7 @@ confidence-gated proposal tool that **never applies anything** — and one **res
 | `analyze_run` | `job_id` | `Diagnosis` — bottleneck stage, symptom, AQE ground truth | `readOnlyHint=true` |
 | `compare_runs` | `current_job_id`, `baseline_job_id?` | `RunComparison` — regressions, plan changes, finding deltas. Omit the baseline and Apex picks the newest prior run with an identical plan shape | `readOnlyHint=true` |
 | `search_kb` | `query`, `top_k=5` | `KbHits` — matches in findings + redacted plan text | `readOnlyHint=true` |
+| `recall_similar_runs` | `job_id`, `top_k=5`, `noise_floor_pct?` | `RecallResult` — prior runs of the same plan shape, with the config each ran under and how it went | `readOnlyHint=true` |
 | `suggest_fix` | `job_id`, `finding_id?`, `min_confidence=0.75` | `FixSuggestion` — unified diff + PR body, **`applied=False`** | `readOnlyHint=false`, `destructiveHint=false` |
 
 ## The resource
@@ -50,6 +51,48 @@ instead of scanning everything.
 a human applies it. `applied` and `requires_human_approval` are `Literal` types,
 so a suggestion claiming otherwise cannot be constructed at all.
 
+## Cross-run memory
+
+`recall_similar_runs` is the only tool here that reasons across runs. It reads
+the contract **v0.3 additive** tables the memory lane writes — `apex.plan_memory`
+(one L2-normalised embedding per plan shape) and `apex.run_outcomes` (one row
+per shape per run: the config it ran under, and how it went) — and imports
+nothing from that lane. The tables are the integration surface, which is why
+this package still depends only on `mcp`, `clickhouse-connect` and `pydantic`.
+
+```
+recall_similar_runs(job_id="app-…")                      # what has this shape done before?
+recall_similar_runs(job_id="app-…", noise_floor_pct=0.16) # …and is one config actually better?
+```
+
+Retrieval is two-tiered and each hit says which tier it came from. An **exact**
+`plan_fingerprint` match means the same literal-normalized logical plan, so that
+run did the same work. A **structural** match means the plans are
+indistinguishable after redaction — weaker, and labelled. Neighbours below the
+similarity threshold are dropped rather than returned as the nearest thing
+available: when nothing matches, the honest answer is that nothing matches.
+
+**The floor rule.** Prior runs are reported as **measurements**. A configuration
+is called *better* only when a caller supplies `noise_floor_pct` — a floor
+**measured** for this shape at this scale (CONTRACT.md rule 2; these runs cannot
+measure their own dispersion) — and only when the difference clears it. Below
+the floor the answer is "indistinguishable from run-to-run variation", which is
+not the same as "no change". Clearing the floor is also necessary but not
+sufficient: with fewer than two distinct **captured** configurations there is no
+experiment in the history, so a real difference is reported as real and still
+not credited to tuning (rule 3). Sorting prior runs by wall clock and presenting
+the top one as the best configuration is exactly the mistake this rule exists to
+prevent.
+
+`config_source` is `observed`, `zest-seed` or `unknown`, and never defaults to
+`observed`. Apex captures no SparkConf today, so most rows are honestly
+`unknown` and carry an explicit `config_unavailable` note rather than six nulls
+a reader could skim as "defaults".
+
+These tables are **additive**: a deployment without them gets
+`status="memory_unavailable"` — no history to *read*, which is not the same
+answer as no history.
+
 ## Install
 
 ```bash
@@ -64,7 +107,7 @@ claude mcp add --scope user --transport stdio apex \
   -- uvx apex-mcp
 
 claude mcp list      # → apex: uvx apex-mcp - ✔ Connected
-# then restart the client; /mcp lists the five tools
+# then restart the client; /mcp lists the six tools
 ```
 
 Until `apex-mcp` is published to PyPI, point `uvx` at this directory:
@@ -99,8 +142,14 @@ cd serve
 uv sync --extra dev
 uv run --extra dev pytest                  # unit + safety suite (fakes, no DB)
 uv run python tools/read_only_gate.py      # live gate: contract + 4 tools + argMax
+uv run python tools/recall_gate.py         # live gate: cross-run memory (v0.3 tables)
 uv run python tools/mcp_stdio_gate.py      # real MCP client over stdio
 ```
+
+The live gates need a ClickHouse carrying the contract schema — `cd infra &&
+docker compose up -d clickhouse` applies `infra/sql/*.sql` on first boot.
+`recall_gate.py` additionally needs the v0.3 additive tables (`030`/`031`); it
+asserts they are present before seeding rather than failing obscurely later.
 
 See [`VALIDATION.md`](VALIDATION.md) for recorded results.
 
