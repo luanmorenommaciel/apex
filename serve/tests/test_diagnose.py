@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from apex_mcp import diagnose
+from apex_mcp.models import Coverage
 from tests.conftest import (
     FINGERPRINT_A,
     FINGERPRINT_B,
@@ -147,6 +150,97 @@ def test_findings_absence_is_stated_not_hidden():
     result = diagnose.analyze("job-1", [stage_row(1)], [], [])
     assert any("apex.findings holds no rows" in note for note in result.notes)
 
+
+
+
+# -- coverage: what the verdict is standing on -----------------------------
+def test_diagnosis_reports_coverage():
+    """B-1 — stages seen, findings seen, and how old the newest event is."""
+    rows = [
+        stage_row(1, ts="2026-08-20T10:00:00+00:00"),
+        stage_row(2, ts="2026-08-20T10:05:00+00:00"),
+    ]
+
+    result = diagnose.analyze(
+        "job-1",
+        rows,
+        [finding_row()],
+        [transition_row("skew_split")],
+        now=datetime(2026, 8, 20, 10, 6, tzinfo=timezone.utc),
+    )
+
+    assert result.coverage.stages_observed == 2
+    assert result.coverage.findings_observed == 1
+    assert result.coverage.plan_transitions_observed == 1
+    # the NEWEST event, not the first one seen
+    assert result.coverage.newest_event_ts == "2026-08-20T10:05:00+00:00"
+    assert result.coverage.newest_event_age_seconds == 60.0
+
+
+def test_thin_coverage_is_visible_on_a_healthy_verdict():
+    """B-3 — a healthy verdict must say how much it looked at.
+
+    W1: without this, one stage that happened to be clean and a job whose
+    telemetry was mostly dropped produce the same confident "healthy".
+    """
+    result = diagnose.analyze("job-1", [stage_row(1, p50_ms=100, p99_ms=110)], [], [])
+
+    assert result.status == "healthy"
+    # the coverage rides on the healthy path too — the easy branch to forget
+    assert result.coverage.stages_observed == 1
+    assert result.coverage.findings_observed == 0
+    # and the verdict itself is scoped to what was observed
+    assert "observed" in result.summary
+
+
+def test_coverage_survives_trimming_so_an_empty_array_stays_legible():
+    """Trimming empties arrays; coverage is what keeps them readable."""
+    full = _rich_diagnosis()
+
+    summary = diagnose.trim(full, "summary")
+
+    assert summary.findings == []
+    assert summary.coverage.findings_observed == full.coverage.findings_observed == 1
+
+
+def test_ingest_age_is_reported_not_judged():
+    """B-2 — Apex reports the number and owns no staleness threshold.
+
+    A nightly batch and a streaming job disagree about what an hour means, so
+    a false "stale" would be worse than no claim at all.
+    """
+    rows = [stage_row(1, ts="2026-08-20T04:00:00+00:00")]
+
+    result = diagnose.analyze(
+        "job-1", rows, [], [], now=datetime(2026, 8, 20, 10, 0, tzinfo=timezone.utc)
+    )
+
+    assert result.coverage.newest_event_age_seconds == 6 * 3600.0
+    # nothing anywhere in the payload grades that number
+    blob = result.model_dump_json().lower()
+    for verdict in ("stale", "fresh", "outdated", "up to date", "up-to-date"):
+        assert verdict not in blob, f"Apex judged ingest age: {verdict!r}"
+    # ...and the schema says so, so a client cannot expect a verdict either
+    described = Coverage.model_json_schema()["properties"]
+    age = described["newest_event_age_seconds"]["description"].lower()
+    assert "never judged" in age
+
+
+def test_a_missing_timestamp_reads_unknown_not_fresh():
+    """None must never be mistaken for age zero."""
+    result = diagnose.analyze("job-1", [stage_row(1)], [], [])
+
+    assert result.coverage.newest_event_age_seconds is None
+    assert result.coverage.newest_event_ts is None
+    assert any("UNKNOWN" in note for note in result.notes)
+
+
+def test_an_unparseable_timestamp_does_not_break_the_diagnosis():
+    """A bad ts is a missing ts, never an exception inside a diagnosis."""
+    result = diagnose.analyze("job-1", [stage_row(1, ts="not-a-timestamp")], [], [])
+
+    assert result.status == "healthy"
+    assert result.coverage.newest_event_age_seconds is None
 
 
 # -- detail levels ---------------------------------------------------------
