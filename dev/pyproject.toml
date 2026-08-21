@@ -23,8 +23,4 @@ packages = ["common"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# tests/test_fingerprint.py is not a pytest test: it has no test functions and
-# is a spark-submit entrypoint (`make fp-test`) that imports pyspark and reads
-# /opt/apex inside the container. Collecting it here would only fail on an
-# import pytest has no business providing.
-addopts = "-q --ignore=tests/test_fingerprint.py"
+addopts = "-q"
