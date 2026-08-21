@@ -3,6 +3,9 @@
 *.env
 !.env.example
 
+# --- generated runtime config (scripts/apex.ps1 / apex.sh) ---
+.apex/
+
 # --- data volumes (infra ClickStack, dev MinIO) ---
 .volumes/
 **/data/
