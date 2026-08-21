@@ -269,3 +269,72 @@ def test_retry_pressure_is_silent_and_registered_on_a_clean_job():
     assert retry_pressure in STAGE_WATCHERS
     findings = run_all_offline([stage(task_counted_failure_attempt_count=0)])
     assert not any(f.type is FindingType.RETRY_PRESSURE for f in findings)
+
+
+# --- effective_* fallback properties (T-20260820-effective-duration-properties) --
+
+def test_effective_duration_prefers_successful_tasks_when_a_real_sample_exists():
+    """B-1: successful_task_sample_count > 0 routes all three effective_*
+    properties through the retry-safe successful_task_* fields."""
+    s = stage(
+        task_duration_p50_ms=100, task_duration_p99_ms=900, task_duration_max_ms=4000,
+        successful_task_duration_p50_ms=80, successful_task_duration_p99_ms=300,
+        successful_task_duration_max_ms=500, successful_task_sample_count=12,
+    )
+    assert s.effective_task_duration_p50_ms == 80
+    assert s.effective_task_duration_p99_ms == 300
+    assert s.effective_task_duration_max_ms == 500
+    assert s.duration_sample_source == "successful_tasks"
+    assert s.duration_sample_count == 12
+
+
+def test_effective_duration_falls_back_to_legacy_fields_with_no_successful_sample():
+    """B-2: successful_task_sample_count == 0 falls back to the legacy
+    all-attempts fields, and duration_sample_count reports the legacy count."""
+    s = stage(
+        task_duration_p50_ms=100, task_duration_p99_ms=900, task_duration_max_ms=4000,
+        task_duration_sample_count=50, successful_task_sample_count=0,
+    )
+    assert s.effective_task_duration_p50_ms == 100
+    assert s.effective_task_duration_p99_ms == 900
+    assert s.effective_task_duration_max_ms == 4000
+    assert s.duration_sample_source == "legacy_all_attempts"
+    assert s.duration_sample_count == 50
+
+
+def test_duration_sample_count_falls_back_to_task_count_when_legacy_count_is_absent():
+    """duration_sample_count is `task_duration_sample_count or task_count` —
+    a historical row with no sample-count column still reports task_count."""
+    s = stage(task_count=50, task_duration_sample_count=0, successful_task_sample_count=0)
+    assert s.duration_sample_count == 50
+
+
+def test_tail_ratio_uses_the_effective_population():
+    """tail_ratio is max/p50 over whichever population effective_* selected."""
+    s = stage(
+        successful_task_duration_max_ms=500, successful_task_duration_p50_ms=50,
+        successful_task_sample_count=5, successful_task_shuffle_read_bytes_p50=4096,
+    )
+    assert s.tail_ratio == 10.0
+
+
+def test_tail_ratio_never_divides_by_zero():
+    """A stage with no duration data at all guards effective_task_duration_p50_ms
+    == 0 exactly like skew_ratio guards task_duration_p50_ms == 0."""
+    s = StageAggregate.model_validate({"job_id": "job-1", "stage_id": 4})
+    assert s.tail_ratio == 0.0
+    assert s.task_duration_sample_count == 0
+    assert s.successful_task_duration_p50_ms == 0
+    assert s.successful_task_duration_p99_ms == 0
+    assert s.successful_task_shuffle_read_bytes_p50 == 0
+
+
+def test_skew_ratio_is_untouched_by_the_effective_properties():
+    """B-4: skew_ratio keeps reading the legacy fields directly, unaffected by
+    successful_task_* being populated."""
+    s = stage(
+        task_duration_p50_ms=100, task_duration_p99_ms=900,
+        successful_task_duration_p50_ms=80, successful_task_duration_p99_ms=300,
+        successful_task_sample_count=12,
+    )
+    assert s.skew_ratio == 9.0
