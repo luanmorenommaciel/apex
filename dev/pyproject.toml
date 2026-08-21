@@ -1,0 +1,30 @@
+[project]
+name = "apex-dev"
+version = "0.1.0"
+description = "Apex dev lane — the reproducible Spark workloads and host-side scripts that generate the evidence the other lanes consume."
+requires-python = ">=3.11"
+# The Spark jobs under jobs/ and the pyspark half of common/ run inside the
+# Spark image (see Dockerfile), which brings its own pyspark — pinning it here
+# would download a second copy for no gain. Only the host-side scripts, which
+# read zstd-compressed event logs, need a dependency.
+dependencies = ["zstandard>=0.22,<1"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# Flat layout, not src/ like the other lanes: jobs/ and tests/ are shipped into
+# the container by path, so common/ is the only importable package here.
+packages = ["common"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# tests/test_fingerprint.py is not a pytest test: it has no test functions and
+# is a spark-submit entrypoint (`make fp-test`) that imports pyspark and reads
+# /opt/apex inside the container. Collecting it here would only fail on an
+# import pytest has no business providing.
+addopts = "-q --ignore=tests/test_fingerprint.py"
