@@ -114,6 +114,22 @@ class StageEvent(BaseModel):
     task_count: int = Field(ge=0)
     task_duration_p50_ms: float = Field(ge=0)
     task_duration_p99_ms: float = Field(ge=0)
+    # Additive v0.5 measurements. Historical rows and fixtures omit these, so
+    # every field keeps the contract's 0-on-empty default.
+    task_duration_max_ms: float = Field(default=0.0, ge=0)
+    task_duration_sample_count: int = Field(default=0, ge=0)
+    successful_task_duration_p50_ms: float = Field(default=0.0, ge=0)
+    successful_task_duration_p99_ms: float = Field(default=0.0, ge=0)
+    successful_task_duration_max_ms: float = Field(default=0.0, ge=0)
+    successful_task_sample_count: int = Field(default=0, ge=0)
+    successful_task_shuffle_read_bytes_p50: int = Field(default=0, ge=0)
+    successful_task_shuffle_read_bytes_max: int = Field(default=0, ge=0)
+    successful_task_shuffle_read_bytes_sample_count: int = Field(default=0, ge=0)
+    task_attempt_count: int = Field(default=0, ge=0)
+    task_failed_attempt_count: int = Field(default=0, ge=0)
+    task_counted_failure_attempt_count: int = Field(default=0, ge=0)
+    task_killed_attempt_count: int = Field(default=0, ge=0)
+    task_speculative_attempt_count: int = Field(default=0, ge=0)
     plan_fingerprint: str = ""
     plan_json: str = ""
     executor_run_time_ms: int = Field(default=0, ge=0)
@@ -164,6 +180,7 @@ class StageAggregate(BaseModel):
     task_attempt_count: int = Field(default=0, ge=0)
     task_failed_attempt_count: int = Field(default=0, ge=0)
     task_counted_failure_attempt_count: int = Field(default=0, ge=0)
+    task_killed_attempt_count: int = Field(default=0, ge=0)
     task_speculative_attempt_count: int = Field(default=0, ge=0)
     # Raw fields the tail-outlier watcher needs (CONTRACT.md v0.5). Same
     # 0-on-empty semantics as the retry-safe counters above. No computed

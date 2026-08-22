@@ -333,3 +333,21 @@ def test_a_new_sibling_run_between_analyses_does_not_duplicate_a_finding():
     assert second["written_rows"] == 0
     assert second["persistence"]["skipped_existing"] == 1
     assert len(store.persisted) == 1
+
+
+def test_retry_pressure_reanalysis_is_idempotent():
+    """The new finding uses the existing stable persisted signature."""
+    store = HistoryStore([{
+        "task_attempt_count": 62,
+        "task_failed_attempt_count": 5,
+        "task_counted_failure_attempt_count": 3,
+    }])
+
+    first = analyze("job-1", store, use_crew=False)
+    second = analyze("job-1", store, use_crew=False)
+
+    assert [f.type for f in first["findings"]] == [FindingType.RETRY_PRESSURE]
+    assert first["written_rows"] == 1
+    assert second["written_rows"] == 0
+    assert second["persistence"]["skipped_existing"] == 1
+    assert len(store.persisted) == 1
