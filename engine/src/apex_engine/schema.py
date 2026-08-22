@@ -41,6 +41,12 @@ class FindingType(str, Enum):
     AQE_REPLAN = "AQE_REPLAN"
     SPILL = "SPILL"
     DUPLICATE_SCAN = "DUPLICATE_SCAN"
+    # Reports scheduler retry-budget consumption as a fact. It does not
+    # classify the failed attempt's root cause as application code vs.
+    # infrastructure — `TaskFailedReason.countTowardsTaskFailures` says
+    # whether an attempt counted against the budget, not why it failed.
+    # Additive, same precedent as TASK_SKEW above.
+    RETRY_PRESSURE = "RETRY_PRESSURE"
 
 
 class Severity(str, Enum):
@@ -108,6 +114,22 @@ class StageEvent(BaseModel):
     task_count: int = Field(ge=0)
     task_duration_p50_ms: float = Field(ge=0)
     task_duration_p99_ms: float = Field(ge=0)
+    # Additive v0.5 measurements. Historical rows and fixtures omit these, so
+    # every field keeps the contract's 0-on-empty default.
+    task_duration_max_ms: float = Field(default=0.0, ge=0)
+    task_duration_sample_count: int = Field(default=0, ge=0)
+    successful_task_duration_p50_ms: float = Field(default=0.0, ge=0)
+    successful_task_duration_p99_ms: float = Field(default=0.0, ge=0)
+    successful_task_duration_max_ms: float = Field(default=0.0, ge=0)
+    successful_task_sample_count: int = Field(default=0, ge=0)
+    successful_task_shuffle_read_bytes_p50: int = Field(default=0, ge=0)
+    successful_task_shuffle_read_bytes_max: int = Field(default=0, ge=0)
+    successful_task_shuffle_read_bytes_sample_count: int = Field(default=0, ge=0)
+    task_attempt_count: int = Field(default=0, ge=0)
+    task_failed_attempt_count: int = Field(default=0, ge=0)
+    task_counted_failure_attempt_count: int = Field(default=0, ge=0)
+    task_killed_attempt_count: int = Field(default=0, ge=0)
+    task_speculative_attempt_count: int = Field(default=0, ge=0)
     plan_fingerprint: str = ""
     plan_json: str = ""
     executor_run_time_ms: int = Field(default=0, ge=0)
@@ -152,11 +174,62 @@ class StageAggregate(BaseModel):
     plan_json: str = ""
     executor_run_time_ms: int = Field(default=0, ge=0)
     failure_reason: str = ""
+    # Retry-safe scheduler counters (CONTRACT.md v0.5). Default 0 for rows
+    # written before these columns existed, matching the contract's
+    # 0-on-empty semantics rather than raising on historical data.
+    task_attempt_count: int = Field(default=0, ge=0)
+    task_failed_attempt_count: int = Field(default=0, ge=0)
+    task_counted_failure_attempt_count: int = Field(default=0, ge=0)
+    task_killed_attempt_count: int = Field(default=0, ge=0)
+    task_speculative_attempt_count: int = Field(default=0, ge=0)
+    # Raw fields the tail-outlier watcher needs (CONTRACT.md v0.5). Same
+    # 0-on-empty semantics as the retry-safe counters above. No computed
+    # fallback property here yet — that is a separate, later unit, and
+    # skew_ratio below is untouched by this addition.
+    task_duration_max_ms: float = Field(default=0.0, ge=0)
+    task_duration_sample_count: int = Field(default=0, ge=0)
+    successful_task_duration_p50_ms: float = Field(default=0.0, ge=0)
+    successful_task_duration_p99_ms: float = Field(default=0.0, ge=0)
+    successful_task_duration_max_ms: float = Field(default=0.0, ge=0)
+    successful_task_sample_count: int = Field(default=0, ge=0)
+    successful_task_shuffle_read_bytes_max: int = Field(default=0, ge=0)
+    successful_task_shuffle_read_bytes_sample_count: int = Field(default=0, ge=0)
+    # Missed by the raw-fields unit above; tail_outlier reads this directly
+    # as a plain value, not through a computed ratio.
+    successful_task_shuffle_read_bytes_p50: int = Field(default=0, ge=0)
 
     @property
     def skew_ratio(self) -> float:
         """p99/p50, guarded exactly like `nullIf(p50, 0)` in 005_skew.sql."""
         return self.task_duration_p99_ms / self.task_duration_p50_ms if self.task_duration_p50_ms else 0.0
+
+    @property
+    def duration_sample_source(self) -> str:
+        """Which population `effective_task_duration_*` is drawn from."""
+        return "successful_tasks" if self.successful_task_sample_count > 0 else "legacy_all_attempts"
+
+    @property
+    def duration_sample_count(self) -> int:
+        if self.successful_task_sample_count > 0:
+            return self.successful_task_sample_count
+        return self.task_duration_sample_count or self.task_count
+
+    @property
+    def effective_task_duration_p50_ms(self) -> float:
+        return self.successful_task_duration_p50_ms if self.successful_task_sample_count > 0 else self.task_duration_p50_ms
+
+    @property
+    def effective_task_duration_p99_ms(self) -> float:
+        return self.successful_task_duration_p99_ms if self.successful_task_sample_count > 0 else self.task_duration_p99_ms
+
+    @property
+    def effective_task_duration_max_ms(self) -> float:
+        return self.successful_task_duration_max_ms if self.successful_task_sample_count > 0 else self.task_duration_max_ms
+
+    @property
+    def tail_ratio(self) -> float:
+        """max/p50 over the effective (retry-safe when available) population."""
+        return self.effective_task_duration_max_ms / self.effective_task_duration_p50_ms if self.effective_task_duration_p50_ms else 0.0
 
     @property
     def spilled_bytes(self) -> int:
