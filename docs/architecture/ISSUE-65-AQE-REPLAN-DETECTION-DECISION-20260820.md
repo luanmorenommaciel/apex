@@ -5,7 +5,6 @@
 - Escopo: direção de design; nenhuma implementação incluída
 - Fonte: [issue #65 — Design decision: AQE re-plan detection logic](https://github.com/luanmorenommaciel/apex/issues/65)
 - Evidência consolidada: [Outcome Brief da issue #65](https://github.com/luanmorenommaciel/apex/issues/65#issuecomment-5309840436)
-- Contrato local: [Task-Spec desta atividade](../lanes/task-specs/ISSUE-65-AQE-REPLAN-DETECTION-DECISION-20260820.local.md)
 
 ## Contexto
 
@@ -140,8 +139,8 @@ por esta proposta documental.
 
 ## Rollback
 
-Esta proposta não muda runtime; seu rollback imediato é descartar os dois
-documentos locais não commitados.
+Esta proposta não muda runtime; seu rollback imediato é reverter o único
+documento de decisão.
 
 Para um PR futuro aprovado, o plano de rollback deve ser restaurar a lógica
 anterior por reversão do commit do detector, sem migração de dados ou schema.
