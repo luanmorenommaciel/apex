@@ -78,6 +78,12 @@ landing in `apex.spark_events`:
 `task_count`, `task_duration_p50_ms`, `task_duration_p99_ms`,
 `plan_fingerprint`, `plan_json`.
 
+- **`execution_id`** — optional Spark SQL correlation for an `apex.stage` span.
+  It is emitted as an OTLP Int64 only when Spark supplied
+  `spark.sql.execution.id`; pure RDD and historical events omit it. It does not
+  replace `job_id`, `stage_id`, or `stage_attempt`. Contract v0.6 ratifies the
+  attribute as additive; existing consumers may ignore it.
+
 - **`plan_fingerprint`** — SHA-256 (64 hex → `FixedString(64)`) of the **normalized LOGICAL**
   plan (`optimizedPlan.canonicalized` **plus a literal-normalization pass**, so the same query
   with different date/constant literals hashes identically — and it survives AQE, which rewrites
