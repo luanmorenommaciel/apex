@@ -183,9 +183,7 @@ class StageAggregate(BaseModel):
     task_killed_attempt_count: int = Field(default=0, ge=0)
     task_speculative_attempt_count: int = Field(default=0, ge=0)
     # Raw fields the tail-outlier watcher needs (CONTRACT.md v0.5). Same
-    # 0-on-empty semantics as the retry-safe counters above. No computed
-    # fallback property here yet — that is a separate, later unit, and
-    # skew_ratio below is untouched by this addition.
+    # 0-on-empty semantics as the retry-safe counters above.
     task_duration_max_ms: float = Field(default=0.0, ge=0)
     task_duration_sample_count: int = Field(default=0, ge=0)
     successful_task_duration_p50_ms: float = Field(default=0.0, ge=0)
@@ -200,7 +198,16 @@ class StageAggregate(BaseModel):
 
     @property
     def skew_ratio(self) -> float:
-        """p99/p50, guarded exactly like `nullIf(p50, 0)` in 005_skew.sql."""
+        """Retry-safe p99/p50, with legacy fallback for historical rows."""
+        return (
+            self.effective_task_duration_p99_ms / self.effective_task_duration_p50_ms
+            if self.effective_task_duration_p50_ms
+            else 0.0
+        )
+
+    @property
+    def legacy_skew_ratio(self) -> float:
+        """All-attempt p99/p50 kept visible for audit and compatibility."""
         return self.task_duration_p99_ms / self.task_duration_p50_ms if self.task_duration_p50_ms else 0.0
 
     @property

@@ -54,6 +54,9 @@ class ShapeSample:
     task_duration_p50_ms: float
     task_duration_p99_ms: float
     bytes_touched: int = 0
+    successful_task_duration_p50_ms: float = 0.0
+    successful_task_duration_p99_ms: float = 0.0
+    successful_task_sample_count: int = 0
 
     @property
     def key(self) -> tuple[str, int, int]:
@@ -61,7 +64,19 @@ class ShapeSample:
 
     @property
     def ratio(self) -> float:
-        return self.task_duration_p99_ms / self.task_duration_p50_ms if self.task_duration_p50_ms else 0.0
+        return self.effective_p99_ms / self.effective_p50_ms if self.effective_p50_ms else 0.0
+
+    @property
+    def effective_p50_ms(self) -> float:
+        return self.successful_task_duration_p50_ms if self.successful_task_sample_count > 0 else self.task_duration_p50_ms
+
+    @property
+    def effective_p99_ms(self) -> float:
+        return self.successful_task_duration_p99_ms if self.successful_task_sample_count > 0 else self.task_duration_p99_ms
+
+    @property
+    def duration_sample_source(self) -> str:
+        return "successful_tasks" if self.successful_task_sample_count > 0 else "legacy_all_attempts"
 
 
 @dataclass(frozen=True)
@@ -78,8 +93,8 @@ class JobContext:
     def tail_bound(self, stage: StageAggregate) -> TailBound:
         return evaluate_tail_bound(
             n_tasks=stage.task_count,
-            p50_ms=stage.task_duration_p50_ms,
-            p99_ms=stage.task_duration_p99_ms,
+            p50_ms=stage.effective_task_duration_p50_ms,
+            p99_ms=stage.effective_task_duration_p99_ms,
             width=self.width,
         )
 
@@ -88,7 +103,7 @@ class JobContext:
     def comparable_runs(self, stage: StageAggregate) -> list[ShapeSample]:
         """One sample per run of this exact shape AT THE SAME CONFIG AND SCALE.
 
-        Three filters, each demanded by a cross-lane rule:
+        Four filters, each demanded by a cross-lane rule:
 
           * same shape — `(plan_fingerprint, task_count, stage_id)`;
           * same CONFIG — rule 3: variation across two different configurations is
@@ -99,6 +114,8 @@ class JobContext:
           * same SCALE — rule 2: "measure it at the level AND SCALE you are
             comparing". The same plan over 10x the data is not a repeat of the
             same measurement.
+          * same duration POPULATION — retry-safe winners and legacy all-attempt
+            percentiles are different measurements and cannot share one floor.
 
         Deduped by `job_id`: within-run repetition is not run-to-run variance,
         which is the only thing a noise floor may be measured over.
@@ -107,10 +124,13 @@ class JobContext:
             return []
         wanted = (stage.plan_fingerprint, stage.task_count, stage.stage_id)
         signature = self.job_conf.signature_map() if self.job_conf.present else None
+        duration_source = stage.duration_sample_source
 
         by_job: dict[str, ShapeSample] = {}
         for sample in self.shape_samples:
             if sample.key != wanted or not self._same_scale(stage, sample):
+                continue
+            if sample.duration_sample_source != duration_source:
                 continue
             if signature is not None and not self._same_config(signature, sample.job_id):
                 continue
@@ -147,7 +167,7 @@ class JobContext:
         """
         samples = self.comparable_runs(stage)
         return measure_floor(
-            (s.task_duration_p99_ms for s in samples),
+            (s.effective_p99_ms for s in samples),
             level=f"stage shape @ {stage.task_count} tasks",
         )
 
