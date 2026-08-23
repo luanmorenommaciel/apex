@@ -6,6 +6,7 @@ import pytest
 
 from apex_engine.clickhouse import (
     FINDING_COLUMNS,
+    SHAPE_HISTORY_SQL,
     STAGE_AGGREGATES_SQL,
     STAGE_EVENTS_SQL,
     EngineStore,
@@ -100,6 +101,32 @@ def test_raw_stage_events_uses_the_historical_executor_runtime_fallback():
 
     assert event.executor_run_time_ms == 4_321
     assert aggregate_events([event])[0].executor_run_time_ms == 4_321
+
+
+def test_shape_history_projects_the_retry_safe_population():
+    client = FakeClient(
+        [
+            {
+                "job_id": "run-1",
+                "stage_id": 21,
+                "shape_fingerprint": "f" * 64,
+                "shape_task_count": 100,
+                "p50_ms": 10,
+                "p99_ms": 900,
+                "successful_p50_ms": 100,
+                "successful_p99_ms": 120,
+                "successful_sample_count": 100,
+                "bytes_touched": 128 * 1024 * 1024,
+            }
+        ]
+    )
+
+    sample = EngineStore(client).shape_history(["f" * 64])[0]
+
+    assert "successful_task_duration_p50_ms" in SHAPE_HISTORY_SQL
+    assert sample.ratio == 1.2
+    assert sample.effective_p50_ms == 100
+    assert sample.effective_p99_ms == 120
 
 
 def test_complete_v05_row_is_projected_analyzed_and_persisted():
