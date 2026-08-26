@@ -83,6 +83,17 @@ class StageView(BaseModel):
     p99_ms: float = 0.0
     p99_p50_ratio: float = 0.0
     plan_fingerprint: str = ""
+    tail_share: float = Field(
+        default=0.0,
+        description=(
+            "This stage's p99 as a fraction of the run's summed p99 — its "
+            "SHARE OF TAIL. It is NOT a scheduling critical path: stages can "
+            "overlap, and p99 is a per-task percentile standing in for stage "
+            "wall time, which contract v0.2 does not carry. Read it as 'how "
+            "much of the tail this stage owns', never as 'this stage is on "
+            "the critical path'."
+        ),
+    )
 
 
 class StageSymptom(BaseModel):
@@ -125,11 +136,51 @@ class PlanTransitionView(BaseModel):
     confidence: str = ""
 
 
+class Coverage(BaseModel):
+    """What the diagnosis actually SAW — the denominator behind the verdict.
+
+    "Healthy" and "healthy, having seen one stage and no findings" are
+    different claims, and until this existed they were the same payload: a
+    dropped job_id was indistinguishable from a genuinely clean run
+    (WEAKNESSES-AND-OPEN-QUESTIONS W1). ``analyze()`` already refuses the
+    zero-stage case outright; this is the weaker one it could not express —
+    telemetry arrived, but thin.
+
+    Counted from the rows already in hand, never from a second query: a
+    coverage number that disagreed with the payload it describes would be
+    worse than none.
+    """
+
+    stages_observed: int = 0
+    findings_observed: int = 0
+    plan_transitions_observed: int = 0
+    newest_event_ts: str | None = None
+    newest_event_age_seconds: float | None = Field(
+        default=None,
+        description=(
+            "Seconds between the newest observed event and the moment this "
+            "diagnosis was built. REPORTED, never judged: Apex has no "
+            "threshold for 'stale' because a nightly batch and a streaming "
+            "job disagree about what an hour means, and a false 'stale' is "
+            "worse than no claim at all. The caller knows its own cadence. "
+            "None means no row carried a timestamp, NOT that the data is "
+            "fresh."
+        ),
+    )
+
+
 class Diagnosis(BaseModel):
     job_id: str
     app_id: str | None = None
     app_name: str | None = None
     status: Literal["healthy", "degraded", "not_found"]
+    coverage: Coverage = Field(
+        default_factory=Coverage,
+        description=(
+            "What this diagnosis observed. Survives every detail level, so a "
+            "trimmed array can always be told apart from an empty one."
+        ),
+    )
     stage_count: int = 0
     worst_stage_id: int | None = None
     primary_symptom: Symptom = "healthy"
@@ -138,6 +189,17 @@ class Diagnosis(BaseModel):
     stages: list[StageView] = Field(default_factory=list)
     findings: list[FindingView] = Field(default_factory=list)
     plan_transitions: list[PlanTransitionView] = Field(default_factory=list)
+    tail_dominant_stage_ids: list[int] = Field(
+        default_factory=list,
+        description=(
+            "The smallest set of stages that between them own most of the "
+            "run's tail time — 'stage 4 is 61% of the tail' rather than a "
+            "sorted list of seventeen stages to read. EMPTY when the tail is "
+            "spread evenly, because then there is no bottleneck to name. "
+            "Share of tail, not a scheduling critical path: see "
+            "StageView.tail_share."
+        ),
+    )
     aqe_ground_truth: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
     untrusted_fields: list[str] = Field(

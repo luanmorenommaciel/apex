@@ -14,7 +14,10 @@ hunks or markdown structure.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from .models import (
+    Coverage,
     Diagnosis,
     FindingDelta,
     FindingView,
@@ -55,6 +58,14 @@ SHUFFLE_ABS_FLOOR_BYTES = 10 * MB
 # measurement, never its severity.
 MIN_TASKS_FOR_RATIO = 4
 SKEW_MIN_BYTES_PER_TASK = 1 * MB
+
+# --- share of tail ---------------------------------------------------------
+# "Most of the tail" and "concentrated enough to be a bottleneck". A stage only
+# counts as dominant if it owns at least TAIL_CONCENTRATION times what an even
+# split would give it — otherwise a flat run would nominate an arbitrary
+# majority of its own stages and call them the bottleneck.
+TAIL_COVER = 0.60
+TAIL_CONCENTRATION = 1.5
 
 _CONFIDENCE_SCALE = {"HIGH": 0.9, "MEDIUM": 0.7, "LOW": 0.4}
 
@@ -295,27 +306,135 @@ def _apply_ground_truth(transitions: list[PlanTransitionView]) -> list[str]:
     return notes
 
 
+# --------------------------------------------------------------------------
+# share of tail — the shape analyze() already computed and threw away
+# --------------------------------------------------------------------------
+def _tail_dominant(stages: list[StageView]) -> list[int]:
+    """The smallest set of stages owning most of the tail — or nothing.
+
+    analyze() already sums p99 to rank stages and then discards the shape.
+    "Stage 4 is 61% of the tail" is actionable; a sorted list of seventeen
+    stages is homework.
+
+    Returns [] when the tail is spread evenly. Naming a bottleneck on a flat
+    distribution is worse than naming none: it sends the reader to optimize a
+    stage that is merely first in a tie.
+
+    This is a SHARE OF TAIL and not a DAG critical path — stages can overlap
+    and p99 is a stand-in for stage wall time. The field descriptions say so
+    where a client will actually read them.
+    """
+    if len(stages) < 2:
+        return []  # one stage owns 100% of its own tail; that says nothing
+
+    ranked = sorted(stages, key=lambda s: s.tail_share, reverse=True)
+
+    # Two separate questions, in order. First: is there a bottleneck at all?
+    # Only the leader is tested, and only against what an even split would
+    # have given it — a flat run must name nothing rather than nominate
+    # whichever stage happens to be first in a tie.
+    if ranked[0].tail_share < (1.0 / len(stages)) * TAIL_CONCENTRATION:
+        return []
+
+    # Then: which stages make it up? Accumulate to TAIL_COVER without
+    # re-testing concentration, so the set genuinely covers most of the tail
+    # instead of stopping at one stage that owns 40% of it.
+    chosen: list[int] = []
+    covered = 0.0
+    for stage in ranked:
+        chosen.append(stage.stage_id)
+        covered += stage.tail_share
+        if covered >= TAIL_COVER:
+            break
+    return chosen
+
+
+# --------------------------------------------------------------------------
+# coverage — what the verdict is actually standing on
+# --------------------------------------------------------------------------
+# Any of these may carry the event time depending on which query produced the
+# row. Checked in order; the first present wins.
+_TS_KEYS = ("ts", "last_ts", "latest_ts")
+
+
+def _row_ts(row: dict) -> datetime | None:
+    """Best-effort event time out of a row, as an aware UTC datetime.
+
+    A real ClickHouse driver hands back naive ``datetime`` in UTC; fakes and
+    JSON hand back ISO strings. Both are accepted, and anything unparseable is
+    None — an unreadable timestamp must not raise inside a diagnosis.
+    """
+    for key in _TS_KEYS:
+        value = row.get(key)
+        if value is None or value == "":
+            continue
+        if isinstance(value, datetime):
+            parsed = value
+        else:
+            try:
+                parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            except ValueError:
+                continue
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return None
+
+
+def _coverage(
+    stage_rows: list[dict],
+    findings: list[FindingView],
+    transitions: list[PlanTransitionView],
+    now: datetime | None = None,
+) -> Coverage:
+    """Count what was seen, from the rows already in hand.
+
+    The age is REPORTED and never judged — see ``Coverage``. Apex owns no
+    staleness threshold, so this function computes a number and stops.
+    """
+    newest = max(
+        (ts for ts in (_row_ts(row) for row in stage_rows) if ts is not None),
+        default=None,
+    )
+    age = None
+    if newest is not None:
+        moment = now or datetime.now(timezone.utc)
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=timezone.utc)
+        age = (moment - newest).total_seconds()
+
+    return Coverage(
+        stages_observed=len(stage_rows),
+        findings_observed=len(findings),
+        plan_transitions_observed=len(transitions),
+        newest_event_ts=newest.isoformat() if newest is not None else None,
+        newest_event_age_seconds=age,
+    )
+
+
 def analyze(
     job_id: str,
     stage_rows: list[dict],
     finding_rows: list[dict],
     transition_rows: list[dict] | None = None,
+    now: datetime | None = None,
 ) -> Diagnosis:
+    """Diagnose one run. ``now`` is injectable only so the age is testable."""
     stages = [stage_view(row) for row in stage_rows]
+    findings = [FindingView.model_validate(row) for row in finding_rows]
+    transitions = [
+        PlanTransitionView.model_validate(row) for row in (transition_rows or [])
+    ]
+    coverage = _coverage(stage_rows, findings, transitions, now)
+
     if not stages:
         return Diagnosis(
             job_id=job_id,
             status="not_found",
+            coverage=coverage,
             summary=(
                 "No stage telemetry exists for this job_id. Check the id, or "
                 "confirm the jar/collect lanes shipped this run."
             ),
         )
-
-    findings = [FindingView.model_validate(row) for row in finding_rows]
-    transitions = [
-        PlanTransitionView.model_validate(row) for row in (transition_rows or [])
-    ]
 
     # A stage completes when its slowest task does, so p99 is the closest
     # stand-in for stage wall time the contract gives us.
@@ -323,13 +442,33 @@ def analyze(
     symptoms: list[StageSymptom] = []
     for stage in stages:
         share = (stage.p99_ms / total_tail_ms) if total_tail_ms else 0.0
+        stage.tail_share = round(share, 4)
         symptoms.extend(stage_symptoms(stage, share))
+
+    dominant = _tail_dominant(stages)
 
     aqe_notes = _apply_ground_truth(transitions)
     symptoms.sort(key=lambda s: s.score, reverse=True)
 
     first = stage_rows[0]
     notes: list[str] = []
+    if dominant:
+        owned = sum(
+            stage.tail_share for stage in stages if stage.stage_id in dominant
+        )
+        notes.append(
+            f"stage(s) {dominant} own ~{owned:.0%} of this run's tail time. "
+            f"That is a SHARE OF TAIL, not a scheduling critical path: stages "
+            f"can overlap and p99 stands in for stage wall time, which the "
+            f"contract does not carry."
+        )
+    if coverage.newest_event_age_seconds is None:
+        notes.append(
+            "No observed row carried an event timestamp, so "
+            "coverage.newest_event_age_seconds is null — that reads UNKNOWN, "
+            "not fresh. The per-stage read resolves each column with "
+            "argMax(col, ts) and projects no ts of its own."
+        )
     if not findings:
         notes.append(
             "apex.findings holds no rows for this job_id — the symptoms below "
@@ -345,11 +484,14 @@ def analyze(
             app_id=str(first.get("app_id") or "") or None,
             app_name=str(first.get("app_name") or "") or None,
             status="healthy",
+            coverage=coverage,
+            tail_dominant_stage_ids=dominant,
             stage_count=len(stages),
             primary_symptom="healthy",
             summary=(
-                f"{len(stages)} stage(s), no spill, no skew tail, no GC "
-                f"pressure above threshold."
+                f"{len(stages)} stage(s) observed: no spill, no skew tail, no "
+                f"GC pressure above threshold. This verdict covers only what "
+                f"was observed — see coverage."
             ),
             stages=stages,
             findings=findings,
@@ -372,6 +514,8 @@ def analyze(
         app_id=str(first.get("app_id") or "") or None,
         app_name=str(first.get("app_name") or "") or None,
         status="degraded",
+        coverage=coverage,
+        tail_dominant_stage_ids=dominant,
         stage_count=len(stages),
         worst_stage_id=worst.stage_id,
         primary_symptom=worst.symptom,
@@ -382,6 +526,67 @@ def analyze(
         plan_transitions=transitions,
         aqe_ground_truth=aqe_notes,
         notes=notes,
+    )
+
+
+# --------------------------------------------------------------------------
+# detail levels — one analysis, three widths
+# --------------------------------------------------------------------------
+# The real P0 run answers "why was this slow" with 17 stages and every finding
+# in one payload. The default answer should be the verdict; the bulk is
+# available on request. Crucially this TRIMS one already-computed Diagnosis —
+# it never re-analyses, so two callers asking at different widths can never be
+# given different verdicts.
+DETAIL_LEVELS = ("summary", "stages", "full")
+
+
+def trim(diagnosis: Diagnosis, detail: str = "full") -> Diagnosis:
+    """Narrow one diagnosis to ``summary`` | ``stages`` | ``full``.
+
+    ``full`` is the identity — it returns the very object it was handed, so
+    the widest level is unchanged by construction rather than by a copy that
+    has to be kept in step.
+
+    An emptied array is NOT the same claim as an empty run, so every trimmed
+    level appends a note stating what was dropped and how much of it there
+    was. Without that, ``findings: []`` at summary reads as "engine found
+    nothing" — which is the opposite of the truth for the run that motivated
+    this.
+    """
+    if detail not in DETAIL_LEVELS:
+        raise ValueError(
+            f"detail must be one of {', '.join(DETAIL_LEVELS)} — got {detail!r}"
+        )
+    if detail == "full":
+        return diagnosis
+
+    dropped = (
+        f"{len(diagnosis.findings)} finding(s) and "
+        f"{len(diagnosis.plan_transitions)} plan transition(s)"
+    )
+    if detail == "stages":
+        note = (
+            f"detail=stages — {dropped} were observed and TRIMMED from this "
+            f"payload, not absent. Re-request with detail=full to see them."
+        )
+        keep_stages, keep_symptoms = list(diagnosis.stages), list(diagnosis.symptoms)
+    else:
+        note = (
+            f"detail=summary — {len(diagnosis.stages)} stage row(s), "
+            f"{len(diagnosis.symptoms)} symptom(s), {dropped} were observed "
+            f"and TRIMMED from this payload, not absent. Re-request with "
+            f"detail=stages or detail=full to see them."
+        )
+        keep_stages, keep_symptoms = [], []
+
+    return diagnosis.model_copy(
+        update={
+            "stages": keep_stages,
+            "symptoms": keep_symptoms,
+            "findings": [],
+            "plan_transitions": [],
+            "notes": [*diagnosis.notes, note],
+        }
     )
 
 

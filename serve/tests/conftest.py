@@ -25,8 +25,16 @@ def stage_row(
     gc_time_ms: int = 0,
     task_count: int = 50,
     plan_fingerprint: str = FINGERPRINT_A,
+    ts: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    """One spark_events row as the read layer hands it over.
+
+    ``ts`` is opt-in and defaults to absent: STAGES_SQL resolves every column
+    with ``argMax(col, ts)`` and projects no ts of its own, so a row WITHOUT
+    one is the shape production actually produces. Coverage has to stay
+    truthful about that rather than assuming a timestamp is always there.
+    """
+    row: dict[str, Any] = {
         "stage_id": stage_id,
         "stage_attempt": 0,
         "app_id": f"app-{job_id}",
@@ -44,6 +52,9 @@ def stage_row(
         "p99_ms": p99_ms,
         "plan_fingerprint": plan_fingerprint,
     }
+    if ts is not None:
+        row["ts"] = ts
+    return row
 
 
 def finding_row(
