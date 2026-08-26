@@ -159,6 +159,111 @@ ORDER BY execution_id, update_seq
 """
 
 
+# --------------------------------------------------------------------------
+# Cross-run memory — contract v0.3 ADDITIVE tables.
+#
+# ``apex.plan_memory`` (one row per plan shape, carrying an L2-NORMALISED
+# embedding) and ``apex.run_outcomes`` (one row per shape per run, carrying the
+# config it ran under and how it went) are written by the memory lane. serve
+# READS them and imports nothing from that lane — the contract tables are the
+# integration surface, which is what keeps this package's dependencies at
+# ``mcp`` + ``clickhouse-connect`` + ``pydantic``.
+#
+# They are v0.3 ADDITIVE, so a cluster that has not applied them is normal, not
+# broken: every read below degrades to empty and says so.
+# --------------------------------------------------------------------------
+MEMORY_TABLES = ("plan_memory", "run_outcomes")
+
+# A neighbour below this is not a neighbour. Ranking by raw distance and taking
+# top-k returns the k LEAST dissimilar shapes even when all k are unrelated, so
+# the gate is on similarity, not on rank — three honest neighbours beat ten of
+# which seven are noise. 0.80 is the memory lane's measured cut-off; serve
+# mirrors the number rather than inventing a looser one.
+MIN_SIMILARITY = 0.80
+MAX_SIMILAR_PLANS = 25
+MAX_PRIOR_RUNS = 200
+
+TABLES_SQL = """
+SELECT name FROM system.tables
+WHERE database = {database:String} AND name IN {names:Array(String)}
+"""
+
+# Similarity is computed IN ClickHouse: the embedding is already L2-normalised,
+# so ``1 - cosineDistance`` is the cosine similarity and serve needs no encoder.
+#
+# Two details that are load-bearing:
+#
+# * ``dim`` is read from the queried shape's own row and matched, never
+#   hardcoded — the encoder's width is the memory lane's to change, and
+#   comparing vectors of different widths is an error, not a weak match.
+# * ``substring(..., 1, 64)`` caps the bound value before ``toFixedString``,
+#   which THROWS on anything longer than 64. A hostile fingerprint therefore
+#   binds as data, matches nothing and returns zero rows instead of raising.
+# * The queried shape is INNER JOINed, not read through a scalar sub-select.
+#   Proven live on 24.8.14.39: a scalar sub-select is constant-folded before
+#   WHERE runs, so an absent fingerprint raises code 125 ("scalar subquery
+#   returned empty result of type Array(Float32) which cannot be Nullable")
+#   rather than returning nothing. A never-before-seen plan shape is an
+#   ordinary answer, not an error. The join also carries the width check:
+#   matching on (encoder_version, dim) is what keeps vectors of different
+#   widths from being compared at all.
+#
+# ``FINAL`` collapses the ReplacingMergeTree duplicates a re-index leaves
+# behind, so one shape cannot appear twice in a single top-k.
+SIMILAR_PLANS_SQL = """
+SELECT * FROM (
+  SELECT
+    toString(p.plan_fingerprint)                  AS plan_fingerprint,
+    1 - cosineDistance(p.embedding, s.embedding)  AS similarity,
+    p.node_count                                  AS node_count,
+    p.join_count                                  AS join_count,
+    p.agg_count                                   AS agg_count,
+    p.exchange_count                              AS exchange_count,
+    p.scan_count                                  AS scan_count,
+    p.last_seen                                   AS last_seen
+  FROM apex.plan_memory AS p FINAL
+  INNER JOIN (
+    SELECT embedding, dim, encoder_version
+    FROM apex.plan_memory FINAL
+    WHERE plan_fingerprint = toFixedString(substring({fingerprint:String}, 1, 64), 64)
+      AND length(embedding) > 0
+    ORDER BY last_seen DESC
+    LIMIT 1
+  ) AS s ON p.encoder_version = s.encoder_version AND p.dim = s.dim
+  WHERE length(p.embedding) > 0
+    AND p.plan_fingerprint != toFixedString(substring({fingerprint:String}, 1, 64), 64)
+) WHERE similarity >= {min_similarity:Float64}
+ORDER BY similarity DESC
+LIMIT {top_k:UInt32}
+"""
+
+# Newest first: the question is "what has this shape done lately", and an
+# ordering by wall clock would pre-rank the runs into a fastest-is-best list —
+# which is exactly the claim serve is not allowed to make without a measured
+# floor (CONTRACT.md rule 2).
+PRIOR_OUTCOMES_SQL = """
+SELECT
+  job_id, app_id, app_name,
+  toString(plan_fingerprint)         AS plan_fingerprint,
+  conf_shuffle_partitions, conf_executor_instances, conf_executor_cores,
+  conf_executor_memory_mb, conf_driver_cores, conf_driver_memory_mb,
+  conf_extra,
+  toString(config_source)            AS config_source,
+  stage_count, task_count, wall_clock_ms, task_time_ms,
+  shuffle_read_bytes, shuffle_write_bytes, spill_disk_bytes, spill_mem_bytes,
+  gc_time_ms, input_bytes, output_bytes, peak_execution_mem_bytes,
+  max_skew_ratio, aqe_skew_splits, aqe_coalesces, finding_count,
+  toString(worst_severity)           AS worst_severity,
+  toString(outcome_source)           AS outcome_source,
+  observed_at
+FROM apex.run_outcomes FINAL
+WHERE plan_fingerprint IN {fingerprints:Array(String)}
+  AND job_id != {exclude_job_id:String}
+ORDER BY observed_at DESC
+LIMIT {limit:UInt32}
+"""
+
+
 def _findings_search_sql(token_params: list[str]) -> str:
     """Build the findings-side search. Placeholder NAMES are generated by us
     (``t0``, ``t1``, …); the token VALUES are always bound, never interpolated.
@@ -238,6 +343,7 @@ class ReadStore:
         self._client = client
         self._database = database
         self._findings_columns: set[str] | None = None
+        self._memory_tables: set[str] | None = None
 
     # -- per-job reads ----------------------------------------------------
     def stages(self, job_id: str) -> list[dict[str, Any]]:
@@ -326,6 +432,118 @@ class ReadStore:
         return self._query(
             PLAN_TRANSITIONS_SQL, {"job_id": _require_job_id(job_id)}
         )
+
+    # -- cross-run memory (contract v0.3 additive) -------------------------
+    def memory_tables_present(self) -> bool:
+        """Does this deployment carry the v0.3 cross-run memory tables?
+
+        Probed once and cached, exactly like the additive findings columns.
+        A cluster without them is a normal older deployment, so the answer is
+        reported rather than raised — the tools turn it into "cross-run memory
+        is unavailable on this deployment", which a user can act on.
+        """
+        if self._memory_tables is None:
+            try:
+                rows = self._query(
+                    TABLES_SQL,
+                    {"database": self._database, "names": list(MEMORY_TABLES)},
+                )
+            except ApexStoreError as exc:
+                # A store that could not be REACHED has told us nothing about
+                # which tables it carries. Swallowing that here would turn an
+                # outage into a confident architectural statement — "this
+                # deployment has no cross-run memory" — and the caller would
+                # never learn ClickHouse was down. Proven live: the probe runs
+                # before every recall, so this short-circuited the guard in
+                # _recall and made an unreachable store answer "no neighbours".
+                if str(exc).startswith("clickhouse_unavailable"):
+                    raise
+                self._memory_tables = set()
+            else:
+                self._memory_tables = {str(row["name"]) for row in rows}
+            missing = set(MEMORY_TABLES) - self._memory_tables
+            if missing:
+                log.warning(
+                    "cross-run memory unavailable: %s absent on this deployment "
+                    "— apply memory/sql/030_plan_memory.sql and "
+                    "031_run_outcomes.sql (infra), then run the memory lane's "
+                    "indexer.",
+                    ", ".join(f"{self._database}.{name}" for name in sorted(missing)),
+                )
+        return not (set(MEMORY_TABLES) - self._memory_tables)
+
+    def similar_plans(
+        self,
+        plan_fingerprint: str,
+        top_k: int = 10,
+        min_similarity: float = MIN_SIMILARITY,
+    ) -> list[dict[str, Any]]:
+        """Plan shapes structurally similar to ``plan_fingerprint``.
+
+        Returns other fingerprints ranked by cosine similarity, gated on
+        ``min_similarity``. Empty is a real answer: it means nothing in memory
+        resembles this shape, which is more useful than the nearest unrelated
+        plan.
+        """
+        if not plan_fingerprint or not self.memory_tables_present():
+            return []
+        return self._recall(
+            SIMILAR_PLANS_SQL,
+            {
+                "fingerprint": plan_fingerprint,
+                "min_similarity": max(0.0, min(float(min_similarity), 1.0)),
+                "top_k": max(1, min(int(top_k), MAX_SIMILAR_PLANS)),
+            },
+        )
+
+    def prior_outcomes(
+        self,
+        fingerprints: list[str],
+        exclude_job_id: str = "",
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Runs of the given plan shapes, newest first, with their configs.
+
+        ``exclude_job_id`` drops the run being asked about: a run is not its
+        own prior.
+        """
+        fingerprints = [fp for fp in dict.fromkeys(fingerprints or []) if fp]
+        if not fingerprints or not self.memory_tables_present():
+            return []
+        return self._recall(
+            PRIOR_OUTCOMES_SQL,
+            {
+                "fingerprints": fingerprints,
+                "exclude_job_id": exclude_job_id or "",
+                "limit": max(1, min(int(limit), MAX_PRIOR_RUNS)),
+            },
+        )
+
+    def _recall(self, sql: str, parameters: dict[str, Any]) -> list[dict[str, Any]]:
+        """Run a memory read, degrading to empty when the tables are absent.
+
+        Only a table that is REALLY GONE degrades, and absence is confirmed by
+        re-probing rather than inferred from the error text. ``_sanitize``
+        routes on the exception's class name, and the driver's generic class is
+        ``DatabaseError`` — so nearly every server-side error arrives labelled
+        ``clickhouse_schema_missing``. Trusting that label was enough to
+        swallow a genuine SQL fault and report it as "no prior runs", which is
+        the one lie this lane can least afford. Proven live: it masked a code
+        125 for an entire session, and poisoned the probe cache so every later
+        recall claimed cross-run memory was unavailable.
+        """
+        try:
+            return self._query(sql, parameters)
+        except ApexStoreError as exc:
+            if not str(exc).startswith("clickhouse_schema_missing"):
+                raise
+            self._memory_tables = None  # force a fresh probe, do not trust the label
+            if self.memory_tables_present():
+                raise
+            log.warning(
+                "cross-run memory read degraded to empty: %s", exc, exc_info=False
+            )
+            return []
 
     # -- search -----------------------------------------------------------
     def search(self, tokens: list[str], top_k: int) -> list[dict[str, Any]]:

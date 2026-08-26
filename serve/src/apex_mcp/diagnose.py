@@ -23,6 +23,8 @@ from .models import (
     KbHits,
     MetricDelta,
     PlanTransitionView,
+    PriorRun,
+    RecallSummary,
     RunComparison,
     StageComparison,
     StageSymptom,
@@ -823,6 +825,160 @@ def compare(
 # ==========================================================================
 # search_kb
 # ==========================================================================
+
+# --------------------------------------------------------------------------
+# Cross-run recall — the floor rule, applied to history
+# --------------------------------------------------------------------------
+# CONTRACT.md rule 2 already forbids serve inventing a dispersion figure, and
+# compare_runs honours it through `noise_floor_pct`. Cross-run recall is where
+# breaking it would do the most damage: rank a shape's prior runs by wall clock
+# and the top row LOOKS like the best configuration, when all that has been
+# measured is that one run happened to be faster. Two runs cannot measure their
+# own dispersion, and neither can twenty of them without a floor measured at
+# this shape's scale.
+#
+# So: prior runs are reported as MEASUREMENTS, and the word "better" is only
+# reachable when a caller supplies a floor the difference actually clears.
+#
+# `noise_floor_pct` is a FRACTION (0.159 == 15.9%), matching compare_runs.
+MIN_RUNS_TO_COMPARE = 2
+
+
+def _wall_clock_runs(runs: list[PriorRun]) -> list[PriorRun]:
+    """Runs that carry a usable duration. A zero wall clock is not a fast run."""
+    return [run for run in runs if run.wall_clock_ms > 0]
+
+
+def _config_identity(run: PriorRun) -> tuple | None:
+    """A run's configuration, or None when it was never captured.
+
+    Two runs whose configs were both never captured are not two configurations
+    — they are one absence, twice.
+    """
+    if not run.config_known:
+        return None
+    return tuple(sorted(run.config.model_dump().items()))
+
+
+def summarise_recall(
+    runs: list[PriorRun], noise_floor_pct: float | None = None
+) -> RecallSummary:
+    """What may honestly be said about a shape's prior runs.
+
+    Returns a `RecallSummary` whose `compared` is True only when a verdict was
+    actually reached: at least two runs with a duration, a floor supplied by
+    the caller, and a difference that clears it. Everything else is reported as
+    a measurement with the reason no verdict was drawn.
+    """
+    timed = _wall_clock_runs(runs)
+
+    if not runs:
+        return RecallSummary(
+            notes=["No prior runs of this plan shape, so nothing to compare."]
+        )
+
+    if len(timed) < MIN_RUNS_TO_COMPARE:
+        return RecallSummary(
+            claim=(
+                "Reported as a measurement only: a single prior run cannot "
+                "measure its own dispersion, so nothing here is faster or "
+                "slower than anything."
+            ),
+            notes=[
+                f"{len(timed)} prior run(s) carry a wall clock. A comparison "
+                f"needs at least {MIN_RUNS_TO_COMPARE} (CONTRACT.md rule 2)."
+            ],
+        )
+
+    fastest = min(timed, key=lambda run: run.wall_clock_ms)
+    slowest = max(timed, key=lambda run: run.wall_clock_ms)
+    # Baseline is the SLOWER run, so the fraction reads as "how much of the
+    # slower run's wall clock the faster one saved" — the same orientation
+    # compare_runs uses for a delta against its baseline.
+    spread = (slowest.wall_clock_ms - fastest.wall_clock_ms) / slowest.wall_clock_ms
+
+    if noise_floor_pct is None or noise_floor_pct <= 0:
+        return RecallSummary(
+            claim=(
+                f"{len(timed)} prior runs are reported as measurements, "
+                f"spanning {spread:.1%} of wall clock. No configuration is "
+                f"called faster or slower: without a measured noise floor "
+                f"that spread is not distinguishable from run-to-run variation."
+            ),
+            notes=[
+                "No noise floor was supplied (CONTRACT.md rule 2: the floor is "
+                "MEASURED per shape and scale, and these runs cannot measure "
+                "their own). Pass noise_floor_pct to adjudicate the spread."
+            ],
+        )
+
+    if not _resolves(noise_floor_pct, slowest.wall_clock_ms, fastest.wall_clock_ms):
+        return RecallSummary(
+            noise_floor_pct=noise_floor_pct,
+            pct_difference=spread,
+            claim=(
+                f"The {spread:.1%} spread across {len(timed)} prior runs is "
+                f"indistinguishable from run-to-run variation at the supplied "
+                f"noise floor of {noise_floor_pct:.1%}."
+            ),
+            notes=[
+                "An unresolvable difference is not proof of zero change — it "
+                "means these runs cannot tell the two apart."
+            ],
+        )
+
+    identities = {
+        identity
+        for identity in (_config_identity(run) for run in timed)
+        if identity is not None
+    }
+    # CONTRACT.md rule 3: clearing the floor is NECESSARY but not SUFFICIENT.
+    # With fewer than two distinct captured configurations there is no
+    # experiment in this history, so a real difference still cannot be
+    # credited to tuning.
+    attributable = (
+        len(identities) >= 2
+        and _config_identity(fastest) is not None
+        and _config_identity(fastest) != _config_identity(slowest)
+    )
+
+    claim = (
+        f"{fastest.job_id} ran {spread:.1%} faster than {slowest.job_id} "
+        f"({fastest.wall_clock_ms:,}ms vs {slowest.wall_clock_ms:,}ms), which "
+        f"clears the supplied noise floor of {noise_floor_pct:.1%}."
+    )
+    notes: list[str] = []
+    if attributable:
+        claim += (
+            f" Their captured configurations differ, so this difference is "
+            f"creditable to configuration and {fastest.job_id}'s is the better "
+            f"of the two."
+        )
+    else:
+        notes.append(
+            "The difference clears the floor but is NOT creditable to "
+            "configuration: this history holds fewer than two distinct "
+            "captured configurations, so no config is called better "
+            "(CONTRACT.md rule 3)."
+        )
+    notes.append(
+        f"The floor of {noise_floor_pct:.1%} was supplied by the caller. serve "
+        f"did not measure it — if it was not measured at this shape's scale, "
+        f"the verdict inherits that."
+    )
+
+    return RecallSummary(
+        compared=True,
+        claim=claim,
+        noise_floor_pct=noise_floor_pct,
+        faster_job_id=fastest.job_id,
+        slower_job_id=slowest.job_id,
+        pct_difference=spread,
+        attributable_to_config=attributable,
+        notes=notes,
+    )
+
+
 def build_hits(query: str, tokens: list[str], rows: list[dict], top_k: int) -> KbHits:
     hits: list[KbHit] = []
     for row in rows:

@@ -1,0 +1,301 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: l6-learn
+  source: docs/lanes/SERVE-LEGS.md
+units:
+  - id: T-20260820-plan-memory-read-layer
+    title: Read plan similarity and prior outcomes
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/src/apex_mcp/ch.py, serve/tests/test_ch.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: The memory lane answers the one question no single-run tool can - have we seen this plan shape before, and what configuration worked. It writes apex.plan_memory and apex.run_outcomes, and nothing surfaces either.
+    goal: Find plan shapes similar to a run, and the prior runs of those shapes with their configs and outcomes.
+    context: plan_memory.embedding is L2-normalised and cosineDistance-ready, so similarity runs in ClickHouse - no import of apex_memory, and serve keeps depending only on mcp, clickhouse-connect and pydantic. dim is asserted on read by the memory lane; serve must not assume a fixed width. These are v0.3 additive tables, absent on older clusters.
+    behaviors:
+      - id: B-1
+        given: a plan_fingerprint present in plan_memory
+        when: similar_plans() is called
+        then: it returns other fingerprints ranked by cosine similarity, above a minimum threshold
+      - id: B-2
+        given: a set of fingerprints
+        when: prior_outcomes() is called
+        then: it returns runs of those shapes with their config columns and wall clock, newest first
+      - id: B-3
+        given: a deployment without the v0.3 tables
+        when: either read is called
+        then: it returns empty and logs, rather than raising
+      - id: B-4
+        given: a hostile fingerprint value
+        when: either read is called
+        then: it binds server-side and returns zero rows
+    evals:
+      - id: eval_1
+        description: the similarity and outcome reads exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_similar_plans_ranks_by_cosine_distance" "tests/test_ch.py::test_prior_outcomes_returns_configs_newest_first" "tests/test_ch.py::test_plan_memory_binds_hostile_fingerprint" )
+        verifies: [B-1, B-2, B-4]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: absent additive tables degrade instead of raising
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_plan_memory_absent_tables_degrade" )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_3
+        description: serve still depends on no other lane
+        command: ( cd serve && ! grep -nE 'apex_memory|apex_verify' src/apex_mcp/*.py pyproject.toml )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Importing apex_memory; the contract tables are the integration surface.
+      - Hardcoding the embedding width instead of reading dim.
+      - Ranking by raw distance without a minimum similarity, which returns unrelated shapes as neighbours.
+    do_not_touch:
+      - serve/src/apex_mcp/server.py
+      - serve/src/apex_mcp/models.py
+
+  - id: T-20260820-recall-models
+    title: Type the recall payload
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/src/apex_mcp/models.py]
+    creates_paths: [serve/tests/test_recall_view.py]
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: A claim about what configuration worked is the most consequential thing this server can say, so it must be schema-constrained and carry its own uncertainty.
+    goal: SimilarPlan and PriorRun models carrying similarity, config and outcome, with app_name marked untrusted.
+    context: app_name comes from the observed Spark job, exactly as in list_runs. Similarity must be carried as a number the reader can judge, never collapsed into a same or different boolean.
+    behaviors:
+      - id: B-1
+        given: a SimilarPlan
+        when: constructed
+        then: it carries the fingerprint and a similarity score between 0 and 1
+      - id: B-2
+        given: a PriorRun
+        when: serialized
+        then: it carries the config columns, wall clock, and which config_source they came from
+      - id: B-3
+        given: any recall payload
+        when: serialized
+        then: untrusted_fields names app_name
+      - id: B-4
+        given: a run whose config_source is unknown
+        when: the payload is read
+        then: that is visible rather than presented as an observed configuration
+    evals:
+      - id: eval_1
+        description: the recall model tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_recall_view.py::test_similar_plan_carries_bounded_similarity" "tests/test_recall_view.py::test_prior_run_carries_config_and_source" "tests/test_recall_view.py::test_app_name_is_marked_untrusted" )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: an unknown config source is not laundered into an observed one
+        command: ( cd serve && uv run --extra dev pytest "tests/test_recall_view.py::test_unknown_config_source_stays_visible" )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 30
+    anti_patterns:
+      - Collapsing similarity into a boolean; the reader needs the number to judge the neighbour.
+      - Defaulting config_source to observed, which turns a seeded guess into evidence.
+    do_not_touch:
+      - serve/src/apex_mcp/ch.py
+      - serve/src/apex_mcp/server.py
+
+  - id: T-20260820-recall-runs-tool
+    title: Add recall_similar_runs
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-plan-memory-read-layer, T-20260820-recall-models]
+    touches_paths: [serve/src/apex_mcp/server.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: Every serve tool reasons about one run. This is the first that reasons across them.
+    goal: recall_similar_runs(job_id, top_k) returns prior runs of the same plan shape with their configs and outcomes.
+    context: L1, L3 and L5 each move the same surface assertion in their own worktrees; whichever lands last reconciles. The five-tools assertion is expected to fail after this unit.
+    behaviors:
+      - id: B-1
+        given: a built server
+        when: list_tools() is called
+        then: recall_similar_runs is present with readOnlyHint True
+      - id: B-2
+        given: a job_id whose shape has prior runs
+        when: recall_similar_runs is called
+        then: it returns those runs with similarity, config and wall clock
+      - id: B-3
+        given: a shape never seen before
+        when: recall_similar_runs is called
+        then: it says so, rather than returning the nearest unrelated shape
+      - id: B-4
+        given: a deployment without the memory tables
+        when: recall_similar_runs is called
+        then: it reports that cross-run memory is unavailable on this deployment
+    evals:
+      - id: eval_1
+        description: recall_similar_runs is registered read-only
+        command: ( cd serve && uv run python -c "import asyncio; from apex_mcp.server import create_server; from apex_mcp.ch import ReadStore; from tests.conftest import FakeClient; s=create_server(ReadStore(FakeClient())); t={x.name:x for x in asyncio.run(s.list_tools())}; assert 'recall_similar_runs' in t, sorted(t); assert t['recall_similar_runs'].annotations.readOnlyHint" )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 20
+      - id: eval_2
+        description: the docstring no longer claims five tools
+        command: ( cd serve && ! grep -n 'Five tools' src/apex_mcp/server.py )
+        verifies: [B-3, B-4]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Returning the nearest shape regardless of similarity; below the threshold the honest answer is that nothing matches.
+      - Repairing the surface assertion here.
+    do_not_touch:
+      - serve/tests/test_server_tools.py
+      - serve/src/apex_mcp/ch.py
+
+  - id: T-20260820-l6-tool-surface
+    title: Re-pin the tool surface for recall_similar_runs
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-recall-runs-tool]
+    touches_paths: [serve/tests/test_server_tools.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: An unnoticed tool on a server a model can call is a security event.
+    goal: Move the ordered assertion to include recall_similar_runs, keeping it an exact equality.
+    context: Its own commit so the surface change is legible in git log.
+    behaviors:
+      - id: B-1
+        given: the built server
+        when: list_tools() is called
+        then: the assertion is an exact ordered list including recall_similar_runs
+      - id: B-2
+        given: another tool were added
+        when: the suite runs
+        then: it fails, because the assertion is neither a subset nor a count
+    evals:
+      - id: eval_1
+        description: the updated surface assertion exists and passes
+        command: ( cd serve && uv run --extra dev pytest "tests/test_server_tools.py::test_exactly_the_six_contracted_tools" )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the assertion is still an ordered equality
+        command: ( cd serve && ! grep -nE '(issubset|len\(_tools|set\(\[t\.name)' tests/test_server_tools.py )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Relaxing the assertion so it stops needing maintenance.
+      - Bundling source changes into this unit.
+    do_not_touch:
+      - serve/src/apex_mcp
+
+  - id: T-20260820-noise-floor-honesty
+    title: Never call a configuration better without a floor
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-recall-runs-tool]
+    touches_paths: [serve/src/apex_mcp/diagnose.py, serve/tests/test_diagnose.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: The whole value of cross-run memory is distinguishing this config is better from this run happened to be faster. Rank prior runs by wall clock and you have built a machine for confusing the two.
+    goal: Prior runs are reported with their measurements, and a configuration is only called better against a measured floor.
+    context: CONTRACT.md rule 2 already forbids serve inventing a dispersion figure, and compare_runs honours it via noise_floor_pct. Cross-run recall must honour the same rule - the memory lane computes a floor, serve reports it and refuses to rank without one.
+    behaviors:
+      - id: B-1
+        given: prior runs and no noise floor
+        when: recall is summarised
+        then: runs are reported as measurements and no configuration is called better
+      - id: B-2
+        given: prior runs and a measured floor
+        when: a difference clears that floor
+        then: it may be called better, and the floor it cleared is named
+      - id: B-3
+        given: a difference inside the floor
+        when: recall is summarised
+        then: it is reported as indistinguishable from run-to-run variation
+      - id: B-4
+        given: a single prior run
+        when: recall is summarised
+        then: no comparison is drawn, because one run cannot measure its own dispersion
+    evals:
+      - id: eval_1
+        description: the floor-honesty tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_diagnose.py::test_no_floor_means_no_better_claim" "tests/test_diagnose.py::test_difference_inside_floor_is_indistinguishable" "tests/test_diagnose.py::test_single_prior_run_draws_no_comparison" )
+        verifies: [B-1, B-3, B-4]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: a cleared floor is named in the claim
+        command: ( cd serve && uv run --extra dev pytest "tests/test_diagnose.py::test_cleared_floor_is_named" )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 30
+    anti_patterns:
+      - Sorting prior runs by wall clock and presenting the top one as the best configuration.
+      - Inventing a floor from the runs being compared; CONTRACT rule 2 forbids exactly that.
+    do_not_touch:
+      - serve/src/apex_mcp/ch.py
+      - serve/src/apex_mcp/server.py
+
+  - id: T-20260820-l6-docs
+    title: Document cross-run memory across the lane docs
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-l6-tool-surface, T-20260820-noise-floor-honesty]
+    touches_paths: [serve/README.md, serve/VALIDATION.md, docs/lanes/SERVE-LEGS.md]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: SERVE-LEGS still describes L6 as building an embedding backend, which would duplicate a lane that already exists with 47 tests and a normalised embedding table.
+    goal: Record that L6 is an MCP surface over the memory lane, not a reimplementation.
+    context: Rewrite the L6 section so the next reader does not rebuild what memory already does.
+    behaviors:
+      - id: B-1
+        given: serve/README.md
+        when: read
+        then: recall_similar_runs is in the tool table and the floor rule is stated
+      - id: B-2
+        given: serve/VALIDATION.md
+        when: read
+        then: it records a test count copied from an actual run
+      - id: B-3
+        given: docs/lanes/SERVE-LEGS.md
+        when: read
+        then: L6 is described as exposing the memory lane, naming apex.plan_memory and apex.run_outcomes
+    evals:
+      - id: eval_1
+        description: the lane docs describe L6 as a surface over memory
+        command: ( grep -q 'plan_memory' docs/lanes/SERVE-LEGS.md && grep -q 'recall_similar_runs' serve/README.md )
+        verifies: [B-1, B-3]
+        terminal: true
+        expected_duration_sec: 10
+      - id: eval_2
+        description: the recorded test count equals what the suite reports
+        command: ( cd serve && n=$(uv run --extra dev pytest 2>&1 | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+') && grep -q "$n passed" VALIDATION.md )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Writing a test count from memory.
+      - Leaving the L6 section describing work the memory lane already did.
+    do_not_touch:
+      - serve/src/apex_mcp
+      - serve/tests
+      - docs/lanes/SERVE.md
