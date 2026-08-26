@@ -1,4 +1,4 @@
-"""The MCP tool surface: exactly five tools, correct annotations, no stdout."""
+"""The MCP tool surface: the contracted tools, correct annotations, no stdout."""
 
 from __future__ import annotations
 
@@ -16,6 +16,21 @@ from apex_mcp.server import create_server
 from tests.conftest import FakeClient, finding_row, stage_row, transition_row
 
 SRC = Path(__file__).resolve().parents[1] / "src"
+
+# The contracted tool surface, in one place. Every assertion below derives from
+# this list, so a leg that adds a tool inserts ONE sorted line and every test
+# follows. Repeating the names per-test is what made parallel legs collide.
+CONTRACTED_TOOLS = [
+    "analyze_run",
+    "compare_runs",
+    "list_runs",
+    "search_kb",
+    "suggest_fix",
+]
+
+# suggest_fix is the only non-read-only tool: it proposes and never applies.
+WRITE_TOOLS = {"suggest_fix"}
+READ_ONLY_TOOLS = [n for n in CONTRACTED_TOOLS if n not in WRITE_TOOLS]
 
 
 @pytest.fixture
@@ -36,18 +51,22 @@ def _tools(server):
     return asyncio.run(server.list_tools())
 
 
-def test_exactly_the_five_contracted_tools(server):
-    """Exact and ordered on purpose. A subset check would let a tool appear by
-    accident, and an unnoticed tool on a server a model can call is a security
-    event, not a cosmetic one."""
-    assert [t.name for t in _tools(server)] == [
-        "analyze_run", "compare_runs", "list_runs", "search_kb", "suggest_fix",
-    ]
+def test_the_contracted_tool_surface(server):
+    """Exact equality on the tool set — not a subset, not a count.
+
+    An unnoticed tool on a server a model can call is a security event, so a new
+    tool must fail here and be reconciled in a diff. That is the control.
+
+    Compared SORTED: registration order is an implementation detail this server
+    makes no promise about, and pinning it made every branch that adds a tool
+    collide with every other branch on one line.
+    """
+    assert sorted(t.name for t in _tools(server)) == CONTRACTED_TOOLS
 
 
 def test_read_tools_are_annotated_read_only(server):
     by_name = {t.name: t for t in _tools(server)}
-    for name in ("analyze_run", "compare_runs", "search_kb"):
+    for name in READ_ONLY_TOOLS:
         annotations = by_name[name].annotations
         assert annotations is not None
         # camelCase — ToolAnnotations has no `read_only_hint` field, and
