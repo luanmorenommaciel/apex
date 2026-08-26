@@ -63,11 +63,22 @@ def _strip_comments(sql: str) -> str:
 
 def _columns_read_by(sql: str) -> set[str]:
     """Bare identifiers the query reads, minus SQL keywords and functions."""
-    read = set(re.findall(r"\b([a-z][a-z0-9_]{2,})\b", _strip_comments(sql)))
+    cleaned = _strip_comments(sql)
+    # Quoted map keys and string literals are values, not column identifiers.
+    cleaned = re.sub(r"'(?:''|[^'])*'", "''", cleaned)
+    # Remove only the output declaration, not every occurrence of the alias.
+    # In particular, ``argMax(fake, ts) AS fake`` still reads ``fake`` and must
+    # fail when no DDL declares it. Subtracting aliases from a set of tokens
+    # erased both occurrences and let that invalid query pass.
+    inputs_only = re.sub(
+        r"\bAS\s+[a-z][a-z0-9_]*",
+        "AS",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    read = set(re.findall(r"\b([a-z][a-z0-9_]*)\b", inputs_only))
     read -= {token.lower() for token in NOT_COLUMNS}
     read -= NOT_COLUMNS
-    # `AS <alias>` names the output, not an input column.
-    read -= set(re.findall(r"\bAS\s+([a-z][a-z0-9_]*)", sql))
     return read
 
 
@@ -93,3 +104,19 @@ def test_stage_events_sql_reads_only_declared_columns():
         f"STAGE_EVENTS_SQL reads column(s) no DDL declares: {sorted(undeclared)}. "
         "Add the column to contract/ + infra/sql/, or stop reading it."
     )
+
+
+def test_same_name_alias_cannot_hide_an_undeclared_input_column():
+    sql = "SELECT argMax(fake, ts) AS fake FROM apex.spark_events"
+
+    undeclared = _columns_read_by(sql) - _declared_columns()
+
+    assert undeclared == {"fake"}
+
+
+def test_short_undeclared_identifier_cannot_escape_column_validation():
+    sql = "SELECT id FROM apex.spark_events"
+
+    undeclared = _columns_read_by(sql) - _declared_columns()
+
+    assert undeclared == {"id"}
