@@ -71,6 +71,83 @@ def test_clean_event_has_zero_findings_and_zero_llm_calls():
     assert result["mode"] == "deterministic"
 
 
+def test_complete_v05_event_reaches_retry_pressure_through_analyze_events():
+    """The fixture path must preserve the same v0.5 measurements as SQL."""
+    event = clean_event(
+        executor_run_time_ms=9_000,
+        task_duration_max_ms=900,
+        task_duration_sample_count=62,
+        successful_task_duration_p50_ms=90,
+        successful_task_duration_p99_ms=150,
+        successful_task_duration_max_ms=250,
+        successful_task_sample_count=50,
+        successful_task_shuffle_read_bytes_p50=1_024,
+        successful_task_shuffle_read_bytes_max=4_096,
+        successful_task_shuffle_read_bytes_sample_count=50,
+        task_attempt_count=62,
+        task_failed_attempt_count=5,
+        task_counted_failure_attempt_count=3,
+        task_killed_attempt_count=4,
+        task_speculative_attempt_count=8,
+    )
+
+    aggregate = aggregate_events([event])[0]
+    expected = {
+        "executor_run_time_ms": 9_000,
+        "task_duration_max_ms": 900,
+        "task_duration_sample_count": 62,
+        "successful_task_duration_p50_ms": 90,
+        "successful_task_duration_p99_ms": 150,
+        "successful_task_duration_max_ms": 250,
+        "successful_task_sample_count": 50,
+        "successful_task_shuffle_read_bytes_p50": 1_024,
+        "successful_task_shuffle_read_bytes_max": 4_096,
+        "successful_task_shuffle_read_bytes_sample_count": 50,
+        "task_attempt_count": 62,
+        "task_failed_attempt_count": 5,
+        "task_counted_failure_attempt_count": 3,
+        "task_killed_attempt_count": 4,
+        "task_speculative_attempt_count": 8,
+    }
+    assert {field: getattr(aggregate, field) for field in expected} == expected
+
+    result = analyze_events([event])
+    retry_findings = [f for f in result["findings"] if f.type is FindingType.RETRY_PRESSURE]
+    assert len(retry_findings) == 1
+    assert not any(
+        rejected["finding"].type is FindingType.RETRY_PRESSURE
+        for rejected in result["rejected"]
+    )
+    assert retry_findings[0].details == {
+        "task_attempt_count": 62,
+        "task_failed_attempt_count": 5,
+        "task_counted_failure_attempt_count": 3,
+    }
+
+
+def test_historical_event_defaults_all_v05_fields_to_zero():
+    event = clean_event()
+    aggregate = aggregate_events([event])[0]
+    fields = (
+        "task_duration_max_ms",
+        "task_duration_sample_count",
+        "successful_task_duration_p50_ms",
+        "successful_task_duration_p99_ms",
+        "successful_task_duration_max_ms",
+        "successful_task_sample_count",
+        "successful_task_shuffle_read_bytes_p50",
+        "successful_task_shuffle_read_bytes_max",
+        "successful_task_shuffle_read_bytes_sample_count",
+        "task_attempt_count",
+        "task_failed_attempt_count",
+        "task_counted_failure_attempt_count",
+        "task_killed_attempt_count",
+        "task_speculative_attempt_count",
+    )
+    assert all(getattr(event, field) == 0 for field in fields)
+    assert all(getattr(aggregate, field) == 0 for field in fields)
+
+
 # --- the Finding <-> DDL reconciliation -----------------------------------
 
 def _finding(**overrides):
@@ -144,3 +221,81 @@ def test_latest_attempt_wins_when_a_stage_is_retried():
     assert len(aggregates) == 1
     assert aggregates[0].task_duration_p99_ms == 120  # the retry, not the max
     assert aggregates[0].skew_ratio < 5
+
+
+def test_retry_pressure_validation_requires_complete_coherent_integer_counters():
+    base = {
+        "job_id": "job-1",
+        "stage_id": 2,
+        "type": FindingType.RETRY_PRESSURE,
+        "severity": Severity.INFO,
+        "evidence": "scheduler retry budget consumed",
+        "impact": "retry pressure observed",
+        "fix": "correlate task-end reasons",
+        "confidence_score": 0.95,
+        "detected_by": "retry_pressure_watcher",
+    }
+    coherent = Finding(
+        **base,
+        details={
+            "task_attempt_count": 62,
+            "task_failed_attempt_count": 5,
+            "task_counted_failure_attempt_count": 3,
+        },
+    )
+    assert validate_finding(coherent)["accepted"] is True
+
+    incomplete = coherent.model_copy(
+        update={"details": {"task_counted_failure_attempt_count": 3}}
+    )
+    incomplete_result = validate_finding(incomplete)
+    assert incomplete_result["accepted"] is False
+    assert "missing_retry_measurements" in incomplete_result["issues"]
+
+    forged = coherent.model_copy(
+        update={
+            "details": {
+                "task_attempt_count": 2,
+                "task_failed_attempt_count": 1,
+                "task_counted_failure_attempt_count": 3,
+            }
+        }
+    )
+    forged_result = validate_finding(forged)
+    assert forged_result["accepted"] is False
+    assert "incoherent_retry_measurements" in forged_result["issues"]
+
+    text_counters = coherent.model_copy(
+        update={
+            "details": {
+                "task_attempt_count": "62",
+                "task_failed_attempt_count": "5",
+                "task_counted_failure_attempt_count": "3",
+            }
+        }
+    )
+    text_result = validate_finding(text_counters)
+    assert text_result["accepted"] is False
+    assert "invalid_retry_measurements" in text_result["issues"]
+
+
+def test_retry_pressure_validation_rejects_zero_counted_failures():
+    finding = Finding(
+        job_id="job-1",
+        stage_id=2,
+        type=FindingType.RETRY_PRESSURE,
+        severity=Severity.INFO,
+        evidence="forged",
+        impact="forged",
+        fix="forged",
+        confidence_score=0.95,
+        detected_by="retry_pressure_watcher",
+        details={
+            "task_attempt_count": 10,
+            "task_failed_attempt_count": 2,
+            "task_counted_failure_attempt_count": 0,
+        },
+    )
+    result = validate_finding(finding)
+    assert result["accepted"] is False
+    assert "missing_counted_task_failures" in result["issues"]

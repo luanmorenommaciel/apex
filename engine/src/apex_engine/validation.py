@@ -69,11 +69,41 @@ def _measurement_issues(finding: Finding, details: dict[str, object]) -> list[st
     if finding_type is FindingType.COST:
         return [] if any(key in details for key in _COST_KEYS) else ["missing_cost_ratio"]
 
+    if finding_type is FindingType.RETRY_PRESSURE:
+        return _retry_pressure_issues(details)
+
     required = _REQUIRED_MEASUREMENTS.get(finding_type)
     if required is None:
         return []
     key, floor, issue = required
     return _floor(details, key, floor, issue)
+
+
+def _retry_pressure_issues(details: dict[str, object]) -> list[str]:
+    """Require Spark's three nested scheduler counters as typed evidence.
+
+    `counted` is a subset of failed attempts, and failed attempts are a subset
+    of all task-end events. The validator deliberately reasons only from these
+    structured counters; finding prose is not evidence.
+    """
+    keys = (
+        "task_attempt_count",
+        "task_failed_attempt_count",
+        "task_counted_failure_attempt_count",
+    )
+    if any(key not in details for key in keys):
+        return ["missing_retry_measurements"]
+
+    values = tuple(details[key] for key in keys)
+    if any(type(value) is not int or value < 0 for value in values):
+        return ["invalid_retry_measurements"]
+
+    attempts, failed, counted = values
+    if counted == 0:
+        return ["missing_counted_task_failures"]
+    if not counted <= failed <= attempts:
+        return ["incoherent_retry_measurements"]
+    return []
 
 
 def _skew_issues(finding: Finding, details: dict[str, object]) -> list[str]:
