@@ -26,6 +26,7 @@ CONTRACTED_TOOLS = [
     "list_runs",
     "search_kb",
     "suggest_fix",
+    "verify_fix",
 ]
 
 # suggest_fix is the only non-read-only tool: it proposes and never applies.

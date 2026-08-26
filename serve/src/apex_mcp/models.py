@@ -15,6 +15,7 @@ does not fit these models, so injected prose has no channel to ride on.
 
 from __future__ import annotations
 
+import json
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -232,6 +233,224 @@ class KbHits(BaseModel):
 
 
 # --------------------------------------------------------------------------
+# verify_fix — what the verify lane concluded (apex.fix_verifications, v0.3)
+# --------------------------------------------------------------------------
+# Nothing in these two models is written by the observed Spark job. The verify
+# lane authors `evidence`, `caveats` and `safety_detail`; `proposed_config`
+# holds Spark conf keys and values only, never data and never a path (v0.3 DDL).
+# So `untrusted_fields` is EMPTY here on purpose — declaring a field untrusted
+# that Apex authored would devalue the marker everywhere else it is used.
+VERIFICATION_UNTRUSTED_FIELDS: list[str] = []
+
+# The one convention a reader must not get wrong. It is repeated in the field
+# descriptions because the schema is what a client actually sees.
+_SIGN_CONVENTION = (
+    "SIGNED percentage change in job runtime: negative means FASTER, positive "
+    "means slower."
+)
+
+
+class VerificationView(BaseModel):
+    """One row of ``apex.fix_verifications`` (verify writes, serve reads).
+
+    Three states a reader must be able to tell apart:
+
+    * ``method='predicted'`` — analytic only, nothing was executed;
+      ``measured_delta_pct`` is None.
+    * ``method='replayed'``  — measured on the synthetic bench;
+      ``measured_delta_pct`` is a number, and ``0.0`` means "measured, no
+      change" — which is why the field is nullable rather than defaulted.
+    * ``method='refused'``   — the fix was not verifiable at all (unsafe,
+      no-op, or no bench). A refusal is not a low-confidence pass.
+    """
+
+    verification_id: str
+    finding_id: str
+    job_id: str
+    app_id: str = ""
+
+    proposed_config: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "The Spark conf overlay that was evaluated. Conf keys and values "
+            "only — never data, never a path."
+        ),
+    )
+    method: str = Field(
+        default="",
+        description="predicted | replayed | refused — see the model docstring.",
+    )
+    predictor: str = Field(
+        default="",
+        description=(
+            "Which model produced the prediction: amdahl_tail_share | "
+            "partition_sizing | noop_gate | none."
+        ),
+    )
+
+    # -- the prediction (always present) -----------------------------------
+    predicted_delta_pct: float = Field(
+        default=0.0,
+        description=f"Predicted job-runtime change. {_SIGN_CONVENTION}",
+    )
+    predicted_low_pct: float = Field(
+        default=0.0,
+        description=(
+            f"Lower NUMERIC bound of the predicted interval. {_SIGN_CONVENTION} "
+            "Because negative means faster, `low` is the MOST improvement, not "
+            "the least optimistic case."
+        ),
+    )
+    predicted_high_pct: float = Field(
+        default=0.0,
+        description=(
+            f"Upper NUMERIC bound of the predicted interval. {_SIGN_CONVENTION} "
+            "Because negative means faster, `high` is the LEAST improvement."
+        ),
+    )
+
+    # -- the measurement (None means never replayed) ------------------------
+    measured_delta_pct: float | None = Field(
+        default=None,
+        description=(
+            f"Measured job-runtime change, or null if this prediction was "
+            f"never replayed. {_SIGN_CONVENTION} Null and 0.0 are different "
+            "answers: null means unmeasured, 0.0 means measured and unchanged."
+        ),
+    )
+    baseline_ms: float | None = None
+    treatment_ms: float | None = None
+    noise_floor_pct: float | None = Field(
+        default=None,
+        description=(
+            "Run-to-run coefficient of variation of the BASELINE arm. A "
+            "|measured_delta_pct| below this is indistinguishable from zero."
+        ),
+    )
+    replay_reps: int = 0
+    bench: str = ""
+    shape_fidelity: float = Field(
+        default=0.0,
+        description=(
+            "0-1: how well the bench reproduced the observed shape. A replay "
+            "of the wrong shape is not evidence, so low fidelity caps "
+            "confidence."
+        ),
+    )
+
+    # -- the safety gate ----------------------------------------------------
+    safe: bool = Field(
+        default=False,
+        description="False means nothing was executed.",
+    )
+    safety_verdict: str = Field(
+        default="",
+        description=(
+            "allow | block_size | block_ast | block_no_bench | not_applicable. "
+            "A block is a refusal to execute, not a low confidence score."
+        ),
+    )
+    safety_detail: str = ""
+
+    # -- the verdict --------------------------------------------------------
+    confidence: str = ""  # human-facing tier: LOW | MEDIUM | HIGH
+    confidence_score: float = 0.0  # the raw 0-1, same convention as findings
+    evidence: str = Field(
+        default="",
+        description="How the verdict was derived. Apex-authored, not job-authored.",
+    )
+    caveats: str = Field(
+        default="", description="What would falsify this verdict."
+    )
+    verify_version: str = ""
+    verified_at: str | None = None
+
+    @field_validator("proposed_config", mode="before")
+    @classmethod
+    def _parse_config(cls, value: object) -> object:
+        """The column stores canonical JSON; the model exposes a mapping.
+
+        A malformed or non-object value degrades to ``{}`` rather than failing
+        the whole read — an unparseable overlay must not hide the safety
+        verdict that sits in the same row.
+        """
+        if value is None or value == "":
+            return {}
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except ValueError:
+                return {}
+            value = parsed
+        if not isinstance(value, dict):
+            return {}
+        return {str(k): str(v) for k, v in value.items()}
+
+    @field_validator("safe", mode="before")
+    @classmethod
+    def _uint8_to_bool(cls, value: object) -> object:
+        """ClickHouse stores the gate as UInt8; the wire carries a boolean."""
+        if isinstance(value, bool) or value is None:
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        return value
+
+    @field_validator("verified_at", mode="before")
+    @classmethod
+    def _isoformat(cls, value: object) -> object:
+        """The driver hands back datetime objects; the wire carries strings."""
+        if value is None or isinstance(value, str):
+            return value
+        isoformat = getattr(value, "isoformat", None)
+        return isoformat() if callable(isoformat) else str(value)
+
+
+class FixVerdict(BaseModel):
+    """``verify_fix``'s answer: what the verify lane concluded, reported as-is.
+
+    ``status='not_assessed'`` is a real answer, not an empty success — "the
+    verify lane has not looked at this run" and "the verify lane found nothing
+    wrong" are different facts and a user must be able to tell them apart.
+
+    ``blocked`` is surfaced separately from ``confidence`` on purpose: a safety
+    block means Apex refused to execute anything, which is not the same claim
+    as a weakly-supported prediction.
+    """
+
+    job_id: str
+    finding_id: str | None = None
+    status: Literal["verified", "not_assessed"]
+    verification_count: int = 0
+    blocked: bool = Field(
+        default=False,
+        description=(
+            "True when the newest verification's safety gate refused to "
+            "execute. Distinct from low confidence."
+        ),
+    )
+    blocked_reason: str = ""
+    summary: str = ""
+    verifications: list[VerificationView] = Field(default_factory=list)
+    evidence: list[str] = Field(
+        default_factory=list,
+        description="Per-verification derivation, newest first. Apex-authored.",
+    )
+    caveats: list[str] = Field(
+        default_factory=list,
+        description="What would falsify each verdict, newest first.",
+    )
+    notes: list[str] = Field(default_factory=list)
+    untrusted_fields: list[str] = Field(
+        default_factory=lambda: list(VERIFICATION_UNTRUSTED_FIELDS),
+        description=(
+            "Fields whose content came from the observed Spark job. Empty "
+            "here: every field in this payload is authored by Apex."
+        ),
+    )
+
+
+# --------------------------------------------------------------------------
 # suggest_fix  (the one non-read-only tool — still writes NOTHING)
 # --------------------------------------------------------------------------
 class FixSuggestion(BaseModel):
@@ -261,6 +480,15 @@ class FixSuggestion(BaseModel):
     )
     applied: Literal[False] = False
     requires_human_approval: Literal[True] = True
+    verification: VerificationView | None = Field(
+        default=None,
+        description=(
+            "What the verify lane already concluded about this finding's fix, "
+            "read from apex.fix_verifications. None means the verify lane has "
+            "not assessed it. Serve reports this judgement and never recomputes "
+            "it."
+        ),
+    )
     warnings: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 
