@@ -47,7 +47,7 @@ doctor: verify ## Alias for `verify`
 
 fp-test: ## T7: prove the plan_fingerprint normalizes literals (same query/diff literals -> same hash)
 	$(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
-	  --master 'local[2]' --conf spark.eventLog.enabled=false /opt/apex/tests/test_fingerprint.py
+	  --master 'local[2]' --conf spark.eventLog.enabled=false /opt/apex/tests/prove_fingerprint.py
 
 # Integration proof: dev apexdev.PlanFingerprint == jar apex.ApexPlanFingerprint for
 # the same query. Mounts the jar lane's compiled Scala class (read-only) onto the
@@ -63,7 +63,7 @@ fp-crosscheck: ## T7 integration: dev fingerprint == jar's Scala fingerprint (cr
 	  -e PYTHONHASHSEED=0 -e TZ=UTC \
 	  $(APEX_IMAGE) --master 'local[2]' \
 	  --driver-class-path '/opt/apex/lib/apex-devfp.jar:/opt/jarlane/classes' \
-	  --conf spark.eventLog.enabled=false /opt/apex/tests/test_fingerprint.py
+	  --conf spark.eventLog.enabled=false /opt/apex/tests/prove_fingerprint.py
 
 APEX_IMAGE ?= apex-spark:local
 gen-data: up ## Generate deterministic ~50% hot-key Delta tables (T8)
