@@ -19,6 +19,7 @@ final case class ApexStageEvent(
   app_name: String,
   stage_id: Int,
   stage_attempt: Int,
+  execution_id: Option[Long],
   ts: Long,
   shuffle_read_bytes: Long,
   shuffle_write_bytes: Long,

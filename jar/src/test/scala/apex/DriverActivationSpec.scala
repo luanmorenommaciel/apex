@@ -43,6 +43,24 @@ class DriverActivationSpec extends AnyFunSuite {
     events
   }
 
+  /** A pure RDD job has no Spark SQL execution id and must not invent one. */
+  private def runCapturingRdd(): Seq[ApexStageEvent] = {
+    resetSessions()
+    val spark = SparkSession.builder()
+      .master("local[2]")
+      .appName("apex-rdd-activation")
+      .config("spark.plugins", "apex.ApexPlugin")
+      .config("spark.apex.sink.class", "apex.CapturingSink")
+      .config("spark.ui.enabled", "false")
+      .getOrCreate()
+
+    try spark.sparkContext.parallelize(1 to 2000, 4).map(_ + 1).count()
+    finally spark.stop()
+    val events = Option(CapturingSink.latest).map(_.events.toList).getOrElse(Nil)
+    resetSessions()
+    events
+  }
+
   test("T10: spark.plugins and spark.extraListeners emit identical per-stage events (shuffle > 0)") {
     val viaPlugin = runCapturing(_.config("spark.plugins", "apex.ApexPlugin"))
     val viaExtra  = runCapturing(_.config("spark.extraListeners", "apex.ApexStageListener"))
@@ -53,6 +71,14 @@ class DriverActivationSpec extends AnyFunSuite {
     assert(viaPlugin.exists(_.shuffle_read_bytes > 0),  "plugin path: expected a stage with shuffle_read_bytes > 0")
     assert(viaExtra.exists(_.shuffle_read_bytes > 0),   "extraListeners path: expected shuffle_read_bytes > 0")
     assert(viaPlugin.forall(e => e.job_id.nonEmpty && e.app_id.nonEmpty), "job_id/app_id must be populated")
+    assert(viaPlugin.forall(_.execution_id.nonEmpty),
+      "SQL-derived stage events must preserve Spark SQL execution_id")
+    assert(viaExtra.forall(_.execution_id.nonEmpty),
+      "extraListeners SQL-derived stage events must preserve Spark SQL execution_id")
+    assert(viaPlugin.map(_.execution_id).distinct.size == 1,
+      s"one SQL query must keep one execution_id across its stages: ${viaPlugin.map(_.execution_id)}")
+    assert(viaExtra.map(_.execution_id).distinct.size == 1,
+      s"one SQL query must keep one execution_id across its stages: ${viaExtra.map(_.execution_id)}")
     assert(viaPlugin.forall(e =>
       e.task_duration_max_ms >= e.task_duration_p99_ms &&
         e.task_duration_p99_ms >= e.task_duration_p50_ms),
@@ -89,6 +115,13 @@ class DriverActivationSpec extends AnyFunSuite {
         s"stage=${e.stage_id} shRead=${e.shuffle_read_bytes} shWrite=${e.shuffle_write_bytes} tasks=${e.task_count}").mkString(" | ")
     info(s"plugin        : ${render(viaPlugin)}")
     info(s"extraListeners: ${render(viaExtra)}")
+  }
+
+  test("T10: non-SQL stages omit execution_id rather than inventing SQL correlation") {
+    val events = runCapturingRdd()
+    assert(events.nonEmpty, "pure RDD workload must emit at least one stage event")
+    assert(events.forall(_.execution_id.isEmpty),
+      s"non-SQL stage events must omit execution_id: ${events.map(_.execution_id)}")
   }
 
   private def deadCollectorWorkload(enablePlugin: Boolean): Long = {

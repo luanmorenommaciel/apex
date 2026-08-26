@@ -4,10 +4,21 @@
 > It defines the data shapes that flow between stages so each directory can be built independently and still fuse.
 > A stage may **add** a field; it may never rename or repurpose one. Breaking changes = version bump + a note here.
 
-**Status:** contract **v0.5** · **Consumed by:** `dev` · `jar` · `collect` · `infra` · `engine` · `serve` · `memory` · `verify`
+**Status:** contract **v0.6** · **Consumed by:** `dev` · `jar` · `collect` · `infra` · `engine` · `serve` · `memory` · `verify`
 **Artifacts:** [`contract/sample_event.json`](contract/) · [`spark_events`](contract/spark_events.ddl.sql) · [`findings`](contract/findings.ddl.sql) · [`plan_transitions`](contract/plan_transitions.ddl.sql) · [`job_conf`](contract/job_conf.ddl.sql) · `memory/sql/030_plan_memory.sql` · `memory/sql/031_run_outcomes.sql` · `verify/ddl/fix_verifications.ddl.sql`
 
 **Changelog:**
+- **v0.6** — ADDITIVE: `apex.stage` may carry optional `execution_id` as an
+  OTLP Int64 when Spark supplied `spark.sql.execution.id` for that completed
+  SQL stage. Pure-RDD and historical events omit the key; producers must not
+  synthesize a sentinel. The value is Spark SQL correlation only: it does not
+  replace `job_id`, `stage_id`, `stage_attempt`, trace IDs, or span IDs.
+  Existing consumers remain compatible by ignoring an absent or unknown
+  attribute. This increment changes neither a ClickHouse schema nor Engine,
+  Serve, Memory, or Verify behavior; using it for execution-to-stage
+  attribution requires a separately validated cross-lane increment.
+  - Affects now: `jar` (emits). Future opt-in readers must preserve the
+    absence semantics above.
 - **v0.5** — ADDITIVE: ~15 OTLP keys for retry-safe task analysis. All columns default to 0 for historical events; consumers must treat `sample_count=0` as "no sample available" (0-on-empty semantics).
   - **Tail-outlier visibility:** `task_duration_max_ms` (maximum task duration) + `task_duration_sample_count` (attempts with duration available).
   - **Retry-safe successful-task sample:** `successful_task_duration_p50_ms`, `successful_task_duration_p99_ms`, `successful_task_duration_max_ms`, `successful_task_sample_count` — one successful attempt per logical partition, excluding retries/speculation.
@@ -74,7 +85,7 @@ dev  ──[job_id]──►  jar  ──[job_id]──►  collect  ──[job_
 
 One event **per completed stage**, OTLP/HTTP to the collector on `:4318`. Fields (snake_case, exact):
 
-- **Identity:** `job_id`, `app_id`, `app_name`, `stage_id`, `stage_attempt`, `ts` (epoch millis).
+- **Identity:** `job_id`, `app_id`, `app_name`, `stage_id`, `stage_attempt`, `ts` (epoch millis), and optional `execution_id` *(v0.6; Spark SQL correlation only, Int64 when present)*.
 - **Stage metrics** (from `stageInfo.taskMetrics`): `shuffle_read_bytes`, `shuffle_write_bytes`, `spill_disk_bytes`, `spill_mem_bytes`, `gc_time_ms`, `executor_run_time_ms` *(v0.5)*, `input_bytes`, `output_bytes`, `peak_execution_mem_bytes`, `task_count`, `task_duration_p50_ms`, `task_duration_p99_ms`, `task_duration_max_ms` *(v0.5)*, `task_duration_sample_count` *(v0.5)*.
 - **Successful-task sample** *(v0.5, retry-safe)*: `successful_task_duration_p50_ms`, `successful_task_duration_p99_ms`, `successful_task_duration_max_ms`, `successful_task_sample_count`, `successful_task_shuffle_read_bytes_p50`, `successful_task_shuffle_read_bytes_max`, `successful_task_shuffle_read_bytes_sample_count`.
 - **Task-termination counters** *(v0.5)*: `task_attempt_count`, `task_failed_attempt_count`, `task_counted_failure_attempt_count`, `task_killed_attempt_count`, `task_speculative_attempt_count`.

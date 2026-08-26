@@ -101,6 +101,7 @@ class ApexOtelSink(endpoint: String, service: String) extends ApexSink {
         .setAttribute(ApexAttributes.TaskSpeculativeAttemptCount, Long.box(ev.task_speculative_attempt_count.toLong))
         .setAttribute(ApexAttributes.PlanFingerprint, ev.plan_fingerprint)
         .setAttribute(ApexAttributes.PlanJson, ApexPayloadLimits.planJson(ev.plan_json))
+      ev.execution_id.foreach(id => span.setAttribute(ApexAttributes.ExecutionId, Long.box(id)))
     } finally span.end()
   }.recover { case t => logger.warn(s"apex: dropped stage ${ev.stage_id}: ${t.getMessage}") }
 
