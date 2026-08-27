@@ -91,6 +91,33 @@ def test_relative_target_is_resolved_from_containing_site_packages(tmp_path):
     assert check(site_packages, target, "apex-engine").status is PthStatus.NORMAL
 
 
+def test_tilde_target_is_relative_to_containing_site_packages(tmp_path):
+    site_packages = tmp_path / "venv" / "lib" / "site-packages"
+    site_packages.mkdir(parents=True)
+    target = Path("~/apex-issue-104/engine/src").expanduser()
+    editable_pth(site_packages, "apex-engine", "~/apex-issue-104/engine/src")
+
+    assert check(site_packages, target, "apex-engine").status is PthStatus.WRONG_TARGET
+
+
+def test_unknown_user_tilde_target_is_not_expanded(monkeypatch, tmp_path):
+    site_packages = tmp_path / "site-packages"
+    site_packages.mkdir()
+    target = tmp_path / "engine" / "src"
+    editable_pth(
+        site_packages,
+        "apex-engine",
+        "~apex_user_that_must_not_exist_104/engine/src",
+    )
+
+    def must_not_expand(_path):
+        raise AssertionError(".pth paths must not use shell-style tilde expansion")
+
+    monkeypatch.setattr(Path, "expanduser", must_not_expand)
+
+    assert check(site_packages, target, "apex-engine").status is PthStatus.WRONG_TARGET
+
+
 def test_utf8_bom_is_accepted(tmp_path):
     site_packages = tmp_path / "site-packages"
     site_packages.mkdir()
@@ -119,7 +146,7 @@ def test_import_tab_line_is_ignored_as_executable_code(monkeypatch, tmp_path):
     def must_not_parse(_path):
         raise AssertionError("executable .pth line was parsed as a path")
 
-    monkeypatch.setattr(Path, "expanduser", must_not_parse)
+    monkeypatch.setattr(Path, "is_absolute", must_not_parse)
 
     assert preflight._points_to(path, target) is False
 

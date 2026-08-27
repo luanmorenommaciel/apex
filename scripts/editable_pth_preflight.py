@@ -68,7 +68,7 @@ def _points_to(path: Path, expected_target: Path) -> bool:
     for line in lines:
         if not line.strip() or line.startswith("#") or line.startswith(("import ", "import\t")):
             continue
-        candidate = Path(line.rstrip()).expanduser()
+        candidate = Path(line.rstrip())
         if not candidate.is_absolute():
             candidate = path.parent / candidate
         if candidate.resolve(strict=False) == expected:
