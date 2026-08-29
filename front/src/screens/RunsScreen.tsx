@@ -17,7 +17,7 @@ export function RunsScreen() {
   const [filter, setFilter] = useState<Filter>("all");
 
   const { data, loading, error } = useAsync(() => repo.listRuns(50), [repo]);
-  const runs = data ?? [];
+  const runs = useMemo(() => data ?? [], [data]);
 
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();

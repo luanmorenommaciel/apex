@@ -1,18 +1,12 @@
 --- # The console only. The store belongs to the infra lane.
 #
-# This stack used to run its own ClickHouse, seeded from ./contract — which holds
-# the read-only user and NOTHING ELSE. That produced a live database with zero
-# contract tables, and because resolveRepository() decides on /ping alone, the
-# console chose it over the fixtures and every screen failed. The canonical store
-# is infra/docker-compose.yml, which applies infra/sql/* on first boot.
+# The console reaches ClickHouse through an explicit endpoint. The default uses
+# the host-published port of infra's canonical store; VITE_CLICKHOUSE_URL may
+# instead name any reachable remote endpoint. No compose-only service hostname
+# is embedded in the application or proxy configuration.
 #
 # Start the store first:
 #   cd ../infra && docker compose up -d clickhouse otel-collector && ./scripts/seed.sh
-#
-# ALIAS RULE (infra/docker-compose.yml, the lost-telemetry postmortem): reach
-# ClickHouse ONLY by its globally-unique apex-infra-* alias. The short name
-# `clickhouse` can resolve to another lane's throwaway instance on a shared
-# network. The console joins with no alias of its own, which that rule permits.
 services:
   console:
     build:
@@ -23,18 +17,13 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+    extra_hosts:
+      # Makes the host gateway explicit on Linux; Docker Desktop provides the
+      # same name. Override the URL when the store is remote or uses another port.
+      - "host.docker.internal:host-gateway"
     environment:
-      VITE_CLICKHOUSE_URL: http://apex-infra-clickhouse:8123
+      VITE_CLICKHOUSE_URL: ${VITE_CLICKHOUSE_URL:-http://host.docker.internal:8123}
       VITE_CLICKHOUSE_DB: apex
       VITE_CLICKHOUSE_USER: apex_ro
       VITE_CLICKHOUSE_PASSWORD: ""
       VITE_DATA_SOURCE: ${VITE_DATA_SOURCE:-clickhouse}
-    networks:
-      - apex-infra-net
-
-# Created by infra/docker-compose.yml. `external: true` means this file never
-# creates it: if the store is not up, the console fails to start instead of
-# silently talking to an empty database it made itself.
-networks:
-  apex-infra-net:
-    external: true

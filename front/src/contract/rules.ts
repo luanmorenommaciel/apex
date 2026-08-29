@@ -26,6 +26,37 @@ export type RuleVerdict =
 export const isVacant = (v: RuleVerdict): v is { vacant: true; reason: string } =>
   "vacant" in v;
 
+export type DataState<T> =
+  | { state: "available"; value: T }
+  | { state: "unavailable"; value: null }
+  | { state: "not_comparable"; value: null };
+
+/** Null and undefined are unavailable; zero remains a real available value. */
+export function dataState<T>(value: T | null | undefined): DataState<T> {
+  return value === null || value === undefined
+    ? { state: "unavailable", value: null }
+    : { state: "available", value };
+}
+
+/** An empty collection means no observation, not an observed count of zero. */
+export function collectionState<T>(values: readonly T[]): DataState<readonly T[]> {
+  return values.length === 0
+    ? { state: "unavailable", value: null }
+    : { state: "available", value: values };
+}
+
+/** Incompatibility wins over absence, so Compare can explain why no delta exists. */
+export function comparisonState<T>(
+  current: T | null | undefined,
+  baseline: T | null | undefined,
+  comparable: boolean,
+): DataState<{ current: T; baseline: T }> {
+  if (!comparable) return { state: "not_comparable", value: null };
+  if (current === null || current === undefined || baseline === null || baseline === undefined)
+    return { state: "unavailable", value: null };
+  return { state: "available", value: { current, baseline } };
+}
+
 /* ------------------------------------------------------------------ rule 1 */
 
 /**
@@ -72,23 +103,62 @@ export function ratioOf(
 /**
  * Volume per task, for the measurability floor.
  *
- * ONE shuffle quantity over task_count, which is how CONTRACT.md §7 works its
- * canonical example: "stage 29's exchange of 113,632,037 bytes ... over 114
- * tasks, giving 996,772 B/task = 0.951 MiB — below the floor".
- *
- * ⚠️ The engine does NOT compute it this way. Its skew watcher gates on
- * (shuffle_read_bytes + shuffle_write_bytes + input_bytes) / task_count, which
- * on a shuffle stage is roughly double. The two lanes therefore refuse
- * different sets of stages, and on this bench's fixtures the sum lifts twelve
- * stages over the floor — including stage 29, whose disqualification is the
- * whole point of §7. That divergence is real and unresolved; this function
- * follows the contract's own worked example rather than settling it silently.
+ * Exact Engine semantics: bytes_touched is shuffle read + shuffle write +
+ * input, divided by task_count. The Engine defaults an omitted additive byte
+ * field to zero and returns zero when there are no tasks; the front does the
+ * same calculation here, then uses bytesPerTaskState before making a UI claim.
  */
 export function bytesPerTask(
-  row: Pick<SparkEventRow, "shuffle_read_bytes" | "task_count">,
+  row: Pick<SparkEventRow, "shuffle_read_bytes" | "shuffle_write_bytes" | "input_bytes" | "task_count">,
 ): number {
   if (row.task_count <= 0) return 0;
-  return row.shuffle_read_bytes / row.task_count;
+  return (row.shuffle_read_bytes + row.shuffle_write_bytes + (row.input_bytes ?? 0)) /
+    row.task_count;
+}
+
+/** Zero tasks cannot support a per-task claim even though Engine arithmetic returns 0. */
+export function bytesPerTaskState(
+  row: Pick<SparkEventRow, "shuffle_read_bytes" | "shuffle_write_bytes" | "input_bytes" | "task_count">,
+): DataState<number> {
+  return row.task_count <= 0
+    ? { state: "unavailable", value: null }
+    : { state: "available", value: bytesPerTask(row) };
+}
+
+export interface SuccessfulTaskDurationStats {
+  p50Ms: number;
+  p99Ms: number;
+  maxMs: number;
+  sampleCount: number;
+}
+
+/** v0.5's sample_count=0 convention: zeros without a sample are unavailable. */
+export function successfulTaskDurationState(
+  row: Partial<Pick<
+    SparkEventRow,
+    | "successful_task_duration_p50_ms"
+    | "successful_task_duration_p99_ms"
+    | "successful_task_duration_max_ms"
+    | "successful_task_sample_count"
+  >>,
+): DataState<SuccessfulTaskDurationStats> {
+  const sampleCount = row.successful_task_sample_count;
+  if (
+    sampleCount === undefined || sampleCount <= 0 ||
+    row.successful_task_duration_p50_ms === undefined ||
+    row.successful_task_duration_p99_ms === undefined ||
+    row.successful_task_duration_max_ms === undefined
+  ) return { state: "unavailable", value: null };
+
+  return {
+    state: "available",
+    value: {
+      p50Ms: row.successful_task_duration_p50_ms,
+      p99Ms: row.successful_task_duration_p99_ms,
+      maxMs: row.successful_task_duration_max_ms,
+      sampleCount,
+    },
+  };
 }
 
 export function ruleOneTailBound(
@@ -127,7 +197,7 @@ export function ruleOneTailBound(
  * Rule 2's floor, MEASURED from the replay set rather than trusted from a row,
  * so a stale stored value cannot mislead.
  *
- * Null input is not an edge case: contract v0.4 stores only the two arms'
+ * Null input is not an edge case: contract v0.5 stores only the two arms'
  * medians, never the individual replay durations, so against the live store
  * there is nothing to recompute from and the caller must fall back to the
  * stored noise_floor_pct — and say that it did.
@@ -290,9 +360,9 @@ export function ruleSevenReshaped(
 
 /* ------------------------------------------------- attribution & composition */
 
-/** v0.4 carries no execution -> stage map, so a transition cannot name a stage. */
+/** v0.5 still carries no execution -> stage map, so a transition cannot name a stage. */
 export function attributionIsAvailable(): boolean {
-  return false; // becomes true in v0.5
+  return false;
 }
 
 export function readSlots(conf: JobConfRow[]): number | null {

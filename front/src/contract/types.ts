@@ -1,20 +1,81 @@
 /**
- * Row shapes for the frozen Apex contract, v0.4.
+ * Row shapes for the frozen Apex contract, v0.5.
  *
- * These mirror the DDL in the apex repository (contract/*.ddl.sql) field for
- * field. If the DDL moves, this file moves with it and the version below is
- * bumped — the console never silently reads a shape it was not written for.
+ * SparkEventContractV05 mirrors the canonical DDL field for field. SparkEventRow
+ * is the console's intentionally narrower projection: additive fields are
+ * optional there until a query selects them, so absence remains observable.
  */
-export const CONTRACT_VERSION = "0.4" as const;
+export const CONTRACT_VERSION = "0.5" as const;
 
 export type Confidence = "HIGH" | "BEST_EFFORT";
 export type Severity = "critical" | "warning" | "info";
 
-/** One row per (job_id, stage_id, stage_attempt). Latest via argMax(col, ts). */
-export interface SparkEventRow {
+/** One canonical row per (job_id, stage_id, stage_attempt). */
+export interface SparkEventContractV05 {
   job_id: string;
+  app_id: string;
   app_name: string;
   stage_id: number;
+  stage_attempt: number;
+  ts: string;
+  shuffle_read_bytes: number;
+  shuffle_write_bytes: number;
+  spill_disk_bytes: number;
+  spill_mem_bytes: number;
+  gc_time_ms: number;
+  executor_run_time_ms: number;
+  input_bytes: number;
+  output_bytes: number;
+  peak_execution_mem_bytes: number;
+  task_count: number;
+  task_duration_p50_ms: number;
+  task_duration_p99_ms: number;
+  task_duration_max_ms: number;
+  task_duration_sample_count: number;
+  successful_task_duration_p50_ms: number;
+  successful_task_duration_p99_ms: number;
+  successful_task_duration_max_ms: number;
+  successful_task_sample_count: number;
+  successful_task_shuffle_read_bytes_p50: number;
+  successful_task_shuffle_read_bytes_max: number;
+  successful_task_shuffle_read_bytes_sample_count: number;
+  task_attempt_count: number;
+  task_failed_attempt_count: number;
+  task_counted_failure_attempt_count: number;
+  task_killed_attempt_count: number;
+  task_speculative_attempt_count: number;
+  plan_fingerprint: string;
+  plan_json: string;
+  attributes: Record<string, string>;
+}
+
+type SparkEventProjectionCore = Pick<
+  SparkEventContractV05,
+  | "job_id"
+  | "app_name"
+  | "stage_id"
+  | "stage_attempt"
+  | "task_count"
+  | "shuffle_read_bytes"
+  | "shuffle_write_bytes"
+  | "spill_mem_bytes"
+  | "spill_disk_bytes"
+  | "peak_execution_mem_bytes"
+  | "gc_time_ms"
+  | "task_duration_p50_ms"
+  | "task_duration_p99_ms"
+  | "plan_fingerprint"
+  | "ts"
+>;
+
+type SparkEventProjectionAdditions = Omit<
+  SparkEventContractV05,
+  keyof SparkEventProjectionCore
+>;
+
+/** Latest console projection via argMax(col, ts). Unselected fields stay absent. */
+export type SparkEventRow = SparkEventProjectionCore &
+  Partial<SparkEventProjectionAdditions> & {
   /**
    * NOT CAPTURED. The contract stores no stage name, and plan_json — the only
    * other text on the row — is a redacted Catalyst tree-string its own DDL says
@@ -22,36 +83,17 @@ export interface SparkEventRow {
    * DAG falls back to the stage id.
    */
   stage_name: string | null;
-  stage_attempt: number;
-  task_count: number;
-  shuffle_read_bytes: number;
-  shuffle_write_bytes: number;
-  spill_mem_bytes: number;
-  spill_disk_bytes: number;
-  peak_execution_mem_bytes: number;
-  gc_time_ms: number;
-  /**
-   * Percentiles of task DURATION, in milliseconds — the only percentiles the
-   * contract keeps. There is no per-task byte distribution anywhere in it, so
-   * a bytes ratio is not merely absent, it is underivable: shuffle_read_bytes /
-   * task_count yields the MEAN, never a p50 or p99. Rule 1's ratio is therefore
-   * this pair, which is also what the engine's skew watcher reads.
-   */
-  task_duration_p50_ms: number;
-  task_duration_p99_ms: number;
   /**
    * The stage's plan shape. Stage IDS move between runs; fingerprints do not,
    * so this is the only sound key for pairing a stage across two runs. Empty
    * when the stage carried no fingerprint — such a stage cannot be paired.
    */
-  plan_fingerprint: string;
-  ts: string;
-}
+  };
 
 /** Runtime re-planning decisions captured from Spark's own AQE listener. */
 export interface PlanTransitionRow {
   job_id: string;
-  /** v0.4 keys transitions by (job_id, execution_id) and carries NO
+  /** v0.5 keys transitions by (job_id, execution_id) and carries NO
    *  execution -> stage map. See rules.ts, attributionIsAvailable(). */
   execution_id: number;
   transition_type: "skew_split" | "join_strategy" | "coalesce" | "other";
@@ -162,7 +204,7 @@ export interface RunSummary {
   app_name: string;
   stage_count: number;
   /**
-   * NOT CAPTURED by contract v0.4, and null says exactly that.
+   * NOT CAPTURED by the current contract, and null says exactly that.
    *
    * spark_events has no stage duration, and run_outcomes.wall_clock_ms is the
    * timestamp span of ONE plan shape — its own DDL calls it "context, not the

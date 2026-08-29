@@ -36,8 +36,8 @@ export function RunDetailScreen() {
   const transQ = useAsync(() => repo.transitions(jobId), [repo, jobId]);
 
   const run = runQ.data ?? null;
-  const stages = stagesQ.data ?? [];
-  const conf = confQ.data ?? [];
+  const stages = useMemo(() => stagesQ.data ?? [], [stagesQ.data]);
+  const conf = useMemo(() => confQ.data ?? [], [confQ.data]);
   const findings = findingsQ.data ?? [];
   const transitions = transQ.data ?? [];
 

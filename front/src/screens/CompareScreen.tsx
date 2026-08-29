@@ -41,8 +41,8 @@ export function CompareScreen() {
   const curF = useAsync(() => (currentJob ? repo.findings(currentJob) : Promise.resolve([])), [repo, currentJob]);
   const baseF = useAsync(() => (baselineJob ? repo.findings(baselineJob) : Promise.resolve([])), [repo, baselineJob]);
 
-  const cur = curQ.data ?? [];
-  const base = baseQ.data ?? [];
+  const cur = useMemo(() => curQ.data ?? [], [curQ.data]);
+  const base = useMemo(() => baseQ.data ?? [], [baseQ.data]);
   const sharedShapes = candidatesQ.data?.find((c) => c.job_id === baselineJob)?.shared_shapes ?? 0;
 
   // Wall clock comes from each run's own row, never from summing stage durations:
