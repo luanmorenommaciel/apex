@@ -2,7 +2,7 @@
 
 **Role:** decide whether a recommended fix would actually work — and say so honestly when it
 would not, or when the answer cannot be certified at this scale.
-**Obeys:** [`../CONTRACT.md`](../CONTRACT.md) (v0.4) · **Full brief:** [`../docs/lanes/VERIFY.md`](../docs/lanes/VERIFY.md)
+**Obeys:** [`../CONTRACT.md`](../CONTRACT.md) (v0.5) · **Full brief:** [`../docs/lanes/VERIFY.md`](../docs/lanes/VERIFY.md)
 **Extension:** [`CONTRACT-EXTENSION-v0.3.md`](CONTRACT-EXTENSION-v0.3.md) (`apex.fix_verifications`, ratified)
 **Exit criterion (met):** predicts a fix's effect analytically, replays it on the bench, and
 emits `mechanism_confirmed` / `runtime_certified` / `runtime_unresolved` as separate verdicts —

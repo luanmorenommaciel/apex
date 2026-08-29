@@ -272,3 +272,69 @@ def test_small_confidence_wobble_is_ignored():
     result = diagnose.compare("a", "b", [stage_row(2)], [stage_row(2)], before, after)
     assert result.findings == []
     assert result.status == "unchanged"
+
+
+# --------------------------------------------------------------------------
+# auto-baseline: identical plan shape, or nothing
+# --------------------------------------------------------------------------
+def test_auto_baseline_picks_same_fingerprint():
+    """B-1 — the newest prior run whose plan shape matches, not just the newest."""
+    current = [stage_row(1, plan_fingerprint=FINGERPRINT_A)]
+    candidates = [
+        ("job-newer-different-plan", [stage_row(1, plan_fingerprint=FINGERPRINT_B)]),
+        ("job-older-same-plan", [stage_row(1, plan_fingerprint=FINGERPRINT_A)]),
+    ]
+
+    chosen, reason = diagnose.select_baseline("job-current", current, candidates)
+
+    assert chosen == "job-older-same-plan"
+    assert "identical plan shape" in reason
+
+
+def test_auto_baseline_refuses_across_plan_change():
+    """B-2 — a silently wrong baseline yields a confident wrong answer."""
+    current = [stage_row(1, plan_fingerprint=FINGERPRINT_A)]
+    candidates = [("job-other", [stage_row(1, plan_fingerprint=FINGERPRINT_B)])]
+
+    chosen, reason = diagnose.select_baseline("job-current", current, candidates)
+
+    assert chosen is None
+    assert "plan change" in reason
+    assert "baseline_job_id" in reason
+
+
+def test_explicit_baseline_is_unchanged():
+    """B-3 — supplying a baseline behaves exactly as before."""
+    baseline = [stage_row(1, p50_ms=100, p99_ms=100, plan_fingerprint=FINGERPRINT_A)]
+    current = [stage_row(1, p50_ms=100, p99_ms=100, plan_fingerprint=FINGERPRINT_A)]
+
+    result = diagnose.compare("base", "cur", baseline, current, [], [])
+
+    assert result.baseline_job_id == "base"
+    assert result.current_job_id == "cur"
+    assert result.status == "unchanged"
+    assert result.plan_fingerprint_changed is False
+
+
+def test_auto_baseline_skips_the_current_run_and_empty_candidates():
+    """The current run always matches itself; it must never be its own baseline."""
+    current = [stage_row(1, plan_fingerprint=FINGERPRINT_A)]
+    candidates = [
+        ("job-current", current),
+        ("job-empty", []),
+        ("job-match", [stage_row(1, plan_fingerprint=FINGERPRINT_A)]),
+    ]
+
+    chosen, _ = diagnose.select_baseline("job-current", current, candidates)
+
+    assert chosen == "job-match"
+
+
+def test_auto_baseline_refuses_when_the_current_run_has_no_fingerprint():
+    """Without a fingerprint there is no shape to match, so do not guess."""
+    current = [stage_row(1, plan_fingerprint="")]
+
+    chosen, reason = diagnose.select_baseline("job-current", current, [("j", current)])
+
+    assert chosen is None
+    assert "no plan_fingerprint" in reason

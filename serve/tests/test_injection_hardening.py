@@ -26,6 +26,7 @@ import pytest
 
 from apex_mcp import ch, diagnose
 from apex_mcp.ch import ApexStoreError, ReadStore
+from apex_mcp.models import RunList, RunSummary
 from tests.conftest import FakeClient, finding_row, stage_row, transition_row
 
 # A payload that tries every trick at once: instruction override, a shell
@@ -227,3 +228,75 @@ def test_empty_and_oversized_job_ids_are_rejected_before_any_query():
     with pytest.raises(ApexStoreError):
         store.stages("x" * 513)
     assert client.calls == []
+
+
+# --------------------------------------------------------------------------
+# run discovery — a new user-influenced path into both SQL and the context
+# --------------------------------------------------------------------------
+class _RunsClient:
+    """Local double: FakeClient routes on job_id, and run discovery has none."""
+
+    def __init__(self, rows: list[dict] | None = None) -> None:
+        self.rows = rows or []
+        self.calls: list[tuple[str, dict]] = []
+
+    def query(self, query: str, parameters: dict | None = None):
+        self.calls.append((query, parameters or {}))
+        return type("R", (), {"named_results": lambda _self: list(self.rows)})()
+
+
+def _hostile_run_row() -> dict:
+    return {
+        "job_id": "job-hostile",
+        "app_id": "app-1",
+        "app_name": PAYLOAD,
+        "first_ts": "2026-08-19T09:00:00",
+        "last_ts": "2026-08-19T09:10:00",
+        "stage_count": 2,
+        "spill_disk_bytes": 0,
+        "worst_p99_ms": 10,
+    }
+
+
+def test_hostile_app_name_stays_data():
+    """B-1 — the payload may be echoed verbatim, but only inside a typed field.
+
+    It must never appear in a string Apex itself composes, because that is the
+    channel an injected instruction would ride out on.
+    """
+    store = ReadStore(_RunsClient([_hostile_run_row()]))
+
+    rows = store.runs()
+    payload = RunList(
+        runs=[RunSummary.model_validate(r) for r in rows], returned=len(rows)
+    ).model_dump()
+
+    assert payload["runs"][0]["app_name"] == PAYLOAD
+    generated = " ".join(payload["notes"]) + " ".join(payload["untrusted_fields"])
+    assert PAYLOAD not in generated
+    assert "runs[].app_name" in payload["untrusted_fields"]
+
+
+def test_hostile_app_name_triggers_no_action(no_side_effects):
+    """B-2 — reading it executes nothing: no spawn, no write, no unlink."""
+    store = ReadStore(_RunsClient([_hostile_run_row()]))
+
+    rows = store.runs(app_name=PAYLOAD)
+    RunList(runs=[RunSummary.model_validate(r) for r in rows], returned=len(rows))
+
+    # The fixture fails the test if subprocess/os/open were touched at all.
+    assert rows[0]["app_name"] == PAYLOAD
+
+
+def test_hostile_app_name_is_bound_never_interpolated():
+    """B-3 — a SQL fragment in app_name binds as data and widens nothing."""
+    client = _RunsClient([])
+    store = ReadStore(client)
+    hostile = "' OR 1=1 --"
+
+    assert store.runs(app_name=hostile) == []
+
+    sql, parameters = client.calls[0]
+    assert parameters["app_name"] == hostile
+    assert hostile not in sql
+    assert "{app_name:String}" in sql

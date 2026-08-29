@@ -6,7 +6,7 @@
 [![Spark](https://img.shields.io/badge/Spark-3.5%20%7C%204.0%20%7C%204.1-e25a1c.svg)](#compatibility)
 [![Scala](https://img.shields.io/badge/Scala-2.12%20%7C%202.13-dc322f.svg)](#compatibility)
 [![Tests](https://img.shields.io/badge/tests-401-brightgreen.svg)](#verify-everything)
-[![Contract](https://img.shields.io/badge/contract-v0.4-fabd2f.svg)](CONTRACT.md)
+[![Contract](https://img.shields.io/badge/contract-v0.5-fabd2f.svg)](CONTRACT.md)
 
 Apex captures Spark telemetry from inside the JVM, lands it in ClickHouse you own, reasons over it with deterministic detectors, and answers questions through an MCP server — so you ask *"why was this job slow?"* in your editor and get an answer backed by measurements.
 
@@ -60,13 +60,16 @@ Stage 29 is the honest edge, and it is documented rather than hidden: it *is* th
 
 ## Quick start
 
-**Prerequisites:** Docker, [`uv`](https://docs.astral.sh/uv/), and **JDK 17** (`brew install openjdk@17`).
+**Prerequisites:** Docker, [`uv`](https://docs.astral.sh/uv/), [`sbt`](https://www.scala-sbt.org/) (`brew install sbt`), and **JDK 17** (`brew install openjdk@17`).
 
 ```bash
 git clone https://github.com/luanmorenommaciel/apex && cd apex
 
 # 1 — stand up the store you own (ClickHouse + HyperDX)
-cd infra && make apply-ddl && docker compose up -d --wait
+cd infra
+cp .env.example .env            # then set HYPERDX_API_KEY=$(openssl rand -hex 32)
+# if 8123/9000/4318 are taken on your host, uncomment the shifted band in .env
+docker compose up -d --wait && make apply-ddl
 
 # 2 — build the capture plugin
 cd ../jar && sbt -java-home "$(../scripts/find-jdk.sh 17)" assembly
@@ -88,7 +91,29 @@ Then point any MCP client at `serve/` and ask about the run:
 claude mcp add --scope project apex -- uvx --from ./serve apex-mcp
 ```
 
-> **Try it without a Spark cluster.** `cd dev && make up && make run-pathology JOB=skew_join` builds a Spark + Delta + MinIO lab and generates a job with a *known* pathology, so you can watch the whole pipeline work before pointing it at anything real.
+> **Try it without a Spark cluster.** `cd dev && make up && make run-pathology JOB=skew_join` builds a Spark + Delta + MinIO lab and generates a job with a *known* pathology, so you can exercise the plugin and the History Server locally. On its own this does **not** export telemetry anywhere real — `dev`'s Spark cluster only reaches ClickHouse once it's wired to `collect`/`infra`, below.
+
+### Prove it end-to-end: `dev` → `collect` → `infra`
+
+To watch a pathology's telemetry actually land in the canonical ClickHouse from step 1 — not just complete in the Spark UI — wire the three lanes together and run the built-in gate:
+
+```bash
+# infra/ already up from step 1. Connect collect/'s collector to it
+# (instead of collect's own throwaway ClickHouse):
+cd collect
+docker compose -f docker-compose.yml -f docker-compose.c3-infra.yml \
+  --env-file .env.example --env-file .env.c3-infra.example up -d
+
+# dev/'s pathology lab, wired to that same collector:
+cd ../dev
+cp .env.example .env
+export APEX_CANONICAL_CH_PASSWORD=apex_local_dev   # matches infra/.env's CLICKHOUSE_PASSWORD
+make e2e
+```
+
+`make e2e` runs all four pathologies (`skew_join`, `spill`, `bad_shuffle`, `driver_oom`) and asserts each one's specific signal against `apex.spark_events` in the real ClickHouse — not against Spark's own stats.
+
+> **Memory.** This brings up 11+ containers at once (2× ClickHouse, 2 Spark JVMs, HyperDX, MongoDB, 2 OTel Collectors). Give Docker Desktop **8 GB+** (Settings → Resources → Memory). Under ~4 GB the OOM killer takes down ClickHouse or a Spark executor mid-run (`exit code 137`) — it reads like a pipeline bug but is a resource limit.
 
 ---
 
@@ -130,7 +155,7 @@ flowchart LR
 | [`memory/`](memory/) | **recall** | "We've seen this plan shape before — here's what worked" | Python |
 | [`verify/`](verify/) | **refute** | Predicts a fix's effect, replays it, reports what can be certified | Python |
 
-**No lane imports another lane's code.** Every arrow above is a ClickHouse table defined by [`CONTRACT.md`](CONTRACT.md) — the frozen interface, now at v0.4 with **seven cross-lane rules**, each discovered by an implementation contradicting the spec. That's what let all eight lanes be built concurrently with **zero merge conflicts**.
+**No lane imports another lane's code.** Every arrow above is a ClickHouse table defined by [`CONTRACT.md`](CONTRACT.md) — the frozen interface, now at v0.5 with **seven cross-lane rules**, each discovered by an implementation contradicting the spec. That's what let all eight lanes be built concurrently with **zero merge conflicts**.
 
 ### Privacy: diagnosable, without your data
 

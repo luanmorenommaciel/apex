@@ -53,6 +53,23 @@ class DriverActivationSpec extends AnyFunSuite {
     assert(viaPlugin.exists(_.shuffle_read_bytes > 0),  "plugin path: expected a stage with shuffle_read_bytes > 0")
     assert(viaExtra.exists(_.shuffle_read_bytes > 0),   "extraListeners path: expected shuffle_read_bytes > 0")
     assert(viaPlugin.forall(e => e.job_id.nonEmpty && e.app_id.nonEmpty), "job_id/app_id must be populated")
+    assert(viaPlugin.forall(e =>
+      e.task_duration_max_ms >= e.task_duration_p99_ms &&
+        e.task_duration_p99_ms >= e.task_duration_p50_ms),
+      "duration metrics must satisfy max >= p99 >= p50")
+    assert(viaPlugin.forall(e =>
+      e.successful_task_sample_count == e.task_count &&
+        e.task_duration_sample_count == e.task_attempt_count &&
+        e.task_attempt_count == e.task_count &&
+        e.task_failed_attempt_count == 0 &&
+        e.task_counted_failure_attempt_count == 0 &&
+        e.task_killed_attempt_count == 0 &&
+        e.successful_task_shuffle_read_bytes_sample_count == e.task_count &&
+        e.successful_task_shuffle_read_bytes_max >=
+          e.successful_task_shuffle_read_bytes_p50 &&
+        e.successful_task_duration_max_ms >= e.successful_task_duration_p99_ms &&
+        e.successful_task_duration_p99_ms >= e.successful_task_duration_p50_ms),
+      "successful-only sample must match the healthy local job")
 
     // Ordering fix: every stage row of the one query carries the SAME correct 64-hex
     // fingerprint (attached via execution_id buffer flushed at SQL execution end).

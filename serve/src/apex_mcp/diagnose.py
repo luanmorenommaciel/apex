@@ -1160,3 +1160,56 @@ def _heuristic_confidence(symptom: StageSymptom) -> float:
         "warning": 0.7,
         "info": 0.5,
     }.get(symptom.severity, 0.5)
+
+
+# --------------------------------------------------------------------------
+# baseline selection
+# --------------------------------------------------------------------------
+def _fingerprints(rows: list[dict]) -> frozenset[str]:
+    return frozenset(
+        str(r.get("plan_fingerprint") or "") for r in rows if r.get("plan_fingerprint")
+    )
+
+
+def select_baseline(
+    current_job_id: str,
+    current_rows: list[dict],
+    candidates: list[tuple[str, list[dict]]],
+) -> tuple[str | None, str]:
+    """Choose the most recent prior run with an identical plan shape.
+
+    Pure: the caller supplies candidates already ordered newest-first.
+
+    Identical plan shape is the whole point. Comparing across a plan change
+    measures the plan, not the regression — so when nothing matches this
+    REFUSES rather than falling back to "the most recent run", because a
+    silently wrong baseline produces a confident wrong answer.
+    """
+    if not current_rows:
+        return None, (
+            "no stage telemetry exists for the current run, so there is nothing "
+            "to match a baseline against"
+        )
+
+    want = _fingerprints(current_rows)
+    if not want:
+        return None, (
+            "the current run carries no plan_fingerprint, so plan shape cannot "
+            "be matched — pass baseline_job_id explicitly"
+        )
+
+    for job_id, rows in candidates:
+        if job_id == current_job_id or not rows:
+            continue
+        if _fingerprints(rows) == want:
+            return job_id, (
+                f"auto-selected {job_id}: most recent prior run of the same "
+                f"application with an identical plan shape "
+                f"({len(want)} fingerprint(s))"
+            )
+
+    return None, (
+        "no prior run of this application shares its plan shape — comparing "
+        "across a plan change would measure the plan, not the regression. "
+        "Pass baseline_job_id explicitly to override."
+    )

@@ -4,9 +4,13 @@
 2. spill to disk or memory above a real floor      -> SPILL, measured
 3. GC time eating executor runtime                 -> MEMORY, ratio
 
-Rule 3 needs an executor-runtime denominator. `executor_run_time_ms` is not a
-contract column — it rides `attributes` when a listener supplies it. When it is
-absent the watcher falls back to `task_count * p50` as a runtime proxy and says
+Rule 3 needs an executor-runtime denominator. `executor_run_time_ms` is now a
+typed column on `spark_events`, but it is read through a fallback rather than
+directly: rows written before that column existed carry the value only in
+`attributes`, where it defaults to zero in the typed column. Reading the typed
+column alone would silently demote those rows from `measured` to the proxy, so
+the SQL prefers the typed column and falls back to the map. When neither is
+present the watcher falls back to `task_count * p50` as a runtime proxy and says
 so in the evidence, rather than silently reporting a ratio against a made-up
 denominator.
 """
@@ -34,7 +38,9 @@ SELECT
   argMax(peak_execution_mem_bytes, ts)    AS peak_execution_mem_bytes,
   argMax(task_count, ts)                  AS task_count,
   argMax(task_duration_p50_ms, ts)        AS task_duration_p50_ms,
-  toInt64OrZero(argMax(attributes['executor_run_time_ms'], ts)) AS executor_run_time_ms,
+  argMax(if(executor_run_time_ms > 0,
+            executor_run_time_ms,
+            toInt64OrZero(attributes['executor_run_time_ms'])), ts) AS executor_run_time_ms,
   argMax(attributes['failure_reason'], ts) AS failure_reason
 FROM apex.spark_events
 WHERE job_id = {job_id:String}

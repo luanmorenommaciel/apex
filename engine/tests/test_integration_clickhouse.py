@@ -242,3 +242,66 @@ def test_real_p0_job_yields_aqe_ground_truth(store):
     assert len(aqe) == 1
     assert aqe[0].type is FindingType.AQE_REPLAN
     assert aqe[0].stage_id == -1  # job-level: v0.2 has no execution->stage map
+
+
+# --- typed executor runtime, read with the Map as a FALLBACK ---------------
+# The column is additive, so three row shapes coexist in a real store and the
+# read has to survive all three. Only the middle one is interesting: it is the
+# transition window, and reading the typed column ALONE demotes it from
+# `measured` (0.85) to the proxy (0.45), which silently flips it back to
+# escalation-eligible. That regression is invisible offline — the SQL is what
+# changes, and the unit suite builds StageAggregate directly — so it is pinned
+# here, against a real ClickHouse.
+RUNTIME_ROW_COLUMNS = [
+    "job_id", "app_id", "stage_id", "stage_attempt", "ts",
+    "gc_time_ms", "task_count", "task_duration_p50_ms", "task_duration_p99_ms",
+    "executor_run_time_ms", "attributes",
+]
+
+
+@pytest.fixture
+def runtime_rows(store):
+    job_id = f"engine-test-{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    rows = [
+        # 0: pre-column run — nothing anywhere, the proxy is correct here.
+        [job_id, f"app-{job_id}", 0, 0, now, 3_000, 10, 100, 100, 0, {}],
+        # 1: TRANSITION — typed column defaulted to 0, value still in the Map.
+        [job_id, f"app-{job_id}", 1, 0, now, 3_000, 10, 100, 100, 0,
+         {"executor_run_time_ms": "10000"}],
+        # 2: post-migration run — typed column populated.
+        [job_id, f"app-{job_id}", 2, 0, now, 3_000, 10, 100, 100, 20_000,
+         {"executor_run_time_ms": "20000"}],
+    ]
+    store.client.insert(table="spark_events", database="apex",
+                        data=rows, column_names=RUNTIME_ROW_COLUMNS)
+    yield job_id
+    store.client.command(
+        "ALTER TABLE apex.spark_events DELETE WHERE job_id = %(j)s SETTINGS mutations_sync=1",
+        parameters={"j": job_id})
+
+
+def test_typed_runtime_column_is_read_with_the_map_as_fallback(runtime_rows, store):
+    by_stage = {s.stage_id: s for s in store.stage_aggregates(runtime_rows)}
+
+    assert by_stage[0].executor_run_time_ms == 0, "no value anywhere -> proxy, unchanged"
+    assert by_stage[1].executor_run_time_ms == 10_000, (
+        "transition row: typed column is 0 but the Map still carries the value. "
+        "Reading the column alone loses it and demotes the finding to the proxy."
+    )
+    assert by_stage[2].executor_run_time_ms == 20_000, "typed column is preferred"
+
+
+def test_transition_row_still_reports_a_measured_runtime(runtime_rows, store):
+    """The behavioural consequence, not just the number: a transition row must
+    stay `measured` and stay above the 0.60 gate."""
+    result = analyze(runtime_rows, store, persist=False, use_crew=False)
+    memory_findings = {f.stage_id: f for f in result["findings"]
+                       if f.detected_by == "memory_watcher"}
+
+    transition = memory_findings[1]
+    assert transition.details["runtime_basis"] == "measured"
+    assert transition.confidence_score >= 0.60, "must not fall back to escalation-eligible"
+
+    pre_column = memory_findings[0]
+    assert "estimated" in pre_column.details["runtime_basis"], "historical rows keep the proxy"

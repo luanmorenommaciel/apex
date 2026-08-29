@@ -35,6 +35,9 @@ something the others do not, and the naming does not make that obvious. This pag
 **The normal sequence is generate → verify:** run `e2e_canonical`, take the `job_id` it prints,
 then run the gate against it.
 
+For an opt-in, pre-submit custody chain for a particular E2E run, see
+[Pre-submit provenance](PRE_SUBMIT_PROVENANCE.md).
+
 ## What the canonical gate asserts
 
 `scripts/e2e_six_lanes.py` validates one already-submitted Spark application. It does **not**
@@ -49,6 +52,19 @@ start Docker, delete telemetry, invoke an LLM, or print credentials. It fails wh
 
 Repeat runs are **idempotent**: existing findings must carry the same signature and are not
 duplicated.
+
+### Optional ClickHouse identity check
+
+Set `CLICKHOUSE_EXPECTED_HOSTNAME` when the gate must prove that its existing ClickHouse client
+is connected to one specific server. Before `run_gate`, MCP, or findings persistence begins, the
+harness runs `SELECT hostName()` through that same client and requires exactly one non-empty
+`hostName()` value equal to the configured value. The comparison is exact and case-sensitive;
+the harness does not trim or normalize either hostname.
+
+If `CLICKHOUSE_EXPECTED_HOSTNAME` is absent or the literal empty string, the identity query is
+skipped. This preserves the previous behavior for existing invocations. An invalid response, a
+different hostname, or a query error fails closed with a sanitized `GateFailure` that does not
+echo connection details or environment values.
 
 ## Two operational traps
 

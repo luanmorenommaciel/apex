@@ -1,9 +1,10 @@
-"""The MCP tool surface: exactly four tools, correct annotations, no stdout."""
+"""The MCP tool surface: the contracted tools, correct annotations, no stdout."""
 
 from __future__ import annotations
 
 import ast
 import asyncio
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -15,6 +16,21 @@ from apex_mcp.server import create_server
 from tests.conftest import FakeClient, finding_row, stage_row, transition_row
 
 SRC = Path(__file__).resolve().parents[1] / "src"
+
+# The contracted tool surface, in one place. Every assertion below derives from
+# this list, so a leg that adds a tool inserts ONE sorted line and every test
+# follows. Repeating the names per-test is what made parallel legs collide.
+CONTRACTED_TOOLS = [
+    "analyze_run",
+    "compare_runs",
+    "list_runs",
+    "search_kb",
+    "suggest_fix",
+]
+
+# suggest_fix is the only non-read-only tool: it proposes and never applies.
+WRITE_TOOLS = {"suggest_fix"}
+READ_ONLY_TOOLS = [n for n in CONTRACTED_TOOLS if n not in WRITE_TOOLS]
 
 
 @pytest.fixture
@@ -35,15 +51,22 @@ def _tools(server):
     return asyncio.run(server.list_tools())
 
 
-def test_exactly_the_four_contracted_tools(server):
-    assert [t.name for t in _tools(server)] == [
-        "analyze_run", "compare_runs", "search_kb", "suggest_fix",
-    ]
+def test_the_contracted_tool_surface(server):
+    """Exact equality on the tool set — not a subset, not a count.
+
+    An unnoticed tool on a server a model can call is a security event, so a new
+    tool must fail here and be reconciled in a diff. That is the control.
+
+    Compared SORTED: registration order is an implementation detail this server
+    makes no promise about, and pinning it made every branch that adds a tool
+    collide with every other branch on one line.
+    """
+    assert sorted(t.name for t in _tools(server)) == CONTRACTED_TOOLS
 
 
 def test_read_tools_are_annotated_read_only(server):
     by_name = {t.name: t for t in _tools(server)}
-    for name in ("analyze_run", "compare_runs", "search_kb"):
+    for name in READ_ONLY_TOOLS:
         annotations = by_name[name].annotations
         assert annotations is not None
         # camelCase — ToolAnnotations has no `read_only_hint` field, and
@@ -166,3 +189,63 @@ def test_logging_is_configured_to_stderr():
         assert all(stream is sys.stderr for stream in streams)
     finally:
         root.handlers = saved
+
+
+# --------------------------------------------------------------------------
+# apex://runs — the lane's first MCP resource
+# --------------------------------------------------------------------------
+class _RunsOnlyClient:
+    """Serves run-discovery rows; FakeClient routes on job_id and runs has none."""
+
+    def __init__(self, rows: list[dict]) -> None:
+        self.rows = rows
+
+    def query(self, query: str, parameters: dict | None = None):
+        return type("R", (), {"named_results": lambda _self: list(self.rows)})()
+
+
+def _server_with_runs():
+    return create_server(
+        ReadStore(
+            _RunsOnlyClient(
+                [
+                    {
+                        "job_id": "job-recent",
+                        "app_id": "app-1",
+                        "app_name": "nightly_etl",
+                        "first_ts": "2026-08-19T09:00:00",
+                        "last_ts": "2026-08-19T09:12:00",
+                        "stage_count": 7,
+                        "spill_disk_bytes": 2048,
+                        "worst_p99_ms": 460,
+                    }
+                ]
+            )
+        )
+    )
+
+
+def test_runs_resource_is_listed(server):
+    """B-1 — a client can discover it without knowing the URI in advance."""
+    resources = asyncio.run(server.list_resources())
+
+    by_uri = {str(r.uri): r for r in resources}
+    assert "apex://runs" in by_uri, sorted(by_uri)
+    assert by_uri["apex://runs"].mimeType == "application/json"
+    assert by_uri["apex://runs"].name
+
+
+def test_runs_resource_returns_run_data():
+    """B-2 — the same typed payload the tool returns, as JSON."""
+    contents = list(asyncio.run(_server_with_runs().read_resource("apex://runs")))
+
+    payload = json.loads(contents[0].content)
+    assert payload["returned"] == 1
+    assert payload["runs"][0]["job_id"] == "job-recent"
+    assert payload["runs"][0]["stage_count"] == 7
+    assert "runs[].app_name" in payload["untrusted_fields"]
+
+
+def test_runs_resource_is_not_a_tool(server):
+    """A resource must not inflate the tool surface the model sees."""
+    assert "runs_resource" not in [t.name for t in _tools(server)]

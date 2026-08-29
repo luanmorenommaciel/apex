@@ -188,6 +188,29 @@ async def live_mcp_probe(job_id: str) -> dict[str, Any]:
     }
 
 
+CLICKHOUSE_HOSTNAME_QUERY = "SELECT hostName()"
+
+
+def _validate_clickhouse_hostname(client: Any) -> None:
+    """Optionally prove that the connected ClickHouse server is the expected one."""
+    expected = os.getenv("CLICKHOUSE_EXPECTED_HOSTNAME")
+    if expected is None or expected == "":
+        return
+
+    try:
+        rows = list(client.query(CLICKHOUSE_HOSTNAME_QUERY).named_results())
+    except Exception:
+        raise GateFailure("clickhouse_hostname_query_failed") from None
+
+    if len(rows) != 1 or not isinstance(rows[0], dict) or set(rows[0]) != {"hostName()"}:
+        raise GateFailure("clickhouse_hostname_response_invalid")
+    actual = rows[0]["hostName()"]
+    if not isinstance(actual, str) or actual == "":
+        raise GateFailure("clickhouse_hostname_response_invalid")
+    if actual != expected:
+        raise GateFailure("clickhouse_hostname_mismatch")
+
+
 def _connect_clickhouse() -> Any:
     import clickhouse_connect
 
@@ -209,7 +232,9 @@ def _parse_args() -> argparse.Namespace:
 def main() -> int:
     args = _parse_args()
     try:
-        result = asyncio.run(run_gate(job_id=args.job_id, client=_connect_clickhouse(), mcp_probe=live_mcp_probe))
+        client = _connect_clickhouse()
+        _validate_clickhouse_hostname(client)
+        result = asyncio.run(run_gate(job_id=args.job_id, client=client, mcp_probe=live_mcp_probe))
     except Exception as exc:
         result = {"gate": "six-lane-canonical-e2e", "job_id": args.job_id, "status": "failed", "error": f"{type(exc).__name__}:{exc}"}
         print(json.dumps(result, indent=2, sort_keys=True))

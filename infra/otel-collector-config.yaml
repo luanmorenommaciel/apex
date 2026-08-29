@@ -42,7 +42,17 @@ exporters:
     # Use the qualified alias apex-infra-clickhouse, NEVER the short `clickhouse` name:
     # on a shared network that short alias can round-robin to another lane's throwaway
     # ClickHouse (no reshape MVs there => spans silently lost). See docker-compose.yml.
-    endpoint: tcp://apex-infra-clickhouse:9000?compress=lz4&async_insert=1
+    #
+    # async_insert=0 (synchronous) + deduplicate_blocks_in_dependent_materialized_views=1:
+    # ClickHouse 24.8 rejects the async_insert=1 combination with this setting
+    # (Code 344 SUPPORT_IS_DISABLED). Without either the async toggle or the
+    # dedup setting, a retry_on_failure resend duplicates the row in otel_traces
+    # and inflates every downstream aggregate that isn't argMax-based (rollup,
+    # skew watcher, memory watcher). Requires non_replicated_deduplication_window
+    # set on otel_traces/spark_events/plan_transitions/spark_jobs_1m — see the
+    # additive migration. Synchronous inserts measured faster in this pipeline's
+    # shape (single-writer, small batches), not slower.
+    endpoint: tcp://apex-infra-clickhouse:9000?compress=lz4&async_insert=0&deduplicate_blocks_in_dependent_materialized_views=1
     database: apex
     username: ${env:CLICKHOUSE_USER}
     password: ${env:CLICKHOUSE_PASSWORD}

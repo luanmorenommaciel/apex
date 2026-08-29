@@ -4,6 +4,12 @@
 
 name: apex-dev
 
+secrets:
+  apex_s3_access_key:
+    file: ./secrets/apex_s3_access_key
+  apex_s3_secret_key:
+    file: ./secrets/apex_s3_secret_key
+
 x-spark-common: &spark-common
   image: ${APEX_IMAGE:-apex-spark:local}
   build:
@@ -100,6 +106,9 @@ services:
     depends_on:
       minio-init:
         condition: service_completed_successfully
+    secrets:
+      - apex_s3_access_key
+      - apex_s3_secret_key
 
   # ── Spark workers (scalable: `docker compose up -d --scale spark-worker=N`) ──
   spark-worker:
@@ -121,6 +130,9 @@ services:
     depends_on:
       spark-master:
         condition: service_healthy   # worker only starts once the master is serving
+    secrets:
+      - apex_s3_access_key
+      - apex_s3_secret_key
     # No fixed container_name / no host-port bind → free to scale to N replicas.
 
   # ── Spark History Server (reads finalized event logs from s3a://spark-logs) ──

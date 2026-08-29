@@ -1,0 +1,21 @@
+# Initial-package overlay. The orchestrator generates this bind source under
+# ignored .apex/ with MinIO credentials matching the local installation.
+services:
+  spark-master:
+    volumes:
+      - type: bind
+        source: ${APEX_SPARK_DEFAULTS_PATH:?set APEX_SPARK_DEFAULTS_PATH}
+        target: /opt/spark/conf/spark-defaults.conf
+        read_only: true
+  spark-worker:
+    volumes:
+      - type: bind
+        source: ${APEX_SPARK_DEFAULTS_PATH:?set APEX_SPARK_DEFAULTS_PATH}
+        target: /opt/spark/conf/spark-defaults.conf
+        read_only: true
+  spark-history:
+    volumes:
+      - type: bind
+        source: ${APEX_SPARK_DEFAULTS_PATH:?set APEX_SPARK_DEFAULTS_PATH}
+        target: /opt/spark/conf/spark-defaults.conf
+        read_only: true

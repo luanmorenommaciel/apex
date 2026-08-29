@@ -25,12 +25,27 @@ final case class ApexStageEvent(
   spill_disk_bytes: Long,
   spill_mem_bytes: Long,
   gc_time_ms: Long,
+  executor_run_time_ms: Long,
   input_bytes: Long,
   output_bytes: Long,
   peak_execution_mem_bytes: Long,
   task_count: Int,
   task_duration_p50_ms: Long,
   task_duration_p99_ms: Long,
+  task_duration_max_ms: Long,
+  task_duration_sample_count: Int,
+  successful_task_duration_p50_ms: Long,
+  successful_task_duration_p99_ms: Long,
+  successful_task_duration_max_ms: Long,
+  successful_task_sample_count: Int,
+  successful_task_shuffle_read_bytes_p50: Long,
+  successful_task_shuffle_read_bytes_max: Long,
+  successful_task_shuffle_read_bytes_sample_count: Int,
+  task_attempt_count: Int,
+  task_failed_attempt_count: Int,
+  task_counted_failure_attempt_count: Int,
+  task_killed_attempt_count: Int,
+  task_speculative_attempt_count: Int,
   plan_fingerprint: String,
   plan_json: String
 )
@@ -53,12 +68,40 @@ object ApexAttributes {
   val SpillDiskBytes: AttributeKey[java.lang.Long]    = AttributeKey.longKey("spill_disk_bytes")
   val SpillMemBytes: AttributeKey[java.lang.Long]     = AttributeKey.longKey("spill_mem_bytes")
   val GcTimeMs: AttributeKey[java.lang.Long]          = AttributeKey.longKey("gc_time_ms")
+  val ExecutorRunTimeMs: AttributeKey[java.lang.Long] = AttributeKey.longKey("executor_run_time_ms")
   val InputBytes: AttributeKey[java.lang.Long]        = AttributeKey.longKey("input_bytes")
   val OutputBytes: AttributeKey[java.lang.Long]       = AttributeKey.longKey("output_bytes")
   val PeakExecutionMemBytes: AttributeKey[java.lang.Long] = AttributeKey.longKey("peak_execution_mem_bytes")
   val TaskCount: AttributeKey[java.lang.Long]         = AttributeKey.longKey("task_count")
   val TaskDurationP50Ms: AttributeKey[java.lang.Long] = AttributeKey.longKey("task_duration_p50_ms")
   val TaskDurationP99Ms: AttributeKey[java.lang.Long] = AttributeKey.longKey("task_duration_p99_ms")
+  val TaskDurationMaxMs: AttributeKey[java.lang.Long] = AttributeKey.longKey("task_duration_max_ms")
+  val TaskDurationSampleCount: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("task_duration_sample_count")
+  val SuccessfulTaskDurationP50Ms: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("successful_task_duration_p50_ms")
+  val SuccessfulTaskDurationP99Ms: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("successful_task_duration_p99_ms")
+  val SuccessfulTaskDurationMaxMs: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("successful_task_duration_max_ms")
+  val SuccessfulTaskSampleCount: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("successful_task_sample_count")
+  val SuccessfulTaskShuffleReadBytesP50: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("successful_task_shuffle_read_bytes_p50")
+  val SuccessfulTaskShuffleReadBytesMax: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("successful_task_shuffle_read_bytes_max")
+  val SuccessfulTaskShuffleReadBytesSampleCount: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("successful_task_shuffle_read_bytes_sample_count")
+  val TaskAttemptCount: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("task_attempt_count")
+  val TaskFailedAttemptCount: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("task_failed_attempt_count")
+  val TaskCountedFailureAttemptCount: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("task_counted_failure_attempt_count")
+  val TaskKilledAttemptCount: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("task_killed_attempt_count")
+  val TaskSpeculativeAttemptCount: AttributeKey[java.lang.Long] =
+    AttributeKey.longKey("task_speculative_attempt_count")
   val PlanFingerprint: AttributeKey[String]  = AttributeKey.stringKey("plan_fingerprint")
   val PlanJson: AttributeKey[String]         = AttributeKey.stringKey("plan_json")
 

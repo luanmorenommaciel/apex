@@ -62,9 +62,15 @@ SELECT
   argMax(task_count, ts)                               AS task_count,
   argMax(plan_fingerprint, ts)                         AS plan_fingerprint,
   argMax(plan_json, ts)                                AS plan_json,
-  -- additive observations ride the contract's Map escape hatch when present;
-  -- a missing key yields '' -> 0, so their rules simply do not fire.
-  toInt64OrZero(argMax(attributes['executor_run_time_ms'], ts)) AS executor_run_time_ms,
+  -- executor runtime is a typed column, read with the Map as a FALLBACK, not
+  -- as the source: rows written before the column existed default it to zero
+  -- while still carrying the value under `attributes`. Preferring the column
+  -- and falling back keeps those rows `measured` instead of silently demoting
+  -- them to the task_count*p50 proxy.
+  argMax(if(executor_run_time_ms > 0,
+            executor_run_time_ms,
+            toInt64OrZero(attributes['executor_run_time_ms'])), ts) AS executor_run_time_ms,
+  -- still a pure Map escape hatch; a missing key yields '' so the rule does not fire.
   argMax(attributes['failure_reason'], ts)             AS failure_reason
 FROM apex.spark_events
 WHERE job_id = {job_id:String}

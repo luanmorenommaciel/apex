@@ -22,6 +22,7 @@ import logging
 import os
 import re
 from collections.abc import Iterable
+from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
 log = logging.getLogger("apex_mcp.ch")
@@ -93,6 +94,42 @@ _FINDINGS_ADDITIVE = {
         "toFloat64(0) AS confidence_score",
     ),
 }
+
+# The one read not keyed by job_id: a new user has no job_id yet, and a
+# reachable-but-empty store must be distinguishable from a broken one.
+# Run discovery. spark_events is ORDER BY (job_id, stage_id, stage_attempt)
+# PARTITION BY toYYYYMM(ts), so a newest-first listing is a full scan unless it
+# is bounded on ts — the `since` predicate is what lets partitions prune.
+# The table alias `e` is load-bearing: the SELECT projects `argMax(app_name, ts)
+# AS app_name`, and an unqualified `app_name` in WHERE resolves to that alias,
+# which ClickHouse rejects as an aggregate in WHERE (ILLEGAL_AGGREGATION).
+# app_name is set by the observed Spark job, so it BINDS; the empty-string test
+# expresses "no filter" without building two different statements.
+RUNS_SQL = """
+SELECT
+  job_id,
+  argMax(app_id, ts)             AS app_id,
+  argMax(app_name, ts)           AS app_name,
+  min(ts)                        AS first_ts,
+  max(ts)                        AS last_ts,
+  uniqExact(stage_id)            AS stage_count,
+  sum(spill_disk_bytes)          AS spill_disk_bytes,
+  max(task_duration_p99_ms)      AS worst_p99_ms
+FROM apex.spark_events AS e
+WHERE e.ts >= {since:DateTime}
+  AND ({app_name:String} = '' OR e.app_name = {app_name:String})
+GROUP BY job_id
+ORDER BY last_ts DESC
+LIMIT {limit:UInt32}
+"""
+
+HEALTH_SQL = """
+SELECT
+  count()           AS row_count,
+  uniqExact(job_id) AS job_count,
+  max(ts)           AS latest_ts
+FROM apex.spark_events
+"""
 
 COLUMNS_SQL = """
 SELECT name FROM system.columns
@@ -210,6 +247,56 @@ class ReadStore:
         # Validate BEFORE the column probe, so a bad job_id costs no round trip.
         job_id = _require_job_id(job_id)
         return self._query(_findings_sql(self.findings_columns()), {"job_id": job_id})
+
+    MAX_RUNS = 200
+
+    def runs(
+        self,
+        limit: int = 20,
+        since_hours: int = 168,
+        app_name: str = "",
+    ) -> list[dict[str, Any]]:
+        """Recent runs, one row per job_id, newest first.
+
+        The read the lane was missing: every other method needs a ``job_id``
+        the user has no way to obtain from Apex.
+
+        ``since_hours`` is not a convenience — it is the partition-pruning
+        bound. Without a ``ts`` predicate this degrades to a full scan on a
+        table sorted by ``job_id``. ``limit`` is clamped so a caller-supplied
+        value cannot ask for the whole table.
+        """
+        limit = max(1, min(int(limit), self.MAX_RUNS))
+        hours = max(1, int(since_hours))
+        since = datetime.now(timezone.utc) - timedelta(hours=hours)
+        return self._query(
+            RUNS_SQL,
+            {
+                "since": since.strftime("%Y-%m-%d %H:%M:%S"),
+                "app_name": app_name or "",
+                "limit": limit,
+            },
+        )
+
+    def store_health(self) -> dict[str, Any]:
+        """Row count, distinct jobs and newest ts across apex.spark_events.
+
+        ``latest_ts`` is normalised to None on an empty table: ClickHouse
+        returns the zero DateTime for max() over no rows, and 1970 presented as
+        a freshness reading is worse than saying nothing.
+
+        The timestamp is the EMITTER's clock, not ingestion time — a Spark host
+        with skewed time shows up here as skewed freshness.
+        """
+        rows = self._query(HEALTH_SQL, {})
+        row = rows[0] if rows else {}
+        row_count = int(row.get("row_count") or 0)
+        latest = row.get("latest_ts")
+        return {
+            "row_count": row_count,
+            "job_count": int(row.get("job_count") or 0),
+            "latest_ts": latest if row_count else None,
+        }
 
     def findings_columns(self) -> set[str]:
         """Which apex.findings columns this deployment actually has.
