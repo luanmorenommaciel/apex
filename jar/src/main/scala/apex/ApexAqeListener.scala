@@ -162,8 +162,8 @@ object ApexAqeListener {
     def nonEmpty: Boolean = signature.nonEmpty
   }
 
-  private final case class Trans(kind: String, detail: String, before: String, after: String, confidence: String,
-                                 skewAccumIds: Set[Long] = Set.empty, readCount: Int = 0)
+  private[apex] final case class Trans(kind: String, detail: String, before: String, after: String, confidence: String,
+                                       skewAccumIds: Set[Long] = Set.empty, readCount: Int = 0)
 
   /** A skew_split parked until Spark posts numSkewedPartitions for its reads. */
   private final case class PendingSkew(accumIds: Set[Long], prevAccumIds: Set[Long],
@@ -202,17 +202,16 @@ object ApexAqeListener {
   }
 
   /** Consecutive-snapshot diff → real transitions only (empty ⇒ no-op re-plan, dropped). */
-  private def diff(prev: PlanShape, cur: PlanShape): Seq[Trans] = {
+  private[apex] def diff(prev: PlanShape, cur: PlanShape): Seq[Trans] = {
     val out = mutable.ArrayBuffer.empty[Trans]
 
-    // Join-strategy switches: same tree position changed join type (HIGH — structural).
-    val n = math.min(prev.joins.size, cur.joins.size)
-    var i = 0
-    while (i < n) {
-      if (prev.joins(i) != cur.joins(i))
-        out += Trans(PlanTransition.JoinSwitch, s"${prev.joins(i)}->${cur.joins(i)}",
-          prev.joins(i), cur.joins(i), PlanTransition.High)
-      i += 1
+    // Align the join sequences before classifying replacements. A positional
+    // zip relabels every following join when one node is inserted or removed.
+    // Edit-distance alignment treats those as indels and emits only strict
+    // substitutions as HIGH-confidence strategy switches.
+    joinReplacements(prev.joins, cur.joins).foreach { case (before, after) =>
+      out += Trans(PlanTransition.JoinSwitch, s"$before->$after",
+        before, after, PlanTransition.High)
     }
 
     // New AQEShuffleRead descriptors → skew split / coalesce / local read (HIGH — structural).
@@ -234,5 +233,66 @@ object ApexAqeListener {
     // No specific structural signal → treat as a no-op re-plan and drop (avoids noise
     // from benign AQEShuffleRead insertion). `other` is reserved for future use.
     out.toList
+  }
+
+  /** Strict substitutions in a minimum edit alignment; insertions/deletions
+    * are structural movement, not join strategy switches.
+    */
+  private[apex] def joinReplacements(before: List[String], after: List[String]): List[(String, String)] = {
+    val left = before.toIndexedSeq
+    val right = after.toIndexedSeq
+    val distance = Array.ofDim[Int](left.size + 1, right.size + 1)
+
+    var i = left.size
+    while (i >= 0) {
+      distance(i)(right.size) = left.size - i
+      i -= 1
+    }
+    var j = right.size
+    while (j >= 0) {
+      distance(left.size)(j) = right.size - j
+      j -= 1
+    }
+
+    i = left.size - 1
+    while (i >= 0) {
+      j = right.size - 1
+      while (j >= 0) {
+        distance(i)(j) =
+          if (left(i) == right(j)) distance(i + 1)(j + 1)
+          else {
+            val substitute = 1 + distance(i + 1)(j + 1)
+            val delete = 1 + distance(i + 1)(j)
+            val insert = 1 + distance(i)(j + 1)
+            math.min(substitute, math.min(delete, insert))
+          }
+        j -= 1
+      }
+      i -= 1
+    }
+
+    val replacements = mutable.ArrayBuffer.empty[(String, String)]
+    i = 0
+    j = 0
+    while (i < left.size && j < right.size) {
+      if (left(i) == right(j)) {
+        i += 1
+        j += 1
+      } else {
+        val substitute = 1 + distance(i + 1)(j + 1)
+        val delete = 1 + distance(i + 1)(j)
+        val insert = 1 + distance(i)(j + 1)
+        if (substitute < delete && substitute < insert) {
+          replacements += ((left(i), right(j)))
+          i += 1
+          j += 1
+        } else if (delete <= insert) {
+          i += 1
+        } else {
+          j += 1
+        }
+      }
+    }
+    replacements.toList
   }
 }
