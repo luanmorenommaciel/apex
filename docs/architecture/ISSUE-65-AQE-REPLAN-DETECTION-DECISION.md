@@ -1,34 +1,18 @@
-# Issue #65 — AQE re-plan detection decision
+# Issue #65 — AQE re-plan detection decision record index
 
-Status: owner decision; candidate not published.
+Status: superseded as a decision record; owner decision still pending.
 
-## Options
+The canonical proposal is
+[ADR-003 — AQE re-plan detection](ADR-003-AQE-REPLAN-DETECTION.md). This file is
+kept only as a stable lineage link for issue #65 and the PR #98 document path;
+it is not a second decision.
 
-1. Keep positional join comparison and accumulator-based skew counts.
-2. Use edit alignment without accumulator-based skew counts.
-3. Combine edit alignment with the current accumulator-based skew counts.
+ADR-003 consolidates the design evidence first documented by PR #93 with the
+combined implementation candidate and tests carried by PR #98. PR #93 is
+therefore superseded for decision-document purposes, while its alternatives,
+benchmarks, cross-test results, risks, and rollback analysis remain attributed
+in the ADR.
 
-## Candidate evaluated here
-
-Option 3. It fixes false join-switch cascades caused by insertion/removal while
-retaining the current `numSkewedPartitions` accumulator IDs, pending transition
-queue, and execution-end fallback. The four transition categories keep their
-current meanings: `join_switch`, `skew_split`, `coalesce`, and `local_read`.
-
-## Trade-off
-
-Edit alignment uses O(n²) time and memory in the number of joins. A reproducible
-JVM benchmark at 100 joins is included. That synthetic result is evidence about
-the algorithm on the test JVM, not a claim about production latency or plan-size
-distribution.
-
-## Compatibility and rollback
-
-The candidate is exercised across all supported Spark/Scala build cells. It
-does not change schema, DDL, event payloads, or consumers, so rollback is a
-code-only revert.
-
-## Decision required
-
-The owner must explicitly choose the combined behavior before publication.
-Offline correctness and cost evidence do not constitute product acceptance.
+No owner approval is implied by this consolidation. Luan must still decide
+whether the combined detector is accepted as the product direction before the
+candidate is published or merged.
