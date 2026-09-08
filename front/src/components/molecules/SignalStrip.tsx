@@ -56,13 +56,14 @@ export function SignalStrip({
       <div className="h-px bg-edge" />
       <div className="flex gap-6 font-mono text-[11px] text-dim">
         <span>{stages.length} stages · log axis, bytes/task</span>
-        <span>{refusedCount} tails considered</span>
+        {/* The refusal set is the TOP 5 by p99/p50, not every stage — say the
+            bound rather than letting the number read as run-wide. */}
+        <span>{refusedCount} of the 5 loudest ratios refused</span>
         <span>
           <span className="text-spark">{claimCount}</span> claims made
         </span>
-        <span>
-          llm_calls <span className="text-certified">0</span>
-        </span>
+        {/* `llm_calls 0` used to sit here. Nothing in the contract counts model
+            invocations, and this component is handed stages, not a run. */}
       </div>
     </div>
   );

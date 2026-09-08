@@ -1,9 +1,14 @@
 import { Link, useParams } from "react-router-dom";
-import { Bar, Card, FLOOR_PX, KeyValue, Label, Mono, Pill, Prose, SeverityBadge } from "@/components/atoms";
+import {
+  Bar, Card, ConfidencePill, FLOOR_PX, KeyValue, Label, Mono, Pill, Prose, SeverityBadge,
+} from "@/components/atoms";
 import { ScreenHeader } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
-import { assessStage, fmt, noOpGate, ratioOf, VOLUME_FLOOR_BYTES_PER_TASK } from "@/contract/rules";
+import {
+  assessStage, fmt, noOpGate, parseProposal, ratioOf, VOLUME_FLOOR_BYTES_PER_TASK,
+} from "@/contract/rules";
 import { attributionIsAvailable } from "@/contract/rules";
+import { CONTRACT_VERSION } from "@/contract/types";
 import { useAsync, useRepository } from "@/data/useRepository";
 
 /** UNTRUSTED per the contract: written by the observed job, rendered as data. */
@@ -18,16 +23,46 @@ export function FindingScreen() {
   const confQ = useAsync(() => repo.jobConf(jobId), [repo, jobId]);
   const transQ = useAsync(() => repo.transitions(jobId), [repo, jobId]);
 
+  // The verification row carries the only PROPOSAL the contract stores, and
+  // the shape history is what plan memory actually knows about this run. Both
+  // used to be prose typed into this screen.
+  const fixQ = useAsync(() => repo.fixVerification(findingId), [repo, findingId]);
+
   const finding = (findingsQ.data ?? []).find((f) => f.finding_id === findingId);
   const stages = stagesQ.data ?? [];
   const conf = confQ.data ?? [];
-  const transition = (transQ.data ?? [])[0];
+  const transitions = transQ.data ?? [];
+
+  const fingerprint = stages.find((s) => s.plan_fingerprint)?.plan_fingerprint ?? "";
+  const shapeQ = useAsync(
+    () => (fingerprint ? repo.shapeRuns(fingerprint) : Promise.resolve([])),
+    [repo, fingerprint],
+  );
 
   if (findingsQ.loading) return <Page><Prose>Loading finding…</Prose></Page>;
   if (!finding) return <Page><Prose>No finding <Mono>{findingId}</Mono>.</Prose></Page>;
 
-  const gate = noOpGate(conf, "spark.sql.adaptive.skewJoin.enabled", "true");
+  const shapeHistory = shapeQ.data ?? [];
+  const v = fixQ.data;
+  const proposal = v ? parseProposal(v.proposed_diff) : null;
+
+  // The AQE transition is only THIS finding's ground truth when this finding is
+  // the AQE one. `transitions[0]` was rendered under that heading for every
+  // finding, including a SPILL that no re-plan produced.
+  const transition = finding.type === "AQE_REPLAN" ? transitions[0] : undefined;
+
   const ranked = [...stages].sort((a, b) => ratioOf(b) - ratioOf(a)).slice(0, 5);
+  const rankedAssessed = ranked.map((s) => ({ s, a: assessStage(s, conf) }));
+  // "zero were reported as skew" was a constant. This is the count.
+  const rankedWithFinding = ranked.filter((s) =>
+    (findingsQ.data ?? []).some((f) => f.stage_id === s.stage_id),
+  ).length;
+  // A stage that CLEARS the volume floor and is still excluded is the sharpest
+  // illustration of rule 6, so the caption names whichever one that is — it
+  // used to name stage 11 unconditionally.
+  const clearsFloorButExcluded = rankedAssessed.find(
+    ({ a }) => a.aboveVolumeFloor && a.refusal?.code === "not_a_distribution",
+  );
 
   return (
     <Page>
@@ -44,35 +79,70 @@ export function FindingScreen() {
             <span className="text-edge2">/</span>
             <Mono>{finding.finding_id}</Mono>
             <SeverityBadge severity={finding.severity} />
-            <Pill tone="certified">{finding.confidence} · {finding.confidence_score.toFixed(2)}</Pill>
+            {/* Was a hardcoded `certified` (green) pill: a LOW-confidence
+                finding wore the colour of a passed check. */}
+            <ConfidencePill confidence={finding.confidence} score={finding.confidence_score} />
           </span>
         }
       />
 
       <div className="flex gap-5 flex-1 min-h-0">
         <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-auto pr-1">
+          {/* One paragraph used to assert AQE provenance for EVERY finding: a
+              SPILL raised by the memory watcher was described as Spark's own
+              re-planning decision, captured from a listener that had nothing to
+              do with it. The claim is now made only for the type that has it.
+              The version is read from the contract module too — this said v0.4,
+              and promised a map "in v0.5" that v0.5 does not carry. */}
           <Prose size="base" className="max-w-[760px]">
-            This finding is not a heuristic. It is Spark's own runtime re-planning decision, captured
-            from <Mono className="text-body2">SparkListenerSQLAdaptiveExecutionUpdate</Mono> and
-            diffed per execution. It sits at job level because contract v0.4 keys transitions by{" "}
-            <Mono className="text-body2">(job_id, execution_id)</Mono> and carries no execution→stage
-            map. Attributing it to a stage would be a fabrication
-            {!attributionIsAvailable() && " — the map arrives in v0.5"}.
+            {finding.type === "AQE_REPLAN" ? (
+              <>
+                This finding is not a heuristic. It is Spark&rsquo;s own runtime re-planning
+                decision, captured from{" "}
+                <Mono className="text-body2">SparkListenerSQLAdaptiveExecutionUpdate</Mono> and
+                diffed per execution.
+              </>
+            ) : (
+              <>
+                Raised by <Mono className="text-body2">{finding.detected_by}</Mono> over the
+                contract rows for this run. Everything below is the stored row and what this
+                console can derive from it; no part of the verdict is re-decided here.
+              </>
+            )}{" "}
+            {finding.stage_id < 0 && (
+              <>
+                It sits at job level because contract v{CONTRACT_VERSION} keys transitions by{" "}
+                <Mono className="text-body2">(job_id, execution_id)</Mono> and carries no
+                execution→stage map. Attributing it to a stage would be a fabrication
+                {!attributionIsAvailable() && ", and that map is still not in the contract"}.
+              </>
+            )}
           </Prose>
 
           <div className="grid grid-cols-2 gap-3.5">
             <Card className="p-4 flex flex-col gap-2.5">
-              <Label>GROUND TRUTH CAPTURED</Label>
-              <div className="flex flex-col gap-1.5 font-mono text-xs">
-                <div className="flex justify-between"><span className="text-sub">transition_type</span><span className="text-withheld">{transition?.transition_type ?? "—"}</span></div>
-                <div className="flex justify-between"><span className="text-sub">execution_id</span><span className="text-body2">{transition?.execution_id ?? "—"}</span></div>
-                <div className="flex justify-between"><span className="text-sub">detail</span><span className="text-body2">{transition?.detail ?? "—"}</span></div>
-                <div className="flex justify-between"><span className="text-sub">before → after</span><span className="text-body2">{transition ? `${transition.before} → ${transition.after}` : "—"}</span></div>
-                <div className="flex justify-between"><span className="text-sub">confidence</span><span className="text-certified">{transition?.confidence ?? "—"}</span></div>
-              </div>
+              <Label>{transition ? "GROUND TRUTH CAPTURED" : "AQE TRANSITION LOG"}</Label>
+              {transition ? (
+                <div className="flex flex-col gap-1.5 font-mono text-xs">
+                  <div className="flex justify-between"><span className="text-sub">transition_type</span><span className="text-withheld">{transition.transition_type}</span></div>
+                  <div className="flex justify-between"><span className="text-sub">execution_id</span><span className="text-body2">{transition.execution_id}</span></div>
+                  <div className="flex justify-between"><span className="text-sub">detail</span><span className="text-body2">{transition.detail}</span></div>
+                  <div className="flex justify-between"><span className="text-sub">before → after</span><span className="text-body2">{transition.before} → {transition.after}</span></div>
+                  <div className="flex justify-between"><span className="text-sub">confidence</span><span className="text-certified">{transition.confidence}</span></div>
+                </div>
+              ) : (
+                <Prose size="sm" className="text-sub">
+                  {transitions.length === 0
+                    ? "Spark logged no AQE re-plan for this run at all."
+                    : `${transitions.length} re-plan${transitions.length === 1 ? "" : "s"} were logged for this run, but none is this finding's evidence: contract v${CONTRACT_VERSION} carries no execution→stage map, so a transition cannot be tied to a ${finding.type} on a stage.`}
+                </Prose>
+              )}
               <Prose size="xs" className="text-dim">
-                Cost to produce: <Mono className="text-certified">$0</Mono>. No LLM was called for
-                this finding.
+                {/* The em dash is the honest form: nothing in the contract counts
+                    model invocations, so "$0, no LLM was called" was a claim this
+                    console had no row to support. */}
+                LLM calls recorded against this finding:{" "}
+                <Mono className="text-body2">—</Mono> — no contract table counts them.
               </Prose>
             </Card>
 
@@ -84,37 +154,74 @@ export function FindingScreen() {
                   .filter((c) => c.key.includes("adaptive"))
                   .map((c) => (
                     <div key={c.key} className="text-body2">
-                      {c.key.replace("spark.sql.", "")} = <span className="text-certified">{c.value}</span>
-                      {c.key.endsWith("skewJoin.enabled") && (
+                      {c.key.replace("spark.sql.", "")} ={" "}
+                      <span className={c.value === "true" ? "text-certified" : "text-body2"}>
+                        {c.value}
+                      </span>
+                      {/* Printed beside skewJoin.enabled whatever its value —
+                          including `false`, where "already on" is backwards. */}
+                      {c.key.endsWith("skewJoin.enabled") && c.value === "true" && (
                         <span className="text-withheld"> ← already on</span>
                       )}
                     </div>
                   ))}
-                <div className="text-body2">
-                  spark.executor.instances = <span className="text-finding">absent</span>
-                </div>
+                {/* Rendered only when the key really is missing. Unconditional,
+                    it printed "absent" for a run that had emitted the value. */}
+                {!conf.some((c) => c.key === "spark.executor.instances") && (
+                  <div className="text-body2">
+                    spark.executor.instances = <span className="text-finding">absent</span>
+                  </div>
+                )}
               </div>
-              <Prose size="xs" className="text-sub">{gate.reason}</Prose>
+              {/* The gate now runs over the PROPOSAL the verify lane stored, key
+                  by key. It used to gate one key and one value written into this
+                  screen — skewJoin.enabled -> true — which gates a proposal no
+                  lane had necessarily made. */}
+              {proposal ? (
+                <div className="flex flex-col gap-1">
+                  {Object.entries(proposal).map(([k, val]) => (
+                    <Prose key={k} size="xs" className="text-sub">
+                      <Mono className="text-dim">{k}</Mono> — {noOpGate(conf, k, val).reason}
+                    </Prose>
+                  ))}
+                </div>
+              ) : (
+                <Prose size="xs" className="text-sub">
+                  Nothing to gate:{" "}
+                  <Mono className="text-body2">apex.fix_verifications</Mono>{" "}
+                  {v
+                    ? "carries no readable conf overlay for this finding"
+                    : "holds no row for this finding"}
+                  , and the fix below is prose rather than a testable set of keys.
+                </Prose>
+              )}
             </Card>
           </div>
 
-          <Card accent="certified" className="p-4 flex flex-col gap-2">
+          {/* The STORED fix, not a sentence about the recorded run's fix. It is
+              UNTRUSTED — authored by the engine about the observed job — so it is
+              rendered as data and never parsed into something to run. */}
+          <Card accent={finding.fix ? "certified" : "withheld"} className="p-4 flex flex-col gap-2">
             <Label>FIX AS WRITTEN</Label>
             <div className="font-mono text-sm text-bright">
-              Keep <span className="text-certified">skewJoin.enabled=true</span>, then remove the
-              skew at the source.
+              {finding.fix || "No fix text was stored with this finding."}
             </div>
             <Prose size="xs" className="text-sub">
-              Salt the join key, or pre-aggregate the hot key upstream. AQE is already doing what it
-              can — and rule 5 means a quiet transition log would license no claim either way.
+              Prose, not a configuration. Turning it into a testable overlay is the verify
+              lane&rsquo;s job — and rule 5 means a quiet transition log licenses no claim either
+              way in the meantime.
             </Prose>
           </Card>
 
           <Card className="p-4 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <Label tone="withheld">WHY THE LOUDEST NUMBER IS NOT HERE</Label>
+              {/* "zero were reported as skew" was a constant beside a count. */}
               <span className="text-xs text-dim">
-                {ranked.length} stages carried a tail · zero were reported as skew
+                the {ranked.length} loudest p99/p50 ratios ·{" "}
+                {rankedWithFinding === 0
+                  ? "none produced a finding"
+                  : `${rankedWithFinding} produced a finding`}
               </span>
             </div>
             <div className="flex gap-5">
@@ -128,28 +235,38 @@ export function FindingScreen() {
                     1 MiB/task floor
                   </div>
                   <div className="h-full flex items-end gap-4 pb-[18px]">
-                    {ranked.map((s) => {
-                      const a = assessStage(s, conf);
-                      return (
-                        <Bar
-                          key={s.stage_id}
-                          bytesPerTask={a.bytesPerTask}
-                          tone={a.refusal?.code === "post_intervention" ? "withheld" : "refused"}
-                          label={String(s.stage_id)}
-                        />
-                      );
-                    })}
+                    {rankedAssessed.map(({ s, a }) => (
+                      <Bar
+                        key={s.stage_id}
+                        bytesPerTask={a.bytesPerTask}
+                        tone={a.refusal?.code === "post_intervention" ? "withheld" : "refused"}
+                        label={String(s.stage_id)}
+                      />
+                    ))}
                   </div>
                 </div>
+                {/* Named stage 11 and "2 tasks" unconditionally. The caption now
+                    finds whichever stage actually demonstrates the point, and
+                    says something weaker when none does. */}
                 <Prose size="xs" className="text-dim">
-                  Bar height is bytes/task on a log scale. Stage 11 clears the floor but has 2 tasks
-                  — rule 6 makes rule 1 vacant, so the stage is excluded, not cleared.
+                  Bar height is bytes/task on a log scale.{" "}
+                  {clearsFloorButExcluded ? (
+                    <>
+                      Stage {clearsFloorButExcluded.s.stage_id} clears the floor but has{" "}
+                      {clearsFloorButExcluded.s.task_count} tasks — rule 6 makes rule 1 vacant, so
+                      the stage is excluded, not cleared.
+                    </>
+                  ) : (
+                    <>
+                      A bar above the line is not a claim: rule 6 excludes a stage whose task count
+                      cannot describe a distribution, whatever its volume.
+                    </>
+                  )}
                 </Prose>
               </div>
 
               <div className="flex-1 min-w-0 flex flex-col gap-2.5">
-                {ranked.slice(0, 2).map((s) => {
-                  const a = assessStage(s, conf);
+                {rankedAssessed.slice(0, 2).map(({ s, a }) => {
                   return (
                     <Prose key={s.stage_id}>
                       <Mono className="text-bright">stage {s.stage_id} · {fmt.ratio(a.ratio)}</Mono> —{" "}
@@ -186,7 +303,14 @@ export function FindingScreen() {
               <KeyValue k="confidence" v={finding.confidence} />
               <KeyValue k="confidence_score" v={finding.confidence_score.toFixed(2)} />
               <KeyValue k="detected_by" v={finding.detected_by} />
-              <KeyValue k="hot_key" v={<span className="text-muted">""</span>} />
+              {/* Was the literal string `""`, so a finding that named a hot key
+                  showed none. */}
+              <KeyValue
+                k="hot_key"
+                v={finding.hot_key
+                  ? <span className="text-body2">{finding.hot_key}</span>
+                  : <span className="text-muted">not set</span>}
+              />
             </div>
           </div>
 
@@ -201,11 +325,33 @@ export function FindingScreen() {
             </Prose>
           </div>
 
-          <Card accent="memory" className="p-3 flex flex-col gap-1.5">
-            <Mono className="text-xs text-memory">7 runs · same fingerprint</Mono>
+          {/* Was "7 runs · same fingerprint" over two sentences about salting a
+              join key and raising skewedPartitionFactor — an outcome history
+              this console had never queried, printed beside every finding. */}
+          <Card
+            accent={shapeHistory.length > 0 ? "memory" : "withheld"}
+            className="p-3 flex flex-col gap-1.5"
+          >
+            <Mono className="text-xs text-memory">
+              {shapeHistory.length > 0
+                ? `${shapeHistory.length} run${shapeHistory.length === 1 ? "" : "s"} · same fingerprint`
+                : "no history on this shape"}
+            </Mono>
             <Prose size="xs" className="text-sub">
-              Salting the join key cleared it twice. Raising{" "}
-              <Mono className="text-body2">skewedPartitionFactor</Mono> did nothing, three times.
+              {shapeHistory.length === 0 ? (
+                <>
+                  <Mono className="text-body2">apex.run_outcomes</Mono> holds no run of this plan
+                  shape, so there is nothing to recall — and rule 3 credits nothing to tuning below
+                  two distinct configurations.
+                </>
+              ) : (
+                <>
+                  {shapeHistory.filter((r) => r.finding_count === 0).length} of them ran clean.
+                  Configuration was captured on{" "}
+                  {shapeHistory.filter((r) => r.config_source !== "unknown").length}, which is all
+                  rule 3 has to reason over. <Link to="/memory">Open plan memory</Link>.
+                </>
+              )}
             </Prose>
             <Mono className="text-[10px] text-muted">
               single-environment corpus · magnitude uncertain

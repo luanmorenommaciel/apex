@@ -174,7 +174,10 @@ export const runs: (RunSummary & { age: string })[] = recordedRuns.map((r) => ({
  * look comparable to every other, which is the failure the memory lane's own
  * DDL warns about.
  */
-const recordedStages: Record<string, Omit<SparkEventRow, "plan_fingerprint">[]> = {
+const recordedStages: Record<
+  string,
+  Omit<SparkEventRow, "plan_fingerprint" | "input_bytes">[]
+> = {
   "app-20260803014217-0071": [
   {
     "job_id": "app-20260803014217-0071",
@@ -1345,6 +1348,11 @@ export const stagesByJob: Record<string, SparkEventRow[]> = Object.fromEntries(
     rows.map((r) => ({
       ...r,
       plan_fingerprint: SHARED_SHAPE_JOBS.has(job) ? PLAN_FINGERPRINT : "",
+      // The recording predates the console selecting input_bytes, exactly as it
+      // predates plan_fingerprint above. Zero is stated ONCE, here, as a
+      // property of this recording — not defaulted per row inside bytesPerTask,
+      // where it silently became a property of every live stage too.
+      input_bytes: 0,
     })),
   ]),
 );
@@ -1492,7 +1500,11 @@ export const findingsByJob: Record<string, FindingRow[]> = {
     "stage_id": 9,
     "type": "DUPLICATE_SCAN",
     "severity": "warning",
-    "confidence": "BEST_EFFORT",
+    // MEDIUM, not BEST_EFFORT: findings.confidence is Enum8('LOW','MEDIUM',
+    // 'HIGH') and 0.81 falls in the engine's MEDIUM band (< 0.85). BEST_EFFORT
+    // belongs to plan_transitions and only the `as FindingRow[]` cast below
+    // ever let it through.
+    "confidence": "MEDIUM",
     "confidence_score": 0.81,
     "detected_by": "scan_watcher",
     "evidence": "orders scanned twice in one execution",

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Confidence, Severity } from "@/contract/types";
+import type { FindingConfidence, Severity } from "@/contract/types";
 
 export function Pill({
   children, tone = "neutral", solid = false,
@@ -31,10 +31,26 @@ export function Pill({
   );
 }
 
+/**
+ * The contract ladder is info < warning < critical < blocker.
+ *
+ * `blocker` used to have no branch and fell through to INFO — the loudest rung
+ * the engine can raise (an explicit OOM) rendered as the quietest. It is listed
+ * first now, and the default names an unrecognised rung instead of colouring it.
+ */
 export function SeverityBadge({ severity }: { severity: Severity }) {
-  if (severity === "critical") return <Pill tone="finding" solid>CRITICAL</Pill>;
-  if (severity === "warning") return <Pill tone="withheld">WARNING</Pill>;
-  return <Pill tone="neutral">INFO</Pill>;
+  switch (severity) {
+    case "blocker":
+      return <Pill tone="finding" solid>BLOCKER</Pill>;
+    case "critical":
+      return <Pill tone="finding" solid>CRITICAL</Pill>;
+    case "warning":
+      return <Pill tone="withheld">WARNING</Pill>;
+    case "info":
+      return <Pill tone="neutral">INFO</Pill>;
+    default:
+      return <Pill tone="withheld">{String(severity).toUpperCase()}</Pill>;
+  }
 }
 
 /**
@@ -44,12 +60,29 @@ export function SeverityBadge({ severity }: { severity: Severity }) {
 export function ConfidencePill({
   confidence, score,
 }: {
-  confidence: Confidence;
+  confidence: FindingConfidence;
   score: number;
 }) {
   return (
     <Pill tone={confidence === "HIGH" ? "certified" : "neutral"}>
       {confidence} · {score.toFixed(2)}
+    </Pill>
+  );
+}
+
+/**
+ * A verdict the contract may have no source for: true, false, or NOT STORED.
+ *
+ * Three states, three tones, because rule 4 turns on the difference. Collapsing
+ * null onto false — `tone={v ? "certified" : "finding"}` — convicts a fix of
+ * not firing on the strength of a column that does not exist.
+ */
+export function VerdictPill({ value, label }: { value: boolean | null; label?: string }) {
+  if (value === null)
+    return <Pill tone="withheld" solid>{label ?? "NO SOURCE"}</Pill>;
+  return (
+    <Pill tone={value ? "certified" : "finding"} solid>
+      {String(value).toUpperCase()}
     </Pill>
   );
 }

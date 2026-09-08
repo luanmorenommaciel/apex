@@ -32,15 +32,29 @@ export function RunsScreen() {
     });
   }, [runs, q, filter]);
 
+  /**
+   * Each total is summed ONLY over the runs that carry the field, and reports
+   * how many those were. Summing a sentinel — refused_count is -1 for "not
+   * derivable here" — turned "we did not compute it" into a number, and the
+   * denominator quietly stayed at 50 either way.
+   */
   const totals = useMemo(() => {
-    const findings = runs.reduce((n, r) => n + r.finding_count, 0);
-    const refused = runs.reduce((n, r) => n + Math.max(0, r.refused_count), 0);
+    const withRefused = runs.filter((r) => r.refused_count >= 0);
+    const withLlm = runs.filter((r) => r.llm_calls !== null);
     return {
-      findings,
-      refused,
-      llm: runs.reduce((n, r) => n + r.llm_calls, 0),
+      findings: runs.reduce((n, r) => n + r.finding_count, 0),
       affected: runs.filter((r) => r.finding_count > 0).length,
-      escalated: runs.filter((r) => r.llm_calls > 0).length,
+      refused: withRefused.length === 0
+        ? null
+        : withRefused.reduce((n, r) => n + r.refused_count, 0),
+      refusedRuns: withRefused.length,
+      llm: withLlm.length === 0 ? null : withLlm.reduce((n, r) => n + (r.llm_calls ?? 0), 0),
+      llmRuns: withLlm.length,
+      escalated: withLlm.filter((r) => (r.llm_calls ?? 0) > 0).length,
+      // Whether the memory lane has been over a run at all. It is the one
+      // cross-lane fact this list can actually establish, and it decides
+      // whether /compare and /memory have anything to show.
+      indexed: runs.filter((r) => r.shaped_stage_count !== null).length,
     };
   }, [runs]);
 
@@ -77,7 +91,10 @@ export function RunsScreen() {
         subtitle={
           loading
             ? "querying…"
-            : `Last 24 h · ${runs.length} applications · ${totals.affected} carrying an open finding`
+            // NOT "last 24 h": RUN_LIST carries no time filter at all — it is
+            // ORDER BY started_at DESC LIMIT 50. The window was a label over a
+            // query that never had one.
+            : `${runs.length} most recent applications · ${totals.affected} carrying an open finding`
         }
         right={
           <div className="flex gap-2 font-mono text-xs">
@@ -113,9 +130,42 @@ export function RunsScreen() {
 
       <div className="grid grid-cols-4 gap-3">
         <KpiCard label="OPEN FINDINGS" value={totals.findings} note="ranked on confidence_score" accent="finding" />
-        <KpiCard label="CONSIDERED & REFUSED" value={totals.refused || "—"} note="stages with a tail, no claim" accent="edge" />
-        <KpiCard label="LLM CALLS TODAY" value={totals.llm} note={`${totals.escalated} of ${runs.length} runs escalated past the gate`} accent="withheld" />
-        <KpiCard label="SIX-LANE GATE" value="passed" note="7/7 contract tables match DDL" accent="certified" tone="certified" />
+        <KpiCard
+          label="CONSIDERED & REFUSED"
+          value={fmt.countOrDash(totals.refused)}
+          note={
+            totals.refused === null
+              ? "not derivable list-wide — open a run"
+              : `stages with a tail, no claim · ${totals.refusedRuns} of ${runs.length} runs`
+          }
+          accent="edge"
+        />
+        <KpiCard
+          label="LLM CALLS"
+          value={fmt.countOrDash(totals.llm)}
+          note={
+            totals.llm === null
+              ? "no contract table counts model invocations"
+              : `${totals.escalated} of ${totals.llmRuns} runs escalated past the gate`
+          }
+          accent="withheld"
+          tone={totals.llm === null ? "withheld" : "bright"}
+        />
+        {/* Replaces a hardcoded "SIX-LANE GATE · passed · 7/7 tables match DDL".
+            The console cannot verify a DDL match, and asserting one from a
+            screen is the failure mode this product argues against. This is the
+            cross-lane fact the list CAN establish. */}
+        <KpiCard
+          label="INDEXED BY MEMORY"
+          value={`${totals.indexed}/${runs.length}`}
+          note={
+            totals.indexed === 0
+              ? "run_outcomes has no row for these runs"
+              : "run_outcomes carries a plan shape for these"
+          }
+          accent={totals.indexed === 0 ? "withheld" : "certified"}
+          tone={totals.indexed === 0 ? "withheld" : "certified"}
+        />
       </div>
 
       <DataTable

@@ -1,10 +1,13 @@
 import { useSearchParams } from "react-router-dom";
-import { Card, Diff, Label, Mono, Pill, Prose } from "@/components/atoms";
+import {
+  Card, ConfidencePill, Diff, Label, Metric, Mono, Pill, Prose, SeverityBadge,
+} from "@/components/atoms";
 import { Button, DualVerdictPanel, GuardrailList, ScreenHeader, type Guardrail } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import {
-  assessStage, fmt, measureNoiseFloorPct, noOpGate, readConfiguredPartitions,
-  readSlots, ruleFiveSkewAbsence, ruleSevenReshaped, ruleTwoRuntimeResolvable,
+  assessStage, fmt, measureNoiseFloorPct, noOpGate, parseProposal,
+  readConfiguredPartitions, readSlots, ruleFiveSkewAbsence, ruleSevenReshaped,
+  ruleTwoRuntimeResolvable,
 } from "@/contract/rules";
 import { useAsync, useRepository } from "@/data/useRepository";
 
@@ -85,6 +88,19 @@ export function VerifyScreen() {
   // has written nothing. The noise floor is the exception: it compares a
   // PREDICTED saving against a MEASURED floor, and both live on that row.
   const assessment = stage ? assessStage(stage, conf) : null;
+
+  /**
+   * The proposal, read off the row rather than typed into this screen.
+   *
+   * `apex.fix_verifications.proposed_config` is a conf overlay; the recorded
+   * run predates that column and carries a unified diff. parseProposal handles
+   * both and returns null when neither reads, which is a state this screen
+   * shows rather than papers over.
+   */
+  const proposal = v ? parseProposal(v.proposed_diff) : null;
+  const proposalKeys = proposal ? Object.keys(proposal) : [];
+  const nonConfKeys = proposalKeys.filter((k) => !k.startsWith("spark."));
+
   const guardrails: Guardrail[] = [
     {
       name: "bound analysis",
@@ -129,21 +145,64 @@ export function VerifyScreen() {
     {
       name: "safety",
       rule: "policy",
-      verdict: { held: true, reason: "config-only change, no data path touched" },
+      // ESTABLISHED, not asserted. "config-only change, no data path touched"
+      // used to be a constant string printed beside every proposal, including
+      // ones this console had never read. Every key in the overlay being a
+      // spark.* conf key is something the console can actually check, and it
+      // says whose check it is: verify's own `safe` / `safety_verdict` columns
+      // are not selected by FIX_VERIFICATIONS, so this is not that lane's
+      // verdict and must not borrow its authority.
+      verdict: !v
+        ? { vacant: true, reason: "no verification row — nothing proposed to check" }
+        : !proposal
+          ? {
+              vacant: true,
+              reason:
+                "proposal unreadable as a conf overlay; verify's own safe/safety_verdict " +
+                "columns are not read by this console",
+            }
+          : nonConfKeys.length === 0
+            ? {
+                held: true,
+                reason:
+                  `${proposalKeys.length} spark.* ${proposalKeys.length === 1 ? "key" : "keys"}, ` +
+                  `no data path named — checked here, not read from verify.safety_verdict`,
+              }
+            : {
+                held: false,
+                reason: `proposal names a non-conf key: ${nonConfKeys.join(", ")}`,
+              },
     },
   ];
 
   // The proposal itself lives on the verification row. Without one there is no
   // proposed config, so the no-op gate has nothing to gate and the noise floor
   // has no predicted saving to resolve — both are added only alongside `v`.
-  const measured = v ? measureNoiseFloorPct(v.replay_durations_ms) ?? v.noise_floor_pct : null;
+  const recomputedFloor = v ? measureNoiseFloorPct(v.replay_durations_ms) : null;
+  const measured = v ? recomputedFloor ?? v.noise_floor_pct : null;
   if (v) {
-    guardrails.unshift({
-      name: "no-op gate",
-      rule: "conf",
-      verdict: noOpGate(conf, "spark.sql.shuffle.partitions", "800"),
-    });
-    guardrails.splice(3, 0, {
+    // ONE GATE PER PROPOSED KEY, each read off the row.
+    //
+    // This was `noOpGate(conf, "spark.sql.shuffle.partitions", "800")` — a key
+    // and a value typed into this screen. It gated a proposal no lane had made,
+    // so the gate could report a real change while the actual overlay was a
+    // no-op, which is the one thing a no-op gate exists to catch.
+    const gates: Guardrail[] = proposal
+      ? Object.entries(proposal).map(([key, value]) => ({
+          name: `no-op gate · ${key.replace(/^spark\.(sql\.)?/, "")}`,
+          rule: "conf",
+          verdict: noOpGate(conf, key, value),
+        }))
+      : [{
+          name: "no-op gate",
+          rule: "conf",
+          verdict: {
+            vacant: true,
+            reason: "proposed_config could not be read as a conf overlay — nothing to gate",
+          },
+        }];
+    guardrails.unshift(...gates);
+    guardrails.splice(gates.length + 1, 0, {
       name: "noise floor",
       rule: "rule 2",
       verdict: ruleTwoRuntimeResolvable(v.predicted_saving_pct, measured),
@@ -211,12 +270,25 @@ export function VerifyScreen() {
     <Page className="!py-0 !px-0">
       <div className="flex flex-1 min-h-0">
         <div className="flex-1 min-w-0 px-7 py-6 flex flex-col gap-4 border-r border-edge overflow-auto">
+          {/* Was: title "Repartition the join input", finding id `f-7c41e9` and
+              "confidence 0.94 >= 0.75" — the recorded run's proposal, its id and
+              its score, printed over every row. The 0.75 was not a contract
+              number either: the engine cuts tiers at 0.60 and 0.85 and gates
+              escalation at 0.60, so no threshold is claimed here at all. */}
           <ScreenHeader
-            title="Repartition the join input"
+            title={`Proposed fix · ${finding.type}`}
             subtitle={
-              <>
-                proposal for <Mono className="text-body2">f-7c41e9</Mono> · confidence 0.94 ≥ 0.75
-              </>
+              <span className="flex items-center gap-2.5 flex-wrap">
+                <span>
+                  for <Mono className="text-body2">{finding.finding_id}</Mono> ·{" "}
+                  {finding.stage_id < 0 ? "job-level" : `stage ${finding.stage_id}`}
+                </span>
+                <SeverityBadge severity={finding.severity} />
+                <ConfidencePill
+                  confidence={finding.confidence}
+                  score={finding.confidence_score}
+                />
+              </span>
             }
             right={
               <div className="flex gap-2">
@@ -231,13 +303,28 @@ export function VerifyScreen() {
             approval gate is enforced by the schema, not by convention.
           </Prose>
 
+          {/* Rendered as WHAT IT IS. The header read "conf/spark-defaults.conf ·
+              2 hunks" over both shapes — naming a file and a hunk count that the
+              JSON overlay the live column actually stores does not have. */}
           <div className="bg-raised border border-edge rounded-sm overflow-hidden">
             <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-edge font-mono text-[11px] text-sub">
-              <span>proposed_diff</span>
-              <span className="text-muted">conf/spark-defaults.conf · 2 hunks</span>
+              <span>{v.proposed_diff.trim().startsWith("{") ? "proposed_config" : "proposed_diff"}</span>
+              <span className="text-muted">
+                {proposal
+                  ? `${proposalKeys.length} conf ${proposalKeys.length === 1 ? "key" : "keys"}`
+                  : "not readable as a conf overlay"}
+              </span>
             </div>
             <div className="p-3.5">
-              <Diff text={v.proposed_diff} />
+              {v.proposed_diff.trim().startsWith("{") && proposal ? (
+                <div className="flex flex-col gap-1.5">
+                  {Object.entries(proposal).map(([k, val]) => (
+                    <Metric key={k} label={k} value={val} />
+                  ))}
+                </div>
+              ) : (
+                <Diff text={v.proposed_diff} />
+              )}
             </div>
           </div>
 
@@ -305,12 +392,48 @@ export function VerifyScreen() {
           <div className="flex flex-col gap-2.5 mt-auto">
             <Label>FIX_VERIFICATIONS ROW</Label>
             <div className="bg-surface border border-edge rounded-sm p-3 font-mono text-[10.5px] leading-[1.85] text-body">
-              <div><span className="text-dim">mechanism_confirmed</span> <span className="text-certified">{String(v.mechanism_confirmed)}</span></div>
-              <div><span className="text-dim">runtime_certified</span> <span className="text-finding">{String(v.runtime_certified)}</span></div>
-              <div><span className="text-dim">runtime_verdict</span> <span className="text-withheld">{v.runtime_verdict}</span></div>
-              <div><span className="text-dim">noise_floor_pct</span> {measured?.toFixed(1)} <span className="text-muted">(measured, not stored)</span></div>
-              <div><span className="text-dim">replays</span> {v.replay_count}</div>
-              <div><span className="text-dim">cluster_slots</span> <span className="text-muted">{v.cluster_slots ?? "unknown"}</span></div>
+              {/* Three colours were fixed here: mechanism green, certified red,
+                  verdict amber — regardless of the values. On the live store
+                  mechanism_confirmed is null, so "null" rendered in the green of
+                  a confirmed mechanism. */}
+              <div>
+                <span className="text-dim">mechanism_confirmed</span>{" "}
+                <span className={
+                  v.mechanism_confirmed === null ? "text-withheld"
+                  : v.mechanism_confirmed ? "text-certified" : "text-finding"
+                }>
+                  {fmt.verdict(v.mechanism_confirmed)}
+                </span>
+              </div>
+              <div>
+                <span className="text-dim">runtime_certified</span>{" "}
+                <span className={v.runtime_certified ? "text-certified" : "text-withheld"}>
+                  {String(v.runtime_certified)}
+                </span>
+              </div>
+              <div>
+                <span className="text-dim">runtime_verdict</span>{" "}
+                <span className={
+                  v.runtime_verdict === "unresolved" ? "text-withheld"
+                  : v.runtime_verdict === "improved" ? "text-certified" : "text-finding"
+                }>
+                  {v.runtime_verdict}
+                </span>
+              </div>
+              {/* The label used to read "(measured, not stored)" on BOTH paths.
+                  Against the live store the replay durations are never stored,
+                  so it is always the fallback that is on screen. */}
+              <div>
+                <span className="text-dim">noise_floor_pct</span> {fmt.pctOrDash(measured)}{" "}
+                <span className="text-muted">
+                  ({recomputedFloor !== null ? "measured here from the replays" : "as verify stored it"})
+                </span>
+              </div>
+              <div><span className="text-dim">replays</span> {v.replay_count} per arm</div>
+              <div>
+                <span className="text-dim">cluster_slots</span>{" "}
+                <span className="text-muted">{v.cluster_slots ?? "not captured"}</span>
+              </div>
             </div>
             <Prose size="xs" className="text-dim">
               A small bench can honestly deliver the first verdict and not the second. Both are

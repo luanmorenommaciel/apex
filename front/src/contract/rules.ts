@@ -104,16 +104,23 @@ export function ratioOf(
  * Volume per task, for the measurability floor.
  *
  * Exact Engine semantics: bytes_touched is shuffle read + shuffle write +
- * input, divided by task_count. The Engine defaults an omitted additive byte
- * field to zero and returns zero when there are no tasks; the front does the
- * same calculation here, then uses bytesPerTaskState before making a UI claim.
+ * input, divided by task_count — identical to engine's StageAggregate and
+ * verify's StageObservation, which is the only reason a stage that is
+ * volume-ineligible in one lane is ineligible in the others.
+ *
+ * `input_bytes` is REQUIRED, not optional-with-a-zero-default. It used to be
+ * `?? 0` while LATEST_STAGES did not select the column at all, so against the
+ * live store every stage was measured on shuffle alone: a scan stage moving
+ * gigabytes of input and little shuffle fell under the 1 MiB floor here and
+ * cleared it in the engine. The two lanes disagreed about which stages a ratio
+ * may describe, silently, which is the contradiction class the shared floor
+ * exists to close.
  */
 export function bytesPerTask(
   row: Pick<SparkEventRow, "shuffle_read_bytes" | "shuffle_write_bytes" | "input_bytes" | "task_count">,
 ): number {
   if (row.task_count <= 0) return 0;
-  return (row.shuffle_read_bytes + row.shuffle_write_bytes + (row.input_bytes ?? 0)) /
-    row.task_count;
+  return (row.shuffle_read_bytes + row.shuffle_write_bytes + row.input_bytes) / row.task_count;
 }
 
 /** Zero tasks cannot support a per-task claim even though Engine arithmetic returns 0. */
@@ -390,6 +397,55 @@ export function noOpGate(conf: JobConfRow[], key: string, proposed: string): Rul
     : { held: true, reason: `${key}: ${current} -> ${target} is a real change` };
 }
 
+/**
+ * The proposal, read as a map of conf key -> value.
+ *
+ * Two shapes reach this and both are the contract's:
+ *  - `apex.fix_verifications.proposed_config` is "canonical JSON of the Spark
+ *    conf overlay under test", per its DDL. That is the live shape.
+ *  - the recorded run carries a unified diff, which is what the verify lane
+ *    emitted before that column was ratified.
+ *
+ * Null when neither parses, so the caller reports that the proposal could not
+ * be read. The no-op gate previously passed a literal "800" typed into the
+ * screen, which meant it gated a value no lane had ever proposed.
+ */
+export function parseProposal(text: string): Record<string, string> | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("{")) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      return null;
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      // Spark conf values are scalars. A nested object is not a conf value and
+      // is dropped rather than stringified into "[object Object]".
+      if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+        out[k] = String(v);
+      }
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  }
+
+  // Unified diff. Only an ADDED line is the proposal: a removed line is the
+  // state being replaced and a context line is untouched, so reading either as
+  // a proposal would gate against the configuration the job already ran with.
+  const out: Record<string, string> = {};
+  for (const line of trimmed.split("\n")) {
+    if (!line.startsWith("+") || line.startsWith("+++")) continue;
+    const [key, ...rest] = line.slice(1).trim().split(/\s+/);
+    const value = rest.join(" ");
+    if (key && value) out[key] = value;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 export type RefusalCode =
   | "below_volume_floor"
   | "not_a_distribution"
@@ -518,6 +574,28 @@ export const fmt = {
   },
   pct(n: number): string {
     return `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
+  },
+  /**
+   * A percentage the contract may not carry. `${n?.toFixed(1)}%` printed the
+   * string "undefined%" wherever the column was Nullable and null — a rendered
+   * measurement made out of a missing one.
+   */
+  pctOrDash(n: number | null | undefined): string {
+    return n === null || n === undefined || !Number.isFinite(n) ? "—" : `${n.toFixed(1)}%`;
+  },
+  /** A count the contract may not carry. 0 asserts "we counted, and none". */
+  countOrDash(n: number | null | undefined): string {
+    return n === null || n === undefined ? "—" : n.toLocaleString("en-US");
+  },
+  /**
+   * A stored boolean the contract may have NO SOURCE for.
+   *
+   * null is not false. Rule 4 forbids deriving one verdict from the other, and
+   * rendering an unknown mechanism as a failed one does exactly that — which is
+   * what `String(null)` did, in a red pill, on every live row.
+   */
+  verdict(v: boolean | null | undefined): string {
+    return v === null || v === undefined ? "no source" : String(v);
   },
   shortJob(id: string): string {
     return id.length > 12 ? `...${id.slice(-9)}` : id;

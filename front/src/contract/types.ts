@@ -7,8 +7,65 @@
  */
 export const CONTRACT_VERSION = "0.5" as const;
 
-export type Confidence = "HIGH" | "BEST_EFFORT";
-export type Severity = "critical" | "warning" | "info";
+/**
+ * TWO confidence vocabularies, deliberately not one type.
+ *
+ * `apex.findings.confidence` is Enum8('LOW','MEDIUM','HIGH') — the engine's
+ * human-facing tier, cut from confidence_score at 0.60 and 0.85
+ * (engine/src/apex_engine/config.py). `apex.plan_transitions.confidence` is
+ * HIGH | BEST_EFFORT — how sure the jar's AQE listener is that it read Spark's
+ * own decision correctly (jar/src/main/scala/apex/ApexAqeListener.scala).
+ *
+ * They share the word HIGH and nothing else. Modelling both as one union let a
+ * MEDIUM finding fall through a branch written for BEST_EFFORT and render as
+ * the low-confidence tier it is not.
+ */
+export type FindingConfidence = "LOW" | "MEDIUM" | "HIGH";
+export type TransitionConfidence = "HIGH" | "BEST_EFFORT";
+
+/**
+ * The contract ladder, in order. `blocker` is the TOP rung, not an oddity to
+ * fall through to `info`: engine's memory watcher raises it for an explicit OOM
+ * (engine/src/apex_engine/watchers/memory.py), the single loudest thing Apex
+ * can say. Omitting it from this union is what let the UI render it as INFO.
+ */
+export type Severity = "info" | "warning" | "critical" | "blocker";
+
+export const SEVERITY_ORDER: readonly Severity[] = ["info", "warning", "critical", "blocker"];
+
+/** Rank on the ladder, never on alphabetical order or on the display colour. */
+export const severityRank = (s: Severity): number => {
+  const i = SEVERITY_ORDER.indexOf(s);
+  // An unknown rung is not silently the lowest: the store's column is an Enum8
+  // and a value outside it means this projection is behind the contract.
+  return i < 0 ? SEVERITY_ORDER.length : i;
+};
+
+
+/**
+ * The engine's FindingType enum today (engine/src/apex_engine/schema.py).
+ * `SKEW` and `GC_PRESSURE` never existed; they were guesses.
+ */
+export type KnownFindingType =
+  | "SHUFFLE"
+  | "SKEW_ON_JOIN"
+  | "TASK_SKEW"
+  | "MEMORY"
+  | "DRIVER_OOM"
+  | "COST"
+  | "CARTESIAN_PRODUCT"
+  | "AQE_REPLAN"
+  | "SPILL"
+  | "DUPLICATE_SCAN";
+
+/**
+ * OPEN on purpose. `findings.type` is a plain `String` column in the contract
+ * DDL and the engine's own comment calls a new member "an additive value, not a
+ * schema change" — so a closed union here would reject a row the store legally
+ * holds. The intersection keeps autocomplete on the known members without
+ * narrowing the type to them.
+ */
+export type FindingType = KnownFindingType | (string & Record<never, never>);
 
 /** One canonical row per (job_id, stage_id, stage_attempt). */
 export interface SparkEventContractV05 {
@@ -58,6 +115,12 @@ type SparkEventProjectionCore = Pick<
   | "task_count"
   | "shuffle_read_bytes"
   | "shuffle_write_bytes"
+  // Load-bearing, and CORE rather than additive: rule 1's volume floor is
+  // engine's bytes_touched = shuffle read + write + INPUT. While this sat in
+  // the optional half, LATEST_STAGES never selected it, `?? 0` swallowed the
+  // absence, and every scan-heavy stage measured short of the shared floor —
+  // the console refusing stages the engine had accepted.
+  | "input_bytes"
   | "spill_mem_bytes"
   | "spill_disk_bytes"
   | "peak_execution_mem_bytes"
@@ -96,14 +159,21 @@ export interface PlanTransitionRow {
   /** v0.5 keys transitions by (job_id, execution_id) and carries NO
    *  execution -> stage map. See rules.ts, attributionIsAvailable(). */
   execution_id: number;
-  transition_type: "skew_split" | "join_strategy" | "coalesce" | "other";
+  /**
+   * The jar is the source of these, not this file:
+   * jar/src/main/scala/apex/ApexPlanTransition.scala. `join_strategy` was never
+   * one of them — the emitted value is `join_switch` — and `local_read` was
+   * missing entirely.
+   */
+  transition_type: "join_switch" | "skew_split" | "coalesce" | "local_read" | "other";
   /** Monotonic per execution_id. The latest re-plan is the one with max(update_seq). */
   update_seq: number;
   /** UNTRUSTED: written by the observed job. Render as data, never evaluate. */
   detail: string;
   before: string;
   after: string;
-  confidence: Confidence;
+  /** HIGH | BEST_EFFORT — the listener's own certainty, not a finding tier. */
+  confidence: TransitionConfidence;
   /**
    * NOT a column of plan_transitions — joined from spark_events, where the
    * fingerprint actually lives. Empty when the job has no fingerprinted stage.
@@ -126,9 +196,10 @@ export interface FindingRow {
   job_id: string;
   /** -1 means job-level: the contract could not attribute this to a stage. */
   stage_id: number;
-  type: "SPILL" | "AQE_REPLAN" | "SKEW" | "DUPLICATE_SCAN" | "GC_PRESSURE";
+  type: FindingType;
   severity: Severity;
-  confidence: Confidence;
+  /** LOW | MEDIUM | HIGH — the engine's tier. Never BEST_EFFORT. */
+  confidence: FindingConfidence;
   /** The raw 0..1 the contract routes. Rank on this, never on the display tier. */
   confidence_score: number;
   detected_by: string;
@@ -221,7 +292,13 @@ export interface RunSummary {
   finding_count: number;
   /** Stages that carried a tail and produced no claim. */
   refused_count: number;
-  llm_calls: number;
+  /**
+   * NOT CAPTURED by the contract. No table counts model invocations, so the
+   * live path reports null and the UI renders an em dash. It was 0 before, and
+   * a hardcoded 0 reads as "we checked, and Apex called no model" — the exact
+   * claim this console exists to stop making for free.
+   */
+  llm_calls: number | null;
   status: "healthy" | "warning" | "degraded" | "failed";
   /** The dominant shape's fingerprint. Meaningful alone only when shape_count is 1. */
   plan_fingerprint: string;

@@ -64,6 +64,8 @@ export interface Repository {
   planShapes(): Promise<PlanShape[]>;
   /** Every run of one shape, oldest first — the history rule 3 reasons over. */
   shapeRuns(fingerprint: string): Promise<ShapeRun[]>;
+  /** The memory lane's redacted plan exemplar for a shape. null when unindexed. */
+  planSample(fingerprint: string): Promise<string | null>;
   stages(jobId: string): Promise<SparkEventRow[]>;
   jobConf(jobId: string): Promise<JobConfRow[]>;
   findings(jobId: string): Promise<FindingRow[]>;
@@ -108,7 +110,9 @@ const toRunSummary = (r: RunRollupRow): RunSummary & { age?: string } => ({
   task_time_ms: notIndexed(r.task_time_ms),
   finding_count: Number(r.finding_count),
   refused_count: -1, // -1 renders as "—", never as zero
-  llm_calls: 0,
+  // Nothing in the contract counts model invocations. null renders as "—";
+  // 0 asserted that Apex had answered this run for free without checking.
+  llm_calls: null,
   status: statusOf(Number(r.finding_count), Boolean(Number(r.has_critical))),
   plan_fingerprint: r.plan_fingerprint,
   shape_count: Number(r.shape_count),
@@ -142,6 +146,13 @@ export class ClickHouseRepository implements Repository {
   }
   shapeRuns(fingerprint: string) {
     return query<ShapeRun>(Q.SHAPE_RUNS, { fingerprint });
+  }
+  async planSample(fingerprint: string) {
+    if (!fingerprint) return null;
+    const rows = await query<{ sample_plan_json: string }>(Q.PLAN_SAMPLE, { fingerprint });
+    // An empty exemplar is not an exemplar: the row exists but carries no text,
+    // which is "the memory lane indexed no plan", not "the plan is blank".
+    return rows[0]?.sample_plan_json || null;
   }
 
   stages(jobId: string) {
@@ -208,6 +219,11 @@ export class FixtureRepository implements Repository {
   }
   async shapeRuns(fingerprint: string) {
     return fingerprint === fx.PLAN_FINGERPRINT ? fx.shapeRuns : [];
+  }
+  async planSample(fingerprint: string) {
+    // Only the recorded shape has an exemplar. Returning it for any fingerprint
+    // would show one run's plan as though it belonged to another.
+    return fingerprint === fx.PLAN_FINGERPRINT ? fx.REDACTED_PLAN.join("\n") : null;
   }
   async stages(jobId: string) {
     return fx.stagesByJob[jobId] ?? [];

@@ -50,7 +50,7 @@ export function RefusalTable({
           </span>
         </div>
         <span className="text-xs text-dim">
-          stages evaluated for a tail claim · none produced one
+          the 5 loudest p99/p50 ratios, evaluated for a tail claim · none produced one
         </span>
       </div>
 

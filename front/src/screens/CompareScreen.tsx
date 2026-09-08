@@ -64,13 +64,22 @@ export function CompareScreen() {
     };
   }, [cur, base]);
 
-  const delta = (a: number, b: number) => (b === 0 ? 0 : ((a - b) / b) * 100);
+  /**
+   * A delta against a ZERO baseline is not a percentage — there is nothing for
+   * it to be a percentage of. It returned 0, which renders as "+0.0%": a
+   * measurement of no change, made out of the absence of a denominator.
+   */
+  const delta = (a: number, b: number): number | null => (b === 0 ? null : ((a - b) / b) * 100);
+  const pctDelta = (a: number, b: number): string => {
+    const d = delta(a, b);
+    return d === null ? "—" : fmt.pct(d);
+  };
 
   // An unknown run renders as "—". A missing wall clock is not a zero, and a
   // delta against one is not a percentage.
   const dur = (ms: number | null) => (ms === null ? "—" : fmt.duration(ms));
   const wallDelta =
-    curWall === null || baseWall === null ? "—" : fmt.pct(delta(curWall, baseWall));
+    curWall === null || baseWall === null ? "—" : pctDelta(curWall, baseWall);
 
   /**
    * Stage ids move between runs; plan fingerprints do not. Pairing on id alone
@@ -267,11 +276,50 @@ export function CompareScreen() {
       </Card>
 
       <div className="grid grid-cols-5 gap-3">
-        <KpiCard label="WALL CLOCK" value={wallDelta} note={`${dur(baseWall)} → ${dur(curWall)}`} tone="finding" />
-        <KpiCard label="SHUFFLE READ" value={fmt.pct(delta(totals.curShuffle, totals.baseShuffle))} note={`${fmt.bytes(totals.baseShuffle)} → ${fmt.bytes(totals.curShuffle)}`} tone="finding" />
-        <KpiCard label="SPILLED" value={`0 → ${fmt.bytes(totals.curSpill)}`} note="introduced" tone="finding" />
-        <KpiCard label="GC TIME" value={fmt.pct(delta(totals.curGc, totals.baseGc))} note={`${(totals.baseGc / 1000).toFixed(1)} → ${(totals.curGc / 1000).toFixed(1)} s`} tone="withheld" />
-        <KpiCard label="STAGE COUNT" value={`${base.length} = ${cur.length}`} note="unchanged" />
+        <KpiCard
+          label="WALL CLOCK"
+          value={wallDelta}
+          note={`${dur(baseWall)} → ${dur(curWall)}`}
+          tone={wallDelta === "—" ? "withheld" : "finding"}
+        />
+        <KpiCard
+          label="SHUFFLE READ"
+          value={pctDelta(totals.curShuffle, totals.baseShuffle)}
+          note={`${fmt.bytes(totals.baseShuffle)} → ${fmt.bytes(totals.curShuffle)}`}
+          tone="finding"
+        />
+        {/* Was `0 → X` with the note "introduced", while totals.baseSpill sat
+            computed and unread beside it: a baseline of zero asserted for every
+            pair, including two runs that both spilled. "introduced" is now a
+            statement the numbers support, made only when they do. */}
+        <KpiCard
+          label="SPILLED"
+          value={pctDelta(totals.curSpill, totals.baseSpill)}
+          note={
+            totals.baseSpill === 0 && totals.curSpill > 0
+              ? `introduced · 0 B → ${fmt.bytes(totals.curSpill)}`
+              : `${fmt.bytes(totals.baseSpill)} → ${fmt.bytes(totals.curSpill)}`
+          }
+          tone={totals.curSpill > totals.baseSpill ? "finding" : "bright"}
+        />
+        <KpiCard
+          label="GC TIME"
+          value={pctDelta(totals.curGc, totals.baseGc)}
+          note={`${(totals.baseGc / 1000).toFixed(1)} → ${(totals.curGc / 1000).toFixed(1)} s`}
+          tone="withheld"
+        />
+        {/* Was `${base.length} = ${cur.length}` under the note "unchanged" —
+            an equals sign and a word, both printed even when the two differed. */}
+        <KpiCard
+          label="STAGE COUNT"
+          value={`${base.length} → ${cur.length}`}
+          note={
+            base.length === cur.length
+              ? "unchanged"
+              : `${cur.length > base.length ? "+" : ""}${cur.length - base.length} stages`
+          }
+          tone={base.length === cur.length ? "bright" : "withheld"}
+        />
       </div>
 
       <div className="flex-1 min-h-0 grid grid-cols-[1.55fr_1fr] gap-4">
@@ -279,8 +327,17 @@ export function CompareScreen() {
           columns={columns}
           rows={rows}
           rowKey={(r) => `${r.baseline}-${r.current}`}
-          isHighlighted={(r) => r.current === 25}
-          footer={`${cur.length - rows.length} further stages aligned with no material delta.`}
+          // The loudest row, which the sort already put first. It was `stage 25`
+          // — a stage id from the recorded run, highlighted in every comparison.
+          isHighlighted={(r) => r === rows[0] && r.verdict !== "unchanged"}
+          // `cur.length - rows.length` was always 0: `rows` is a map over `cur`,
+          // so the two lengths are equal by construction and the sentence
+          // reported "0 further stages" on every screen it has ever rendered.
+          footer={
+            `${rows.filter((r) => r.verdict === "unchanged").length} aligned with no material ` +
+            `delta · ${rows.filter((r) => r.alignedBy === "unmatched").length} with no shape ` +
+            `in the baseline.`
+          }
         />
 
         <div className="bg-raised border border-edge rounded-sm overflow-hidden flex flex-col">

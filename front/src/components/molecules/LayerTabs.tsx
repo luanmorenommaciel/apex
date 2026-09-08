@@ -1,7 +1,14 @@
-export type Layer = "stage_dag" | "plan_operators" | "pipeline_lanes";
+/**
+ * "stage dag" was a promise the contract cannot keep. Nothing in v0.5 carries a
+ * stage-to-stage edge: spark_events is keyed by (job_id, stage_id, attempt) and
+ * plan_json is a tree-string its own DDL forbids parsing. The layer showed nine
+ * hand-placed nodes from the recorded run and drew no edges between them. It is
+ * named for what it is now — the stages, ordered by id.
+ */
+export type Layer = "stages" | "plan_operators" | "pipeline_lanes";
 
 const LABELS: Record<Layer, string> = {
-  stage_dag: "stage dag",
+  stages: "stages",
   plan_operators: "plan operators",
   pipeline_lanes: "pipeline lanes",
 };

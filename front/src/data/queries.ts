@@ -19,6 +19,11 @@ SELECT
   argMax(se.task_count, se.ts)                    AS task_count,
   argMax(se.shuffle_read_bytes, se.ts)            AS shuffle_read_bytes,
   argMax(se.shuffle_write_bytes, se.ts)           AS shuffle_write_bytes,
+  -- The third term of rule 1's volume floor. Engine sums shuffle read + write
+  -- + INPUT for bytes_touched (apex_engine/clickhouse.py, SHAPE_HISTORY_SQL);
+  -- omitting it here measured every stage short and refused stages the engine
+  -- had accepted, with nothing on screen to say the two disagreed.
+  argMax(se.input_bytes, se.ts)                   AS input_bytes,
   argMax(se.spill_mem_bytes, se.ts)               AS spill_mem_bytes,
   argMax(se.spill_disk_bytes, se.ts)              AS spill_disk_bytes,
   argMax(se.peak_execution_mem_bytes, se.ts)      AS peak_execution_mem_bytes,
@@ -326,6 +331,29 @@ FROM plan_memory AS pm FINAL
 INNER JOIN r ON r.plan_fingerprint = pm.plan_fingerprint
 ORDER BY r.run_count DESC, r.last_run DESC
 LIMIT 50
+`;
+
+/**
+ * ONE redacted plan exemplar for a shape.
+ *
+ * `plan_memory.sample_plan_json` is the contract's own answer to "show me this
+ * plan": its DDL calls it "ONE redacted exemplar, for citation", already
+ * redacted upstream by the jar, and the table holds one row per fingerprint.
+ *
+ * It is read from HERE and not from spark_events.plan_json, for two reasons.
+ * plan_json is per stage, so a 34-stage run would ship 34 Catalyst trees to
+ * draw one; and its DDL marks it a tree-string that is never parsed, which this
+ * console honours by rendering the text verbatim and reading nothing out of it.
+ *
+ * Empty when the memory lane has not indexed the shape — which is a fact about
+ * that lane, and the screen says so rather than showing a plan from a fixture.
+ */
+export const PLAN_SAMPLE = `
+SELECT toString(sample_plan_json) AS sample_plan_json
+FROM plan_memory FINAL
+WHERE plan_fingerprint = {fingerprint:String}
+ORDER BY indexed_at DESC
+LIMIT 1
 `;
 
 /**
