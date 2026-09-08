@@ -19,12 +19,17 @@ import { runtimeConfig } from "./runtimeConfig";
  * The same-origin path both proxies front. The TRAILING SLASH is load-bearing.
  *
  * nginx fronts this with `location /clickhouse/`, a prefix match that does NOT
- * cover a bare `/clickhouse`. Without the slash a query POST fell through to the
- * SPA fallback, came back as index.html with HTTP 200, and failed below parsing
- * HTML as JSON — while `/clickhouse/ping` matched, so `auto` mode SELECTED the
- * database and then every query failed. Vite's proxy matches both spellings, so
- * the fault existed only in production. `location = /clickhouse` in nginx.conf
- * is the guard that a future change here cannot silently reopen it.
+ * cover a bare `/clickhouse`. Measured against the real image, the bare path is
+ * answered with `301 Moved Permanently` to `http://$host/clickhouse/?…`: the
+ * upstream is never reached on that request, the scheme is forced to http and
+ * the port is dropped, so behind a TLS terminator a browser refuses the hop as
+ * mixed content — and a 301 a browser does follow is replayed as GET, dropping
+ * the SQL body with it.
+ *
+ * `/clickhouse/ping` matched all along, so `auto` mode SELECTED the database and
+ * only then failed on every query. Vite's proxy matches both spellings, so the
+ * fault existed only in production. `location = /clickhouse` in nginx.conf is
+ * the guard that a future change here cannot silently reopen it.
  */
 const BASE = "/clickhouse/";
 
