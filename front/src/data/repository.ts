@@ -13,6 +13,7 @@ import type {
 import * as fx from "./fixtures";
 import * as Q from "./queries";
 import { ping, query } from "./clickhouse";
+import { runtimeConfig } from "./runtimeConfig";
 
 /** A plan shape the memory lane indexed, plus how often it has run. */
 export interface PlanShape {
@@ -226,7 +227,9 @@ export class FixtureRepository implements Repository {
 }
 
 export async function resolveRepository(): Promise<Repository> {
-  const mode = import.meta.env.VITE_DATA_SOURCE ?? "auto";
+  // Runtime, so a single production image can be started against fixtures,
+  // pinned to ClickHouse, or left to probe — without a rebuild.
+  const mode = runtimeConfig.dataSource;
   if (mode === "fixtures") return new FixtureRepository();
   if (mode === "clickhouse") return new ClickHouseRepository();
   return (await ping()) ? new ClickHouseRepository() : new FixtureRepository();

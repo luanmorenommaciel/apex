@@ -13,8 +13,20 @@
  * When the deployment stops being a bench, swap ClickHouseRepository for an
  * HTTP client against serve/ — the Repository interface is the seam.
  */
+import { runtimeConfig } from "./runtimeConfig";
 
-const BASE = "/clickhouse";
+/**
+ * The same-origin path both proxies front. The TRAILING SLASH is load-bearing.
+ *
+ * nginx fronts this with `location /clickhouse/`, a prefix match that does NOT
+ * cover a bare `/clickhouse`. Without the slash a query POST fell through to the
+ * SPA fallback, came back as index.html with HTTP 200, and failed below parsing
+ * HTML as JSON — while `/clickhouse/ping` matched, so `auto` mode SELECTED the
+ * database and then every query failed. Vite's proxy matches both spellings, so
+ * the fault existed only in production. `location = /clickhouse` in nginx.conf
+ * is the guard that a future change here cannot silently reopen it.
+ */
+const BASE = "/clickhouse/";
 
 export interface ClickHouseConfig {
   database: string;
@@ -22,10 +34,12 @@ export interface ClickHouseConfig {
   password: string;
 }
 
+// Runtime, not build time: see runtimeConfig.ts for why an image built once
+// must still be able to reach a different database as a different user.
 export const chConfig: ClickHouseConfig = {
-  database: import.meta.env.VITE_CLICKHOUSE_DB ?? "apex",
-  user: import.meta.env.VITE_CLICKHOUSE_USER ?? "apex_ro",
-  password: import.meta.env.VITE_CLICKHOUSE_PASSWORD ?? "",
+  database: runtimeConfig.database,
+  user: runtimeConfig.user,
+  password: runtimeConfig.password,
 };
 
 export class ClickHouseError extends Error {
@@ -122,7 +136,9 @@ export async function query<T>(
 
 export async function ping(signal?: AbortSignal): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE}/ping`, { signal });
+    // BASE already ends in a slash; `${BASE}/ping` would rely on nginx
+    // collapsing the double slash back into a matchable path.
+    const res = await fetch(`${BASE}ping`, { signal });
     return res.ok;
   } catch {
     return false;

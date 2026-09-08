@@ -19,7 +19,7 @@ of depending on a compose-only service name or shared network alias.
 Without Docker: `npm ci && make dev` — with no store reachable,
 `VITE_DATA_SOURCE=auto` falls back to the recorded gate run.
 
-### Configure the ClickHouse endpoint
+### Configure a deployment
 
 Development compose uses `http://host.docker.internal:8123` by default. Supply
 an explicit URL when infra publishes another port or the store is remote:
@@ -28,19 +28,41 @@ an explicit URL when infra publishes another port or the store is remote:
 VITE_CLICKHOUSE_URL=http://clickhouse.example.internal:8123 docker compose up --build console
 ```
 
-The production image treats nginx configuration as a startup template. Set
-`CLICKHOUSE_UPSTREAM` when the container starts; it is an endpoint only, never a
-credential, and nginx keeps the browser on same-origin `/clickhouse`:
+**The production image is configured at container start, not at build.** Vite
+inlines every `VITE_*` reference into the bundle, so an image built once would
+otherwise be pinned forever to the database, user and mode it was compiled
+against. The entrypoint renders `/config.js` from its own environment and
+`index.html` loads it before the app; `src/data/runtimeConfig.ts` is the read
+side. One image therefore serves every deployment:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `CLICKHOUSE_UPSTREAM` | *required* | Where nginx proxies `/clickhouse`. An endpoint only, **never** a credential. Missing ⇒ the container refuses to start with a named error instead of nginx's `invalid URL prefix` |
+| `CLICKHOUSE_DB` | `apex` | Database the queries name |
+| `CLICKHOUSE_USER` | `apex_ro` | Must stay the read-only user — it ships to the browser |
+| `CLICKHOUSE_PASSWORD` | *empty* | Set to `""` deliberately for `no_password`; unset means "keep the bundle's default" |
+| `DATA_SOURCE` | `auto` | `clickhouse`, `fixtures`, or `auto` (ping and fall back) |
 
 ```bash
 docker build --target prod -t apex-console:prod .
 docker run --rm -p 8080:80 \
   -e CLICKHOUSE_UPSTREAM=http://clickhouse.example.internal:8123 \
+  -e CLICKHOUSE_DB=apex \
+  -e CLICKHOUSE_USER=apex_ro \
+  -e CLICKHOUSE_PASSWORD= \
+  -e DATA_SOURCE=clickhouse \
   apex-console:prod
 ```
 
+`make prod` does the same against infra's store through the host gateway;
+override any of the five on the command line.
+
 No short hostname is mandatory: deployments may use a Compose address, host
 gateway, private DNS name, or HTTPS reverse proxy without rebuilding assets.
+
+Rotating the credential is a restart, not a rebuild. It is still a *public*
+credential — moving it out of the bundle changes who sets it, not who can read
+it. See "Querying ClickHouse from the browser" below.
 
 ---
 
