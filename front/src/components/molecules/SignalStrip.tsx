@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Bar, FLOOR_PX, type BarTone } from "@/components/atoms";
-import { assessStage, ratioOf } from "@/contract/rules";
+import { assessStage, ratioOf, TAIL_SAMPLE } from "@/contract/rules";
 import type { FindingRow, JobConfRow, SparkEventRow } from "@/contract/types";
 
 /**
@@ -21,10 +21,12 @@ export function SignalStrip({
 }) {
   const bars = useMemo(() => {
     const withFinding = new Set(findings.filter((f) => f.stage_id >= 0).map((f) => f.stage_id));
-    const ranked = [...stages].sort((a, b) => ratioOf(b) - ratioOf(a)).slice(0, 5);
+    const ranked = [...stages].sort((a, b) => ratioOf(b) - ratioOf(a)).slice(0, TAIL_SAMPLE);
     const refusedIds = new Set(
       ranked.filter((s) => assessStage(s, conf).refusal !== null).map((s) => s.stage_id),
     );
+
+    const sampled = new Set(ranked.map((s) => s.stage_id));
 
     return stages.map((s) => {
       const a = assessStage(s, conf);
@@ -32,11 +34,28 @@ export function SignalStrip({
       if (withFinding.has(s.stage_id)) tone = "finding";
       else if (a.refusal?.code === "post_intervention") tone = "withheld";
       else if (refusedIds.has(s.stage_id)) tone = "refused";
-      return { stage: s, tone, bpt: a.bytesPerTask };
+      return {
+        stage: s,
+        tone,
+        bpt: a.bytesPerTask,
+        sampled: sampled.has(s.stage_id),
+        refused: a.refusal !== null,
+        reshaped: a.refusal?.code === "post_intervention",
+      };
     });
   }, [stages, conf, findings]);
 
-  const refusedCount = bars.filter((b) => b.tone === "refused" || b.tone === "withheld").length;
+  /**
+   * Counted from the assessments, NOT from the bar tones.
+   *
+   * The footer read "15 of the 5 loudest ratios refused" against this recording.
+   * `withheld` is the tone for a post-intervention refusal and applies to ANY
+   * stage, while `refused` is only for the sampled ones — summing the two and
+   * captioning it "of the 5 loudest" counted a run-wide fact under a sampled
+   * label. They are two different numbers and are reported as two.
+   */
+  const refusedInSample = bars.filter((b) => b.sampled && b.refused).length;
+  const reshaped = bars.filter((b) => b.reshaped).length;
   const claimCount = bars.filter((b) => b.tone === "finding").length;
 
   return (
@@ -56,11 +75,11 @@ export function SignalStrip({
       <div className="h-px bg-edge" />
       <div className="flex gap-6 font-mono text-[11px] text-dim">
         <span>{stages.length} stages · log axis, bytes/task</span>
-        {/* The refusal set is the TOP 5 by p99/p50, not every stage — say the
-            bound rather than letting the number read as run-wide. */}
-        <span>{refusedCount} of the 5 loudest ratios refused</span>
+        <span>{refusedInSample} of the {TAIL_SAMPLE} loudest ratios refused</span>
+        {reshaped > 0 && <span>{reshaped} measured after an AQE reshape</span>}
         <span>
-          <span className="text-spark">{claimCount}</span> claims made
+          <span className="text-spark">{claimCount}</span>{" "}
+          {claimCount === 1 ? "claim" : "claims"} made
         </span>
         {/* `llm_calls 0` used to sit here. Nothing in the contract counts model
             invocations, and this component is handed stages, not a run. */}

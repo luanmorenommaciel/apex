@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Label, Mono, Prose } from "@/components/atoms";
 import {
-  assessStage, breakEvenSlots, fmt, isVacant, ratioOf, readSlots, tailBoundBar,
+  assessStage, breakEvenSlots, fmt, isVacant, ratioOf, readSlots, TAIL_SAMPLE, tailBoundBar,
 } from "@/contract/rules";
 import type { JobConfRow, SparkEventRow } from "@/contract/types";
 
@@ -26,7 +26,7 @@ export function RefusalTable({
     () =>
       [...stages]
         .sort((a, b) => ratioOf(b) - ratioOf(a))
-        .slice(0, 5)
+        .slice(0, TAIL_SAMPLE)
         .map((s) => ({ s, a: assessStage(s, conf) }))
         .filter((r) => r.a.refusal !== null),
     [stages, conf],
@@ -50,7 +50,7 @@ export function RefusalTable({
           </span>
         </div>
         <span className="text-xs text-dim">
-          the 5 loudest p99/p50 ratios, evaluated for a tail claim · none produced one
+          the {TAIL_SAMPLE} loudest p99/p50 ratios, evaluated for a tail claim · none produced one
         </span>
       </div>
 

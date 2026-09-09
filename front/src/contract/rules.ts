@@ -532,6 +532,16 @@ export function assessStage(
   };
 }
 
+/**
+ * How many of the loudest p99/p50 ratios the refusal set covers.
+ *
+ * A DISPLAY bound, not a contract one — which is why every count derived from
+ * it is labelled with it. Defined here so the number and the sentence that
+ * quotes it cannot drift: the signal strip said "of the 5 loudest" while
+ * counting something else entirely.
+ */
+export const TAIL_SAMPLE = 5;
+
 /** Formatting helpers used by every screen, so units never drift between them. */
 export const fmt = {
   bytes(n: number): string {

@@ -5,7 +5,8 @@ import {
 import { ScreenHeader } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import {
-  assessStage, fmt, noOpGate, parseProposal, ratioOf, VOLUME_FLOOR_BYTES_PER_TASK,
+  assessStage, fmt, noOpGate, parseProposal, ratioOf, TAIL_SAMPLE,
+  VOLUME_FLOOR_BYTES_PER_TASK,
 } from "@/contract/rules";
 import { attributionIsAvailable } from "@/contract/rules";
 import { CONTRACT_VERSION } from "@/contract/types";
@@ -51,7 +52,7 @@ export function FindingScreen() {
   // finding, including a SPILL that no re-plan produced.
   const transition = finding.type === "AQE_REPLAN" ? transitions[0] : undefined;
 
-  const ranked = [...stages].sort((a, b) => ratioOf(b) - ratioOf(a)).slice(0, 5);
+  const ranked = [...stages].sort((a, b) => ratioOf(b) - ratioOf(a)).slice(0, TAIL_SAMPLE);
   const rankedAssessed = ranked.map((s) => ({ s, a: assessStage(s, conf) }));
   // "zero were reported as skew" was a constant. This is the count.
   const rankedWithFinding = ranked.filter((s) =>
@@ -134,15 +135,15 @@ export function FindingScreen() {
                 <Prose size="sm" className="text-sub">
                   {transitions.length === 0
                     ? "Spark logged no AQE re-plan for this run at all."
-                    : `${transitions.length} re-plan${transitions.length === 1 ? "" : "s"} were logged for this run, but none is this finding's evidence: contract v${CONTRACT_VERSION} carries no execution→stage map, so a transition cannot be tied to a ${finding.type} on a stage.`}
+                    : `${transitions.length} re-plan${transitions.length === 1 ? " was" : "s were"} logged for this run, but none is this finding's evidence: contract v${CONTRACT_VERSION} carries no execution→stage map, so a transition cannot be tied to a ${finding.type} on a stage.`}
                 </Prose>
               )}
               <Prose size="xs" className="text-dim">
-                {/* The em dash is the honest form: nothing in the contract counts
-                    model invocations, so "$0, no LLM was called" was a claim this
-                    console had no row to support. */}
-                LLM calls recorded against this finding:{" "}
-                <Mono className="text-body2">—</Mono> — no contract table counts them.
+                {/* Was "Cost to produce: $0. No LLM was called for this finding."
+                    Nothing in the contract counts model invocations, so that was
+                    a claim this console had no row to support. */}
+                No contract table counts model invocations, so no LLM cost is
+                claimed for this finding.
               </Prose>
             </Card>
 
@@ -346,10 +347,10 @@ export function FindingScreen() {
                 </>
               ) : (
                 <>
-                  {shapeHistory.filter((r) => r.finding_count === 0).length} of them ran clean.
-                  Configuration was captured on{" "}
-                  {shapeHistory.filter((r) => r.config_source !== "unknown").length}, which is all
-                  rule 3 has to reason over. <Link to="/memory">Open plan memory</Link>.
+                  {shapeHistory.filter((r) => r.finding_count === 0).length} of them ran clean, and
+                  configuration was captured on{" "}
+                  {shapeHistory.filter((r) => r.config_source !== "unknown").length} of them — which
+                  is all rule 3 has to reason over. <Link to="/memory">Open plan memory</Link>.
                 </>
               )}
             </Prose>

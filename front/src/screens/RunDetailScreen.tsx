@@ -10,19 +10,10 @@ import {
 import { Page } from "@/components/layout/Shell";
 import {
   assessStage, breakEvenSlots, fmt, isVacant, measureNoiseFloorPct, parseProposal, ratioOf,
-  readSlots, ruleFiveSkewAbsence, ruleTwoRuntimeResolvable,
+  readSlots, ruleFiveSkewAbsence, ruleTwoRuntimeResolvable, TAIL_SAMPLE,
 } from "@/contract/rules";
 import { severityRank } from "@/contract/types";
 import { useAsync, useRepository } from "@/data/useRepository";
-
-/**
- * How many of the loudest ratios the refusal set covers.
- *
- * It is a DISPLAY bound, not a contract one, so every place that shows a count
- * derived from it says so. Left unlabelled, "5 refused" beside "2 findings"
- * reads as a run-wide total.
- */
-const TAIL_SAMPLE = 5;
 
 export function RunDetailScreen() {
   const { jobId = "" } = useParams();
