@@ -1,3 +1,4 @@
+import { useCallback, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Card, ConfidencePill, Diff, Label, Metric, Mono, Pill, Prose, SeverityBadge,
@@ -23,6 +24,7 @@ import { useAsync, useRepository } from "@/data/useRepository";
 export function VerifyScreen() {
   const repo = useRepository();
   const [params] = useSearchParams();
+  const [copied, setCopied] = useState(false);
 
   // Self-directing, like /compare: the nav link with no parameters lands on the
   // most recent run that carries a finding, and its highest-confidence one.
@@ -61,6 +63,20 @@ export function VerifyScreen() {
   const conf = confQ.data ?? [];
   const stages = stagesQ.data ?? [];
   const v = fixQ.data;
+  // Through a ref: the button is declared in the same render as `v` and the
+  // handler must not capture a stale one.
+  const proposalRef = useRef<string>("");
+  proposalRef.current = v?.proposed_diff ?? "";
+  const copyProposal = useCallback(() => {
+    const text = proposalRef.current;
+    if (!text) return;
+    // navigator.clipboard needs a secure context; localhost qualifies, an IP
+    // over plain http does not. Failure is reported, never swallowed.
+    void navigator.clipboard
+      ?.writeText(text)
+      .then(() => setCopied(true))
+      .catch(() => setCopied(false));
+  }, []);
   const stage = finding ? stages.find((s) => s.stage_id === finding.stage_id) ?? null : null;
   const configured = readConfiguredPartitions(conf);
 
@@ -337,10 +353,15 @@ export function VerifyScreen() {
               Apply it yourself: review the diff, then <Mono className="text-body">git apply</Mono>.
               An injected instruction that cannot execute without approval cannot silently act.
             </Prose>
+            {/* `open PR body` and `replay again` are gone. The paragraph beside
+                them says Apex "opens no PR" and the console is read-only by
+                construction, so a button offering to open one contradicted the
+                sentence it sat next to, and one offering to re-run the verify
+                lane offered something this side cannot do. `copy diff` is the
+                only one of the three the console can honestly perform, so it
+                does — on the text already on screen. */}
             <div className="flex gap-2">
-              <Button>copy diff</Button>
-              <Button variant="outline">open PR body</Button>
-              <Button variant="primary">replay again</Button>
+              <Button onClick={copyProposal}>{copied ? "copied ✓" : "copy proposal"}</Button>
             </div>
           </div>
         </div>

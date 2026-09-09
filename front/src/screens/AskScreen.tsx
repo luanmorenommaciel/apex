@@ -53,12 +53,24 @@ export function AskScreen() {
       <div className="flex flex-1 min-h-0">
         <div className="flex-1 min-w-0 flex flex-col border-r border-edge">
           <div className="px-7 pt-6 pb-2 shrink-0">
+            {/* The README calls this screen scripted. The screen did not, and a
+                visitor met a confident diagnostic full of numbers that read as
+                measured — the one thing every other screen here now refuses to
+                do. It says so itself now, and names the lane that would make it
+                real. */}
             <ScreenHeader
-              title="Ask Apex"
+              title={
+                <span className="flex items-center gap-2.5">
+                  Ask Apex
+                  <Pill tone="withheld" solid>SCRIPTED</Pill>
+                </span>
+              }
               subtitle={
                 <>
-                  scope <Mono className="text-body2">app-20260803014217-0071</Mono> · 4 tools ·
-                  read-only
+                  A two-turn mockup, not a diagnostic. Every id and number below is from the
+                  recorded run and is the same whatever you type — this screen queries no table.
+                  Real answers need <Mono className="text-body2">serve</Mono>&rsquo;s tool
+                  endpoints and an <Mono className="text-body2">HttpRepository</Mono> on this side.
                 </>
               }
             />
