@@ -188,7 +188,10 @@ ORDER BY confidence_score DESC
  */
 export const PLAN_TRANSITIONS = `
 WITH fp AS (
-  SELECT job_id, any(toString(plan_fingerprint)) AS plan_fingerprint
+  -- Do not reuse the public output alias here. On ClickHouse 24.8 an aggregate
+  -- named plan_fingerprint shadows the source column in this CTE's WHERE and
+  -- turns the predicate into an illegal aggregate expression.
+  SELECT job_id, any(toString(plan_fingerprint)) AS fingerprint
   FROM spark_events
   WHERE job_id = {job:String}
     AND match(toString(plan_fingerprint), '^[0-9a-f]{64}$')
@@ -204,7 +207,7 @@ SELECT
   argMax(t.before, t.update_seq)      AS before,
   argMax(t.after, t.update_seq)       AS after,
   argMax(t.confidence, t.update_seq)  AS confidence,
-  ifNull(any(fp.plan_fingerprint), '') AS plan_fingerprint,
+  ifNull(any(fp.fingerprint), '')      AS plan_fingerprint,
   max(t.ts)                           AS ts
 FROM plan_transitions AS t
 LEFT JOIN fp ON fp.job_id = t.job_id

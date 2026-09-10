@@ -83,6 +83,34 @@ export function VerifyScreen() {
   const loading = runsQ.loading || findingsQ.loading || fixQ.loading || stagesQ.loading;
   if (loading) return <Page><Prose>Loading verification…</Prose></Page>;
 
+  if (fixQ.error) {
+    return (
+      <Page>
+        <ScreenHeader
+          title="Verification data unavailable"
+          subtitle={
+            <>
+              <Mono className="text-body2">{finding?.type ?? "selected finding"}</Mono> ·{" "}
+              <Mono className="text-body2">{findingId}</Mono>
+            </>
+          }
+        />
+        <Card accent="finding" className="px-4 py-3.5 flex flex-col gap-2">
+          <Label tone="finding">VERIFICATION QUERY FAILED</Label>
+          <Prose>
+            The verification query failed. No missing-row conclusion can be drawn from this
+            response, and no proposal or verdict is available until the query succeeds.
+          </Prose>
+          <Prose size="xs" className="text-dim">
+            Error type: <Mono className="text-body2">{fixQ.error.name || "Error"}</Mono>. The
+            response body and stack are withheld; retry the data source before interpreting this
+            finding.
+          </Prose>
+        </Card>
+      </Page>
+    );
+  }
+
   if (!finding) {
     return (
       <Page>
