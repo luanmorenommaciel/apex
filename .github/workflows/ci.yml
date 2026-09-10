@@ -24,6 +24,32 @@ permissions:
   contents: read
 
 jobs:
+  front:
+    name: front (Node 22)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: front/package-lock.json
+      - name: install dependencies
+        working-directory: front
+        run: npm ci
+      - name: typecheck
+        working-directory: front
+        run: npm run typecheck
+      - name: lint
+        working-directory: front
+        run: npm run lint
+      - name: test
+        working-directory: front
+        run: npm test -- --run --passWithNoTests
+      - name: build
+        working-directory: front
+        run: npm run build
+
   python:
     name: ${{ matrix.lane }} (py)
     runs-on: ubuntu-latest

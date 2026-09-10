@@ -1,0 +1,29 @@
+--- # The console only. The store belongs to the infra lane.
+#
+# The console reaches ClickHouse through an explicit endpoint. The default uses
+# the host-published port of infra's canonical store; VITE_CLICKHOUSE_URL may
+# instead name any reachable remote endpoint. No compose-only service hostname
+# is embedded in the application or proxy configuration.
+#
+# Start the store first:
+#   cd ../infra && docker compose up -d clickhouse otel-collector && ./scripts/seed.sh
+services:
+  console:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    extra_hosts:
+      # Makes the host gateway explicit on Linux; Docker Desktop provides the
+      # same name. Override the URL when the store is remote or uses another port.
+      - "host.docker.internal:host-gateway"
+    environment:
+      VITE_CLICKHOUSE_URL: ${VITE_CLICKHOUSE_URL:-http://host.docker.internal:8123}
+      VITE_CLICKHOUSE_DB: apex
+      VITE_CLICKHOUSE_USER: apex_ro
+      VITE_CLICKHOUSE_PASSWORD: ""
+      VITE_DATA_SOURCE: ${VITE_DATA_SOURCE:-clickhouse}

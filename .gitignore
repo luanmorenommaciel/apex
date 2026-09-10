@@ -6,6 +6,8 @@
 # --- data volumes (infra ClickStack, dev MinIO) ---
 .volumes/
 **/data/
+# front/src/data is source (the console's repository layer), not a volume
+!front/src/data/
 spark-logs/
 
 # --- Python (engine, serve) ---
