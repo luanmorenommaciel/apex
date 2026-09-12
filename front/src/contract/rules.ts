@@ -434,7 +434,12 @@ export function parseProposal(text: string): ProposalParse {
       // Spark conf values are scalars. One invalid member invalidates the
       // whole overlay; dropping it would make this a partial, false proposal.
       if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
-        out[k] = String(v);
+        // Assignment treats __proto__ specially on ordinary objects and would
+        // silently discard the JSON member. Define an own data property so
+        // callers can inspect and reject it as a non-spark key like any other.
+        Object.defineProperty(out, k, {
+          value: String(v), enumerable: true, configurable: true, writable: true,
+        });
       } else {
         return { kind: "invalid-overlay" };
       }
@@ -450,6 +455,12 @@ export function parseProposal(text: string): ProposalParse {
 }
 
 function isUnifiedDiff(text: string): boolean {
+  // A complete patch record ends in a line terminator. Without it Git rejects
+  // a hunk such as `+b` at EOF as a corrupt/truncated patch (unless the patch
+  // includes its explicit "No newline" marker, which itself is a full line).
+  // This remains structural validation only; a complete patch may still not
+  // apply to the user's checkout.
+  if (!text.endsWith("\n")) return false;
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   if (lines.at(-1) === "") lines.pop();
   let index = 0;

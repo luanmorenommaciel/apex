@@ -160,6 +160,16 @@ describe("Verify source states (mounted, real async hooks)", () => {
     expect(text()).not.toContain("no-op gate · keep");
   });
 
+  it("does not give a local namespace pass to an overlay with __proto__", async () => {
+    const original = '{"spark.sql.shuffle.partitions":800,"__proto__":"outside namespace"}';
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: original });
+    await mount();
+    expect(text()).toContain("proposed_config · valid JSON overlay");
+    expect(guard("safety")).toContain("proposal names a non-conf key: __proto__");
+    expect(guard("safety")).not.toContain("local namespace check");
+    expect(text()).toContain("no-op gate · __proto__");
+  });
+
   it("keeps a unified diff manual and reserves git apply advice for that format", async () => {
     const diff = [
       "--- a/conf/spark-defaults.conf",
@@ -167,12 +177,41 @@ describe("Verify source states (mounted, real async hooks)", () => {
       "@@ -1 +1 @@",
       "- spark.sql.shuffle.partitions 200",
       "+ spark.sql.shuffle.partitions 800",
+      "",
     ].join("\n");
     vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: diff });
     await mount();
     expect(text()).toContain("proposed_diff · unified diff");
     expect(text()).toContain("review this unified diff, then git apply");
     expect(text()).toContain("proposal is not a valid conf overlay — nothing to gate");
+  });
+
+  it("does not offer git apply for a structurally truncated patch", async () => {
+    const truncated = [
+      "--- a/x",
+      "+++ b/x",
+      "@@ -1 +1 @@",
+      "-a",
+      "+b",
+    ].join("\n");
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: truncated });
+    await mount();
+    expect(text()).toContain("proposal · unknown format");
+    expect(text()).not.toContain("review this unified diff, then git apply");
+    expect(text()).toContain("inspect or copy the original text without executing it");
+  });
+
+  it.each([
+    ["unified diff", "--- a/x\n+++ b/x\n@@ -1 +1 @@\n-  before\n+  after\n\nfinal  \n"],
+    ["invalid JSON", '{"spark.keep":"yes",\n\n  "broken": }\n'],
+    ["unknown format", "  unknown  format\n\n  indented\nlast\n"],
+  ] as const)("exposes the exact original text for %s while retaining the auxiliary view", async (_kind, original) => {
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: original });
+    await mount();
+    const raw = host.querySelector('pre[aria-label="Original proposal"]');
+    expect(raw?.textContent).toBe(original);
+    expect(raw?.classList.contains("whitespace-pre")).toBe(true);
+    expect(host.querySelector(".bg-surface")).not.toBeNull();
   });
 
   it.each([
@@ -383,21 +422,25 @@ describe("Verify source states (mounted, real async hooks)", () => {
     vi.spyOn(repo, "shapeRuns").mockResolvedValue([{ ...fx.shapeRuns[0], job_id: row.job_id }]);
     await mount();
     expect(text()).toContain("The memory response contains only the selected run");
-    expect(text()).toContain("not previous experience");
-    expect(text()).not.toContain("Prior outcomes on this consulted shape");
+    expect(text()).toContain("no other indexed outcomes to show");
+    expect(text()).not.toContain("Other indexed outcomes on this consulted shape");
   });
 
-  it("lists only prior shape runs and discloses the consulted run fingerprint", async () => {
-    const prior = { ...fx.shapeRuns[0], job_id: "prior-shape-run" };
+  it("describes an observed future run as another indexed outcome, not prior history", async () => {
+    const future = { ...fx.shapeRuns[0], job_id: "future-shape-run", started_at: "2099-01-01 00:00:00" };
+    const selected = await repo.run(row.job_id);
+    vi.spyOn(repo, "run").mockResolvedValue({ ...selected!, started_at: "2020-01-01 00:00:00" });
     vi.spyOn(repo, "shapeRuns").mockResolvedValue([
-      { ...fx.shapeRuns[1], job_id: row.job_id }, prior,
+      { ...fx.shapeRuns[1], job_id: row.job_id, started_at: "2020-01-01 00:00:00" }, future,
     ]);
     await mount();
     expect(text()).toContain("Consulted run fingerprint");
     expect(text()).toContain("does not establish it as the selected finding's shape");
-    expect(text()).toContain("Prior outcomes on this consulted shape");
-    expect(text()).toContain(prior.job_id.slice(-12));
+    expect(text()).toContain("Other indexed outcomes on this consulted shape");
+    expect(text()).toContain(future.job_id.slice(-12));
     expect(text()).not.toContain(row.job_id.slice(-12));
+    expect(text()).not.toContain("prior shape history");
+    expect(text()).not.toContain("Prior outcomes on this consulted shape");
   });
 
   it("does not call a missing run fingerprint an empty history", async () => {

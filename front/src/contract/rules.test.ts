@@ -188,6 +188,16 @@ describe("parseProposal", () => {
     });
   });
 
+  it("preserves __proto__ as an own key so the caller can reject its namespace", () => {
+    const proposal = parseProposal('{"spark.sql.shuffle.partitions":800,"__proto__":"outside namespace"}');
+    expect(proposal.kind).toBe("overlay");
+    if (proposal.kind !== "overlay") throw new Error("expected overlay");
+    expect(Object.getPrototypeOf(proposal.config)).toBe(Object.prototype);
+    expect(Object.hasOwn(proposal.config, "__proto__")).toBe(true);
+    expect(proposal.config["__proto__"]).toBe("outside namespace");
+    expect(Object.keys(proposal.config)).toEqual(["spark.sql.shuffle.partitions", "__proto__"]);
+  });
+
   it.each([
     ['{"a":{"nested":1}}', "nested object"],
     ['{"a":[1]}', "array"],
@@ -207,6 +217,7 @@ describe("parseProposal", () => {
       "+ spark.sql.shuffle.partitions            800",
       "+ spark.memory.fraction                   0.75",
       "  spark.sql.adaptive.enabled              true",
+      "",
     ].join("\n");
     expect(parseProposal(diff)).toEqual({ kind: "diff" });
   });
@@ -217,7 +228,20 @@ describe("parseProposal", () => {
       "+++ b/conf/spark-defaults.conf",
       "@@ -1 +0,0 @@",
       "- spark.sql.shuffle.partitions 200",
+      "",
     ].join("\n"))).toEqual({ kind: "diff" });
+  });
+
+  it("does not call an EOF-truncated hunk a unified diff", () => {
+    const truncated = [
+      "--- a/x",
+      "+++ b/x",
+      "@@ -1 +1 @@",
+      "-a",
+      "+b",
+    ].join("\n");
+    expect(parseProposal(truncated)).toEqual({ kind: "unknown" });
+    expect(parseProposal(`${truncated}\n`)).toEqual({ kind: "diff" });
   });
 
   it.each([

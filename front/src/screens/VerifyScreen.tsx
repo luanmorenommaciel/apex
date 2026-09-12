@@ -76,7 +76,7 @@ export function VerifyScreen() {
   const shapeRuns = shapeQ.data ?? [];
   // A shapeRuns response includes the selected run when the memory lane has
   // indexed it. It is context for this screen, not previous experience.
-  const priorShapeHistory = shapeRuns.filter((r) => r.job_id !== jobId);
+  const otherShapeRuns = shapeRuns.filter((r) => r.job_id !== jobId);
 
   const conf = confQ.data ?? [];
   const stages = stagesQ.data ?? [];
@@ -418,11 +418,9 @@ export function VerifyScreen() {
               ) : (
                 <Diff text={v.proposed_diff} />
               )}
-              {overlay && (
-                <pre aria-label="Original proposal" className="mt-3 overflow-x-auto whitespace-pre font-mono text-[11.5px] text-muted">
-                  {v.proposed_diff}
-                </pre>
-              )}
+              <pre aria-label="Original proposal" className="mt-3 overflow-x-auto whitespace-pre font-mono text-[11.5px] text-muted">
+                {v.proposed_diff}
+              </pre>
             </div>
           </div>
 
@@ -466,8 +464,8 @@ export function VerifyScreen() {
                   : shapeQ.loading ? "plan memory loading"
                   : shapeQ.error ? "plan memory unavailable"
                   : shapeRuns.length === 0 ? "no shape rows returned"
-                  : priorShapeHistory.length === 0 ? "selected run only"
-                  : `prior shape history · ${priorShapeHistory.length} runs`}
+                  : otherShapeRuns.length === 0 ? "selected run only"
+                  : `other indexed shape runs · ${otherShapeRuns.length}`}
               </Mono>
             </div>
             {runQ.loading ? (
@@ -517,15 +515,15 @@ export function VerifyScreen() {
                     Plan memory returned no indexed runs for this fingerprint. That successful empty
                     response does not identify a shape for this finding.
                   </Prose>
-                ) : priorShapeHistory.length === 0 ? (
+                ) : otherShapeRuns.length === 0 ? (
                   <Prose size="xs" className="text-dim">
                     The memory response contains only the selected run. It is current context, not
-                    previous experience, so there are no prior outcomes to recall.
+                    other run context, so there are no other indexed outcomes to show.
                   </Prose>
                 ) : (
                   <>
-                    <Prose>Prior outcomes on this consulted shape, not opinions:</Prose>
-                    {priorShapeHistory.slice(0, 4).map((r) => (
+                    <Prose>Other indexed outcomes on this consulted shape, not opinions:</Prose>
+                    {otherShapeRuns.slice(0, 4).map((r) => (
                       <Card
                         key={r.job_id}
                         accent={r.severity_rank >= 3 ? "finding" : r.finding_count > 0 ? "withheld" : "certified"}
