@@ -131,6 +131,100 @@ describe("Verify source states (mounted, real async hooks)", () => {
     expect(text()).not.toContain("until it runs");
   });
 
+  it("presents and copies a valid overlay as its original text without patch advice", async () => {
+    const original = '  {\n  "spark.z.setting" : true,\n  "spark.sql.shuffle.partitions" : 2e2\n}  \n';
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: original });
+    await mount();
+    expect(text()).toContain("proposed_config · valid JSON overlay");
+    const raw = host.querySelector('pre[aria-label="Original proposal"]');
+    expect(raw?.textContent).toBe(original);
+    expect(raw?.closest('[hidden], [aria-hidden="true"]')).toBeNull();
+    expect(raw?.classList.contains("whitespace-pre")).toBe(true);
+    expect(text()).toContain("spark.sql.shuffle.partitions");
+    expect(text()).toContain("no-op gate · shuffle.partitions");
+    expect(text()).toContain("configuration overlay, not a patch");
+    expect(text()).not.toContain("git apply");
+    await click("copy original proposal");
+    expect(writeText).toHaveBeenCalledWith(original);
+  });
+
+  it("keeps invalid overlay JSON intact and does not create a per-key gate", async () => {
+    const original = '{"spark.keep":"yes","invalid":{"nested":true}}';
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: original });
+    await mount();
+    expect(text()).toContain("proposed_config · invalid overlay");
+    expect(text()).toContain(original);
+    expect(text()).toContain("proposal is not a valid conf overlay — nothing to gate");
+    expect(text()).not.toContain("no-op gate · keep");
+  });
+
+  it("does not give a local namespace pass to an overlay with __proto__", async () => {
+    const original = '{"spark.sql.shuffle.partitions":800,"__proto__":"outside namespace"}';
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: original });
+    await mount();
+    expect(text()).toContain("proposed_config · valid JSON overlay");
+    expect(guard("safety")).toContain("proposal names a non-conf key: __proto__");
+    expect(guard("safety")).not.toContain("local namespace check");
+    expect(text()).toContain("no-op gate · __proto__");
+  });
+
+  it("keeps a unified diff manual and reserves git apply advice for that format", async () => {
+    const diff = [
+      "--- a/conf/spark-defaults.conf",
+      "+++ b/conf/spark-defaults.conf",
+      "@@ -1 +1 @@",
+      "- spark.sql.shuffle.partitions 200",
+      "+ spark.sql.shuffle.partitions 800",
+      "",
+    ].join("\n");
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: diff });
+    await mount();
+    expect(text()).toContain("proposed_diff · unified diff");
+    expect(text()).toContain("review this unified diff, then git apply");
+    expect(text()).toContain("proposal is not a valid conf overlay — nothing to gate");
+  });
+
+  it("does not offer git apply for a structurally truncated patch", async () => {
+    const truncated = [
+      "--- a/x",
+      "+++ b/x",
+      "@@ -1 +1 @@",
+      "-a",
+      "+b",
+    ].join("\n");
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: truncated });
+    await mount();
+    expect(text()).toContain("proposal · unknown format");
+    expect(text()).not.toContain("review this unified diff, then git apply");
+    expect(text()).toContain("inspect or copy the original text without executing it");
+  });
+
+  it.each([
+    ["unified diff", "--- a/x\n+++ b/x\n@@ -1 +1 @@\n-  before\n+  after\n\nfinal  \n"],
+    ["invalid JSON", '{"spark.keep":"yes",\n\n  "broken": }\n'],
+    ["unknown format", "  unknown  format\n\n  indented\nlast\n"],
+  ] as const)("exposes the exact original text for %s while retaining the auxiliary view", async (_kind, original) => {
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: original });
+    await mount();
+    const raw = host.querySelector('pre[aria-label="Original proposal"]');
+    expect(raw?.textContent).toBe(original);
+    expect(raw?.classList.contains("whitespace-pre")).toBe(true);
+    expect(host.querySelector(".bg-surface")).not.toBeNull();
+  });
+
+  it.each([
+    "@@ -1 +1 @@\n+ spark.sql.shuffle.partitions 800",
+    row.proposed_diff,
+  ])("shows headerless proposal as unknown without git apply advice: %s", async (original) => {
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: original });
+    await mount();
+    expect(text()).toContain("proposal · unknown format");
+    expect(text()).not.toContain("git apply");
+    expect(text()).toContain("inspect or copy the original text without executing it");
+  });
+
   it.each([
     ["jobConf", "configuration", ["cluster width", "reshape check", "bound analysis"]],
     ["stages", "stages", ["bound analysis", "reshape check"]],
@@ -143,10 +237,6 @@ describe("Verify source states (mounted, real async hooks)", () => {
     for (const check of checks) {
       expect(guard(check)).toContain(`${source} loading`);
       expect(guard(check)).not.toContain("✓");
-    }
-    if (method === "jobConf") {
-      const noOp = [...host.querySelectorAll("span.text-bright")].find((n) => n.textContent?.startsWith("no-op gate"));
-      expect(noOp?.parentElement?.textContent).toContain("configuration loading");
     }
     await act(async () => request.reject(secret()));
     expect(text()).toContain("Proposed fix");
@@ -262,5 +352,155 @@ describe("Verify source states (mounted, real async hooks)", () => {
     await mount();
     expect(text()).toContain("Proposed fix");
     expect(text()).not.toContain("PRIVATE");
+  });
+
+  it("describes safety as a local namespace check without inventing stronger coverage", async () => {
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({
+      ...row,
+      proposed_diff: '{"spark.sql.shuffle.partitions":200}',
+    });
+    await mount();
+    const safety = guard("safety");
+    expect(safety).toContain("local namespace check");
+    expect(safety).toContain("under spark.*");
+    expect(safety).toContain("does not validate values");
+    expect(safety).toContain("does not inspect data paths");
+    expect(safety).not.toContain("no data path named");
+  });
+
+  it.each([
+    ["improved", false, true, "The verify lane recorded that the fix did not fire."],
+    ["regressed", true, true, "The verify lane recorded that the fix demonstrably fired."],
+    ["unresolved", true, false, "The verify lane recorded that the fix demonstrably fired."],
+  ] as const)("renders %s runtime direction independently from mechanism and certification", async (
+    verdict, mechanismConfirmed, runtimeCertified, mechanismText,
+  ) => {
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({
+      ...row,
+      mechanism_confirmed: mechanismConfirmed,
+      runtime_certified: runtimeCertified,
+      runtime_verdict: verdict,
+    });
+    await mount();
+    expect(text()).toContain(mechanismText);
+    expect(text()).toContain(`Direction: ${verdict}`);
+    expect(text()).toContain("This query derives the runtime fields from the measured delta and recorded noise floor.");
+    expect(text()).toContain("measured magnitude exceeds that floor");
+    expect(text()).toContain("does not attribute the observed runtime change to this proposal");
+    if (verdict === "regressed") expect(text()).toContain("A certified regression is not a runtime saving.");
+  });
+
+  it("separates loading and failure of run context from the available proposal", async () => {
+    const request = deferred<Awaited<ReturnType<FixtureRepository["run"]>>>();
+    const spy = vi.spyOn(repo, "run").mockReturnValueOnce(request.promise);
+    await mount();
+    expect(text()).toContain("Proposed fix");
+    expect(text()).toContain("Loading the selected run context");
+    await act(async () => request.reject(secret()));
+    expect(text()).toContain("The selected run context is unavailable");
+    expect(text()).not.toContain("PRIVATE");
+    await click("Retry run context");
+    expect(text()).toContain("Consulted run fingerprint");
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it("separates loading and failure of shape memory from the available proposal", async () => {
+    const request = deferred<Awaited<ReturnType<FixtureRepository["shapeRuns"]>>>();
+    const spy = vi.spyOn(repo, "shapeRuns").mockReturnValueOnce(request.promise);
+    await mount();
+    expect(text()).toContain("Proposed fix");
+    expect(text()).toContain("Loading plan memory for this fingerprint");
+    await act(async () => request.reject(secret()));
+    expect(text()).toContain("Plan memory is unavailable for this fingerprint");
+    expect(text()).not.toContain("PRIVATE");
+    await click("Retry plan memory");
+    expect(text()).toContain("Consulted run fingerprint");
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it("treats a memory response containing only the selected run as current context", async () => {
+    vi.spyOn(repo, "shapeRuns").mockResolvedValue([{ ...fx.shapeRuns[0], job_id: row.job_id }]);
+    await mount();
+    expect(text()).toContain("The memory response contains only the selected run");
+    expect(text()).toContain("no other indexed outcomes to show");
+    expect(text()).not.toContain("Other indexed outcomes on this consulted shape");
+  });
+
+  it("describes an observed future run as another indexed outcome, not prior history", async () => {
+    const future = { ...fx.shapeRuns[0], job_id: "future-shape-run", started_at: "2099-01-01 00:00:00" };
+    const selected = await repo.run(row.job_id);
+    vi.spyOn(repo, "run").mockResolvedValue({ ...selected!, started_at: "2020-01-01 00:00:00" });
+    vi.spyOn(repo, "shapeRuns").mockResolvedValue([
+      { ...fx.shapeRuns[1], job_id: row.job_id, started_at: "2020-01-01 00:00:00" }, future,
+    ]);
+    await mount();
+    expect(text()).toContain("Consulted run fingerprint");
+    expect(text()).toContain("does not establish it as the selected finding's shape");
+    expect(text()).toContain("Other indexed outcomes on this consulted shape");
+    expect(text()).toContain(future.job_id.slice(-12));
+    expect(text()).not.toContain(row.job_id.slice(-12));
+    expect(text()).not.toContain("prior shape history");
+    expect(text()).not.toContain("Prior outcomes on this consulted shape");
+  });
+
+  it("does not call a missing run fingerprint an empty history", async () => {
+    const selected = await repo.run(row.job_id);
+    const memory = vi.spyOn(repo, "shapeRuns");
+    vi.spyOn(repo, "run").mockResolvedValue({ ...selected!, plan_fingerprint: "" });
+    await mount();
+    expect(text()).toContain("The selected run has no plan fingerprint");
+    expect(text()).toContain("did not query plan memory");
+    expect(text()).not.toContain("no indexed runs for this fingerprint");
+    expect(memory).not.toHaveBeenCalled();
+  });
+
+  it("keeps a successful empty run context distinct from a failed one", async () => {
+    const memory = vi.spyOn(repo, "shapeRuns");
+    vi.spyOn(repo, "run").mockResolvedValue(null);
+    await mount();
+    expect(text()).toContain("The run query returned no row for this selection");
+    expect(text()).toContain("unknown rather than empty");
+    expect(text()).not.toContain("run context is unavailable");
+    expect(memory).not.toHaveBeenCalled();
+  });
+
+  it("keeps a successful empty shape-memory response distinct from a failed one", async () => {
+    vi.spyOn(repo, "shapeRuns").mockResolvedValue([]);
+    await mount();
+    expect(text()).toContain("Plan memory returned no indexed runs for this fingerprint");
+    expect(text()).not.toContain("Plan memory is unavailable");
+    expect(text()).toContain("Proposed fix");
+  });
+
+  it("keeps B's shape context when a late A memory response settles", async () => {
+    const fingerprintA = "a".repeat(64);
+    const fingerprintB = "b".repeat(64);
+    const pendingA = deferred<Awaited<ReturnType<FixtureRepository["shapeRuns"]>>>();
+    const pendingB = deferred<Awaited<ReturnType<FixtureRepository["shapeRuns"]>>>();
+    const selected = (await repo.run(row.job_id))!;
+    const findingA = (await repo.findings(row.job_id)).find((f) => f.finding_id === row.finding_id)!;
+    const findingB = { ...findingA, finding_id: "finding-B", job_id: "job-B" };
+    vi.spyOn(repo, "run").mockImplementation(async (job) => ({
+      ...selected, job_id: job, plan_fingerprint: job === "job-B" ? fingerprintB : fingerprintA,
+    }));
+    vi.spyOn(repo, "findings").mockImplementation(async (job) => job === "job-B" ? [findingB] : [findingA]);
+    vi.spyOn(repo, "fixVerification").mockImplementation(async (finding) => finding === "finding-B"
+      ? { ...row, job_id: "job-B", finding_id: "finding-B" }
+      : row);
+    const shapeSpy = vi.spyOn(repo, "shapeRuns").mockImplementation((fingerprint) =>
+      fingerprint === fingerprintB ? pendingB.promise : pendingA.promise,
+    );
+    await mount();
+    expect(shapeSpy).toHaveBeenCalledWith(fingerprintA);
+    await act(async () => { await router.navigate("/verify?job=job-B&finding=finding-B"); });
+    expect(shapeSpy).toHaveBeenCalledWith(fingerprintB);
+    const priorB = { ...fx.shapeRuns[0], job_id: "prior-B-shape" };
+    await act(async () => pendingB.resolve([priorB]));
+    expect(text()).toContain(fingerprintB);
+    expect(text()).toContain(priorB.job_id.slice(-12));
+    const priorA = { ...fx.shapeRuns[1], job_id: "prior-A-shape" };
+    await act(async () => pendingA.resolve([priorA]));
+    expect(text()).toContain(fingerprintB);
+    expect(text()).not.toContain(priorA.job_id.slice(-12));
   });
 });
