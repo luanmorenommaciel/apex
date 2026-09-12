@@ -10,16 +10,32 @@ import {
   readConfiguredPartitions, readSlots, ruleFiveSkewAbsence, ruleSevenReshaped,
   ruleTwoRuntimeResolvable,
 } from "@/contract/rules";
-import { useAsync, useRepository } from "@/data/useRepository";
+import { useRepository, type AsyncState } from "@/data/useRepository";
+import { useVerifyQuery } from "./useVerifyQuery";
+
+function sourceGap(source: string, query: AsyncState<unknown>) {
+  return query.loading ? { vacant: true as const, reason: `${source} loading — dependent check unavailable` }
+    : query.error ? { vacant: true as const, reason: `${source} query failed — dependent check unavailable` }
+    : null;
+}
+
+function SourceState({ source, query }: {
+  source: string; query: AsyncState<unknown> & { retry: () => void };
+}) {
+  return <Page>
+    <ScreenHeader title={query.loading ? `Loading ${source}…` : `${source[0].toUpperCase()}${source.slice(1)} data unavailable`} />
+    <Card accent="withheld" className="px-4 py-3.5 flex flex-col gap-2">
+      <Prose>{query.loading ? `Waiting for ${source}.` : `The ${source} query failed. No absence conclusion can be drawn.`}</Prose>
+      {query.error && <Button onClick={query.retry}>Retry {source}</Button>}
+    </Card>
+  </Page>;
+}
 
 /**
  * The proposal, and the two verdicts on it.
  *
- * THREE distinct states, because collapsing them is how this screen used to
- * hang on "Loading" forever: still fetching, fetched-and-there-is-no-finding,
- * and fetched-and-the-verify-lane-has-written-no-row. Only the first is a
- * spinner. The third is a fact about the pipeline, not a failure of the console,
- * and it says which lane owes the row.
+ * Each source has its own loading, failure and successful-empty state.
+ * A successful empty result says nothing about why a verification row is absent.
  */
 export function VerifyScreen() {
   const repo = useRepository();
@@ -28,41 +44,42 @@ export function VerifyScreen() {
 
   // Self-directing, like /compare: the nav link with no parameters lands on the
   // most recent run that carries a finding, and its highest-confidence one.
-  const runsQ = useAsync(() => repo.listRuns(50), [repo]);
-  const jobId = params.get("job")
+  const explicitJob = params.get("job") || null;
+  const runsQ = useVerifyQuery(repo, "runs", () => repo.listRuns(50));
+  const jobId = explicitJob
     ?? runsQ.data?.find((r) => r.finding_count > 0)?.job_id
     ?? "";
 
-  const findingsQ = useAsync(
+  const findingsQ = useVerifyQuery(repo, jobId,
     () => (jobId ? repo.findings(jobId) : Promise.resolve([])),
-    [repo, jobId],
   );
   // FINDINGS is ordered by confidence_score DESC — the raw 0-1 the contract
   // routes on, never the coarse display tier.
-  const findingId = params.get("finding") ?? findingsQ.data?.[0]?.finding_id ?? "";
-  const finding = findingsQ.data?.find((f) => f.finding_id === findingId) ?? null;
+  const explicitFinding = params.get("finding") || null;
+  const findingId = explicitFinding ?? findingsQ.data?.[0]?.finding_id ?? "";
+  const finding = findingsQ.data?.find((f) => f.finding_id === findingId && f.job_id === jobId) ?? null;
 
-  const confQ = useAsync(() => (jobId ? repo.jobConf(jobId) : Promise.resolve([])), [repo, jobId]);
-  const stagesQ = useAsync(() => (jobId ? repo.stages(jobId) : Promise.resolve([])), [repo, jobId]);
-  const transQ = useAsync(() => (jobId ? repo.transitions(jobId) : Promise.resolve([])), [repo, jobId]);
-  const fixQ = useAsync(
-    () => (findingId ? repo.fixVerification(findingId) : Promise.resolve(null)),
-    [repo, findingId],
+  const confQ = useVerifyQuery(repo, jobId, () => (jobId ? repo.jobConf(jobId) : Promise.resolve([])));
+  const stagesQ = useVerifyQuery(repo, jobId, () => (jobId ? repo.stages(jobId) : Promise.resolve([])));
+  const transQ = useVerifyQuery(repo, jobId, () => (jobId ? repo.transitions(jobId) : Promise.resolve([])));
+  const fixQ = useVerifyQuery(repo, JSON.stringify([jobId, findingId]),
+    () => (jobId && findingId ? repo.fixVerification(findingId) : Promise.resolve(null)),
   );
 
-  const runQ = useAsync(() => (jobId ? repo.run(jobId) : Promise.resolve(null)), [repo, jobId]);
-  const shapeQ = useAsync(
+  const runQ = useVerifyQuery(repo, jobId, () => (jobId ? repo.run(jobId) : Promise.resolve(null)));
+  const shapeQ = useVerifyQuery(repo, JSON.stringify([jobId, runQ.data?.plan_fingerprint]),
     () => {
       const fp = runQ.data?.plan_fingerprint;
       return fp ? repo.shapeRuns(fp) : Promise.resolve([]);
     },
-    [repo, runQ.data?.plan_fingerprint],
   );
   const shapeHistory = shapeQ.data ?? [];
 
   const conf = confQ.data ?? [];
   const stages = stagesQ.data ?? [];
-  const v = fixQ.data;
+  const rowMismatch = fixQ.data !== null
+    && (fixQ.data.finding_id !== findingId || fixQ.data.job_id !== jobId);
+  const v = rowMismatch ? null : fixQ.data;
   // Through a ref: the button is declared in the same render as `v` and the
   // handler must not capture a stale one.
   const proposalRef = useRef<string>("");
@@ -80,10 +97,11 @@ export function VerifyScreen() {
   const stage = finding ? stages.find((s) => s.stage_id === finding.stage_id) ?? null : null;
   const configured = readConfiguredPartitions(conf);
 
-  const loading = runsQ.loading || findingsQ.loading || fixQ.loading || stagesQ.loading;
-  if (loading) return <Page><Prose>Loading verification…</Prose></Page>;
+  if (!explicitJob && (runsQ.loading || runsQ.error)) return <SourceState source="runs" query={runsQ} />;
+  if (jobId && (findingsQ.loading || findingsQ.error)) return <SourceState source="findings" query={findingsQ} />;
+  if (jobId && findingId && fixQ.loading && finding) return <SourceState source="verification" query={fixQ} />;
 
-  if (fixQ.error) {
+  if (fixQ.error && finding) {
     return (
       <Page>
         <ScreenHeader
@@ -102,10 +120,10 @@ export function VerifyScreen() {
             response, and no proposal or verdict is available until the query succeeds.
           </Prose>
           <Prose size="xs" className="text-dim">
-            Error type: <Mono className="text-body2">{fixQ.error.name || "Error"}</Mono>. The
-            response body and stack are withheld; retry the data source before interpreting this
-            finding.
+            Error details, response body and stack are withheld. Retry the data source before
+            interpreting this finding.
           </Prose>
+          <Button onClick={fixQ.retry}>Retry verification</Button>
         </Card>
       </Page>
     );
@@ -114,24 +132,48 @@ export function VerifyScreen() {
   if (!finding) {
     return (
       <Page>
-        <ScreenHeader title="Verify a fix" subtitle="nothing to verify" />
+        <ScreenHeader title={!jobId ? "No run with findings in the last 50"
+          : explicitFinding ? "Selected finding not found" : "No findings returned for this job"} />
         <Card accent="withheld" className="px-4 py-3.5">
           <Prose>
-            No finding is selected and no run in the last 50 carries one. This screen verifies a
-            proposal against a specific finding — open a run and use{" "}
-            <Mono className="text-body2">propose fix</Mono>, or pass{" "}
-            <Mono className="text-body2">?finding=&lt;id&gt;</Mono>.
+            {!jobId ? "No job could be selected from the returned runs."
+              : explicitFinding ? <>Finding <Mono>{findingId}</Mono> was not returned for job <Mono>{jobId}</Mono>. This does not mean the job has no other findings.</>
+              : <>The findings query returned no findings for job <Mono>{jobId}</Mono>.</>}
+            {" "}Select a job and finding with <Mono>?job=&lt;id&gt;&amp;finding=&lt;id&gt;</Mono>.
           </Prose>
         </Card>
       </Page>
     );
   }
 
+  if (rowMismatch) return <Page>
+    <ScreenHeader title="Verification selection mismatch" />
+    <Prose>The returned verification does not belong to this job and finding. No proposal or verdict is shown.</Prose>
+    <Button onClick={fixQ.retry}>Retry verification</Button>
+  </Page>;
+
+  const confGap = sourceGap("configuration", confQ);
+  const stagesGap = sourceGap("stages", stagesQ);
+  const transGap = sourceGap("transitions", transQ);
+  const missingStage = { vacant: true as const, reason: finding.stage_id < 0
+    ? "this finding is job-level — no stage check applies"
+    : "no stage row returned for this finding — stage check unavailable" };
+  const dependencyNotices = <>
+    {([
+      ["configuration", confQ], ["stages", stagesQ], ["transitions", transQ],
+    ] as const).filter(([, q]) => q.loading || q.error).map(([source, q]) => (
+      <Card key={source} accent="withheld" className="p-3 flex flex-col gap-2">
+        <Prose>{sourceGap(source, q)?.reason}</Prose>
+        {q.error && <Button onClick={q.retry}>Retry {source}</Button>}
+      </Card>
+    ))}
+  </>;
+
   // Every guardrail that does NOT need a verification row is computed from data
   // the console already has, so the gates stay visible even when the verify lane
   // has written nothing. The noise floor is the exception: it compares a
   // PREDICTED saving against a MEASURED floor, and both live on that row.
-  const assessment = stage ? assessStage(stage, conf) : null;
+  const assessment = !stagesGap && !confGap && stage ? assessStage(stage, conf) : null;
 
   /**
    * The proposal, read off the row rather than typed into this screen.
@@ -150,9 +192,7 @@ export function VerifyScreen() {
       name: "bound analysis",
       rule: "rule 1",
       // The real verdict for THIS stage, not a sentence about another one.
-      verdict: assessment
-        ? assessment.ruleOne
-        : { vacant: true, reason: "no stage row for this finding — it is job-level" },
+      verdict: stagesGap ?? confGap ?? assessment?.ruleOne ?? missingStage,
     },
     {
       name: "mechanism",
@@ -168,23 +208,23 @@ export function VerifyScreen() {
     {
       name: "cluster width",
       rule: "rule 1",
-      verdict:
+      verdict: confGap ?? (
         readSlots(conf) === null
           ? { vacant: true, reason: "spark.executor.instances absent from job_conf — no width is assumed" }
-          : { held: true, reason: `${readSlots(conf)} slots resolved from job_conf` },
+          : { held: true, reason: `${readSlots(conf)} slots resolved from job_conf` }),
     },
     {
       name: "reshape check",
       rule: "rule 7",
-      verdict:
-        stage && configured !== null
+      verdict: stagesGap ?? confGap ?? (!stage ? missingStage :
+        configured !== null
           ? ruleSevenReshaped(stage, configured)
-          : { vacant: true, reason: "spark.sql.shuffle.partitions not captured — reshape undecidable" },
+          : { vacant: true, reason: "spark.sql.shuffle.partitions not captured — reshape undecidable" }),
     },
     {
       name: "skew absence",
       rule: "rule 5",
-      verdict: ruleFiveSkewAbsence(transQ.data ?? []),
+      verdict: transGap ?? ruleFiveSkewAbsence(transQ.data ?? []),
     },
     {
       name: "safety",
@@ -235,7 +275,7 @@ export function VerifyScreen() {
       ? Object.entries(proposal).map(([key, value]) => ({
           name: `no-op gate · ${key.replace(/^spark\.(sql\.)?/, "")}`,
           rule: "conf",
-          verdict: noOpGate(conf, key, value),
+          verdict: confGap ?? noOpGate(conf, key, value),
         }))
       : [{
           name: "no-op gate",
@@ -270,11 +310,9 @@ export function VerifyScreen() {
         <Card accent="withheld" className="px-4 py-3.5 flex flex-col gap-2">
           <Label tone="withheld">WHY THIS IS EMPTY</Label>
           <Prose>
-            <Mono className="text-body2">apex.fix_verifications</Mono> holds no row for this
-            finding. That table is written by the <Mono className="text-body2">verify</Mono> lane —
-            never by the console — and until it runs there is no prediction to show and no verdict
-            to render. This is a gap in the pipeline, not a failure of the query: the same query
-            returns rows the moment that lane writes one.
+            The <Mono className="text-body2">apex.fix_verifications</Mono> query returned no row
+            for this selection. No proposal or verdict is available. This successful empty response
+            does not establish why the row is absent or whether processing is pending.
           </Prose>
           <Prose size="xs" className="text-dim">
             Rule 4 is why nothing is inferred meanwhile. A mechanism verdict and a runtime verdict
@@ -305,6 +343,7 @@ export function VerifyScreen() {
           </Card>
         </div>
 
+        {dependencyNotices}
         <GuardrailList items={guardrails} />
       </Page>
     );
@@ -374,6 +413,7 @@ export function VerifyScreen() {
 
           <DualVerdictPanel v={v} />
 
+          {dependencyNotices}
           <GuardrailList items={guardrails} />
 
           <div className="flex items-center justify-between gap-6 mt-auto pt-2">
