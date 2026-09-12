@@ -32,6 +32,7 @@ export function DualVerdictPanel({ v }: { v: FixVerificationRow }) {
   const resolvable = ruleTwoRuntimeResolvable(v.predicted_saving_pct, measured);
   const integrity = ruleFourNoInference(v);
   const proposal = parseProposal(v.proposed_diff);
+  const overlay = proposal.kind === "overlay" ? proposal.config : null;
 
   const runtimeTone = v.runtime_verdict === "unresolved"
     ? "withheld"
@@ -72,8 +73,8 @@ export function DualVerdictPanel({ v }: { v: FixVerificationRow }) {
 
         <div className="flex flex-col gap-1.5">
           <Label>WHAT WAS EVALUATED</Label>
-          {proposal ? (
-            Object.entries(proposal).map(([k, val]) => (
+          {overlay ? (
+            Object.entries(overlay).map(([k, val]) => (
               <Metric key={k} label={k} value={val} />
             ))
           ) : (
@@ -93,7 +94,7 @@ export function DualVerdictPanel({ v }: { v: FixVerificationRow }) {
 
       <Card accent="withheld" className="p-4 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
-          <Label>RUNTIME_CERTIFIED</Label>
+          <Label>RUNTIME EVIDENCE</Label>
           <Pill tone={runtimeTone} solid>{v.runtime_verdict.toUpperCase()}</Pill>
         </div>
         <Prose size="base" className="text-bright">
@@ -122,6 +123,13 @@ export function DualVerdictPanel({ v }: { v: FixVerificationRow }) {
           <Metric label="runtime_verdict" value={v.runtime_verdict} tone={runtimeTone} />
         </div>
         <Prose size="xs" className="text-dim">{resolvable.reason}</Prose>
+        <Prose size="xs" className="text-dim">
+          Direction: <Mono>{v.runtime_verdict}</Mono>. This query derives the runtime fields from
+          the measured delta and recorded noise floor. <Mono>runtime_certified</Mono> means only
+          that the measured magnitude exceeds that floor; <Mono>improved</Mono> or <Mono>regressed</Mono>
+          supplies direction separately. It does not attribute the observed runtime change to this proposal.
+          {v.runtime_verdict === "regressed" && " A certified regression is not a runtime saving."}
+        </Prose>
         {!integrity.ok && (
           <Prose size="xs" className="text-finding">
             contract violation: {integrity.violation}

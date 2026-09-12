@@ -73,7 +73,10 @@ export function VerifyScreen() {
       return fp ? repo.shapeRuns(fp) : Promise.resolve([]);
     },
   );
-  const shapeHistory = shapeQ.data ?? [];
+  const shapeRuns = shapeQ.data ?? [];
+  // A shapeRuns response includes the selected run when the memory lane has
+  // indexed it. It is context for this screen, not previous experience.
+  const priorShapeHistory = shapeRuns.filter((r) => r.job_id !== jobId);
 
   const conf = confQ.data ?? [];
   const stages = stagesQ.data ?? [];
@@ -179,12 +182,12 @@ export function VerifyScreen() {
    * The proposal, read off the row rather than typed into this screen.
    *
    * `apex.fix_verifications.proposed_config` is a conf overlay; the recorded
-   * run predates that column and carries a unified diff. parseProposal handles
-   * both and returns null when neither reads, which is a state this screen
-   * shows rather than papers over.
+   * run predates that column and carries a unified diff. parseProposal names
+   * each outcome, so only a complete valid overlay receives config checks.
    */
   const proposal = v ? parseProposal(v.proposed_diff) : null;
-  const proposalKeys = proposal ? Object.keys(proposal) : [];
+  const overlay = proposal?.kind === "overlay" ? proposal.config : null;
+  const proposalKeys = overlay ? Object.keys(overlay) : [];
   const nonConfKeys = proposalKeys.filter((k) => !k.startsWith("spark."));
 
   const guardrails: Guardrail[] = [
@@ -238,19 +241,20 @@ export function VerifyScreen() {
       // verdict and must not borrow its authority.
       verdict: !v
         ? { vacant: true, reason: "no verification row — nothing proposed to check" }
-        : !proposal
+        : !overlay
           ? {
               vacant: true,
               reason:
-                "proposal unreadable as a conf overlay; verify's own safe/safety_verdict " +
+                "proposal is not a valid conf overlay; verify's own safe/safety_verdict " +
                 "columns are not read by this console",
             }
           : nonConfKeys.length === 0
             ? {
                 held: true,
                 reason:
-                  `${proposalKeys.length} spark.* ${proposalKeys.length === 1 ? "key" : "keys"}, ` +
-                  `no data path named — checked here, not read from verify.safety_verdict`,
+                  `local namespace check: ${proposalKeys.length} proposed ${proposalKeys.length === 1 ? "key is" : "keys are"} under spark.*. ` +
+                  "This does not validate values, establish broader safety, and does not inspect data paths; " +
+                  "verify's safe/safety_verdict columns are not read here",
               }
             : {
                 held: false,
@@ -271,8 +275,8 @@ export function VerifyScreen() {
     // and a value typed into this screen. It gated a proposal no lane had made,
     // so the gate could report a real change while the actual overlay was a
     // no-op, which is the one thing a no-op gate exists to catch.
-    const gates: Guardrail[] = proposal
-      ? Object.entries(proposal).map(([key, value]) => ({
+    const gates: Guardrail[] = overlay
+      ? Object.entries(overlay).map(([key, value]) => ({
           name: `no-op gate · ${key.replace(/^spark\.(sql\.)?/, "")}`,
           rule: "conf",
           verdict: confGap ?? noOpGate(conf, key, value),
@@ -282,7 +286,7 @@ export function VerifyScreen() {
           rule: "conf",
           verdict: {
             vacant: true,
-            reason: "proposed_config could not be read as a conf overlay — nothing to gate",
+            reason: "proposal is not a valid conf overlay — nothing to gate",
           },
         }];
     guardrails.unshift(...gates);
@@ -391,22 +395,33 @@ export function VerifyScreen() {
               JSON overlay the live column actually stores does not have. */}
           <div className="bg-raised border border-edge rounded-sm overflow-hidden">
             <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-edge font-mono text-[11px] text-sub">
-              <span>{v.proposed_diff.trim().startsWith("{") ? "proposed_config" : "proposed_diff"}</span>
+              <span>{
+                proposal?.kind === "overlay" ? "proposed_config · valid JSON overlay"
+                  : proposal?.kind === "diff" ? "proposed_diff · unified diff"
+                    : proposal?.kind === "invalid-json" ? "proposed_config · invalid JSON"
+                      : proposal?.kind === "invalid-overlay" ? "proposed_config · invalid overlay"
+                        : "proposal · unknown format"
+              }</span>
               <span className="text-muted">
-                {proposal
+                {overlay
                   ? `${proposalKeys.length} conf ${proposalKeys.length === 1 ? "key" : "keys"}`
-                  : "not readable as a conf overlay"}
+                  : "original text shown verbatim"}
               </span>
             </div>
             <div className="p-3.5">
-              {v.proposed_diff.trim().startsWith("{") && proposal ? (
+              {overlay ? (
                 <div className="flex flex-col gap-1.5">
-                  {Object.entries(proposal).map(([k, val]) => (
+                  {Object.entries(overlay).map(([k, val]) => (
                     <Metric key={k} label={k} value={val} />
                   ))}
                 </div>
               ) : (
                 <Diff text={v.proposed_diff} />
+              )}
+              {overlay && (
+                <pre aria-label="Original proposal" className="mt-3 overflow-x-auto whitespace-pre font-mono text-[11.5px] text-muted">
+                  {v.proposed_diff}
+                </pre>
               )}
             </div>
           </div>
@@ -418,8 +433,13 @@ export function VerifyScreen() {
 
           <div className="flex items-center justify-between gap-6 mt-auto pt-2">
             <Prose size="xs" className="text-dim max-w-[520px]">
-              Apply it yourself: review the diff, then <Mono className="text-body">git apply</Mono>.
-              An injected instruction that cannot execute without approval cannot silently act.
+              {proposal?.kind === "diff" ? (
+                <>Apply it yourself: review this unified diff, then <Mono className="text-body">git apply</Mono>.</>
+              ) : proposal?.kind === "overlay" ? (
+                <>This is a configuration overlay, not a patch: copy the original proposal and apply its keys manually.</>
+              ) : (
+                <>This proposal format is not actionable here; inspect or copy the original text without executing it.</>
+              )} The console never executes a proposal.
             </Prose>
             {/* `open PR body` and `replay again` are gone. The paragraph beside
                 them says Apex "opens no PR" and the console is read-only by
@@ -429,7 +449,7 @@ export function VerifyScreen() {
                 only one of the three the console can honestly perform, so it
                 does — on the text already on screen. */}
             <div className="flex gap-2">
-              <Button onClick={copyProposal}>{copied ? "copied ✓" : "copy proposal"}</Button>
+              <Button onClick={copyProposal}>{copied ? "original proposal copied ✓" : "copy original proposal"}</Button>
             </div>
           </div>
         </div>
@@ -439,37 +459,91 @@ export function VerifyScreen() {
             <div className="flex items-center gap-2">
               <Label tone="memory">PLAN MEMORY</Label>
               <Mono className="text-[10px] text-muted">
-                {shapeHistory.length > 0
-                  ? `same shape · ${shapeHistory.length} runs`
-                  : "no history on this shape"}
+                {runQ.loading ? "run context loading"
+                  : runQ.error ? "run context unavailable"
+                  : !runQ.data ? "run context returned no row"
+                  : !runQ.data.plan_fingerprint ? "run has no fingerprint"
+                  : shapeQ.loading ? "plan memory loading"
+                  : shapeQ.error ? "plan memory unavailable"
+                  : shapeRuns.length === 0 ? "no shape rows returned"
+                  : priorShapeHistory.length === 0 ? "selected run only"
+                  : `prior shape history · ${priorShapeHistory.length} runs`}
               </Mono>
             </div>
-            {shapeHistory.length === 0 ? (
+            {runQ.loading ? (
               <Prose size="xs" className="text-dim">
-                The memory lane has indexed no other run of this plan shape, so there is no history
-                to recall. One run is not a corpus, and rule 3 credits nothing to tuning below two
-                distinct configurations.
+                Loading the selected run context before consulting plan memory. The available
+                proposal and verdicts remain independent of this sidebar source.
+              </Prose>
+            ) : runQ.error ? (
+              <>
+                <Prose size="xs" className="text-dim">
+                  The selected run context is unavailable, so no plan fingerprint or history can be
+                  stated. This is not an empty memory result.
+                </Prose>
+                <Button onClick={runQ.retry}>Retry run context</Button>
+              </>
+            ) : !runQ.data ? (
+              <Prose size="xs" className="text-dim">
+                The run query returned no row for this selection. No plan fingerprint was available
+                to consult, so plan memory is unknown rather than empty.
+              </Prose>
+            ) : !runQ.data.plan_fingerprint ? (
+              <Prose size="xs" className="text-dim">
+                The selected run has no plan fingerprint. The sidebar did not query plan memory and
+                does not infer a shape for this finding.
               </Prose>
             ) : (
               <>
-                <Prose>We have seen this plan shape before. Outcomes, not opinions:</Prose>
-                {shapeHistory.slice(0, 4).map((r) => (
-                  <Card
-                    key={r.job_id}
-                    accent={r.severity_rank >= 3 ? "finding" : r.finding_count > 0 ? "withheld" : "certified"}
-                    className="p-3 flex flex-col gap-1.5"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <Mono className="text-[11px] text-bright">{r.job_id.slice(-12)}</Mono>
-                      <Mono className="text-[10px] text-body2">{fmt.duration(r.task_time_ms)}</Mono>
-                    </div>
-                    <Prose size="xs" className="text-sub">
-                      {r.finding_count === 0
-                        ? "clean run on this shape"
-                        : `${r.finding_count} finding${r.finding_count === 1 ? "" : "s"} · config ${r.config_source}`}
+                <Prose size="xs" className="text-dim">
+                  Consulted run fingerprint <Mono>{runQ.data.plan_fingerprint}</Mono>. It is the
+                  selected run&apos;s {runQ.data.shape_count > 1 ? "dominant-shape choice" : "run-level shape"};
+                  this screen does not establish it as the selected finding&apos;s shape.
+                </Prose>
+                {shapeQ.loading ? (
+                  <Prose size="xs" className="text-dim">
+                    Loading plan memory for this fingerprint. No history conclusion is available yet.
+                  </Prose>
+                ) : shapeQ.error ? (
+                  <>
+                    <Prose size="xs" className="text-dim">
+                      Plan memory is unavailable for this fingerprint. The failed request is not an
+                      empty history.
                     </Prose>
-                  </Card>
-                ))}
+                    <Button onClick={shapeQ.retry}>Retry plan memory</Button>
+                  </>
+                ) : shapeRuns.length === 0 ? (
+                  <Prose size="xs" className="text-dim">
+                    Plan memory returned no indexed runs for this fingerprint. That successful empty
+                    response does not identify a shape for this finding.
+                  </Prose>
+                ) : priorShapeHistory.length === 0 ? (
+                  <Prose size="xs" className="text-dim">
+                    The memory response contains only the selected run. It is current context, not
+                    previous experience, so there are no prior outcomes to recall.
+                  </Prose>
+                ) : (
+                  <>
+                    <Prose>Prior outcomes on this consulted shape, not opinions:</Prose>
+                    {priorShapeHistory.slice(0, 4).map((r) => (
+                      <Card
+                        key={r.job_id}
+                        accent={r.severity_rank >= 3 ? "finding" : r.finding_count > 0 ? "withheld" : "certified"}
+                        className="p-3 flex flex-col gap-1.5"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <Mono className="text-[11px] text-bright">{r.job_id.slice(-12)}</Mono>
+                          <Mono className="text-[10px] text-body2">{fmt.duration(r.task_time_ms)}</Mono>
+                        </div>
+                        <Prose size="xs" className="text-sub">
+                          {r.finding_count === 0
+                            ? "clean run on this shape"
+                            : `${r.finding_count} finding${r.finding_count === 1 ? "" : "s"} · config ${r.config_source}`}
+                        </Prose>
+                      </Card>
+                    ))}
+                  </>
+                )}
               </>
             )}
             <Mono className="text-[10px] leading-relaxed text-muted">
@@ -525,8 +599,8 @@ export function VerifyScreen() {
               </div>
             </div>
             <Prose size="xs" className="text-dim">
-              A small bench can honestly deliver the first verdict and not the second. Both are
-              stored; neither is inferred from the other.
+              The mechanism field and runtime evidence remain separate claims. Neither is inferred
+              from the other, and the runtime query does not attribute a measured change to this proposal.
             </Prose>
           </div>
         </aside>

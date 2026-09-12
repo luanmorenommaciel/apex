@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fixVerifications } from "@/data/fixtures";
 
 import {
   assessStage,
@@ -175,39 +176,77 @@ describe("the severity ladder", () => {
 describe("parseProposal", () => {
   it("reads the live shape: proposed_config as canonical JSON", () => {
     expect(parseProposal('{"spark.sql.shuffle.partitions":"200"}')).toEqual({
-      "spark.sql.shuffle.partitions": "200",
+      kind: "overlay",
+      config: { "spark.sql.shuffle.partitions": "200" },
     });
   });
 
   it("reads scalars of any JSON type, because conf values are strings on the wire", () => {
-    expect(parseProposal('{"a":200,"b":true,"c":"x"}')).toEqual({ a: "200", b: "true", c: "x" });
+    expect(parseProposal('{"a":200,"b":true,"c":"x"}')).toEqual({
+      kind: "overlay",
+      config: { a: "200", b: "true", c: "x" },
+    });
   });
 
-  it("drops a non-scalar rather than stringifying it into an object literal", () => {
-    expect(parseProposal('{"a":{"nested":1},"b":"keep"}')).toEqual({ b: "keep" });
+  it.each([
+    ['{"a":{"nested":1}}', "nested object"],
+    ['{"a":[1]}', "array"],
+    ['{"a":null}', "null"],
+    ['{"a":"keep","b":{"nested":1}}', "mixed valid and invalid values"],
+    ["[]", "top-level array"],
+  ])("rejects a %s without accepting a partial overlay", (text) => {
+    expect(parseProposal(text)).toEqual({ kind: "invalid-overlay" });
   });
 
-  it("reads the recorded shape: a unified diff, ADDED lines only", () => {
+  it("recognises the recorded shape: a unified diff", () => {
     const diff = [
-      "@@ conf/spark-defaults.conf @@",
+      "--- a/conf/spark-defaults.conf",
+      "+++ b/conf/spark-defaults.conf",
+      "@@ -1,2 +1,3 @@",
       "- spark.sql.shuffle.partitions            200",
       "+ spark.sql.shuffle.partitions            800",
       "+ spark.memory.fraction                   0.75",
       "  spark.sql.adaptive.enabled              true",
     ].join("\n");
-    // The removed line is the state being replaced and the context line is
-    // untouched; gating against either would gate the config already in force.
-    expect(parseProposal(diff)).toEqual({
-      "spark.sql.shuffle.partitions": "800",
-      "spark.memory.fraction": "0.75",
-    });
+    expect(parseProposal(diff)).toEqual({ kind: "diff" });
   });
 
-  it("returns null rather than a guess when nothing reads", () => {
-    expect(parseProposal("")).toBeNull();
-    expect(parseProposal("enable AQE skew join")).toBeNull();
-    expect(parseProposal("{not json")).toBeNull();
-    expect(parseProposal("[]")).toBeNull();
+  it("recognises a deletion-only unified diff without treating it as an overlay", () => {
+    expect(parseProposal([
+      "--- a/conf/spark-defaults.conf",
+      "+++ b/conf/spark-defaults.conf",
+      "@@ -1 +0,0 @@",
+      "- spark.sql.shuffle.partitions 200",
+    ].join("\n"))).toEqual({ kind: "diff" });
+  });
+
+  it.each([
+    "@@ -1 +1 @@\n+ spark.sql.shuffle.partitions 800",
+    fixVerifications[0].proposed_diff,
+    "+++ b/conf\n--- a/conf\n@@ -1 +1 @@\n-old\n+new",
+    "--- a/conf\n+++ b/conf\n@@ conf/spark-defaults.conf @@\n-old\n+new",
+    "--- a/conf\n+++ b/conf\n@@ -1 +1 @@\n+new",
+  ])("keeps incomplete or legacy diff text unknown: %s", (proposal) => {
+    expect(parseProposal(proposal)).toEqual({ kind: "unknown" });
+  });
+
+  it("preserves multiple hunks and files with git headers and an added file", () => {
+    expect(parseProposal([
+      "diff --git a/conf b/conf", "index abc..def 100644",
+      "--- a/conf", "+++ b/conf", "@@ -1 +1 @@", "-old", "+new",
+      "@@ -3 +3 @@ context", "-before", "+after",
+      "diff --git a/new b/new", "new file mode 100644",
+      "--- /dev/null", "+++ b/new", "@@ -0,0 +1 @@", "+added",
+      "\\ No newline at end of file", "",
+    ].join("\n"))).toEqual({ kind: "diff" });
+  });
+
+  it("distinguishes malformed JSON and unknown text", () => {
+    expect(parseProposal("{not json")).toEqual({ kind: "invalid-json" });
+    expect(parseProposal("")).toEqual({ kind: "unknown" });
+    expect(parseProposal("enable AQE skew join")).toEqual({ kind: "unknown" });
+    expect(parseProposal("+ spark.sql.shuffle.partitions 800")).toEqual({ kind: "unknown" });
+    expect(parseProposal("@@ -1 +1 @@")).toEqual({ kind: "unknown" });
   });
 });
 
