@@ -139,6 +139,7 @@ describe("Verify source states (mounted, real async hooks)", () => {
     await mount();
     expect(text()).toContain("proposed_config · valid JSON overlay");
     const raw = host.querySelector('pre[aria-label="Original proposal"]');
+    expect(raw?.getAttribute("role")).toBe("region");
     expect(raw?.textContent).toBe(original);
     expect(raw?.closest('[hidden], [aria-hidden="true"]')).toBeNull();
     expect(raw?.classList.contains("whitespace-pre")).toBe(true);
@@ -209,6 +210,7 @@ describe("Verify source states (mounted, real async hooks)", () => {
     vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: original });
     await mount();
     const raw = host.querySelector('pre[aria-label="Original proposal"]');
+    expect(raw?.getAttribute("role")).toBe("region");
     expect(raw?.textContent).toBe(original);
     expect(raw?.classList.contains("whitespace-pre")).toBe(true);
     expect(host.querySelector(".bg-surface")).not.toBeNull();
