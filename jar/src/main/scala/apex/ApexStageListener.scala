@@ -191,6 +191,7 @@ class ApexStageListener private (
         app_name      = appName,
         stage_id      = si.stageId,
         stage_attempt = si.attemptNumber(),
+        execution_id  = executionId,
         ts            = si.completionTime.getOrElse(System.currentTimeMillis()),
         shuffle_read_bytes       = tm.map(_.shuffleReadMetrics.totalBytesRead).getOrElse(0L),
         shuffle_write_bytes      = tm.map(_.shuffleWriteMetrics.bytesWritten).getOrElse(0L),
