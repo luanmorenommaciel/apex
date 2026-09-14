@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lane: [engine, serve, memory, verify]
+        lane: [engine, serve, memory, verify, dev]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

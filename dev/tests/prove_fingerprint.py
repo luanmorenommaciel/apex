@@ -1,5 +1,5 @@
 """T7 proof (mirrors jar/ApexPlanFingerprintSpec) — run via:
-    spark-submit --master local[2] /opt/apex/tests/test_fingerprint.py
+    spark-submit --master local[2] /opt/apex/tests/prove_fingerprint.py
 
 Proves the dev Python fingerprint:
   1. is 64 lowercase hex;
