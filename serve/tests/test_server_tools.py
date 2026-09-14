@@ -25,6 +25,7 @@ CONTRACTED_TOOLS = [
     "compare_runs",
     "explain_stage",
     "list_runs",
+    "recall_similar_runs",
     "search_kb",
     "suggest_fix",
     "verify_fix",

@@ -6,7 +6,7 @@ stack (ClickHouse `127.0.0.1:8123`, database `apex`) holding the real P0 run
 
 ## Scope
 
-`apex-mcp` — stdio MCP server, seven tools and one resource:
+`apex-mcp` — stdio MCP server, eight tools and one resource:
 
 | Tool | Kind |
 |---|---|
@@ -299,7 +299,7 @@ over that table.
 | `verify_fix(job_id, finding_id?)` | read-only — reports `apex.fix_verifications` |
 | `suggest_fix(...).verification` | the same verdict, attached to the proposal it concerns |
 
-The tool surface is now **seven tools**, re-pinned as an exact ordered equality in
+The tool surface is now **eight tools**, re-pinned as an exact ordered equality in
 `tests/test_server_tools.py::test_the_contracted_tool_surface` and in
 `tools/mcp_stdio_gate.py`'s `EXPECTED_TOOLS`.
 
@@ -339,6 +339,95 @@ uv run --extra dev pytest                  # 179 passed
 `tools/read_only_gate.py` and `tools/mcp_stdio_gate.py` were **not** executed —
 they need a live ClickHouse with `apex.fix_verifications` applied, which this
 worktree does not have. `EXPECTED_TOOLS` in the stdio gate was updated to the
-seven-tool surface, but that update is unexercised until the gate is run against
+eight-tool surface, but that update is unexercised until the gate is run against
 a cluster with the v0.3 DDL applied. The L2 lesson stands: `FakeClient` does not
 parse SQL, so `VERIFICATIONS_SQL` has not yet been validated by a real parser.
+
+---
+
+## L6 — cross-run memory, recorded 2026-08-20
+
+Branch `serve/l6-learn`. `recall_similar_runs` joins the surface as the eighth
+tool and the first that reasons across runs rather than about one.
+
+### Unit + safety suite — `162 passed`
+
+| New coverage | Asserts |
+|---|---|
+| `tests/test_ch.py` (+14) | cosine ranking, the similarity gate, `dim` read rather than assumed, newest-first outcomes, hostile-fingerprint binding, absent-table degradation |
+| `tests/test_recall_view.py` (new, 16) | bounded similarity, Nullable config columns, `config_source` never defaulting to `observed`, and the tool end-to-end on three deployments |
+| `tests/test_diagnose.py` (+9) | the floor rule: no floor, inside the floor, a single run, a cleared floor, and CONTRACT rule 3 attributability |
+| `tests/test_server_tools.py` | the ordered eight-tool surface, still an exact equality |
+
+### `tools/recall_gate.py` — live ClickHouse `24.8.14.39`, `status: passed`
+
+```json
+"similar_plans":       {"returned": 1, "top_similarity": 0.9986,
+                        "orthogonal_shape_dropped": true},
+"prior_outcomes":      {"returned": 3, "newest_first": true, "self_excluded": true,
+                        "null_config_stayed_null": true},
+"recall_similar_runs": {"status": "recalled", "shape": "dominant", "prior_runs": 3,
+                        "no_floor_verdict": false, "with_floor_verdict": true},
+"hostile_fingerprints":{"tried": 4, "rows": 0, "raised": false},
+"absent_tables":       {"present": false, "raised": false, "rows": 0},
+"store_down":          {"degraded_to_empty": false, "code": "unavailable"},
+"writes_by_the_server": 0, "fixture_rows_remaining": 0
+```
+
+- The v0.3 additive schema is verified by `DESCRIBE` for `plan_memory` and
+  `run_outcomes` before anything is seeded.
+- **The gate holds on similarity, not on rank.** Three shapes are seeded: a
+  near-duplicate and an orthogonal one. The orthogonal shape is dropped rather
+  than returned as "the nearest available", and a plan is never its own neighbour.
+- `Nullable(Int32)` config columns arrive as `None`, never `0`; `Map` arrives as
+  `dict`; `DateTime64` arrives as `datetime` — the L2 defect, re-checked in the
+  new columns.
+- Four hostile fingerprints — including `' OR 1=1 --`, a 300-character value and
+  `'; DROP TABLE apex.plan_memory; --` — bind, return 0 rows, raise nothing, and
+  leave the table intact.
+- Without a floor the tool draws no verdict. With a measured floor of 15% it
+  names the floor and credits the difference to configuration.
+- The gate deletes only its own fixture rows, with `mutations_sync = 2` so
+  "none remain" is a verified count rather than a race against an async mutation.
+
+### Two defects only a live database could find
+
+Both survived the entire unit suite, because `FakeClient` does not parse SQL and
+answers every probe the same way. This is L2's lesson repeating in new columns —
+and the previous revision of this section named the scalar sub-select as exactly
+the class of thing a fake cannot catch, one paragraph before it shipped.
+
+1. **`SIMILAR_PLANS_SQL` raised on any unseen plan shape.** The queried shape was
+   read through a scalar sub-select, which ClickHouse **constant-folds before
+   `WHERE` runs** — so a fingerprint absent from `plan_memory` hit code 125,
+   *"scalar subquery returned empty result of type `Array(Float32)` which cannot
+   be Nullable"*, instead of returning no neighbours. A plan shape nobody has run
+   before is the most ordinary case this tool has. Fixed by `INNER JOIN`ing the
+   shape, which also carries the `(encoder_version, dim)` width check.
+
+2. **That failure was being silently swallowed.** `_sanitize` routes on the
+   exception's class name, and the driver's generic class is `DatabaseError`, so
+   the code-125 fault arrived labelled `clickhouse_schema_missing`. `_recall`
+   read that as "these tables are absent", returned `[]`, and cached it — so
+   every later recall in the process reported cross-run memory as unavailable.
+   Absence is now confirmed by **re-probing**, never inferred from the message.
+
+   The same masking sat one level higher: `memory_tables_present()` caught every
+   `ApexStoreError`, so an **unreachable** ClickHouse answered *"cross-run memory
+   is unavailable on this deployment"* — a confident architectural claim about a
+   store that never replied. The probe now re-raises `clickhouse_unavailable`.
+   Both paths are pinned by unit tests, and the gate asserts that an unreachable
+   store raises rather than degrading.
+
+### Known limits
+
+- `noise_floor_pct` is supplied by the caller. The memory lane computes a
+  per-shape floor from its own history; serve cannot read it without a contract
+  surface for the figure, so today the honest default is no floor and therefore
+  no verdict.
+- Apex captures no SparkConf, so `config_source` is `unknown` on every row the
+  memory lane can write today. Recall is fully useful as an OUTCOME store and
+  cannot yet say which configuration won. Closing that is a jar-lane change.
+- Similarity is a brute-force `cosineDistance` scan of `apex.plan_memory`. Exact
+  and cheap at a few thousand shapes; an ANN index would make it approximate,
+  which is a correctness-visible change and not just a speed knob.
