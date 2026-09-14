@@ -28,7 +28,22 @@ SELECT
   job_id, app_id, app_name, stage_id, stage_attempt, ts,
   shuffle_read_bytes, shuffle_write_bytes, spill_disk_bytes, spill_mem_bytes,
   gc_time_ms, input_bytes, output_bytes, peak_execution_mem_bytes, task_count,
-  task_duration_p50_ms, task_duration_p99_ms, plan_fingerprint, plan_json
+  task_duration_p50_ms, task_duration_p99_ms, task_duration_max_ms,
+  task_duration_sample_count,
+  successful_task_duration_p50_ms, successful_task_duration_p99_ms,
+  successful_task_duration_max_ms, successful_task_sample_count,
+  successful_task_shuffle_read_bytes_p50,
+  successful_task_shuffle_read_bytes_max,
+  successful_task_shuffle_read_bytes_sample_count,
+  task_attempt_count, task_failed_attempt_count,
+  task_counted_failure_attempt_count, task_killed_attempt_count,
+  task_speculative_attempt_count,
+  plan_fingerprint, plan_json,
+  -- Same transition-row compatibility as STAGE_AGGREGATES_SQL: before the
+  -- typed column existed, the runtime remained available in the attributes map.
+  if(executor_run_time_ms > 0,
+     executor_run_time_ms,
+     toInt64OrZero(attributes['executor_run_time_ms'])) AS executor_run_time_ms
 FROM apex.spark_events
 WHERE job_id = {job_id:String}
 ORDER BY stage_id, stage_attempt, ts
@@ -71,7 +86,26 @@ SELECT
             executor_run_time_ms,
             toInt64OrZero(attributes['executor_run_time_ms'])), ts) AS executor_run_time_ms,
   -- still a pure Map escape hatch; a missing key yields '' so the rule does not fire.
-  argMax(attributes['failure_reason'], ts)             AS failure_reason
+  argMax(attributes['failure_reason'], ts)             AS failure_reason,
+  -- retry-safe scheduler counters (CONTRACT.md v0.5): typed columns with
+  -- DEFAULT 0 since their own migration, so no Map fallback is needed here
+  -- the way executor_run_time_ms above still needs one.
+  argMax(task_attempt_count, ts)                       AS task_attempt_count,
+  argMax(task_failed_attempt_count, ts)                AS task_failed_attempt_count,
+  argMax(task_counted_failure_attempt_count, ts)       AS task_counted_failure_attempt_count,
+  argMax(task_killed_attempt_count, ts)                AS task_killed_attempt_count,
+  argMax(task_speculative_attempt_count, ts)           AS task_speculative_attempt_count,
+  -- raw fields the tail-outlier watcher needs; also DEFAULT 0 typed columns,
+  -- no Map fallback required, same reasoning as the retry-safe counters above.
+  argMax(task_duration_max_ms, ts)                     AS task_duration_max_ms,
+  argMax(task_duration_sample_count, ts)               AS task_duration_sample_count,
+  argMax(successful_task_duration_p50_ms, ts)          AS successful_task_duration_p50_ms,
+  argMax(successful_task_duration_p99_ms, ts)          AS successful_task_duration_p99_ms,
+  argMax(successful_task_duration_max_ms, ts)          AS successful_task_duration_max_ms,
+  argMax(successful_task_sample_count, ts)             AS successful_task_sample_count,
+  argMax(successful_task_shuffle_read_bytes_p50, ts)   AS successful_task_shuffle_read_bytes_p50,
+  argMax(successful_task_shuffle_read_bytes_max, ts)   AS successful_task_shuffle_read_bytes_max,
+  argMax(successful_task_shuffle_read_bytes_sample_count, ts) AS successful_task_shuffle_read_bytes_sample_count
 FROM apex.spark_events
 WHERE job_id = {job_id:String}
 GROUP BY job_id, stage_id
@@ -377,6 +411,22 @@ def aggregate_events(events: Iterable[StageEvent]) -> list[StageAggregate]:
             plan_json=event.plan_json,
             executor_run_time_ms=event.executor_run_time_ms,
             failure_reason=event.failure_reason,
+            task_attempt_count=event.task_attempt_count,
+            task_failed_attempt_count=event.task_failed_attempt_count,
+            task_counted_failure_attempt_count=event.task_counted_failure_attempt_count,
+            task_killed_attempt_count=event.task_killed_attempt_count,
+            task_speculative_attempt_count=event.task_speculative_attempt_count,
+            task_duration_max_ms=event.task_duration_max_ms,
+            task_duration_sample_count=event.task_duration_sample_count,
+            successful_task_duration_p50_ms=event.successful_task_duration_p50_ms,
+            successful_task_duration_p99_ms=event.successful_task_duration_p99_ms,
+            successful_task_duration_max_ms=event.successful_task_duration_max_ms,
+            successful_task_sample_count=event.successful_task_sample_count,
+            successful_task_shuffle_read_bytes_p50=event.successful_task_shuffle_read_bytes_p50,
+            successful_task_shuffle_read_bytes_max=event.successful_task_shuffle_read_bytes_max,
+            successful_task_shuffle_read_bytes_sample_count=(
+                event.successful_task_shuffle_read_bytes_sample_count
+            ),
         )
         for _, event in sorted(latest.items())
     ]

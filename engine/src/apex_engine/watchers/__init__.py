@@ -1,4 +1,4 @@
-"""Tier 1 — the five deterministic watchers, plus the AQE ground-truth watcher.
+"""Tier 1 — the six deterministic watchers, plus the AQE ground-truth watcher.
 
 ALL of these are plain Python functions over deterministic SQL rules. None is a
 CrewAI agent, none is `@tool`-wrapped, none calls an LLM. Tier 1 answers 95%+ of
@@ -21,16 +21,16 @@ from __future__ import annotations
 
 from ..context import JobContext, context_for
 from ..schema import Finding, PlanTransition, StageAggregate
-from . import aqe, code, cost, memory, shuffle, skew
+from . import aqe, code, cost, memory, retry_pressure, shuffle, skew
 
-# The five contract watchers. Order is the order findings are emitted in.
-STAGE_WATCHERS = (skew, shuffle, memory, cost, code)
+# The six contract watchers. Order is the order findings are emitted in.
+STAGE_WATCHERS = (skew, shuffle, memory, cost, code, retry_pressure)
 WATCHER_NAMES = tuple(module.NAME for module in STAGE_WATCHERS) + (aqe.NAME,)
 
 __all__ = [
     "STAGE_WATCHERS",
     "WATCHER_NAMES",
-    "aqe", "code", "cost", "memory", "shuffle", "skew",
+    "aqe", "code", "cost", "memory", "retry_pressure", "shuffle", "skew",
     "run_all", "run_all_offline",
 ]
 
