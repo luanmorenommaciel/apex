@@ -230,6 +230,66 @@ def samples(job_ids, p99s, *, stage_id=21, n=100, fp="fp", bytes_touched=113_527
     ]
 
 
+def test_shape_history_noise_uses_the_retry_safe_population_when_available():
+    sample = ShapeSample(
+        job_id="run-1",
+        stage_id=21,
+        plan_fingerprint="fp",
+        task_count=100,
+        task_duration_p50_ms=10,
+        task_duration_p99_ms=900,
+        successful_task_duration_p50_ms=100,
+        successful_task_duration_p99_ms=120,
+        successful_task_sample_count=100,
+    )
+    assert sample.ratio == 1.2
+    assert sample.effective_p99_ms == 120
+
+
+@pytest.mark.parametrize("current_source", ["successful_tasks", "legacy_all_attempts"])
+def test_noise_floor_never_mixes_duration_sample_sources(current_source):
+    """Four mixed rows cannot manufacture a known floor when only two rows
+    are comparable to the current stage's duration population."""
+    historical = [
+        ShapeSample(
+            job_id=f"successful-{i}",
+            stage_id=21,
+            plan_fingerprint="fp",
+            task_count=100,
+            task_duration_p50_ms=10,
+            task_duration_p99_ms=900,
+            successful_task_duration_p50_ms=100,
+            successful_task_duration_p99_ms=p99,
+            successful_task_sample_count=100,
+        )
+        for i, p99 in enumerate((120, 122), start=1)
+    ] + [
+        ShapeSample(
+            job_id=f"legacy-{i}",
+            stage_id=21,
+            plan_fingerprint="fp",
+            task_count=100,
+            task_duration_p50_ms=100,
+            task_duration_p99_ms=p99,
+        )
+        for i, p99 in enumerate((900, 920), start=1)
+    ]
+    current = stage(plan_fingerprint="fp")
+    if current_source == "successful_tasks":
+        current = current.model_copy(
+            update={
+                "successful_task_duration_p50_ms": 100,
+                "successful_task_duration_p99_ms": 121,
+                "successful_task_sample_count": 100,
+            }
+        )
+
+    floor = JobContext(shape_samples=historical).noise_floor(current)
+
+    assert floor.known is False
+    assert floor.samples == 2
+
+
 def context(width_slots, p99s, conf=None):
     job_ids = [f"run-{i}" for i in range(len(p99s))]
     job_conf = JobConf(job_id="run-0", present=True, conf=conf or {"k": "v"})

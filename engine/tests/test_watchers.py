@@ -103,6 +103,8 @@ def test_a_real_join_tail_is_reported_as_join_skew():
     assert finding.severity is Severity.CRITICAL
     assert finding.details["tail_bound_verdict"] == "tail_bound"
     assert round(finding.details["tail_bound_threshold"], 2) == 14.14
+    assert finding.details["duration_sample_source"] == "legacy_all_attempts"
+    assert "source=" not in finding.evidence
 
 
 def test_an_undeterminable_width_caps_confidence_and_says_so():
@@ -329,12 +331,53 @@ def test_tail_ratio_never_divides_by_zero():
     assert s.successful_task_shuffle_read_bytes_p50 == 0
 
 
-def test_skew_ratio_is_untouched_by_the_effective_properties():
-    """B-4: skew_ratio keeps reading the legacy fields directly, unaffected by
-    successful_task_* being populated."""
+def test_skew_ratio_prefers_the_retry_safe_successful_population():
+    """Retries must not manufacture skew from attempts that did not win."""
     s = stage(
         task_duration_p50_ms=100, task_duration_p99_ms=900,
         successful_task_duration_p50_ms=80, successful_task_duration_p99_ms=300,
         successful_task_sample_count=12,
     )
+    assert s.skew_ratio == 3.75
+    assert s.legacy_skew_ratio == 9.0
+
+
+def test_skew_ratio_keeps_the_legacy_population_for_historical_rows():
+    """Rows without a successful sample retain the shipped legacy behavior."""
+    s = stage(
+        task_duration_p50_ms=100,
+        task_duration_p99_ms=900,
+        successful_task_duration_p50_ms=80,
+        successful_task_duration_p99_ms=300,
+        successful_task_sample_count=0,
+    )
     assert s.skew_ratio == 9.0
+
+
+def test_failed_attempt_tail_does_not_create_a_skew_finding():
+    """Raw attempts say 20.7x, but successful winners are balanced at 1.2x."""
+    s = joined(
+        task_duration_p50_ms=50,
+        task_duration_p99_ms=1035,
+        successful_task_duration_p50_ms=100,
+        successful_task_duration_p99_ms=120,
+        successful_task_sample_count=100,
+    )
+    assert skew.evaluate(s, at(8)) is None
+
+
+def test_retry_safe_tail_is_not_masked_by_the_legacy_attempt_population():
+    """The inverse divergence must use the same successful-winner contract."""
+    s = joined(
+        task_duration_p50_ms=100,
+        task_duration_p99_ms=120,
+        successful_task_duration_p50_ms=50,
+        successful_task_duration_p99_ms=1035,
+        successful_task_sample_count=100,
+    )
+    finding = skew.evaluate(s, at(8))
+    assert finding is not None
+    assert finding.details["skew_ratio"] == 20.7
+    assert finding.details["duration_sample_source"] == "successful_tasks"
+    assert finding.details["legacy_skew_ratio"] == 1.2
+    assert "source=successful_tasks" in finding.evidence

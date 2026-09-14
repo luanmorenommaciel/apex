@@ -164,6 +164,9 @@ SELECT
   argMax(task_count, ts)            AS shape_task_count,
   argMax(task_duration_p50_ms, ts)  AS p50_ms,
   argMax(task_duration_p99_ms, ts)  AS p99_ms,
+  argMax(successful_task_duration_p50_ms, ts) AS successful_p50_ms,
+  argMax(successful_task_duration_p99_ms, ts) AS successful_p99_ms,
+  argMax(successful_task_sample_count, ts) AS successful_sample_count,
   argMax(shuffle_read_bytes, ts)
     + argMax(shuffle_write_bytes, ts)
     + argMax(input_bytes, ts)       AS bytes_touched
@@ -291,6 +294,9 @@ class EngineStore:
                     task_duration_p50_ms=float(row["p50_ms"]),
                     task_duration_p99_ms=float(row["p99_ms"]),
                     bytes_touched=int(row["bytes_touched"]),
+                    successful_task_duration_p50_ms=float(row["successful_p50_ms"]),
+                    successful_task_duration_p99_ms=float(row["successful_p99_ms"]),
+                    successful_task_sample_count=int(row["successful_sample_count"]),
                 )
                 for row in rows
             ]

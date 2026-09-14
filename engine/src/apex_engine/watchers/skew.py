@@ -97,6 +97,9 @@ SELECT
   max(stage_attempt)                               AS attempt,
   argMax(task_duration_p50_ms, ts)                 AS task_duration_p50_ms,
   argMax(task_duration_p99_ms, ts)                 AS task_duration_p99_ms,
+  argMax(successful_task_duration_p50_ms, ts)      AS successful_task_duration_p50_ms,
+  argMax(successful_task_duration_p99_ms, ts)      AS successful_task_duration_p99_ms,
+  argMax(successful_task_sample_count, ts)         AS successful_task_sample_count,
   argMax(task_count, ts)                           AS task_count,
   argMax(shuffle_read_bytes, ts)                   AS shuffle_read_bytes,
   argMax(shuffle_write_bytes, ts)                  AS shuffle_write_bytes,
@@ -105,7 +108,12 @@ SELECT
   argMax(gc_time_ms, ts)                           AS gc_time_ms,
   argMax(plan_fingerprint, ts)                     AS plan_fingerprint,
   argMax(plan_json, ts)                            AS plan_json,
-  round(argMax(task_duration_p99_ms, ts) / nullIf(argMax(task_duration_p50_ms, ts), 0), 2) AS skew_ratio
+  round(argMax(if(successful_task_sample_count > 0,
+                  successful_task_duration_p99_ms,
+                  task_duration_p99_ms), ts)
+        / nullIf(argMax(if(successful_task_sample_count > 0,
+                           successful_task_duration_p50_ms,
+                           task_duration_p50_ms), ts), 0), 2) AS skew_ratio
 FROM apex.spark_events
 WHERE job_id = {job_id:String}
 GROUP BY job_id, stage_id
@@ -199,9 +207,14 @@ def evaluate(stage: StageAggregate, ctx: JobContext | None = None) -> Finding | 
         details={
             # what the claim rests on — the validator re-checks these
             "skew_ratio": tail.ratio,
+            "legacy_skew_ratio": stage.legacy_skew_ratio,
+            "duration_sample_source": stage.duration_sample_source,
             "task_count": stage.task_count,
             "task_duration_p50_ms": stage.task_duration_p50_ms,
             "task_duration_p99_ms": stage.task_duration_p99_ms,
+            "effective_task_duration_p50_ms": stage.effective_task_duration_p50_ms,
+            "effective_task_duration_p99_ms": stage.effective_task_duration_p99_ms,
+            "duration_sample_count": stage.duration_sample_count,
             "bytes_touched": stage.bytes_touched,
             "bytes_per_task": stage.bytes_per_task,
             "shuffle_read_bytes": stage.shuffle_read_bytes,
@@ -258,10 +271,15 @@ def _evidence(stage, tail, join, gain_pct, within_noise: bool) -> str:
     converging. They live in `details` (exclude=True, never persisted) — already
     populated in `evaluate` — never in this string.
     """
+    duration_source = (
+        ", source=successful_tasks" if stage.duration_sample_source == "successful_tasks" else ""
+    )
     parts = [
         f"p99/p50 = {tail.ratio:.2f}x on stage {stage.stage_id} "
-        f"(p99={stage.task_duration_p99_ms:.0f}ms, p50={stage.task_duration_p50_ms:.0f}ms, "
-        f"{stage.task_count} tasks, {human_bytes(int(stage.bytes_per_task))}/task)",
+        f"(p99={stage.effective_task_duration_p99_ms:.0f}ms, "
+        f"p50={stage.effective_task_duration_p50_ms:.0f}ms, "
+        f"{stage.task_count} tasks{duration_source}, "
+        f"{human_bytes(int(stage.bytes_per_task))}/task)",
         tail.explain(),
     ]
     if not join.supports_join_skew:
