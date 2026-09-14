@@ -406,44 +406,91 @@ export function noOpGate(conf: JobConfRow[], key: string, proposed: string): Rul
  *  - the recorded run carries a unified diff, which is what the verify lane
  *    emitted before that column was ratified.
  *
- * Null when neither parses, so the caller reports that the proposal could not
- * be read. The no-op gate previously passed a literal "800" typed into the
- * screen, which meant it gated a value no lane had ever proposed.
+ * Each format has an explicit outcome so callers never mistake a partial JSON
+ * parse for a valid overlay. The no-op gate previously passed a literal "800"
+ * typed into the screen, which meant it gated a value no lane had ever proposed.
  */
-export function parseProposal(text: string): Record<string, string> | null {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
+export type ProposalParse =
+  | { kind: "overlay"; config: Record<string, string> }
+  | { kind: "invalid-json" }
+  | { kind: "invalid-overlay" }
+  | { kind: "diff" }
+  | { kind: "unknown" };
 
-  if (trimmed.startsWith("{")) {
+export function parseProposal(text: string): ProposalParse {
+  const trimmed = text.trim();
+  if (!trimmed) return { kind: "unknown" };
+
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
     let parsed: unknown;
     try {
       parsed = JSON.parse(trimmed);
     } catch {
-      return null;
+      return { kind: "invalid-json" };
     }
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { kind: "invalid-overlay" };
     const out: Record<string, string> = {};
     for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-      // Spark conf values are scalars. A nested object is not a conf value and
-      // is dropped rather than stringified into "[object Object]".
+      // Spark conf values are scalars. One invalid member invalidates the
+      // whole overlay; dropping it would make this a partial, false proposal.
       if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
-        out[k] = String(v);
+        // Assignment treats __proto__ specially on ordinary objects and would
+        // silently discard the JSON member. Define an own data property so
+        // callers can inspect and reject it as a non-spark key like any other.
+        Object.defineProperty(out, k, {
+          value: String(v), enumerable: true, configurable: true, writable: true,
+        });
+      } else {
+        return { kind: "invalid-overlay" };
       }
     }
-    return Object.keys(out).length > 0 ? out : null;
+    return { kind: "overlay", config: out };
   }
 
-  // Unified diff. Only an ADDED line is the proposal: a removed line is the
-  // state being replaced and a context line is untouched, so reading either as
-  // a proposal would gate against the configuration the job already ran with.
-  const out: Record<string, string> = {};
-  for (const line of trimmed.split("\n")) {
-    if (!line.startsWith("+") || line.startsWith("+++")) continue;
-    const [key, ...rest] = line.slice(1).trim().split(/\s+/);
-    const value = rest.join(" ");
-    if (key && value) out[key] = value;
+  // Require ordered file headers and complete numeric hunks. This is a
+  // structural check only; applicability to a checkout remains manual.
+  if (isUnifiedDiff(text)) return { kind: "diff" };
+
+  return { kind: "unknown" };
+}
+
+function isUnifiedDiff(text: string): boolean {
+  // A complete patch record ends in a line terminator. Without it Git rejects
+  // a hunk such as `+b` at EOF as a corrupt/truncated patch (unless the patch
+  // includes its explicit "No newline" marker, which itself is a full line).
+  // This remains structural validation only; a complete patch may still not
+  // apply to the user's checkout.
+  if (!text.endsWith("\n")) return false;
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  let index = 0;
+  let files = 0;
+  while (index < lines.length) {
+    // Git's optional per-file preamble precedes the unified headers.
+    while (/^(diff --git |index |old mode |new mode |new file mode |deleted file mode |similarity index |rename from |rename to )/.test(lines[index] ?? "")) index++;
+    if (!/^--- \S/.test(lines[index] ?? "") || !/^\+\+\+ \S/.test(lines[index + 1] ?? "")) return false;
+    index += 2;
+    let hunks = 0;
+    while (lines[index]?.startsWith("@@")) {
+      const hunk = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?: .*)?$/.exec(lines[index++]);
+      if (!hunk) return false;
+      let oldLines = Number(hunk[2] ?? 1);
+      let newLines = Number(hunk[4] ?? 1);
+      if (!Number.isSafeInteger(oldLines) || !Number.isSafeInteger(newLines) || oldLines + newLines === 0) return false;
+      while (oldLines > 0 || newLines > 0) {
+        const line = lines[index++];
+        if (line === undefined || !/^[ +\-]/.test(line)) return false;
+        if (line[0] !== "+") oldLines--;
+        if (line[0] !== "-") newLines--;
+        if (oldLines < 0 || newLines < 0) return false;
+        if (lines[index] === "\\ No newline at end of file") index++;
+      }
+      hunks++;
+    }
+    if (!hunks) return false;
+    files++;
   }
-  return Object.keys(out).length > 0 ? out : null;
+  return files > 0;
 }
 
 export type RefusalCode =

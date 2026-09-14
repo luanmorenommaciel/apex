@@ -46,6 +46,7 @@ export function FindingScreen() {
   const shapeHistory = shapeQ.data ?? [];
   const v = fixQ.data;
   const proposal = v ? parseProposal(v.proposed_diff) : null;
+  const overlay = proposal?.kind === "overlay" ? proposal.config : null;
 
   // The AQE transition is only THIS finding's ground truth when this finding is
   // the AQE one. `transitions[0]` was rendered under that heading for every
@@ -178,9 +179,9 @@ export function FindingScreen() {
                   by key. It used to gate one key and one value written into this
                   screen — skewJoin.enabled -> true — which gates a proposal no
                   lane had necessarily made. */}
-              {proposal ? (
+              {overlay ? (
                 <div className="flex flex-col gap-1">
-                  {Object.entries(proposal).map(([k, val]) => (
+                  {Object.entries(overlay).map(([k, val]) => (
                     <Prose key={k} size="xs" className="text-sub">
                       <Mono className="text-dim">{k}</Mono> — {noOpGate(conf, k, val).reason}
                     </Prose>

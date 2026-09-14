@@ -127,6 +127,7 @@ export function RunDetailScreen() {
   const assessment = assessStage(current, conf);
   const v = fixQ.data;
   const proposal = v ? parseProposal(v.proposed_diff) : null;
+  const overlay = proposal?.kind === "overlay" ? proposal.config : null;
   const shapeHistory = shapeQ.data ?? [];
 
   /**
@@ -138,8 +139,8 @@ export function RunDetailScreen() {
    * exists only where the verify lane proposed a key, and the "before" side is
    * the captured job_conf rather than a number typed here.
    */
-  const proposedDiff = proposal
-    ? Object.entries(proposal)
+  const proposedDiff = overlay
+    ? Object.entries(overlay)
         .map(([key, value]) => {
           const currentValue = conf.find((c) => c.key === key)?.value;
           return currentValue === undefined
