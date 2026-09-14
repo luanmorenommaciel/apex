@@ -82,8 +82,8 @@ def _drift(manifest: dict[str, Any], drift_id: str) -> dict[str, Any]:
 
 def _validate(manifest: dict[str, Any]) -> None:
     """Compare structured claims with independent, tracked source evidence."""
-    assert manifest["contract_version"] == "v0.5"
-    assert "contract **v0.5**" in _text("CONTRACT.md")
+    assert manifest["contract_version"] == "v0.6"
+    assert "contract **v0.6**" in _text("CONTRACT.md")
     assert manifest["runtime_caveat"] == "offline_unproven"
 
     assert _edge_set(manifest) == EXPECTED_EDGES
@@ -148,7 +148,7 @@ def _validate(manifest: dict[str, Any]) -> None:
 
     sample_count_gap = _drift(manifest, "v05_sample_count_consumer_gap")
     assert sample_count_gap["contract"] == "sample_count_zero_is_absent"
-    assert sample_count_gap["observed_consumers_without_sample_count"] == ["engine", "memory", "verify"]
+    assert sample_count_gap["observed_consumers_without_sample_count"] == ["memory", "verify"]
     assert sample_count_gap["legacy_p50_p99_consumers"] == ["engine", "memory"]
     assert "sample_count=0" in _text("CONTRACT.md")
     for lane in sample_count_gap["observed_consumers_without_sample_count"]:

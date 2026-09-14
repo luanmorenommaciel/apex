@@ -4,7 +4,7 @@
 **Método:** leitura estática e testes offline; nenhum processo de Docker, Spark,
 ClickHouse, Collector ou MCP foi iniciado.
 
-O contrato global declarado em `CONTRACT.md` é **v0.5** e nomeia `dev`, `jar`,
+O contrato global declarado em `CONTRACT.md` é **v0.6** e nomeia `dev`, `jar`,
 `collect`, `infra`, `engine`, `serve`, `memory` e `verify`. Esta matriz separa
 fluxo principal, lanes transversais e implementação observada. É evidência
 offline, não uma alegação de interoperabilidade em runtime.
@@ -44,7 +44,7 @@ O teste lê este JSON e compara seus fatos com arquivos independentes da base.
 
 ```json
 {
-  "contract_version": "v0.5",
+  "contract_version": "v0.6",
   "runtime_caveat": "offline_unproven",
   "edges": [
     {"from": "dev", "to": "jar", "role": "primary", "payload": "real_jobs"},
@@ -86,7 +86,7 @@ O teste lê este JSON e compara seus fatos com arquivos independentes da base.
     {
       "id": "v05_sample_count_consumer_gap",
       "contract": "sample_count_zero_is_absent",
-      "observed_consumers_without_sample_count": ["engine", "memory", "verify"],
+      "observed_consumers_without_sample_count": ["memory", "verify"],
       "legacy_p50_p99_consumers": ["engine", "memory"]
     },
     {
@@ -139,10 +139,11 @@ por-tabela de leitores/escritores. A coluna
 ### Drift v0.5: semântica de contagem ainda não consumida
 
 O contrato v0.5 determina que `sample_count=0` significa **amostra ausente**,
-não medição zero. Porém, Engine, Memory e Verify não contêm referência a
-`*_sample_count` neste SHA. Engine e Memory continuam com consultas legadas de
-`task_duration_p50_ms`/`task_duration_p99_ms`. Isto é gap de consumo, não uma
-autorização para corrigir código, DDL ou contrato silenciosamente.
+não medição zero. Engine agora consome `*_sample_count` com fallback para campos
+legados; Memory e Verify ainda não contêm referência a `*_sample_count`. Engine
+e Memory continuam com consultas legadas de `task_duration_p50_ms`/`task_duration_p99_ms`.
+Isto é gap de consumo, não uma autorização para corrigir código, DDL ou contrato
+silenciosamente.
 
 ### Drift Verify: `executor_run_time_ms`
 
