@@ -418,7 +418,7 @@ export function VerifyScreen() {
               ) : (
                 <Diff text={v.proposed_diff} />
               )}
-              <pre aria-label="Original proposal" className="mt-3 overflow-x-auto whitespace-pre font-mono text-[11.5px] text-muted">
+              <pre aria-label="Original proposal" role="region" className="mt-3 overflow-x-auto whitespace-pre font-mono text-[11.5px] text-muted">
                 {v.proposed_diff}
               </pre>
             </div>
