@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-canvas">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Apex Console</title>
+    <!-- Deployment configuration, rewritten at every container start by
+         docker-entrypoint.d/30-apex-console-config.sh. It sits HERE, in the head
+         and ahead of the entry bundle Vite injects below, because it is a
+         CLASSIC script: it runs during parsing, while the module bundle is
+         deferred until after it. window.__APEX_CONFIG__ is therefore always set
+         before the app boots. In dev this is public/config.js — an empty object
+         that falls through to import.meta.env. See src/data/runtimeConfig.ts. -->
+    <script src="/config.js"></script>
+    <link rel="icon" type="image/png" href="/apex-star.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Archivo+Black&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-canvas">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

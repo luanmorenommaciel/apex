@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply bg-canvas;
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    -webkit-font-smoothing: antialiased;
+    text-wrap: pretty;
+    @apply font-sans text-body;
+  }
+  a {
+    @apply text-spark no-underline;
+  }
+  a:hover {
+    @apply text-spark-light underline;
+  }
+}
