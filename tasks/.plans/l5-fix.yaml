@@ -1,0 +1,298 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: l5-fix
+  source: docs/lanes/SERVE-LEGS.md
+units:
+  - id: T-20260820-verifications-read-layer
+    title: Read apex.fix_verifications from the serve store
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/src/apex_mcp/ch.py, serve/tests/test_ch.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: The verify lane decides whether a fix would work and writes apex.fix_verifications, but nothing surfaces it. A whole lane with 105 tests has no user surface.
+    goal: Fetch verification rows for a job_id, optionally narrowed to one finding.
+    context: Lanes integrate through ClickHouse, not imports - serve depends only on mcp, clickhouse-connect and pydantic, and reads engine's findings the same way. Do NOT add apex_verify as a dependency. Probe for the table like findings_columns does, so a deployment without the v0.3 tables degrades instead of erroring.
+    behaviors:
+      - id: B-1
+        given: a job_id with verifications
+        when: verifications() is called
+        then: it returns them newest-first with method, predictor, predicted and measured deltas, safety verdict and confidence
+      - id: B-2
+        given: a finding_id filter
+        when: verifications() is called
+        then: only that finding's rows return, bound server-side
+      - id: B-3
+        given: a deployment whose apex.fix_verifications does not exist
+        when: verifications() is called
+        then: it returns empty and logs, rather than raising - the v0.3 tables are additive
+      - id: B-4
+        given: a hostile finding_id
+        when: verifications() is called
+        then: it binds and returns zero rows
+    evals:
+      - id: eval_1
+        description: the verification read tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_verifications_returns_rows_newest_first" "tests/test_ch.py::test_verifications_filters_by_finding_id" "tests/test_ch.py::test_verifications_binds_hostile_finding_id" )
+        verifies: [B-1, B-2, B-4]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: a missing additive table degrades instead of raising
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_verifications_absent_table_degrades" )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_3
+        description: serve still depends on no other lane
+        command: ( cd serve && ! grep -nE 'apex_verify|apex_memory' src/apex_mcp/*.py pyproject.toml )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Importing apex_verify; the contract table is the integration surface.
+      - Raising when the table is absent - v0.3 tables are additive and older clusters lack them.
+      - Interpolating job_id or finding_id into SQL.
+    do_not_touch:
+      - serve/src/apex_mcp/server.py
+      - serve/src/apex_mcp/models.py
+
+  - id: T-20260820-verification-models
+    title: Type the verification payload
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/src/apex_mcp/models.py]
+    creates_paths: [serve/tests/test_verify_view.py]
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: FastMCP derives the tool's output schema from the return annotation, and a verdict about whether a fix works is exactly the payload a client must be able to reject if malformed.
+    goal: VerificationView and FixVerdict carrying prediction, measurement, safety and confidence.
+    context: predicted_delta_pct is SIGNED and negative means faster - a sign error here reports a regression as an improvement, so the field description must state the convention. measured_delta_pct is nullable because a prediction may never have been replayed.
+    behaviors:
+      - id: B-1
+        given: a VerificationView
+        when: constructed from a predicted-only row
+        then: it validates with measured_delta_pct None
+      - id: B-2
+        given: the schema
+        when: predicted_delta_pct is read
+        then: its description states the sign convention, negative meaning faster
+      - id: B-3
+        given: a FixVerdict
+        when: serialized
+        then: evidence and caveats are present, and untrusted_fields marks nothing Apex did not author
+    evals:
+      - id: eval_1
+        description: the verification model tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_verify_view.py::test_predicted_only_row_validates" "tests/test_verify_view.py::test_sign_convention_is_documented" "tests/test_verify_view.py::test_verdict_carries_evidence_and_caveats" )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: models.py still imports nothing from the package at runtime
+        command: ( cd serve && ! grep -nE '^from \.(ch|diagnose|server)|^from apex_mcp\.(ch|diagnose|server)' src/apex_mcp/models.py )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Storing the delta unsigned or flipping the sign for display; negative means faster, everywhere.
+      - Defaulting measured_delta_pct to 0, which would report an unreplayed prediction as a measured no-op.
+    do_not_touch:
+      - serve/src/apex_mcp/ch.py
+      - serve/src/apex_mcp/server.py
+
+  - id: T-20260820-verify-fix-tool
+    title: Add verify_fix
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-verifications-read-layer, T-20260820-verification-models]
+    touches_paths: [serve/src/apex_mcp/server.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: suggest_fix returns a diff and stops. The user applies it, reruns, and is on their own - while the verify lane already holds the answer.
+    goal: verify_fix(job_id, finding_id?) returns what the verify lane concluded about the proposed fixes.
+    context: The sixth tool in this leg's numbering. L1, L3 and L6 each move the same surface assertion in their own worktrees; whichever lands last reconciles. The five-tools assertion is expected to fail after this unit.
+    behaviors:
+      - id: B-1
+        given: a built server
+        when: list_tools() is called
+        then: verify_fix is present with readOnlyHint True
+      - id: B-2
+        given: a job_id with a predicted verification
+        when: verify_fix is called
+        then: it reports the predicted range, the safety verdict and the confidence
+      - id: B-3
+        given: a job_id with no verification rows
+        when: verify_fix is called
+        then: it says the verify lane has not assessed this run, rather than returning an empty success
+      - id: B-4
+        given: a verification whose safety verdict blocked execution
+        when: verify_fix is called
+        then: the block and its reason are surfaced, not hidden behind a low confidence
+    evals:
+      - id: eval_1
+        description: verify_fix is registered read-only
+        command: ( cd serve && uv run python -c "import asyncio; from apex_mcp.server import create_server; from apex_mcp.ch import ReadStore; from tests.conftest import FakeClient; s=create_server(ReadStore(FakeClient())); t={x.name:x for x in asyncio.run(s.list_tools())}; assert 'verify_fix' in t, sorted(t); assert t['verify_fix'].annotations.readOnlyHint" )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 20
+      - id: eval_2
+        description: the docstring no longer claims five tools
+        command: ( cd serve && ! grep -n 'Five tools' src/apex_mcp/server.py )
+        verifies: [B-3, B-4]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Recomputing a prediction in serve; the verify lane owns that judgement and serve reports it.
+      - Collapsing a safety block into low confidence - they mean different things to a user.
+      - Repairing the surface assertion here.
+    do_not_touch:
+      - serve/tests/test_server_tools.py
+      - serve/src/apex_mcp/ch.py
+
+  - id: T-20260820-l5-tool-surface
+    title: Re-pin the tool surface for verify_fix
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-verify-fix-tool]
+    touches_paths: [serve/tests/test_server_tools.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: An unnoticed tool on a server a model can call is a security event.
+    goal: Move the ordered assertion to include verify_fix, keeping it an exact equality.
+    context: Its own commit so the surface change is legible in git log.
+    behaviors:
+      - id: B-1
+        given: the built server
+        when: list_tools() is called
+        then: the assertion is an exact ordered list including verify_fix
+      - id: B-2
+        given: another tool were added
+        when: the suite runs
+        then: it fails, because the assertion is neither a subset nor a count
+    evals:
+      - id: eval_1
+        description: the updated surface assertion exists and passes
+        command: ( cd serve && uv run --extra dev pytest "tests/test_server_tools.py::test_exactly_the_six_contracted_tools" )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the assertion is still an ordered equality
+        command: ( cd serve && ! grep -nE '(issubset|len\(_tools|set\(\[t\.name)' tests/test_server_tools.py )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Relaxing the assertion so it stops needing maintenance.
+      - Bundling source changes into this unit.
+    do_not_touch:
+      - serve/src/apex_mcp
+
+  - id: T-20260820-suggest-fix-provenance
+    title: Tell suggest_fix what verify already concluded
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-verify-fix-tool]
+    touches_paths: [serve/src/apex_mcp/diagnose.py, serve/tests/test_suggest_fix_safety.py]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: suggest_fix currently proposes a diff with no idea that the same fix was already predicted, or measured, or refused as unsafe. Proposing a fix verify has refused is the worst output this lane can produce.
+    goal: A suggestion carries any existing verification for its finding, including a refusal.
+    context: This must not change what suggest_fix proposes - only what it discloses. applied stays Literal[False] and the tree stays untouched.
+    behaviors:
+      - id: B-1
+        given: a finding with a prior verification
+        when: suggest_fix runs
+        then: the suggestion reports the predicted range and any measurement
+      - id: B-2
+        given: a finding whose fix verify refused as unsafe
+        when: suggest_fix runs
+        then: the refusal is stated prominently and the suggestion does not present it as ready to apply
+      - id: B-3
+        given: a finding with no verification
+        when: suggest_fix runs
+        then: the output is unchanged from today
+      - id: B-4
+        given: any path
+        when: the suggestion is returned
+        then: applied is False, requires_human_approval is True and git status is unchanged
+    evals:
+      - id: eval_1
+        description: the provenance tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_suggest_fix_safety.py::test_suggestion_reports_prior_verification" "tests/test_suggest_fix_safety.py::test_refused_fix_is_not_presented_as_ready" "tests/test_suggest_fix_safety.py::test_unverified_finding_output_is_unchanged" )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the never-applies guarantee is untouched
+        command: ( cd serve && uv run --extra dev pytest tests/test_suggest_fix_safety.py )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 30
+    anti_patterns:
+      - Changing which fix is proposed; this unit discloses, it does not decide.
+      - Weakening the Literal[False] on applied for any reason.
+    do_not_touch:
+      - serve/src/apex_mcp/server.py
+      - serve/src/apex_mcp/ch.py
+
+  - id: T-20260820-l5-docs
+    title: Document fix verification across the lane docs
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260820-l5-tool-surface, T-20260820-suggest-fix-provenance]
+    touches_paths: [serve/README.md, serve/VALIDATION.md, docs/lanes/SERVE-LEGS.md]
+    creates_paths: []
+    source_note: docs/lanes/SERVE-LEGS.md
+    why: SERVE-LEGS still describes L5 as building verify_fix from scratch, which would duplicate a lane that already exists with 105 tests.
+    goal: Record that L5 is an MCP surface over the verify lane, not a reimplementation of it.
+    context: Rewrite the L5 section so the next reader does not rebuild what verify already does.
+    behaviors:
+      - id: B-1
+        given: serve/README.md
+        when: read
+        then: verify_fix is in the tool table and the sign convention is stated
+      - id: B-2
+        given: serve/VALIDATION.md
+        when: read
+        then: it records a test count copied from an actual run
+      - id: B-3
+        given: docs/lanes/SERVE-LEGS.md
+        when: read
+        then: L5 is described as exposing the verify lane, and names apex.fix_verifications as the integration surface
+    evals:
+      - id: eval_1
+        description: the lane docs describe L5 as a surface over verify
+        command: ( grep -q 'fix_verifications' docs/lanes/SERVE-LEGS.md && grep -q 'verify_fix' serve/README.md )
+        verifies: [B-1, B-3]
+        terminal: true
+        expected_duration_sec: 10
+      - id: eval_2
+        description: the recorded test count equals what the suite reports
+        command: ( cd serve && n=$(uv run --extra dev pytest 2>&1 | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+') && grep -q "$n passed" VALIDATION.md )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Writing a test count from memory.
+      - Leaving the L5 section describing work that verify already did.
+    do_not_touch:
+      - serve/src/apex_mcp
+      - serve/tests
+      - docs/lanes/SERVE.md
