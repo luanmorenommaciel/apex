@@ -21,9 +21,9 @@ candidate that combines edit alignment with the existing skew-count flow. This
 ADR consolidates those contributions into one canonical proposal. It does not
 approve the product behavior, publish either PR, or change the tested JAR code.
 
-## Proposed decision
+## Decision
 
-Adopt the combined detector, subject to Luan's explicit approval:
+Adopt the combined detector (accepted by Luan in PR #98's review, 2026-09-14):
 
 1. align consecutive join sequences with a minimum edit alignment;
 2. classify only strict substitutions as `join_switch`;
@@ -139,11 +139,11 @@ canonical.
 
 ## Lineage and supersession
 
-- Issue #65 remains the origin and decision tracker.
+- Issue #65 is the origin (closed 2026-09-17; decision recorded here).
 - PR #93 remains evidence for alternatives, cross-tests, benchmarks, risks, and
   rollback, but its decision document is superseded by this ADR.
-- PR #98 remains the source of the combined implementation candidate and its
-  focused tests; this ADR does not approve or publish it.
+- PR #98 is the merged source of the combined implementation and its focused
+  tests (approved 2026-09-14).
 - `ISSUE-65-AQE-REPLAN-DETECTION-DECISION.md` is a stable index to this ADR.
 - `docs/task-specs/ISSUE-65-AQE-REPLAN-DETECTION.md` remains the implementation
   behavior and verification contract, not a competing decision.
