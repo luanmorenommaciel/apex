@@ -1,6 +1,6 @@
 # ADR-003 — AQE re-plan detection
 
-- Status: proposed; maintainer decision required
+- Status: accepted (PR #98 approved and merged 2026-09-14)
 - Date: 2026-08-27
 - Decision owner: Luan
 - Origin: issue #65
@@ -148,9 +148,9 @@ canonical.
 - `docs/task-specs/ISSUE-65-AQE-REPLAN-DETECTION.md` remains the implementation
   behavior and verification contract, not a competing decision.
 
-## Pending owner decision
+## Owner decision
 
-Luan must explicitly accept or reject the combined detector as the product
-direction for issue #65. Until that decision is recorded, this ADR remains
-**proposed**, PR #98 remains an unpublished/unapproved candidate, and PR #93 is
-superseded only as a competing decision document—not as evidence.
+Luan accepted the combined detector (edit alignment + accumulator skew counts)
+as the product direction for issue #65 in PR #98's review on 2026-09-14, and
+PR #98 is merged. PR #93 is superseded as a competing decision document, not
+as evidence.
