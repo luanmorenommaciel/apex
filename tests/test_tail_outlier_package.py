@@ -21,6 +21,12 @@ def _tail_outlier_gate(source: str) -> str:
     return source[start:end]
 
 
+def _if_block(source: str, condition: str) -> str:
+    start = source.index(condition)
+    end = source.index("\n    }", start)
+    return source[start:end]
+
+
 def test_canonical_runner_accepts_and_maps_tail_outlier():
     source = CANONICAL.read_text(encoding="utf-8")
 
@@ -38,15 +44,35 @@ def test_public_gate_reaches_canonical_tail_outlier():
     assert "Invoke-TailOutlierGate" in source.split("switch ($Action)", 1)[1]
     assert "'-Scenario', 'tail_outlier'" in gate
     assert "dev/scripts/e2e_canonical.ps1" in gate
+    assert "throw" not in gate[:gate.index("$canonicalScript")]
 
 
 def test_public_gate_remains_fail_closed_and_llm_free():
     gate = _tail_outlier_gate(PACKAGE.read_text(encoding="utf-8"))
 
-    assert "Tail-outlier job_id missing" in gate
-    assert "$engineExitCode -ne 0" in gate
-    assert "Tail-outlier ENGINE analysis failed" in gate
-    assert "tail_outlier_watcher" in gate
-    assert "--no-crew" in gate
-    assert "APEX_TAIL_OUTLIER_GATE=passed" in gate
-    assert "llm_calls=0" in gate
+    missing_job_guard = _if_block(gate, "if (-not $jobMatch) {")
+    assert 'throw "Tail-outlier job_id missing from $scenarioLog"' in missing_job_guard
+    assert gate.index("$jobMatch =") < gate.index("if (-not $jobMatch) {")
+
+    engine_exit_guard = _if_block(gate, "if ($engineExitCode -ne 0) {")
+    assert 'throw "Tail-outlier ENGINE analysis failed with exit code $engineExitCode"' in engine_exit_guard
+    assert gate.index("$engineExitCode = $LASTEXITCODE") < gate.index("if ($engineExitCode -ne 0) {")
+
+    missing_watcher_guard = _if_block(
+        gate, "if (-not ($engineOutput -match 'tail_outlier_watcher')) {"
+    )
+    assert (
+        'throw "Tail-outlier telemetry arrived, but ENGINE did not emit '
+        'tail_outlier_watcher"'
+    ) in missing_watcher_guard
+    assert gate.index("$engineOutput =") < gate.index(
+        "if (-not ($engineOutput -match 'tail_outlier_watcher')) {"
+    )
+
+    engine_invocation = gate[gate.index("$engineOutput ="):gate.index("$engineExitCode =")]
+    assert "--no-crew" in engine_invocation
+    passed_marker = "APEX_TAIL_OUTLIER_GATE=passed job_id=$jobId llm_calls=0"
+    assert passed_marker in gate
+    assert gate.index(passed_marker) > gate.index(
+        "if (-not ($engineOutput -match 'tail_outlier_watcher')) {"
+    )

@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T19:07:00Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T21:07:24Z
 signed_off_sig: hmac-sha256-v3:6af918b1:bc2624fca27d3a69f40f8606861e4e5d99f7ac8626e108aa47f3657a304fbc68
+accepted_tier: 1
+accepted_attempt_id: 0d84be4e-3503-4d80-a8b3-158dd5d62d20
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:bc2624fca27d3a69f40f8606861e4e5d99f7ac8626e108aa47f3657a304fbc68
+acceptance_record_digest: sha256:b608b9a432080dcd66bba185a77a34e74d18d99e0f7133ae03178c684db4a4aa
 ---
 
 # Harden tail-outlier package fail-closed regression coverage
