@@ -1,0 +1,59 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: issue115-attribution-scope-collision
+  source: https://github.com/luanmorenommaciel/apex/issues/115
+units:
+  - id: T-20260919-execution-attribution-scope-collision
+    title: Pin attribution scope against realistic stage-ID collisions
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - engine/tests/test_execution_attribution.py
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/issues/115
+    why: The first audit-hardening pass scoped foreign rows but used only non-overlapping stage IDs, leaving realistic repeated stage-ID leakage insufficiently tested.
+    goal: Strengthen test-only identity-boundary coverage so foreign app/job rows reusing in-scope stage IDs or target identity cannot change absent, not-found, attributed, or conflict results.
+    context: This is a regression-test leaf only. Resolver behavior, public integration, schema, validation, runtime and docs remain unchanged.
+    behaviors:
+      - id: B-1
+        given: foreign app/job rows whose stage IDs collide with in-scope stages and whose identities include the target or conflicting non-null IDs
+        when: attribution is resolved
+        then: exact app_id/job_id scoping preserves the original in-scope status and exact stage/conflict IDs
+      - id: B-2
+        given: only foreign rows with None execution IDs and no in-scope observations
+        when: attribution is resolved
+        then: the result is execution_id_not_found rather than execution_id_absent
+      - id: B-3
+        given: these new regression cases
+        when: they run
+        then: they make no claim about cross-lane, runtime, or public-surface behavior
+    evals:
+      - id: eval_1
+        description: focused collision and attribution boundary tests pass
+        command: ( cd engine && PYTHONPATH=src uv run --extra dev pytest -q tests/test_execution_attribution.py -p no:warnings )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 45
+      - id: eval_2
+        description: complete offline Engine suite remains green
+        command: ( cd engine && PYTHONPATH=src uv run --extra dev pytest -q -p no:warnings )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Changing resolver code or status semantics.
+      - Adding cross-lane wiring, schema changes, watcher changes, runtime proof, PRs, or publication.
+      - Treating foreign rows as in-scope to make tests pass.
+    do_not_touch:
+      - engine/src
+      - engine/src/apex_engine/watchers
+      - serve
+      - front
+      - dev
+      - scripts
+      - infra
