@@ -1,7 +1,7 @@
 ---
 id: T-20260919-execution-attribution-conflict-collision
 title: "Make foreign conflict-stage collision observable"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: XS
