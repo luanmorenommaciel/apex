@@ -36,13 +36,13 @@ units:
     evals:
       - id: eval_1
         description: focused attribution boundary tests pass
-        command: ( cd engine && uv run --extra dev pytest -q tests/test_execution_attribution.py -p no:warnings )
+        command: ( cd engine && PYTHONPATH=src uv run --extra dev pytest -q tests/test_execution_attribution.py -p no:warnings )
         verifies: [B-1, B-2, B-3]
         terminal: true
         expected_duration_sec: 45
       - id: eval_2
         description: complete offline Engine suite remains green
-        command: ( cd engine && uv run --extra dev pytest -q -p no:warnings )
+        command: ( cd engine && PYTHONPATH=src uv run --extra dev pytest -q -p no:warnings )
         verifies: [B-1, B-2]
         terminal: true
         expected_duration_sec: 90

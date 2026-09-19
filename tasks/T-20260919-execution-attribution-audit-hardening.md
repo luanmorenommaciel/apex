@@ -27,11 +27,11 @@ tracker_ref: (none)
 execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
-signed_off_at: 2026-09-19T19:06:32Z
+signed_off_at: 2026-09-19T21:08:56Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
-signed_off_sig: hmac-sha256-v3:6af918b1:b023455de45f7f38196e7f96bf54b6c9ae08b3f6e6461a6f4a1a8d38ce331cd7
+signed_off_sig: hmac-sha256-v3:6af918b1:cf751f9f35088b0e5d8c8e5a1155efb4fa9f381d1c4e998f424f106a4da2ddc6
 ---
 
 # Harden offline execution attribution identity-boundary coverage
@@ -57,12 +57,12 @@ This is audit remediation for the already accepted offline #115 leaf. It deliber
 ```bash
 # eval_1: focused attribution boundary tests pass
 eval_1() {
-  ( cd engine && uv run --extra dev pytest -q tests/test_execution_attribution.py -p no:warnings )
+  ( cd engine && PYTHONPATH=src uv run --extra dev pytest -q tests/test_execution_attribution.py -p no:warnings )
 }
 
 # eval_2: complete offline Engine suite remains green
 eval_2() {
-  ( cd engine && uv run --extra dev pytest -q -p no:warnings )
+  ( cd engine && PYTHONPATH=src uv run --extra dev pytest -q -p no:warnings )
 }
 
 ```
