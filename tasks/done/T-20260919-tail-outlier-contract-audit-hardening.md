@@ -1,7 +1,7 @@
 ---
 id: T-20260919-tail-outlier-contract-audit-hardening
 title: "Harden tail-outlier contract rejection boundaries"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M
