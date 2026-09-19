@@ -1,7 +1,7 @@
 ---
 id: T-20260919-execution-attribution-audit-hardening
 title: "Harden offline execution attribution identity-boundary coverage"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S
