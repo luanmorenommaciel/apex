@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T21:08:56Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T21:09:10Z
 signed_off_sig: hmac-sha256-v3:6af918b1:cf751f9f35088b0e5d8c8e5a1155efb4fa9f381d1c4e998f424f106a4da2ddc6
+accepted_tier: 1
+accepted_attempt_id: a68a9e42-4cae-4c32-a6c9-8171c46173d4
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:cf751f9f35088b0e5d8c8e5a1155efb4fa9f381d1c4e998f424f106a4da2ddc6
+acceptance_record_digest: sha256:ddf28bf169ea09459082e72275c8e71bcc9e33243423b3603921f98223166ad4
 ---
 
 # Harden offline execution attribution identity-boundary coverage

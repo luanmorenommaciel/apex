@@ -83,10 +83,17 @@ def resolve_stage_ids(
 ) -> StageAttribution:
     """Resolve one SQL execution to its exact distinct stages within one app/job.
 
-    A retry is not a second membership: ``stage_attempt`` is retained on the
-    observation for provenance but the result is keyed by ``stage_id``.  If a
-    target stage carries another non-null execution identity in the same scope,
-    the result is withheld rather than returning a potentially partial set.
+    Only observations matching both the request's ``app_id`` and ``job_id``
+    participate. With no target identity in scope, the result is
+    ``execution_id_absent`` when the scope has observations and all their
+    execution IDs are ``None``; otherwise it is ``execution_id_not_found``
+    (including an empty scope or a mix of ``None`` and other IDs). A retry is
+    not a second membership: ``stage_attempt`` is retained on the observation
+    for provenance but the result is keyed by ``stage_id``. A matching target
+    stage is ``attributed`` unless that same stage also carries another
+    non-null execution identity in scope, in which case the result is
+    ``conflict`` and IDs are withheld. ``None`` beside a target identity does
+    not conflict.
     """
 
     scoped = [

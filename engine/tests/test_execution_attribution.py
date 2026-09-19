@@ -50,6 +50,29 @@ def test_foreign_application_with_same_job_cannot_bleed_into_result():
     assert result.stage_ids == (3,)
 
 
+@pytest.mark.parametrize(
+    "in_scope, expected",
+    [
+        ([observation(1, execution_id=None)], StageAttribution(AttributionStatus.EXECUTION_ID_ABSENT)),
+        ([observation(1, execution_id=99)], StageAttribution(AttributionStatus.EXECUTION_ID_NOT_FOUND)),
+        (
+            [observation(1), observation(2), observation(1, attempt=1, execution_id=99)],
+            StageAttribution(AttributionStatus.CONFLICT, conflicting_stage_ids=(1,)),
+        ),
+    ],
+)
+def test_foreign_application_and_job_rows_cannot_change_scoped_outcomes(in_scope, expected):
+    foreign = [
+        observation(20, execution_id=None, app_id="other-app"),
+        observation(21, execution_id=42, app_id="other-app"),
+        observation(22, execution_id=99, job_id="other-job"),
+        observation(23, execution_id=None, job_id="other-job"),
+    ]
+
+    assert resolve_stage_ids(in_scope, request()) == expected
+    assert resolve_stage_ids([*foreign, *in_scope], request()) == expected
+
+
 def test_all_optional_execution_ids_absent_is_explicit_not_a_sentinel():
     result = resolve_stage_ids(
         [observation(2, execution_id=None), observation(7, execution_id=None)],
@@ -89,6 +112,15 @@ def test_missing_observation_does_not_conflict_with_present_target_identity():
 
     assert result.status is AttributionStatus.ATTRIBUTED
     assert result.stage_ids == (2,)
+
+
+def test_none_mixed_with_non_target_identity_is_not_found():
+    result = resolve_stage_ids(
+        [observation(2, execution_id=None), observation(7, execution_id=99)],
+        request(),
+    )
+
+    assert result == StageAttribution(status=AttributionStatus.EXECUTION_ID_NOT_FOUND)
 
 
 def test_zero_is_a_real_execution_identity():
