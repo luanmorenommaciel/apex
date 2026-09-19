@@ -1,7 +1,7 @@
 ---
 id: T-20260918-tail-outlier-watcher-offline
 title: "Implement and register the deterministic tail-outlier watcher"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T00:44:27Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T00:47:28Z
 signed_off_sig: hmac-sha256-v3:6af918b1:da6c5a8d94c7ba11271909d37f77b3cbb453b09595e3a328d5b06dad0b769531
+accepted_tier: 1
+accepted_attempt_id: 5d87613a-d5fe-4550-a9b6-ae9f6efe2416
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:da6c5a8d94c7ba11271909d37f77b3cbb453b09595e3a328d5b06dad0b769531
+acceptance_record_digest: sha256:0513da33f0b7b269c42149d2b7e44198204c2a6f7930b38446d3a542151f68e4
 ---
 
 # Implement and register the deterministic tail-outlier watcher
