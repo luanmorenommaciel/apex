@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T21:14:30Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T21:15:14Z
 signed_off_sig: hmac-sha256-v3:6af918b1:8f88101e275a7e51bb92fe97e6eb5c13dbf41f6dd28874724210803f6e020c82
+accepted_tier: 1
+accepted_attempt_id: a88c88be-95c4-4648-bf55-5cb06c85e588
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:8f88101e275a7e51bb92fe97e6eb5c13dbf41f6dd28874724210803f6e020c82
+acceptance_record_digest: sha256:c18837e567d53aab1fe384d869f2b829ed4406d6ba62b2b1957e2629220134b0
 ---
 
 # Pin attribution scope against realistic stage-ID collisions

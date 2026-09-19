@@ -73,6 +73,49 @@ def test_foreign_application_and_job_rows_cannot_change_scoped_outcomes(in_scope
     assert resolve_stage_ids([*foreign, *in_scope], request()) == expected
 
 
+@pytest.mark.parametrize(
+    "in_scope, foreign, expected",
+    [
+        (
+            [observation(1)],
+            [
+                observation(1, execution_id=99, app_id="other-app"),
+                observation(1, execution_id=99, job_id="other-job"),
+            ],
+            StageAttribution(AttributionStatus.ATTRIBUTED, stage_ids=(1,)),
+        ),
+        (
+            [observation(2, execution_id=99)],
+            [
+                observation(2, app_id="other-app"),
+                observation(2, job_id="other-job"),
+            ],
+            StageAttribution(AttributionStatus.EXECUTION_ID_NOT_FOUND),
+        ),
+        (
+            [observation(3), observation(3, attempt=1, execution_id=99)],
+            [
+                observation(4, app_id="other-app"),
+                observation(4, execution_id=99, app_id="other-app"),
+                observation(4, job_id="other-job"),
+                observation(4, execution_id=99, job_id="other-job"),
+            ],
+            StageAttribution(AttributionStatus.CONFLICT, conflicting_stage_ids=(3,)),
+        ),
+        (
+            [],
+            [
+                observation(5, execution_id=None, app_id="other-app"),
+                observation(5, execution_id=None, job_id="other-job"),
+            ],
+            StageAttribution(AttributionStatus.EXECUTION_ID_NOT_FOUND),
+        ),
+    ],
+)
+def test_foreign_scope_collisions_cannot_change_attribution_outcomes(in_scope, foreign, expected):
+    assert resolve_stage_ids([*foreign, *in_scope], request()) == expected
+
+
 def test_all_optional_execution_ids_absent_is_explicit_not_a_sentinel():
     result = resolve_stage_ids(
         [observation(2, execution_id=None), observation(7, execution_id=None)],
