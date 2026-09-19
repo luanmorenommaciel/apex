@@ -1,7 +1,7 @@
 ---
 id: T-20260919-pwsh-package-audit-hardening
 title: "Harden PowerShell package contract regression coverage"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S
