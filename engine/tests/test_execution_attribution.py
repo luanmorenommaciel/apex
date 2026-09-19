@@ -93,7 +93,7 @@ def test_foreign_application_and_job_rows_cannot_change_scoped_outcomes(in_scope
             StageAttribution(AttributionStatus.EXECUTION_ID_NOT_FOUND),
         ),
         (
-            [observation(3), observation(3, attempt=1, execution_id=99)],
+            [observation(3), observation(3, attempt=1, execution_id=99), observation(4)],
             [
                 observation(4, app_id="other-app"),
                 observation(4, execution_id=99, app_id="other-app"),

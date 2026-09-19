@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T21:17:27Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T21:17:50Z
 signed_off_sig: hmac-sha256-v3:6af918b1:3e22964fea7d1993e7f792fca2f65977be20048b081233ca85aa9296eacc20aa
+accepted_tier: 1
+accepted_attempt_id: 0a9367d1-d453-4b61-ba29-3cd0aa4afa0d
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:3e22964fea7d1993e7f792fca2f65977be20048b081233ca85aa9296eacc20aa
+acceptance_record_digest: sha256:700d2a8d5ba190bca3a767f07abf4783fbdd638442d24494facf22efdd169558
 ---
 
 # Make foreign conflict-stage collision observable
