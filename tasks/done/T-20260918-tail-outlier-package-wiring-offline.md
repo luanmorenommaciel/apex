@@ -1,7 +1,7 @@
 ---
 id: T-20260918-tail-outlier-package-wiring-offline
 title: "Wire tail-outlier through the canonical runner and package command"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T00:48:21Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T00:49:31Z
 signed_off_sig: hmac-sha256-v3:6af918b1:7abe667374862ff6a0aff52142bc67a996787c6e9cb0757d7c023566206b1e56
+accepted_tier: 1
+accepted_attempt_id: c122a994-0ee1-40e6-a7bf-f1da00214913
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:7abe667374862ff6a0aff52142bc67a996787c6e9cb0757d7c023566206b1e56
+acceptance_record_digest: sha256:f3198a2706e78929ad1f19ede9c35dcd2debd4804a113355e182796fe7631029
 ---
 
 # Wire tail-outlier through the canonical runner and package command
