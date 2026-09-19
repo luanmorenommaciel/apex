@@ -34,6 +34,11 @@ class FindingType(str, Enum):
     # `findings.type` is an open `String` column in the contract DDL, so this is
     # an additive value, not a schema change.
     TASK_SKEW = "TASK_SKEW"
+    # A sparse duration-tail candidate is not evidence of join skew or of a
+    # root cause.  Keeping it distinct prevents the duration fallback from
+    # laundering itself through the stronger skew finding contract.
+    # `findings.type` is an open `String` column, so this is additive.
+    TAIL_OUTLIER = "TAIL_OUTLIER"
     MEMORY = "MEMORY"
     DRIVER_OOM = "DRIVER_OOM"
     COST = "COST"

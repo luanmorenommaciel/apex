@@ -1,7 +1,7 @@
 ---
 id: T-20260918-tail-outlier-finding-contract
 title: "Add an honest tail-outlier finding contract"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T00:44:26Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T00:45:43Z
 signed_off_sig: hmac-sha256-v3:6af918b1:86d050825f76b37bb2a88338d263bafbd4f234f92f1e30bd7e429a798b847312
+accepted_tier: 1
+accepted_attempt_id: be64312d-b71b-424f-a2fa-9aaa8beb90cc
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:86d050825f76b37bb2a88338d263bafbd4f234f92f1e30bd7e429a798b847312
+acceptance_record_digest: sha256:7866ea5fee441dbd62e30cfe7a4d2f8cddbe83947983584805dd090f21f518d9
 ---
 
 # Add an honest tail-outlier finding contract

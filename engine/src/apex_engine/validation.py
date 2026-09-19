@@ -8,6 +8,8 @@ never observed.
 
 from __future__ import annotations
 
+from math import isfinite
+
 from .config import CONFIDENCE_MEDIUM_MAX, ESCALATE_BELOW_CONFIDENCE
 from .physics import MIN_TASKS_FOR_RATIO, SLOTS_UNKNOWN, TAIL_BOUND
 from .schema import Finding, FindingType
@@ -54,6 +56,9 @@ def validate_finding(finding: Finding) -> dict[str, object]:
 def _measurement_issues(finding: Finding, details: dict[str, object]) -> list[str]:
     finding_type = finding.type
 
+    if finding_type is FindingType.TAIL_OUTLIER:
+        return _tail_outlier_issues(details)
+
     if finding_type in (FindingType.SKEW_ON_JOIN, FindingType.TASK_SKEW):
         return _skew_issues(finding, details)
 
@@ -77,6 +82,39 @@ def _measurement_issues(finding: Finding, details: dict[str, object]) -> list[st
         return []
     key, floor, issue = required
     return _floor(details, key, floor, issue)
+
+
+def _tail_outlier_issues(details: dict[str, object]) -> list[str]:
+    """Require only the evidence a sparse duration-tail candidate claims.
+
+    This intentionally does not call `_skew_issues`: a tail outlier is a
+    warning-level diagnostic candidate, not an assertion of shuffle volume,
+    join shape, or a cluster-width-derived skew verdict.
+    """
+    requirements = (
+        ("task_count", 100.0, False),
+        ("duration_sample_count", 100.0, False),
+        ("effective_task_duration_p50_ms", 0.0, True),
+        ("effective_task_duration_max_ms", 0.0, True),
+        ("tail_ratio", 10.0, True),
+    )
+    issues: list[str] = []
+    for field, bound, strict in requirements:
+        value = details.get(field)
+        if not _finite_number(value):
+            issues.append(f"invalid_tail_outlier_{field}")
+            continue
+        numeric = float(value)
+        passes = numeric > bound if strict else numeric >= bound
+        if not passes:
+            comparator = "above" if strict else "at_least"
+            issues.append(f"tail_outlier_{field}_must_be_{comparator}_{bound:g}")
+    return issues
+
+
+def _finite_number(value: object) -> bool:
+    """Reject text, booleans, and non-finite numeric evidence."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and isfinite(value)
 
 
 def _retry_pressure_issues(details: dict[str, object]) -> list[str]:

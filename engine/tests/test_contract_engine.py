@@ -299,3 +299,74 @@ def test_retry_pressure_validation_rejects_zero_counted_failures():
     result = validate_finding(finding)
     assert result["accepted"] is False
     assert "missing_counted_task_failures" in result["issues"]
+
+
+def test_tail_outlier_contract_accepts_coherent_duration_candidate():
+    finding = _finding(
+        type=FindingType.TAIL_OUTLIER,
+        severity=Severity.WARNING,
+        confidence_score=0.72,
+        detected_by="tail_outlier_watcher",
+        details={
+            "task_count": 200,
+            "duration_sample_count": 200,
+            "effective_task_duration_p50_ms": 100.0,
+            "effective_task_duration_max_ms": 3_000.0,
+            "tail_ratio": 30.0,
+        },
+    )
+
+    result = validate_finding(finding)
+    assert finding.type is FindingType.TAIL_OUTLIER
+    assert finding.to_clickhouse_row()["type"] == "TAIL_OUTLIER"
+    assert result["accepted"] is True
+
+
+def test_tail_outlier_contract_rejects_incomplete_or_boundary_evidence():
+    base = {
+        "task_count": 200,
+        "duration_sample_count": 200,
+        "effective_task_duration_p50_ms": 100.0,
+        "effective_task_duration_max_ms": 3_000.0,
+        "tail_ratio": 30.0,
+    }
+    finding = _finding(
+        type=FindingType.TAIL_OUTLIER, confidence_score=0.72, details=base
+    )
+
+    incomplete = finding.model_copy(update={"details": {"tail_ratio": 30.0}})
+    incomplete_result = validate_finding(incomplete)
+    assert incomplete_result["accepted"] is False
+    assert "invalid_tail_outlier_task_count" in incomplete_result["issues"]
+
+    non_numeric = finding.model_copy(
+        update={"details": {**base, "effective_task_duration_p50_ms": "100"}}
+    )
+    non_numeric_result = validate_finding(non_numeric)
+    assert non_numeric_result["accepted"] is False
+    assert "invalid_tail_outlier_effective_task_duration_p50_ms" in non_numeric_result["issues"]
+
+    boundary = finding.model_copy(update={"details": {**base, "tail_ratio": 10.0}})
+    boundary_result = validate_finding(boundary)
+    assert boundary_result["accepted"] is False
+    assert "tail_outlier_tail_ratio_must_be_above_10" in boundary_result["issues"]
+
+
+def test_tail_outlier_type_does_not_weaken_skew_validation():
+    skew = _finding(
+        type=FindingType.SKEW_ON_JOIN,
+        confidence_score=0.72,
+        details={
+            "skew_ratio": 30.0,
+            "task_count": 200,
+            "tail_bound_verdict": "tail_bound",
+            "join_node": True,
+            "shuffle_read_bytes": 200,
+            # Deliberately missing `bytes_per_task`: a duration-tail exception
+            # must never weaken the existing skew validator.
+        },
+    )
+
+    result = validate_finding(skew)
+    assert result["accepted"] is False
+    assert "volume_below_skew_floor" in result["issues"]
