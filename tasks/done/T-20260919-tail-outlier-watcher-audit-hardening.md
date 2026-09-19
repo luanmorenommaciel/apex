@@ -1,7 +1,7 @@
 ---
 id: T-20260919-tail-outlier-watcher-audit-hardening
 title: "Harden emitted tail-outlier watcher contract coverage"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M
