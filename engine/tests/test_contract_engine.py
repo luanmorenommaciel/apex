@@ -352,16 +352,114 @@ def test_tail_outlier_contract_rejects_incomplete_or_boundary_evidence():
     assert "tail_outlier_tail_ratio_must_be_above_10" in boundary_result["issues"]
 
 
-def test_tail_outlier_type_does_not_weaken_skew_validation():
+@pytest.mark.parametrize(
+    ("field", "value", "issue"),
+    [
+        ("task_count", 99, "tail_outlier_task_count_must_be_at_least_100"),
+        ("duration_sample_count", 99, "tail_outlier_duration_sample_count_must_be_at_least_100"),
+        (
+            "effective_task_duration_p50_ms",
+            0.0,
+            "tail_outlier_effective_task_duration_p50_ms_must_be_above_0",
+        ),
+        (
+            "effective_task_duration_p50_ms",
+            -1.0,
+            "tail_outlier_effective_task_duration_p50_ms_must_be_above_0",
+        ),
+        (
+            "effective_task_duration_max_ms",
+            0.0,
+            "tail_outlier_effective_task_duration_max_ms_must_be_above_0",
+        ),
+        (
+            "effective_task_duration_max_ms",
+            -1.0,
+            "tail_outlier_effective_task_duration_max_ms_must_be_above_0",
+        ),
+        ("tail_ratio", 10.0, "tail_outlier_tail_ratio_must_be_above_10"),
+    ],
+)
+def test_tail_outlier_contract_pins_declared_measurement_boundaries(field, value, issue):
+    details = {
+        "task_count": 100,
+        "duration_sample_count": 100,
+        "effective_task_duration_p50_ms": 1.0,
+        "effective_task_duration_max_ms": 10.0,
+        "tail_ratio": 10.1,
+    }
+    details[field] = value
+
+    result = validate_finding(
+        _finding(type=FindingType.TAIL_OUTLIER, confidence_score=0.72, details=details)
+    )
+
+    assert result["accepted"] is False
+    assert issue in result["issues"]
+
+
+def test_tail_outlier_contract_accepts_inclusive_counts_and_strict_ratio():
+    result = validate_finding(
+        _finding(
+            type=FindingType.TAIL_OUTLIER,
+            confidence_score=0.72,
+            details={
+                "task_count": 100,
+                "duration_sample_count": 100,
+                "effective_task_duration_p50_ms": 1.0,
+                "effective_task_duration_max_ms": 10.0,
+                "tail_ratio": 10.1,
+            },
+        )
+    )
+
+    assert result["accepted"] is True
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "task_count",
+        "duration_sample_count",
+        "effective_task_duration_p50_ms",
+        "effective_task_duration_max_ms",
+        "tail_ratio",
+    ],
+)
+@pytest.mark.parametrize("value", [True, "100", float("nan"), float("inf"), float("-inf"), 10**400])
+def test_tail_outlier_contract_rejects_invalid_numeric_evidence_without_raising(field, value):
+    details = {
+        "task_count": 100,
+        "duration_sample_count": 100,
+        "effective_task_duration_p50_ms": 1.0,
+        "effective_task_duration_max_ms": 10.0,
+        "tail_ratio": 10.1,
+    }
+    details[field] = value
+
+    result = validate_finding(
+        _finding(type=FindingType.TAIL_OUTLIER, confidence_score=0.72, details=details)
+    )
+
+    assert result["accepted"] is False
+    assert f"invalid_tail_outlier_{field}" in result["issues"]
+
+
+@pytest.mark.parametrize("finding_type", [FindingType.SKEW_ON_JOIN, FindingType.TASK_SKEW])
+def test_tail_outlier_details_do_not_weaken_skew_validation(finding_type):
     skew = _finding(
-        type=FindingType.SKEW_ON_JOIN,
+        type=finding_type,
         confidence_score=0.72,
         details={
             "skew_ratio": 30.0,
             "task_count": 200,
             "tail_bound_verdict": "tail_bound",
-            "join_node": True,
-            "shuffle_read_bytes": 200,
+            "join_node": finding_type is FindingType.SKEW_ON_JOIN,
+            "shuffle_read_bytes": 200 if finding_type is FindingType.SKEW_ON_JOIN else 0,
+            "duration_sample_count": 200,
+            "effective_task_duration_p50_ms": 100.0,
+            "effective_task_duration_max_ms": 3_000.0,
+            "tail_ratio": 30.0,
             # Deliberately missing `bytes_per_task`: a duration-tail exception
             # must never weaken the existing skew validator.
         },

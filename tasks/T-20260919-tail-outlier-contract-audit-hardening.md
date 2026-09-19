@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T19:06:51Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T20:57:50Z
 signed_off_sig: hmac-sha256-v3:6af918b1:9c60aaa1f963c6b8b69ae30dc9ccfbe8aadc1d05c941f0ba6a5d56f98b82fe44
+accepted_tier: 1
+accepted_attempt_id: 7b64b618-8bc5-4010-9f4a-cf8ef9dac160
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:9c60aaa1f963c6b8b69ae30dc9ccfbe8aadc1d05c941f0ba6a5d56f98b82fe44
+acceptance_record_digest: sha256:6ba61e395fcb89847364a0996017b4fa1b82d9d42c97e16b3439bb49729845a9
 ---
 
 # Harden tail-outlier contract rejection boundaries

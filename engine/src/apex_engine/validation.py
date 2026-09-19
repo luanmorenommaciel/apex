@@ -114,7 +114,12 @@ def _tail_outlier_issues(details: dict[str, object]) -> list[str]:
 
 def _finite_number(value: object) -> bool:
     """Reject text, booleans, and non-finite numeric evidence."""
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and isfinite(value)
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return isfinite(float(value))
+    except (OverflowError, TypeError, ValueError):
+        return False
 
 
 def _retry_pressure_issues(details: dict[str, object]) -> list[str]:
@@ -195,5 +200,5 @@ def _floor(details: dict[str, object], field: str, minimum: float, issue: str) -
         return [issue]
     try:
         return [] if float(value) >= minimum else [issue]
-    except (TypeError, ValueError):
+    except (OverflowError, TypeError, ValueError):
         return [issue]
