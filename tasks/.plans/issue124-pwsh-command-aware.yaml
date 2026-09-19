@@ -1,0 +1,76 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: issue124-pwsh-command-aware
+  source: https://github.com/luanmorenommaciel/apex/issues/124
+units:
+  - id: T-20260918-pwsh-command-aware-coverage
+    title: Make package dry-run coverage explicit and command-aware
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - .github/workflows/ci.yml
+      - scripts/apex.ps1
+      - tests/test_apex_initial_package.py
+    creates_paths:
+      - tasks/.plans/issue124-pwsh-command-aware.yaml
+    source_note: https://github.com/luanmorenommaciel/apex/issues/124
+    why: The current root gate executes PowerShell, but the workflow relies on the runner image and the generic DryRun exits before dispatch, so a named action can look covered while its real handler is unreachable.
+    goal: Explicitly verify PowerShell 7 in CI and make DryRun report the same resolved handler that real execution would invoke, without performing mutations or external calls.
+    context: This is offline package-contract work only. It must not repair the tail-outlier watcher or scenario, start containers, use secrets, publish a PR, or claim runtime proof. The latest main root gate had 64 passed and one macOS-only skip; this task is prevention and coverage, not a claim that current CI skipped PowerShell.
+    behaviors:
+      - id: B-1
+        given: the required root-gate CI job
+        when: package tests start
+        then: PowerShell 7 is explicitly resolved and its version is logged, and absence or an older major version fails the job
+      - id: B-2
+        given: pwsh is absent from PATH
+        when: the package contract test requests it
+        then: the test fails with a dependency error instead of producing eight skips
+      - id: B-3
+        given: any declared package action and DryRun
+        when: the command is executed
+        then: it resolves and reports the exact handler for that action while preserving mutations=0 and external_calls=0
+      - id: B-4
+        given: normal non-DryRun execution
+        when: an action is selected
+        then: execution uses the same resolved action plan that DryRun reported, so the two mappings cannot drift
+      - id: B-5
+        given: tail-outlier DryRun
+        when: the command returns successfully
+        then: it proves routing to Invoke-TailOutlierGate but does not claim that the still-blocked live gate works
+    evals:
+      - id: eval_1
+        description: package contract tests cover dependency failure, all actions, handler identity and non-mutation
+        command: ( cd engine && uv run --extra dev pytest ../tests/test_apex_initial_package.py -q -p no:warnings )
+        verifies: [B-2, B-3, B-4, B-5]
+        terminal: true
+        expected_duration_sec: 45
+      - id: eval_2
+        description: the complete root gate remains green
+        command: ( cd engine && uv run --extra dev pytest ../tests -q -p no:warnings )
+        verifies: [B-2, B-3, B-4]
+        terminal: true
+        expected_duration_sec: 90
+      - id: eval_3
+        description: CI explicitly verifies PowerShell 7 before the root tests
+        command: ( grep -nE 'PowerShell 7|PSVersionTable|pwsh' .github/workflows/ci.yml )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Treating generic DryRun success as evidence that the live action body works.
+      - Starting Docker, Spark, ClickHouse or any external service from a routing test.
+      - Installing a legacy Windows PowerShell fallback.
+      - Fixing issue #123 inside this leaf.
+      - Relaxing the eight-action equality or silently skipping a missing pwsh dependency.
+    do_not_touch:
+      - engine/src
+      - dev/jobs
+      - dev/scripts
+      - front
+      - serve

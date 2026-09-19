@@ -16,15 +16,27 @@ PACKAGE_MAKEFILE = ROOT / "Makefile"
 def _powershell() -> str:
     executable = shutil.which("pwsh")
     if not executable:
-        pytest.skip("PowerShell 7 is required for the package contract test")
+        pytest.fail("PowerShell 7 is required for the package contract test")
     return executable
 
 
+ACTION_HANDLERS = {
+    "bootstrap": "Start-Package",
+    "doctor": "Assert-Prerequisites+Invoke-Doctor",
+    "smoke": "Assert-Prerequisites+Invoke-ProductGate",
+    "e2e": "Assert-Prerequisites+Invoke-ProductGate-Full",
+    "tail-outlier": "Assert-Prerequisites+Invoke-TailOutlierGate",
+    "pilot-clean": "Invoke-CleanPilot",
+    "status": "Show-Status",
+    "down": "Stop-Package",
+}
+
+
 @pytest.mark.parametrize(
-    "action",
-    ["bootstrap", "doctor", "smoke", "e2e", "tail-outlier", "pilot-clean", "status", "down"],
+    ("action", "handler"),
+    ACTION_HANDLERS.items(),
 )
-def test_every_command_has_a_non_mutating_dry_run(action: str) -> None:
+def test_every_command_has_a_non_mutating_dry_run(action: str, handler: str) -> None:
     completed = subprocess.run(
         [_powershell(), "-NoProfile", "-File", str(SCRIPT), action, "-DryRun"],
         cwd=ROOT,
@@ -36,7 +48,15 @@ def test_every_command_has_a_non_mutating_dry_run(action: str) -> None:
 
     assert completed.returncode == 0, completed.stderr
     assert f"APEX_DRY_RUN=passed action={action}" in completed.stdout
+    assert f"handler={handler}" in completed.stdout
     assert "mutations=0 external_calls=0" in completed.stdout
+
+
+def test_missing_powershell_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(shutil, "which", lambda _name: None)
+
+    with pytest.raises(pytest.fail.Exception, match="PowerShell 7 is required"):
+        _powershell()
 
 
 def test_package_uses_generated_local_secrets() -> None:

@@ -74,6 +74,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+      - name: Verify PowerShell 7
+        run: |
+          pwsh -NoProfile -Command '$version = $PSVersionTable.PSVersion; if ($version.Major -lt 7) { throw "PowerShell 7 or newer is required; found $version" }; Write-Output "POWERSHELL_VERSION=$version"'
       # Driven from engine's environment: the gate imports apex_engine and
       # apex_mcp, and engine's project pins both.
       - name: pytest tests/
