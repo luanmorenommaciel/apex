@@ -1,7 +1,7 @@
 ---
 id: T-20260918-execution-stage-attribution-offline
 title: "Resolve execution identity to stages offline"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T00:42:55Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T00:44:40Z
 signed_off_sig: hmac-sha256-v3:6af918b1:d2ee414b956039dbf77391ce05a45155dedc2f364d156684a03b0c1bca9dc7c5
+accepted_tier: 1
+accepted_attempt_id: 05e936eb-85cb-4d86-89cd-f1ed40b1e3eb
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:d2ee414b956039dbf77391ce05a45155dedc2f364d156684a03b0c1bca9dc7c5
+acceptance_record_digest: sha256:2c55d4fa1c49c6306ac46bf1d4b5508f6037c768d9374a823991bed0cab76c4c
 ---
 
 # Resolve execution identity to stages offline
