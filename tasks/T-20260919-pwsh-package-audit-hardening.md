@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T19:06:42Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T21:08:23Z
 signed_off_sig: hmac-sha256-v3:6af918b1:9a9b780a01402504cb23dd179ab235387ee0bc950d704382a1f9587fcb466e46
+accepted_tier: 1
+accepted_attempt_id: 629f10d6-e49b-4c59-809f-ce6b51712e10
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:9a9b780a01402504cb23dd179ab235387ee0bc950d704382a1f9587fcb466e46
+acceptance_record_digest: sha256:871ae4e6c14776c16ccbe356d6c999328dbb43b7f40bcb922f4f1dc9bb7ef9e4
 ---
 
 # Harden PowerShell package contract regression coverage

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 import shutil
 import subprocess
@@ -32,6 +33,25 @@ ACTION_HANDLERS = {
 }
 
 
+def _runtime_snapshot() -> tuple[bool, tuple[tuple[str, str], ...]]:
+    """Record runtime contents without changing a possibly user-owned directory."""
+    runtime_dir = ROOT / ".apex"
+    if not runtime_dir.exists():
+        return False, ()
+
+    entries: list[tuple[str, str]] = []
+    for path in sorted(runtime_dir.rglob("*")):
+        relative = path.relative_to(runtime_dir).as_posix()
+        if path.is_file():
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            entries.append((relative, f"file:{digest}"))
+        elif path.is_dir():
+            entries.append((relative, "directory"))
+        else:
+            entries.append((relative, f"other:{path.is_symlink()}"))
+    return True, tuple(entries)
+
+
 @pytest.mark.parametrize(
     ("action", "handler"),
     ACTION_HANDLERS.items(),
@@ -47,9 +67,56 @@ def test_every_command_has_a_non_mutating_dry_run(action: str, handler: str) -> 
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert f"APEX_DRY_RUN=passed action={action}" in completed.stdout
-    assert f"handler={handler}" in completed.stdout
-    assert "mutations=0 external_calls=0" in completed.stdout
+    summary = f"APEX_DRY_RUN=passed action={action} handler={handler} mutations=0 external_calls=0"
+    assert summary in completed.stdout.splitlines()
+
+
+def test_help_dispatches_to_safe_handler_without_runtime_state() -> None:
+    before = _runtime_snapshot()
+    completed = subprocess.run(
+        [_powershell(), "-NoProfile", "-File", str(SCRIPT), "help"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "Apex initial package" in completed.stdout
+    assert _runtime_snapshot() == before
+
+
+def test_invalid_action_is_rejected_by_validateset_without_runtime_state() -> None:
+    before = _runtime_snapshot()
+    completed = subprocess.run(
+        [_powershell(), "-NoProfile", "-File", str(SCRIPT), "not-a-package-action"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode != 0
+    assert "ValidateSet" in completed.stderr
+    assert _runtime_snapshot() == before
+
+
+def test_representative_dry_runs_leave_runtime_directory_unchanged() -> None:
+    before = _runtime_snapshot()
+    for action in ("bootstrap", "doctor", "pilot-clean", "status", "down"):
+        completed = subprocess.run(
+            [_powershell(), "-NoProfile", "-File", str(SCRIPT), action, "-DryRun"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert completed.returncode == 0, completed.stderr
+
+    assert _runtime_snapshot() == before
 
 
 def test_missing_powershell_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
