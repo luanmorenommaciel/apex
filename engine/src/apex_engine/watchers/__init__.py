@@ -1,4 +1,4 @@
-"""Tier 1 — the six deterministic watchers, plus the AQE ground-truth watcher.
+"""Tier 1 — the seven deterministic watchers, plus the AQE ground-truth watcher.
 
 ALL of these are plain Python functions over deterministic SQL rules. None is a
 CrewAI agent, none is `@tool`-wrapped, none calls an LLM. Tier 1 answers 95%+ of

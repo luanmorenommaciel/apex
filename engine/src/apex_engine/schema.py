@@ -197,8 +197,8 @@ class StageAggregate(BaseModel):
     successful_task_sample_count: int = Field(default=0, ge=0)
     successful_task_shuffle_read_bytes_max: int = Field(default=0, ge=0)
     successful_task_shuffle_read_bytes_sample_count: int = Field(default=0, ge=0)
-    # Missed by the raw-fields unit above; tail_outlier reads this directly
-    # as a plain value, not through a computed ratio.
+    # Retry-safe shuffle-read p50 retained alongside the max/sample fields
+    # above. It is not part of the duration-only tail-outlier signal.
     successful_task_shuffle_read_bytes_p50: int = Field(default=0, ge=0)
 
     @property

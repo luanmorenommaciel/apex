@@ -1,8 +1,9 @@
 """Tier-1 watcher rules. Every case here is deterministic and LLM-free."""
 
-from apex_engine import FindingType, Severity, StageAggregate
+from apex_engine import Confidence, FindingType, Severity, StageAggregate
 from apex_engine.context import JobContext
 from apex_engine.jobconf import operator_width
+from apex_engine.validation import validate_finding
 from apex_engine.watchers import code, cost, memory, retry_pressure, shuffle, skew, tail_outlier
 from apex_engine.watchers.base import GIB, MIB
 
@@ -154,8 +155,21 @@ def test_tail_outlier_prefers_retry_safe_population():
     finding = tail_outlier.evaluate(successful_tail, at(8))
     assert finding is not None
     assert finding.type is FindingType.TAIL_OUTLIER
-    assert finding.details["tail_ratio"] == 30
-    assert finding.details["duration_sample_source"] == "successful_tasks"
+    assert finding.severity is Severity.WARNING
+    assert finding.confidence is Confidence.MEDIUM
+    assert finding.detected_by == tail_outlier.NAME
+    assert finding.details == {
+        "tail_ratio": 30,
+        "skew_ratio": 1,
+        "legacy_skew_ratio": 1,
+        "task_count": 200,
+        "duration_sample_count": 200,
+        "duration_sample_source": "successful_tasks",
+        "effective_task_duration_p50_ms": 100,
+        "effective_task_duration_p99_ms": 100,
+        "effective_task_duration_max_ms": 3_000,
+    }
+    assert validate_finding(finding)["accepted"] is True
 
 
 def test_tail_outlier_uses_legacy_fallback():

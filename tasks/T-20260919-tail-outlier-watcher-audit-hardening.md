@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: augustosilva
 signed_off_at: 2026-09-19T19:06:53Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: augustosilva
+accepted_at: 2026-09-19T20:59:22Z
 signed_off_sig: hmac-sha256-v3:6af918b1:b51644fdaf37e6ae68751eb83eafa4b6f21ff9e4951e72090b3803344c2210c9
+accepted_tier: 1
+accepted_attempt_id: d02ca52b-761d-4bb3-b801-fa3a34b44506
+accepted_authorization_ref: hmac-sha256-v3:6af918b1:b51644fdaf37e6ae68751eb83eafa4b6f21ff9e4951e72090b3803344c2210c9
+acceptance_record_digest: sha256:98e454fff7c41a9e9723a124bb6def8f3bc54121471097dfd85fdaa442efaa1a
 ---
 
 # Harden emitted tail-outlier watcher contract coverage
