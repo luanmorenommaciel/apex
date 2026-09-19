@@ -1,7 +1,7 @@
 ---
 id: T-20260919-execution-attribution-scope-collision
 title: "Pin attribution scope against realistic stage-ID collisions"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S
