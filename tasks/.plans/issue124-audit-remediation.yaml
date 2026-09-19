@@ -1,0 +1,59 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: issue124-audit-remediation
+  source: https://github.com/luanmorenommaciel/apex/issues/124
+units:
+  - id: T-20260919-pwsh-package-audit-hardening
+    title: Harden PowerShell package contract regression coverage
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - tests/test_apex_initial_package.py
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/issues/124
+    why: Independent review found that the current DryRun test can accept a prefix-matched wrong handler, omits help/ValidateSet coverage, and proves non-mutation only through a printed string.
+    goal: Make the package tests prove exact DryRun action identity, safe help/ValidateSet behavior, and the absence of an .apex runtime directory without changing production PowerShell or CI behavior.
+    context: This is test-only audit remediation. It must remain offline and must not execute a product gate, external service, Docker, Spark, ClickHouse, or tail-outlier runtime path.
+    behaviors:
+      - id: B-1
+        given: each supported non-help action and DryRun
+        when: package tests execute it
+        then: they match the complete reported summary rather than a handler substring
+      - id: B-2
+        given: help and an invalid action
+        when: PowerShell dispatch runs without DryRun
+        then: help executes its safe handler and an invalid action is rejected by ValidateSet without creating runtime state
+      - id: B-3
+        given: a clean candidate worktree with no .apex directory
+        when: representative DryRun commands run
+        then: .apex remains absent as well as reporting zero mutations and external calls
+    evals:
+      - id: eval_1
+        description: focused PowerShell package contract tests pass
+        command: ( cd engine && uv run --extra dev pytest ../tests/test_apex_initial_package.py -q -p no:warnings )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: complete root offline test gate remains green
+        command: ( cd engine && uv run --extra dev pytest ../tests -q -p no:warnings )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Editing scripts/apex.ps1 or .github/workflows/ci.yml unless a test proves a real production defect.
+      - Deleting or modifying a pre-existing .apex directory to arrange a test precondition.
+      - Starting Docker, Spark, ClickHouse, or a tail-outlier live path.
+    do_not_touch:
+      - scripts/apex.ps1
+      - .github/workflows/ci.yml
+      - engine/src
+      - dev
+      - front
+      - serve
+      - infra
