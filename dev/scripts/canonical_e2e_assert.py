@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import math
 import os
 import re
 import sys
@@ -16,11 +17,14 @@ from urllib.request import Request, urlopen
 
 
 APP_ID_PATTERN = re.compile(r"^app-\d{14}-\d{4}$")
-SCENARIOS = ("skew_join", "spill", "bad_shuffle", "driver_oom")
+SCENARIOS = ("skew_join", "tail_outlier", "spill", "bad_shuffle", "driver_oom")
 STAGES_SQL = """
 SELECT
   stage_id, stage_attempt, shuffle_read_bytes, spill_disk_bytes,
-  task_count, task_duration_p50_ms, task_duration_p99_ms
+  task_count, task_duration_p50_ms, task_duration_p99_ms,
+  task_duration_max_ms, task_duration_sample_count,
+  successful_task_duration_p50_ms, successful_task_duration_p99_ms,
+  successful_task_duration_max_ms, successful_task_sample_count
 FROM apex.spark_events
 WHERE job_id = {job_id:String}
 ORDER BY stage_id, stage_attempt, ts
@@ -40,8 +44,77 @@ def _number(row: dict[str, Any], field: str) -> float:
         raise AssertionFailure(f"invalid_{field}:{value!r}") from exc
 
 
+def _effective_duration_population(row: dict[str, Any]) -> dict[str, float | str]:
+    """Mirror Engine's retry-safe duration selection for runtime proof."""
+    successful_samples = _number(row, "successful_task_sample_count")
+    if successful_samples > 0:
+        return {
+            "source": "successful_tasks",
+            "sample_count": successful_samples,
+            "p50": _number(row, "successful_task_duration_p50_ms"),
+            "p99": _number(row, "successful_task_duration_p99_ms"),
+            "maximum": _number(row, "successful_task_duration_max_ms"),
+        }
+
+    raw_samples = _number(row, "task_duration_sample_count")
+    return {
+        "source": "legacy_all_attempts",
+        "sample_count": raw_samples or _number(row, "task_count"),
+        "p50": _number(row, "task_duration_p50_ms"),
+        "p99": _number(row, "task_duration_p99_ms"),
+        "maximum": _number(row, "task_duration_max_ms"),
+    }
+
+
+def _tail_outlier_result(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    candidates: list[dict[str, float | int | str]] = []
+    for row in rows:
+        task_count = _number(row, "task_count")
+        duration = _effective_duration_population(row)
+        p50 = float(duration["p50"])
+        maximum = float(duration["maximum"])
+        sample_count = float(duration["sample_count"])
+        if (
+            task_count < 100
+            or sample_count < 100
+            or p50 <= 0
+            or not all(math.isfinite(value) for value in (p50, maximum, sample_count))
+        ):
+            continue
+        tail_ratio = maximum / p50
+        if tail_ratio <= 10:
+            continue
+        p99 = float(duration["p99"])
+        if not math.isfinite(p99):
+            continue
+        candidates.append(
+            {
+                "stage_id": int(_number(row, "stage_id")),
+                "task_count": int(task_count),
+                "sample_count": int(sample_count),
+                "duration_source": str(duration["source"]),
+                "max_tail_ratio": tail_ratio,
+                "p99_p50_ratio": p99 / p50,
+            }
+        )
+
+    if not candidates:
+        raise AssertionFailure("tail_outlier_not_observed")
+
+    strongest = max(candidates, key=lambda candidate: float(candidate["max_tail_ratio"]))
+    return {
+        "stage_id": strongest["stage_id"],
+        "task_count": strongest["task_count"],
+        "duration_sample_count": strongest["sample_count"],
+        "duration_sample_source": strongest["duration_source"],
+        "max_tail_ratio": round(float(strongest["max_tail_ratio"]), 3),
+        "p99_p50_ratio": round(float(strongest["p99_p50_ratio"]), 3),
+        "stage_count": len(rows),
+    }
+
+
 def evaluate(scenario: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
-    """Evaluate the same four signals as the legacy JSONL gate."""
+    """Evaluate the configured canonical pathology signals."""
     if scenario not in SCENARIOS:
         raise ValueError(f"unknown_scenario:{scenario}")
     if not rows:
@@ -57,6 +130,9 @@ def evaluate(scenario: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
         if maximum <= 10:
             raise AssertionFailure(f"skew_ratio_not_above_10:{maximum:.3f}")
         return {"max_p99_p50_ratio": round(maximum, 3), "stage_count": len(rows)}
+
+    if scenario == "tail_outlier":
+        return _tail_outlier_result(rows)
 
     if scenario == "spill":
         total = sum(_number(row, "spill_disk_bytes") for row in rows)
