@@ -734,3 +734,141 @@ def test_memory_reads_short_circuit_on_empty_input():
     assert store.similar_plans("") == []
     assert store.prior_outcomes([]) == []
     assert client.calls == []
+
+
+# --------------------------------------------------------------------------
+# Console reads ported out of front/src/data/queries.ts.
+#
+# These ran in the BROWSER against a credential that shipped to every visitor.
+# The port's acceptance criterion is that the console's rendered numbers do not
+# move, so these tests pin the result SHAPE rather than the SQL text.
+# --------------------------------------------------------------------------
+
+INJECTION = "x' OR 1=1 --"
+
+
+class _ConsoleClient:
+    """Routes on the ported SQL's shape, like FakeClient does for the tools."""
+
+    def __init__(
+        self,
+        *,
+        run_rows: list[dict] | None = None,
+        conf_rows: list[dict] | None = None,
+        shape_rows: list[dict] | None = None,
+        sample_rows: list[dict] | None = None,
+        candidate_rows: list[dict] | None = None,
+        tables: tuple[str, ...] = ("plan_memory", "run_outcomes"),
+    ) -> None:
+        self.run_rows = run_rows or []
+        self.conf_rows = conf_rows or []
+        self.shape_rows = shape_rows or []
+        self.sample_rows = sample_rows or []
+        self.candidate_rows = candidate_rows or []
+        self.tables = tables
+        self.calls: list[tuple[str, dict]] = []
+
+    def query(self, query: str, parameters: dict | None = None):
+        self.calls.append((query, parameters or {}))
+        if "system.tables" in query:
+            rows = [{"name": name} for name in self.tables]
+        elif "system.columns" in query:
+            rows = [{"name": "job_id"}]
+        elif "ARRAY JOIN" in query:
+            rows = self.conf_rows
+        elif "sample_plan_json" in query:
+            rows = self.sample_rows
+        elif "shared_shapes" in query:
+            rows = self.candidate_rows
+        elif "severity_rank" in query or "node_count" in query:
+            rows = self.shape_rows
+        else:
+            rows = self.run_rows
+        return type("R", (), {"named_results": lambda _s: list(rows)})()
+
+
+def test_run_returns_one_rollup_row():
+    row = {
+        "job_id": "j", "app_name": "nightly-rollup", "stage_count": 34,
+        "started_at": "2026-09-20 10:00:00", "finding_count": 3,
+        "has_critical": 1, "task_time_ms": 91000, "plan_fingerprint": "a" * 64,
+        "shape_count": 2, "shaped_stage_count": 30, "config_source": "observed",
+        "conf_executor_instances": 8, "conf_shuffle_partitions": 200,
+    }
+    got = ReadStore(_ConsoleClient(run_rows=[row])).run("j")
+    assert got == row
+
+
+def test_run_returns_none_for_unknown_job():
+    """None, never a zero-filled row: the console renders that as a real run."""
+    assert ReadStore(_ConsoleClient(run_rows=[])).run("nope") is None
+
+
+def test_job_conf_returns_rows_and_empty_when_absent():
+    rows = [
+        {"job_id": "j", "key": "spark.executor.cores", "value": "4", "ts": None},
+        {"job_id": "j", "key": "spark.sql.shuffle.partitions", "value": "200", "ts": None},
+    ]
+    assert ReadStore(_ConsoleClient(conf_rows=rows)).job_conf("j") == rows
+    # A jar that emitted no job_conf is an absence of capture, not a run with
+    # no configuration — and it stays empty rather than gaining a default.
+    assert ReadStore(_ConsoleClient(conf_rows=[])).job_conf("j") == []
+
+
+def test_shape_runs_and_plan_sample():
+    runs = [
+        {"job_id": "old", "observed_at": "2026-09-01", "task_time_ms": 10},
+        {"job_id": "new", "observed_at": "2026-09-20", "task_time_ms": 20},
+    ]
+    store = ReadStore(
+        _ConsoleClient(
+            shape_rows=runs, sample_rows=[{"sample_plan_json": "== Physical Plan =="}]
+        )
+    )
+    assert [r["job_id"] for r in store.shape_runs("a" * 64)] == ["old", "new"]
+    assert store.plan_sample("a" * 64) == "== Physical Plan =="
+    # Unindexed shape: None, so "the lane has not reached this shape" stays
+    # distinguishable from "this shape's plan text is empty".
+    assert ReadStore(_ConsoleClient(sample_rows=[])).plan_sample("b" * 64) is None
+    assert (
+        ReadStore(_ConsoleClient(sample_rows=[{"sample_plan_json": ""}])).plan_sample(
+            "b" * 64
+        )
+        is None
+    )
+
+
+def test_new_methods_bind_parameters():
+    """A value carrying SQL syntax is bound, never interpolated."""
+    client = _ConsoleClient()
+    store = ReadStore(client)
+    store.run(INJECTION)
+    store.job_conf(INJECTION)
+    store.baseline_candidates(INJECTION)
+    store.plan_shapes()
+    store.plan_sample(INJECTION)
+    store.shape_runs(INJECTION)
+
+    bound = False
+    for sql, parameters in client.calls:
+        assert INJECTION not in sql, "the value reached the statement text"
+        if parameters.get("job_id") == INJECTION or parameters.get("fingerprint") == INJECTION:
+            bound = True
+            assert "{job_id:String}" in sql or "{fingerprint:String}" in sql
+    assert bound, "no call carried the value as a bound parameter"
+
+
+def test_plan_shapes_reports_absent_memory_tables():
+    """Absence of a TABLE is not an empty history, and is not reported as one."""
+    store = ReadStore(_ConsoleClient(tables=()))
+    for call in (
+        lambda: store.plan_shapes(),
+        lambda: store.shape_runs("a" * 64),
+        lambda: store.plan_sample("a" * 64),
+        lambda: store.baseline_candidates("j"),
+    ):
+        with pytest.raises(ApexStoreError) as caught:
+            call()
+        assert str(caught.value).startswith("memory_unavailable")
+    # The reads that do not depend on v0.3 still work on the same deployment.
+    assert ReadStore(_ConsoleClient(tables=(), conf_rows=[])).job_conf("j") == []

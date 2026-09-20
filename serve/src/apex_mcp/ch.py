@@ -311,6 +311,169 @@ LIMIT {limit:UInt32}
 """
 
 
+# --------------------------------------------------------------------------
+# Console reads (ported from front/src/data/queries.ts).
+#
+# These six answered the console's screens from the BROWSER, against a
+# read-only ClickHouse user that shipped to every visitor. They live here so
+# the API can serve them and that credential can be retired. The SQL is a
+# PORT, not a redesign: the console's rendered numbers are the acceptance
+# criterion, so the shape of every result matches what queries.ts returned.
+# --------------------------------------------------------------------------
+
+# spark_events is authoritative for WHAT RAN: every stage is here, including
+# ones no plan shape claims, so a run stays listed even when the memory lane
+# has never indexed it. run_outcomes is read ONLY for shape-attributable
+# outcome data — its own stage_count and finding_count exclude unfingerprinted
+# stages and stage-less findings, so both would under-report the run, and its
+# wall_clock_ms is a per-shape timestamp span rather than a job duration.
+RUN_ONE_SQL = """
+WITH
+base AS (
+  SELECT job_id, argMax(app_name, ts) AS app_name,
+         uniqExact(stage_id) AS stage_count, min(ts) AS started_at
+  FROM apex.spark_events
+  WHERE job_id = {job_id:String}
+  GROUP BY job_id
+),
+f AS (
+  SELECT job_id, count() AS finding_count,
+         max(severity IN ('critical', 'blocker')) AS has_critical
+  FROM apex.findings GROUP BY job_id
+),
+shapes AS (
+  SELECT ro.job_id AS job_id,
+         sum(ro.task_time_ms)                                  AS task_time_ms,
+         toString(argMax(ro.plan_fingerprint, ro.stage_count)) AS plan_fingerprint,
+         uniqExact(ro.plan_fingerprint)                        AS shape_count,
+         sum(ro.stage_count)                                   AS shaped_stage_count,
+         argMax(ro.config_source, ro.observed_at)              AS config_source,
+         max(ro.conf_executor_instances)                       AS conf_executor_instances,
+         max(ro.conf_shuffle_partitions)                       AS conf_shuffle_partitions
+  FROM apex.run_outcomes AS ro FINAL
+  GROUP BY ro.job_id
+)
+SELECT
+  b.job_id      AS job_id,
+  b.app_name    AS app_name,
+  b.stage_count AS stage_count,
+  b.started_at  AS started_at,
+  ifNull(f.finding_count, 0) AS finding_count,
+  ifNull(f.has_critical, 0)  AS has_critical,
+  ifNull(s.task_time_ms, -1)       AS task_time_ms,
+  ifNull(s.plan_fingerprint, '')   AS plan_fingerprint,
+  ifNull(s.shape_count, 0)         AS shape_count,
+  ifNull(s.shaped_stage_count, -1) AS shaped_stage_count,
+  ifNull(s.config_source, 'unknown') AS config_source,
+  s.conf_executor_instances, s.conf_shuffle_partitions
+FROM base b
+LEFT JOIN f        ON f.job_id = b.job_id
+LEFT JOIN shapes s ON s.job_id = b.job_id
+LIMIT 1
+"""
+
+# job_conf holds ONE row per job with conf as a Map, while every consumer reads
+# one row per key. ARRAY JOIN does the reshape in SQL. An absent key stays
+# absent — no LEFT JOIN or COALESCE invents one — which is what lets rule 1
+# declare itself vacant rather than assume a cluster width.
+JOB_CONF_SQL = """
+SELECT
+  job_id,
+  entry.1 AS key,
+  entry.2 AS value,
+  ts
+FROM apex.job_conf
+ARRAY JOIN CAST(conf, 'Array(Tuple(String, String))') AS entry
+WHERE job_id = {job_id:String}
+ORDER BY key
+"""
+
+# Runs that executed at least one of this run's plan shapes. Runs sharing
+# nothing are not returned, so the screen can say "no comparable run" instead
+# of differencing two unrelated jobs.
+BASELINE_CANDIDATES_SQL = """
+WITH mine AS (
+  SELECT DISTINCT plan_fingerprint
+  FROM apex.run_outcomes FINAL
+  WHERE job_id = {job_id:String}
+)
+SELECT
+  o.job_id                       AS job_id,
+  any(o.app_name)                AS app_name,
+  uniqExact(o.plan_fingerprint)  AS shared_shapes,
+  max(o.observed_at)             AS observed_at
+FROM apex.run_outcomes AS o FINAL
+INNER JOIN mine ON mine.plan_fingerprint = o.plan_fingerprint
+WHERE o.job_id != {job_id:String}
+GROUP BY o.job_id
+ORDER BY observed_at DESC
+LIMIT {limit:UInt32}
+"""
+
+# The INNER JOIN is deliberate: a shape with no outcome row has no history to
+# show, and a run whose shape was never indexed is not a shape we know.
+PLAN_SHAPES_SQL = """
+WITH r AS (
+  SELECT plan_fingerprint,
+         uniqExact(job_id) AS run_count,
+         min(observed_at)  AS first_run,
+         max(observed_at)  AS last_run
+  FROM apex.run_outcomes FINAL
+  GROUP BY plan_fingerprint
+)
+SELECT
+  toString(pm.plan_fingerprint) AS plan_fingerprint,
+  r.run_count       AS run_count,
+  r.first_run       AS first_run,
+  r.last_run        AS last_run,
+  pm.node_count     AS node_count,
+  pm.join_count     AS join_count,
+  pm.agg_count      AS agg_count,
+  pm.exchange_count AS exchange_count,
+  pm.scan_count     AS scan_count,
+  pm.max_depth      AS max_depth,
+  pm.has_udf        AS has_udf
+FROM apex.plan_memory AS pm FINAL
+INNER JOIN r ON r.plan_fingerprint = pm.plan_fingerprint
+ORDER BY r.run_count DESC, r.last_run DESC
+LIMIT {limit:UInt32}
+"""
+
+# ONE redacted exemplar per shape, which the contract's own DDL calls "for
+# citation". Read from plan_memory and never from spark_events.plan_json: the
+# latter is per stage, so a 34-stage run would ship 34 Catalyst trees to draw
+# one. The text is carried verbatim and nothing is parsed out of it.
+PLAN_SAMPLE_SQL = """
+SELECT toString(sample_plan_json) AS sample_plan_json
+FROM apex.plan_memory FINAL
+WHERE plan_fingerprint = toFixedString(substring({fingerprint:String}, 1, 64), 64)
+ORDER BY indexed_at DESC
+LIMIT 1
+"""
+
+# task_time_ms is the cost metric, not wall_clock_ms. The conf_* columns stay
+# NULL unless the jar emitted job_conf for that run, and null travels through
+# as "not captured" so rule 3 can refuse to credit a difference rather than
+# compare against an invented default.
+SHAPE_RUNS_SQL = """
+SELECT
+  job_id                  AS job_id,
+  app_name                AS app_name,
+  task_time_ms            AS task_time_ms,
+  finding_count           AS finding_count,
+  indexOf(['info', 'warning', 'critical', 'blocker'], worst_severity) AS severity_rank,
+  config_source           AS config_source,
+  conf_shuffle_partitions AS conf_shuffle_partitions,
+  conf_executor_instances AS conf_executor_instances,
+  conf_executor_cores     AS conf_executor_cores,
+  conf_executor_memory_mb AS conf_executor_memory_mb,
+  observed_at             AS observed_at
+FROM apex.run_outcomes FINAL
+WHERE plan_fingerprint = toFixedString(substring({fingerprint:String}, 1, 64), 64)
+ORDER BY observed_at
+"""
+
+
 def _findings_search_sql(token_params: list[str]) -> str:
     """Build the findings-side search. Placeholder NAMES are generated by us
     (``t0``, ``t1``, …); the token VALUES are always bound, never interpolated.
@@ -662,6 +825,82 @@ class ReadStore:
         rows = self._query(_findings_search_sql(names), params)
         rows += self._query(_plans_search_sql(names), params)
         return rows
+
+    # -- console reads (ported from the browser) ---------------------------
+    MAX_SHAPES = 50
+    MAX_BASELINE_CANDIDATES = 20
+
+    def run(self, job_id: str) -> dict[str, Any] | None:
+        """One run's rollup row, or None when the job_id is unknown.
+
+        None rather than a zero-filled row on purpose: the console renders a
+        synthesised zero as a real but empty run, which is a claim the store
+        never made.
+        """
+        return next(
+            iter(self._query(RUN_ONE_SQL, {"job_id": _require_job_id(job_id)})), None
+        )
+
+    def job_conf(self, job_id: str) -> list[dict[str, Any]]:
+        """This job's configuration, one row per key.
+
+        Empty when the jar emitted no job_conf for the run. That is an absence
+        of capture, not a run with no configuration.
+        """
+        return self._query(JOB_CONF_SQL, {"job_id": _require_job_id(job_id)})
+
+    def baseline_candidates(self, job_id: str) -> list[dict[str, Any]]:
+        """Other runs sharing at least one of this run's plan shapes."""
+        self._require_memory()
+        return self._query(
+            BASELINE_CANDIDATES_SQL,
+            {
+                "job_id": _require_job_id(job_id),
+                "limit": self.MAX_BASELINE_CANDIDATES,
+            },
+        )
+
+    def plan_shapes(self) -> list[dict[str, Any]]:
+        """Plan shapes the memory lane has indexed, most-run first."""
+        self._require_memory()
+        return self._query(PLAN_SHAPES_SQL, {"limit": self.MAX_SHAPES})
+
+    def plan_sample(self, fingerprint: str) -> str | None:
+        """The redacted exemplar for a shape, or None when unindexed.
+
+        None rather than "" so a caller can tell "the memory lane has not
+        reached this shape" from "this shape's plan text is empty".
+        """
+        self._require_memory()
+        rows = self._query(
+            PLAN_SAMPLE_SQL,
+            {"fingerprint": _require_optional_id(fingerprint, "fingerprint")},
+        )
+        sample = str(rows[0].get("sample_plan_json") or "") if rows else ""
+        return sample or None
+
+    def shape_runs(self, fingerprint: str) -> list[dict[str, Any]]:
+        """Every run of one shape, oldest first — the history rule 3 reads."""
+        self._require_memory()
+        return self._query(
+            SHAPE_RUNS_SQL,
+            {"fingerprint": _require_optional_id(fingerprint, "fingerprint")},
+        )
+
+    def _require_memory(self) -> None:
+        """Refuse a memory read on a deployment without the v0.3 tables.
+
+        Raised, not degraded to []. An empty list here would read as "this
+        store has no history", when the truth is that it has no TABLE to hold
+        one — and the caller acts differently on each.
+        """
+        if not self.memory_tables_present():
+            raise ApexStoreError(
+                "memory_unavailable: the contract v0.3 tables "
+                "apex.plan_memory and apex.run_outcomes are not present on "
+                "this deployment. This is not an empty history. Apply the "
+                "v0.3 DDL via the infra lane and run the memory lane's indexer."
+            )
 
     # -- plumbing ---------------------------------------------------------
     def _query(self, sql: str, parameters: dict[str, Any]) -> list[dict[str, Any]]:

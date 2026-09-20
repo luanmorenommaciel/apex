@@ -27,9 +27,9 @@ execution_backend: any
 signed_off: true
 signed_off_by: sidymar
 signed_off_at: 2026-09-20T17:24:39Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-09-20T17:29:12Z
 signed_off_sig: hmac-sha256-v2:5153084e:b5571d2807e334f9487ed02f72f7339c41814f8d1a449d469379187397dc0ad4
 ---
 
