@@ -13,6 +13,7 @@ import type {
 import * as fx from "./fixtures";
 import * as Q from "./queries";
 import { ping, query } from "./clickhouse";
+import { apiGet, apiPing } from "./http";
 import { runtimeConfig } from "./runtimeConfig";
 
 /** A plan shape the memory lane indexed, plus how often it has run. */
@@ -54,7 +55,7 @@ export interface BaselineCandidate {
 }
 
 export interface Repository {
-  readonly kind: "clickhouse" | "fixtures";
+  readonly kind: "clickhouse" | "fixtures" | "http";
   listRuns(limit?: number): Promise<(RunSummary & { age?: string })[]>;
   /** One run's summary row. null when the job is unknown — never a synthesised zero. */
   run(jobId: string): Promise<(RunSummary & { age?: string }) | null>;
@@ -169,30 +170,50 @@ export class ClickHouseRepository implements Repository {
   }
   async fixVerification(findingId: string) {
     const rows = await query<Record<string, unknown>>(Q.FIX_VERIFICATIONS, { finding: findingId });
-    const r = rows[0];
-    if (!r) return null;
-    // The query already renamed, flipped the sign and applied rule 2. What it
-    // cannot supply, it returns as NULL, and that travels through as null —
-    // mechanism_confirmed has no column, and the individual replay durations
-    // were never stored, only the two arms' medians.
-    return {
-      fix_id: String(r.fix_id),
-      finding_id: String(r.finding_id),
-      job_id: String(r.job_id),
-      mechanism_confirmed: r.mechanism_confirmed === null ? null : Boolean(Number(r.mechanism_confirmed)),
-      runtime_certified: Boolean(Number(r.runtime_certified)),
-      runtime_verdict: r.runtime_verdict as FixVerificationRow["runtime_verdict"],
-      predicted_saving_pct: r.predicted_saving_pct === null ? null : Number(r.predicted_saving_pct),
-      noise_floor_pct: r.noise_floor_pct === null ? null : Number(r.noise_floor_pct),
-      replay_count: Number(r.replay_count ?? 0),
-      replay_durations_ms: null,
-      cluster_slots: r.cluster_slots === null ? null : Number(r.cluster_slots),
-      requires_human_approval: true as const,
-      applied: false as const,
-      proposed_diff: String(r.proposed_diff ?? ""),
-    };
+    return rows[0] ? toFixVerification(rows[0]) : null;
   }
 }
+
+/**
+ * One verification row, however it arrived.
+ *
+ * The projection — in SQL against ClickHouse, in ch.py behind the API — has
+ * already renamed the columns, flipped the sign and applied rule 2. What it
+ * cannot supply it returns as NULL, and that travels through as null:
+ * mechanism_confirmed has no column at all, and the individual replay
+ * durations were never stored, only the two arms\' medians.
+ *
+ * Shared by both repositories so the two paths cannot disagree about what a
+ * verification means.
+ */
+const toFixVerification = (r: Record<string, unknown>): FixVerificationRow => ({
+  fix_id: String(r.fix_id),
+  finding_id: String(r.finding_id),
+  job_id: String(r.job_id),
+  mechanism_confirmed:
+    r.mechanism_confirmed === null || r.mechanism_confirmed === undefined
+      ? null
+      : Boolean(Number(r.mechanism_confirmed)),
+  runtime_certified: Boolean(Number(r.runtime_certified)),
+  runtime_verdict: r.runtime_verdict as FixVerificationRow["runtime_verdict"],
+  predicted_saving_pct:
+    r.predicted_saving_pct === null || r.predicted_saving_pct === undefined
+      ? null
+      : Number(r.predicted_saving_pct),
+  noise_floor_pct:
+    r.noise_floor_pct === null || r.noise_floor_pct === undefined
+      ? null
+      : Number(r.noise_floor_pct),
+  replay_count: Number(r.replay_count ?? 0),
+  replay_durations_ms: null,
+  cluster_slots:
+    r.cluster_slots === null || r.cluster_slots === undefined
+      ? null
+      : Number(r.cluster_slots),
+  requires_human_approval: true as const,
+  applied: false as const,
+  proposed_diff: String(r.proposed_diff ?? ""),
+});
 
 export class FixtureRepository implements Repository {
   readonly kind = "fixtures" as const;
@@ -242,11 +263,105 @@ export class FixtureRepository implements Repository {
   }
 }
 
+/**
+ * The console against the Apex API.
+ *
+ * Implementing this interface is the whole change — no screen knows where a
+ * row came from, which is what `clickhouse.ts` meant by calling the Repository
+ * the seam. The rows the API returns are the same projections `queries.ts`
+ * produced, now computed server-side, so the mappers below are the ones
+ * ClickHouseRepository already uses.
+ */
+export class HttpRepository implements Repository {
+  readonly kind = "http" as const;
+
+  async listRuns(limit = 50) {
+    const { data } = await apiGet<RunRollupRow[]>("/v1/runs", { limit });
+    return (data ?? []).map(toRunSummary);
+  }
+
+  async run(jobId: string) {
+    // 404 arrives as null: the API uses it for "no run with that id", which is
+    // an absence this method is typed to report, not a fault.
+    const { data } = await apiGet<RunRollupRow>(`/v1/runs/${encodeURIComponent(jobId)}`);
+    return data ? toRunSummary(data) : null;
+  }
+
+  async baselineCandidates(jobId: string) {
+    const { data } = await apiGet<BaselineCandidate[]>(
+      `/v1/runs/${encodeURIComponent(jobId)}/baseline-candidates`,
+    );
+    return data ?? [];
+  }
+
+  async planShapes() {
+    const { data } = await apiGet<PlanShape[]>("/v1/plans");
+    return data ?? [];
+  }
+
+  async shapeRuns(fingerprint: string) {
+    const { data } = await apiGet<ShapeRun[]>(
+      `/v1/plans/${encodeURIComponent(fingerprint)}/runs`,
+    );
+    return data ?? [];
+  }
+
+  async planSample(fingerprint: string) {
+    if (!fingerprint) return null;
+    const { data } = await apiGet<string | null>(
+      `/v1/plans/${encodeURIComponent(fingerprint)}/sample`,
+    );
+    // An empty exemplar is not an exemplar: the shape was indexed with no plan
+    // text, which is not the same as a blank plan.
+    return data || null;
+  }
+
+  async stages(jobId: string) {
+    const { data } = await apiGet<SparkEventRow[]>(
+      `/v1/runs/${encodeURIComponent(jobId)}/stages`,
+    );
+    return data ?? [];
+  }
+
+  async jobConf(jobId: string) {
+    const { data } = await apiGet<JobConfRow[]>(`/v1/runs/${encodeURIComponent(jobId)}/conf`);
+    return data ?? [];
+  }
+
+  async findings(jobId: string) {
+    const { data } = await apiGet<FindingRow[]>(
+      `/v1/runs/${encodeURIComponent(jobId)}/findings`,
+    );
+    return data ?? [];
+  }
+
+  async transitions(jobId: string) {
+    const { data } = await apiGet<PlanTransitionRow[]>(
+      `/v1/runs/${encodeURIComponent(jobId)}/transitions`,
+    );
+    return data ?? [];
+  }
+
+  async fixVerification(findingId: string) {
+    const { data } = await apiGet<Record<string, unknown>>(
+      `/v1/findings/${encodeURIComponent(findingId)}/verification`,
+    );
+    return data ? toFixVerification(data) : null;
+  }
+}
+
 export async function resolveRepository(): Promise<Repository> {
   // Runtime, so a single production image can be started against fixtures,
   // pinned to ClickHouse, or left to probe — without a rebuild.
   const mode = runtimeConfig.dataSource;
   if (mode === "fixtures") return new FixtureRepository();
   if (mode === "clickhouse") return new ClickHouseRepository();
+  // Pinned to the API. NOT probed and NOT fallen back from: falling back to
+  // ClickHouse because the API refused would quietly restore the browser-side
+  // database credential this data source exists to remove.
+  if (mode === "http") return new HttpRepository();
+  // auto: prefer the API when one is configured and answering, because that is
+  // the deployment that no longer needs a database user at all.
+  if (runtimeConfig.apiUrl && (await apiPing())) return new HttpRepository();
   return (await ping()) ? new ClickHouseRepository() : new FixtureRepository();
 }
