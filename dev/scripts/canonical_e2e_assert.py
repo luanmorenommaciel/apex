@@ -78,7 +78,7 @@ def _tail_outlier_result(rows: list[dict[str, Any]]) -> dict[str, Any]:
             task_count < 100
             or sample_count < 100
             or p50 <= 0
-            or not all(math.isfinite(value) for value in (p50, maximum, sample_count))
+            or not all(math.isfinite(value) for value in (task_count, p50, maximum, sample_count))
         ):
             continue
         tail_ratio = maximum / p50

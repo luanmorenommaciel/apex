@@ -173,6 +173,24 @@ class CanonicalE2EAssertionTests(unittest.TestCase):
                 ],
             )
 
+    def test_tail_outlier_rejects_non_finite_effective_duration_values(self):
+        for field, value in (
+            ("task_count", float("inf")),
+            ("task_duration_sample_count", float("nan")),
+            ("task_duration_p50_ms", float("nan")),
+            ("task_duration_max_ms", float("inf")),
+            ("task_duration_p99_ms", float("inf")),
+        ):
+            with self.subTest(field=field):
+                overrides = {
+                    "task_count": 200,
+                    "task_duration_sample_count": 200,
+                    "task_duration_max_ms": 101,
+                }
+                overrides[field] = value
+                with self.assertRaisesRegex(MODULE.AssertionFailure, "tail_outlier_not_observed"):
+                    MODULE.evaluate("tail_outlier", [row(**overrides)])
+
     def test_tail_outlier_reports_the_strongest_qualifying_stage(self):
         result = MODULE.evaluate(
             "tail_outlier",

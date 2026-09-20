@@ -74,8 +74,9 @@ The deterministic local checks also passed:
 
 | Check | Result | What it covers |
 |---|---:|---|
-| `python3 -m unittest dev/tests/test_canonical_e2e_assert.py` | 19 passed | tail shape, retry-safe source selection, boundary and delayed-ingestion cases |
-| `uv run --project dev python -m unittest discover -s dev/tests` | 19 passed | DEV test environment compatibility |
+| `python3 -m unittest dev/tests/test_canonical_e2e_assert.py` | 20 passed | tail shape, retry-safe source selection, finite-input, boundary and delayed-ingestion cases |
+| `uv run --project dev python -m unittest discover -s dev/tests` | 20 passed | DEV test environment compatibility |
+| `cd dev && uv run --extra dev pytest -q` | 27 passed | DEV test runner coverage, including the opt-in POSIX selector and unchanged default scenario list |
 | `cd engine && uv run --extra dev pytest -q ../tests/test_tail_outlier_package.py -p no:warnings` | 3 passed | public package routing contract |
 | `bash -n dev/scripts/e2e_canonical.sh` | passed | POSIX entry-point syntax |
 | `git diff --check` | passed | whitespace integrity |

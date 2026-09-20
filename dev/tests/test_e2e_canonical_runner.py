@@ -19,3 +19,11 @@ def test_canonical_runner_never_copies_s3_values_to_arguments_or_spark_conf() ->
     )
     for value in forbidden:
         assert value not in source
+
+
+def test_posix_canonical_runner_exposes_opt_in_tail_outlier_without_changing_defaults() -> None:
+    source = (DEV / "scripts" / "e2e_canonical.sh").read_text(encoding="utf-8")
+
+    assert "REQUESTED_SCENARIOS=(skew_join spill bad_shuffle driver_oom)" in source
+    assert "skew_join|tail_outlier|spill|bad_shuffle|driver_oom" in source
+    assert "should_run tail_outlier && run_success tail_outlier tail_outlier.py off off" in source
