@@ -738,6 +738,57 @@ Docker resources or tracked worktree changes and never removes them.
 '@
 }
 
+$actionPlan = switch ($Action) {
+    'bootstrap' {
+        [PSCustomObject]@{ Handler = 'Start-Package'; Command = { Start-Package } }
+        break
+    }
+    'doctor' {
+        [PSCustomObject]@{
+            Handler = 'Assert-Prerequisites+Invoke-Doctor'
+            Command = { Assert-Prerequisites; Invoke-Doctor }
+        }
+        break
+    }
+    'smoke' {
+        [PSCustomObject]@{
+            Handler = 'Assert-Prerequisites+Invoke-ProductGate'
+            Command = { Assert-Prerequisites; Invoke-ProductGate }
+        }
+        break
+    }
+    'e2e' {
+        [PSCustomObject]@{
+            Handler = 'Assert-Prerequisites+Invoke-ProductGate-Full'
+            Command = { Assert-Prerequisites; Invoke-ProductGate -Full }
+        }
+        break
+    }
+    'tail-outlier' {
+        [PSCustomObject]@{
+            Handler = 'Assert-Prerequisites+Invoke-TailOutlierGate'
+            Command = { Assert-Prerequisites; Invoke-TailOutlierGate }
+        }
+        break
+    }
+    'pilot-clean' {
+        [PSCustomObject]@{ Handler = 'Invoke-CleanPilot'; Command = { Invoke-CleanPilot } }
+        break
+    }
+    'status' {
+        [PSCustomObject]@{ Handler = 'Show-Status'; Command = { Show-Status } }
+        break
+    }
+    'down' {
+        [PSCustomObject]@{ Handler = 'Stop-Package'; Command = { Stop-Package } }
+        break
+    }
+    'help' {
+        [PSCustomObject]@{ Handler = 'Show-Help'; Command = { Show-Help } }
+        break
+    }
+}
+
 if ($DryRun) {
     $requiredFiles = @(
         'infra/docker-compose.yml',
@@ -754,19 +805,9 @@ if ($DryRun) {
             throw "Package input missing: $relativePath"
         }
     }
-    Write-Host "APEX_DRY_RUN=passed action=$Action mutations=0 external_calls=0"
+    Write-Host "APEX_DRY_RUN=passed action=$Action handler=$($actionPlan.Handler) mutations=0 external_calls=0"
     exit 0
 }
 
 Set-Location $script:Root
-switch ($Action) {
-    'bootstrap' { Start-Package }
-    'doctor' { Assert-Prerequisites; Invoke-Doctor }
-    'smoke' { Assert-Prerequisites; Invoke-ProductGate }
-    'e2e' { Assert-Prerequisites; Invoke-ProductGate -Full }
-    'tail-outlier' { Assert-Prerequisites; Invoke-TailOutlierGate }
-    'pilot-clean' { Invoke-CleanPilot }
-    'status' { Show-Status }
-    'down' { Stop-Package }
-    'help' { Show-Help }
-}
+& $actionPlan.Command
