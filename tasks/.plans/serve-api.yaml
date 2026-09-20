@@ -216,12 +216,12 @@ units:
     agent: any
     execution_backend: any
     depends_on: [T-20260920-api-skeleton, T-20260920-readstore-console-queries]
-    touches_paths: []
+    touches_paths: [serve/src/apex_mcp/ch.py, serve/tests/test_ch.py, serve/tests/test_api_app.py]
     creates_paths: [serve/src/apex_api/routes/resources.py, serve/tests/test_api_resources.py]
     source_note: front/src/data/repository.ts
     why: The six data screens need rows, not verdicts. Without these routes the console keeps its browser-side database credential regardless of what the diagnostic tier offers.
     goal: A route for each of the twelve Repository methods, returning the same row shapes the console renders today.
-    context: front/src/data/repository.ts is the contract - twelve methods whose return types the screens already consume. The response shapes must match those types, because the acceptance test on the other side is that no screen changes.
+    context: front/src/data/repository.ts is the contract - ELEVEN methods plus a `kind` property, whose return types the screens already consume. The response shapes must match those types, because the acceptance test on the other side is that no screen changes. This task also carries two query ports the readstore task missed: `listRuns` and `fixVerification` were mapped to ReadStore.runs() and ReadStore.verifications() by NAME, but those return different projections - runs() has no task_time_ms or finding_count, and verifications() requires a job_id and derives none of rule 2's columns. RUN_LIST and FIX_VERIFICATIONS therefore land in ch.py here, which is why this task writes it.
     behaviors:
       - id: B-1
         given: each of the twelve Repository methods
@@ -243,6 +243,10 @@ units:
         given: a list route
         when: it is called without bounds
         then: the same MAX_RUNS-style truncation ReadStore already applies is applied and reported
+      - id: B-6
+        given: the console's RUN_LIST and FIX_VERIFICATIONS projections
+        when: ReadStore.run_list and ReadStore.fix_verification are called
+        then: they return the console's RunSummary and FixVerificationRow shapes, and fix_verification is keyed on finding_id alone rather than requiring a job_id
     evals:
       - id: eval_1
         description: every Repository method has a route and the row shapes match
@@ -262,10 +266,18 @@ units:
         verifies: [B-5]
         terminal: true
         expected_duration_sec: 60
+      - id: eval_4
+        description: the two missed console projections are ported faithfully
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_run_list_returns_the_console_rollup" "tests/test_ch.py::test_fix_verification_keys_on_finding_id_alone" )
+        verifies: [B-6]
+        terminal: true
+        expected_duration_sec: 60
     anti_patterns:
       - Returning 200 with an empty body for an unknown job; the console renders that as a real but empty run.
       - Inventing a new row shape and making the console adapt, which turns a swap into a rewrite.
       - Accepting raw SQL from the client on any route.
+      - Serving listRuns from ReadStore.runs(); it is a different projection and the console cannot render it.
+      - Leaving the skeleton's admission test asserting 404 on /v1/runs; this task gives that path a handler, so admission must be proven against a path that will never be routed.
     do_not_touch:
       - front/src/
 

@@ -9,7 +9,7 @@ budget_iterations: 15
 agent: any
 parent: (none)
 depends_on: [T-20260920-api-skeleton, T-20260920-readstore-console-queries]
-touches_paths: []
+touches_paths: [serve/src/apex_mcp/ch.py, serve/tests/test_ch.py, serve/tests/test_api_app.py]
 creates_paths: [serve/src/apex_api/routes/resources.py, serve/tests/test_api_resources.py]
 source_note: "front/src/data/repository.ts"
 created: "2026-09-20T00:00:00Z"
@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-09-20T21:21:43Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v2:5153084e:c6eef77d32f1997fd161abe8a17ea3a4298b4761970f6fdc7374d7a713590bf3
 ---
 
 # Serve the console's row-level data over /v1
@@ -42,7 +43,7 @@ A route for each of the twelve Repository methods, returning the same row shapes
 
 ## Context
 
-front/src/data/repository.ts is the contract - twelve methods whose return types the screens already consume. The response shapes must match those types, because the acceptance test on the other side is that no screen changes.
+front/src/data/repository.ts is the contract - ELEVEN methods plus a `kind` property, whose return types the screens already consume. The response shapes must match those types, because the acceptance test on the other side is that no screen changes. This task also carries two query ports the readstore task missed: `listRuns` and `fixVerification` were mapped to ReadStore.runs() and ReadStore.verifications() by NAME, but those return different projections - runs() has no task_time_ms or finding_count, and verifications() requires a job_id and derives none of rule 2's columns. RUN_LIST and FIX_VERIFICATIONS therefore land in ch.py here, which is why this task writes it.
 
 ## Behavior
 
@@ -51,6 +52,7 @@ front/src/data/repository.ts is the contract - twelve methods whose return types
 - **B-3** — GIVEN an unknown job_id WHEN the single-run route is called THEN the response is 404 and never a zero-filled row
 - **B-4** — GIVEN the contract v0.3 memory tables are absent WHEN the plan-shape routes are called THEN the response says the tables are absent rather than returning an empty list
 - **B-5** — GIVEN a list route WHEN it is called without bounds THEN the same MAX_RUNS-style truncation ReadStore already applies is applied and reported
+- **B-6** — GIVEN the console's RUN_LIST and FIX_VERIFICATIONS projections WHEN ReadStore.run_list and ReadStore.fix_verification are called THEN they return the console's RunSummary and FixVerificationRow shapes, and fix_verification is keyed on finding_id alone rather than requiring a job_id
 
 ## Success Criteria
 
@@ -68,6 +70,11 @@ eval_2() {
 # eval_3: unbounded listings are truncated and say so
 eval_3() {
   ( cd serve && uv run --extra dev pytest "tests/test_api_resources.py::test_unbounded_listing_is_truncated_and_reported" )
+}
+
+# eval_4: the two missed console projections are ported faithfully
+eval_4() {
+  ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_run_list_returns_the_console_rollup" "tests/test_ch.py::test_fix_verification_keys_on_finding_id_alone" )
 }
 
 ```
@@ -97,6 +104,13 @@ success_criteria:
     verifies: [B-5]
     terminal: true
     expected_duration_sec: 60
+  - id: eval_4
+    description: "the two missed console projections are ported faithfully"
+    runnable: bash
+    check_type: deterministic
+    verifies: [B-6]
+    terminal: true
+    expected_duration_sec: 60
 retry_policy:
   max_iterations: 15
   circuit_breaker_no_progress: 3
@@ -117,7 +131,7 @@ agent_contract:
 ## Exit Check
 
 ```bash
-eval_1 && eval_2 && eval_3
+eval_1 && eval_2 && eval_3 && eval_4
 ```
 
 ## Rollback Plan
@@ -133,6 +147,8 @@ Revert only the declared write surface and park the task with context.
 - Returning 200 with an empty body for an unknown job; the console renders that as a real but empty run.
 - Inventing a new row shape and making the console adapt, which turns a swap into a rewrite.
 - Accepting raw SQL from the client on any route.
+- Serving listRuns from ReadStore.runs(); it is a different projection and the console cannot render it.
+- Leaving the skeleton's admission test asserting 404 on /v1/runs; this task gives that path a handler, so admission must be proven against a path that will never be routed.
 
 ## Do-Not-Touch
 
