@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-09-20T17:29:28Z
+accepted: true
+accepted_by: sidymar
+accepted_at: 2026-09-20T17:32:20Z
+signed_off_sig: hmac-sha256-v2:5153084e:ac71fec574f23931e7c22d73fb86e2ee727570da1192ca85b06e45a90e53ed70
 ---
 
 # Expose the eight MCP tools as /v1 diagnostic routes
