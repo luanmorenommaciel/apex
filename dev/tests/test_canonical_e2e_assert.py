@@ -173,8 +173,9 @@ class CanonicalE2EAssertionTests(unittest.TestCase):
                 ],
             )
 
-    def test_tail_outlier_rejects_non_finite_effective_duration_values(self):
+    def test_tail_outlier_rejects_non_finite_required_values(self):
         for field, value in (
+            ("stage_id", float("inf")),
             ("task_count", float("inf")),
             ("task_duration_sample_count", float("nan")),
             ("task_duration_p50_ms", float("nan")),

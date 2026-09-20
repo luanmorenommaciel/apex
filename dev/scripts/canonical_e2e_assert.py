@@ -69,6 +69,7 @@ def _effective_duration_population(row: dict[str, Any]) -> dict[str, float | str
 def _tail_outlier_result(rows: list[dict[str, Any]]) -> dict[str, Any]:
     candidates: list[dict[str, float | int | str]] = []
     for row in rows:
+        stage_id = _number(row, "stage_id")
         task_count = _number(row, "task_count")
         duration = _effective_duration_population(row)
         p50 = float(duration["p50"])
@@ -78,7 +79,9 @@ def _tail_outlier_result(rows: list[dict[str, Any]]) -> dict[str, Any]:
             task_count < 100
             or sample_count < 100
             or p50 <= 0
-            or not all(math.isfinite(value) for value in (task_count, p50, maximum, sample_count))
+            or not all(
+                math.isfinite(value) for value in (stage_id, task_count, p50, maximum, sample_count)
+            )
         ):
             continue
         tail_ratio = maximum / p50
@@ -89,7 +92,7 @@ def _tail_outlier_result(rows: list[dict[str, Any]]) -> dict[str, Any]:
             continue
         candidates.append(
             {
-                "stage_id": int(_number(row, "stage_id")),
+                "stage_id": int(stage_id),
                 "task_count": int(task_count),
                 "sample_count": int(sample_count),
                 "duration_source": str(duration["source"]),
