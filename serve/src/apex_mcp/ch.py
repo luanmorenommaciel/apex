@@ -327,13 +327,21 @@ LIMIT {limit:UInt32}
 # outcome data — its own stage_count and finding_count exclude unfingerprinted
 # stages and stage-less findings, so both would under-report the run, and its
 # wall_clock_ms is a per-shape timestamp span rather than a job duration.
-RUN_ONE_SQL = """
+def _run_rollup_sql(where: str, tail: str) -> str:
+    """The console's run rollup, parameterised by filter and ordering.
+
+    ``where`` and ``tail`` are LITERALS from this module, never a caller's
+    value — every user-supplied value in the result is still bound. Sharing
+    one body is what stops the single-run and list forms from drifting into
+    two different answers to "what is this run".
+    """
+    return f"""
 WITH
 base AS (
   SELECT job_id, argMax(app_name, ts) AS app_name,
          uniqExact(stage_id) AS stage_count, min(ts) AS started_at
   FROM apex.spark_events
-  WHERE job_id = {job_id:String}
+  {where}
   GROUP BY job_id
 ),
 f AS (
@@ -369,6 +377,53 @@ SELECT
 FROM base b
 LEFT JOIN f        ON f.job_id = b.job_id
 LEFT JOIN shapes s ON s.job_id = b.job_id
+{tail}
+"""
+
+
+RUN_ONE_SQL = _run_rollup_sql(
+    "WHERE job_id = {job_id:String}", "LIMIT 1"
+)
+RUN_LIST_SQL = _run_rollup_sql(
+    "", "ORDER BY b.started_at DESC LIMIT {limit:UInt32}"
+)
+
+# Rule 2 lives in this projection, not in the table. A delta inside the
+# measured floor is UNRESOLVABLE, which is not the same as zero, so
+# runtime_verdict becomes 'unresolved' and never a direction.
+# predicted_saving_pct flips the sign of the stored column, which is signed
+# with negative meaning faster. mechanism_confirmed has no source at all and
+# stays NULL: deriving it from the safety verdict would collapse rule 4's two
+# independent verdicts into one.
+FIX_VERIFICATION_SQL = """
+WITH slots AS (
+  SELECT job_id,
+         max(conf_executor_instances) * max(conf_executor_cores) AS cluster_slots
+  FROM apex.run_outcomes FINAL
+  GROUP BY job_id
+)
+SELECT
+  v.verification_id AS fix_id,
+  v.finding_id      AS finding_id,
+  v.job_id          AS job_id,
+  CAST(NULL AS Nullable(UInt8))       AS mechanism_confirmed,
+  toUInt8(v.measured_delta_pct IS NOT NULL
+          AND v.noise_floor_pct IS NOT NULL
+          AND abs(v.measured_delta_pct) > v.noise_floor_pct) AS runtime_certified,
+  multiIf(v.measured_delta_pct IS NULL
+            OR v.noise_floor_pct IS NULL
+            OR abs(v.measured_delta_pct) <= v.noise_floor_pct, 'unresolved',
+          v.measured_delta_pct < 0, 'improved',
+          'regressed')                AS runtime_verdict,
+  -v.predicted_delta_pct              AS predicted_saving_pct,
+  v.noise_floor_pct                   AS noise_floor_pct,
+  v.replay_reps                       AS replay_count,
+  s.cluster_slots                     AS cluster_slots,
+  v.proposed_config                   AS proposed_diff
+FROM apex.fix_verifications AS v
+LEFT JOIN slots s ON s.job_id = v.job_id
+WHERE v.finding_id = {finding_id:String}
+ORDER BY v.verified_at DESC
 LIMIT 1
 """
 
@@ -840,6 +895,44 @@ class ReadStore:
         return next(
             iter(self._query(RUN_ONE_SQL, {"job_id": _require_job_id(job_id)})), None
         )
+
+    def run_list(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Recent runs in the CONSOLE's rollup shape, newest first.
+
+        Not ``runs()``. That one projects app_id, first_ts, last_ts,
+        spill_disk_bytes and worst_p99_ms for the MCP's RunSummary; the console
+        needs task_time_ms, finding_count and the shape columns, which runs()
+        does not carry. Same name, different question.
+
+        The limit is clamped rather than trusted, and the caller is told when
+        the clamp bit so a truncated page is never read as a complete one.
+        """
+        return self._query(
+            RUN_LIST_SQL, {"limit": max(1, min(int(limit), self.MAX_RUNS))}
+        )
+
+    def fix_verification(self, finding_id: str) -> dict[str, Any] | None:
+        """The verify lane's row for ONE finding, keyed on the finding alone.
+
+        Not ``verifications()``: that requires a job_id and reports the stored
+        columns, while this derives rule 2's verdict from the measured delta
+        against the measured floor. Both call sites in the console have only a
+        finding_id in hand.
+
+        None when the additive table is absent or holds no row for this
+        finding — the screen states the emptiness and names the lane that owes
+        it, rather than showing a verdict nobody reached.
+        """
+        finding_id = _require_optional_id(finding_id, "finding_id")
+        if not finding_id:
+            raise ApexStoreError("finding_id_required: pass a non-empty finding_id.")
+        if not self.table_exists("fix_verifications"):
+            return None
+        # cluster_slots comes from run_outcomes, so this projection needs the
+        # v0.3 tables. The console's own query joins them too — on a cluster
+        # without them it would fail rather than quietly drop the column.
+        self._require_memory()
+        return next(iter(self._query(FIX_VERIFICATION_SQL, {"finding_id": finding_id})), None)
 
     def job_conf(self, job_id: str) -> list[dict[str, Any]]:
         """This job's configuration, one row per key.

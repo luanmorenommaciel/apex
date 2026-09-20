@@ -31,6 +31,12 @@ DSN = "clickhouse://apex:sup3rs3cr3t@db.internal.example:8123/apex"
 
 API_PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "src" / "apex_api"
 
+# A path no task will ever route. Admission is proven by reaching the router at
+# all, so the probe must not be a path a later task might implement — an
+# earlier version of this test used /v1/runs and started failing the moment
+# the resource tier gave it a handler.
+UNROUTED = "/v1/__never-a-route__"
+
 
 class HealthClient:
     """Answers the health query with a known row."""
@@ -141,15 +147,16 @@ def test_missing_token_is_refused_without_querying():
     client = HealthClient()
     response = TestClient(
         create_app(store=ReadStore(client), settings=SETTINGS)
-    ).get("/v1/runs")
+    ).get(UNROUTED)
     assert response.status_code == 401
-    # Refused ahead of routing, so nothing reached the store.
+    # Refused ahead of routing, so nothing reached the store — and the path
+    # does not even exist, which an unauthenticated caller cannot learn.
     assert client.calls == []
 
 
 def test_unknown_token_is_refused():
     response = build(HealthClient()).get(
-        "/v1/runs", headers={"Authorization": "Bearer not-the-token"}
+        UNROUTED, headers={"Authorization": "Bearer not-the-token"}
     )
     assert response.status_code == 401
 
@@ -157,15 +164,15 @@ def test_unknown_token_is_refused():
 def test_configured_token_is_accepted():
     """A good token gets past admission, so routing decides the answer.
 
-    /v1/runs has no handler in this task, so 404 is the proof that the request
-    was admitted — an unauthenticated one never gets far enough to 404.
+    Nothing serves UNROUTED, so 404 is the proof that the request was
+    admitted — an unauthenticated one never gets far enough to 404.
     """
-    unauthenticated = build(HealthClient()).get("/v1/runs")
-    authenticated = build(HealthClient()).get("/v1/runs", headers=AUTH)
+    unauthenticated = build(HealthClient()).get(UNROUTED)
+    authenticated = build(HealthClient()).get(UNROUTED, headers=AUTH)
     assert unauthenticated.status_code == 401
     assert authenticated.status_code == 404
-    # Same body for a bad token on a real path and on a fake one: no oracle.
-    assert unauthenticated.json() == build(HealthClient()).get("/v1/health/nope").json()
+    # Same body for a missing token on a real path and on a fake one: no oracle.
+    assert unauthenticated.json() == build(HealthClient()).get("/v1/runs").json()
 
 
 def test_startup_refuses_when_no_token_is_configured():

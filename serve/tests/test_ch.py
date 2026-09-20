@@ -872,3 +872,72 @@ def test_plan_shapes_reports_absent_memory_tables():
         assert str(caught.value).startswith("memory_unavailable")
     # The reads that do not depend on v0.3 still work on the same deployment.
     assert ReadStore(_ConsoleClient(tables=(), conf_rows=[])).job_conf("j") == []
+
+
+def test_run_list_returns_the_console_rollup():
+    """run_list is NOT runs(): same subject, different projection.
+
+    runs() answers the MCP's RunSummary — app_id, first/last ts, spill,
+    worst p99. The console needs task_time_ms, finding_count and the shape
+    columns, which runs() does not carry. Serving one as the other would give
+    the console a payload it cannot render.
+    """
+    row = {
+        "job_id": "j", "app_name": "nightly-rollup", "stage_count": 34,
+        "started_at": "2026-09-20 10:00:00", "finding_count": 3,
+        "has_critical": 1, "task_time_ms": 91000, "plan_fingerprint": "a" * 64,
+        "shape_count": 2, "shaped_stage_count": 30, "config_source": "observed",
+        "conf_executor_instances": 8, "conf_shuffle_partitions": 200,
+    }
+    client = _ConsoleClient(run_rows=[row])
+    assert ReadStore(client).run_list(limit=10) == [row]
+
+    sql, parameters = client.calls[-1]
+    for column in ("task_time_ms", "finding_count", "shape_count", "config_source"):
+        assert column in sql, f"the console needs {column} and runs() has none"
+    assert parameters["limit"] == 10
+    # The limit is clamped, not trusted — a caller cannot ask for the table.
+    ReadStore(client).run_list(limit=10_000)
+    assert client.calls[-1][1]["limit"] == ReadStore.MAX_RUNS
+    # And the two forms share one body, so they cannot drift.
+    assert "{job_id:String}" not in ch.RUN_LIST_SQL
+    assert "{job_id:String}" in ch.RUN_ONE_SQL
+
+
+def test_fix_verification_keys_on_finding_id_alone():
+    """Both console call sites hold a finding_id and no job_id."""
+    row = {
+        "fix_id": "v1", "finding_id": "f-7c41e9", "job_id": "j",
+        "mechanism_confirmed": None, "runtime_certified": 0,
+        "runtime_verdict": "unresolved", "predicted_saving_pct": 11.0,
+        "noise_floor_pct": 17.4, "replay_count": 5, "cluster_slots": 32,
+        "proposed_diff": "- 200\n+ 800",
+    }
+
+    class _VerifyClient(_ConsoleClient):
+        def query(self, query: str, parameters: dict | None = None):
+            self.calls.append((query, parameters or {}))
+            if "system.tables" in query:
+                rows = [{"name": n} for n in self.tables]
+            elif "system.columns" in query:
+                rows = [{"name": "verification_id"}]
+            elif "runtime_verdict" in query:
+                rows = self.run_rows
+            else:
+                rows = []
+            return type("R", (), {"named_results": lambda _s: list(rows)})()
+
+    client = _VerifyClient(run_rows=[row])
+    assert ReadStore(client).fix_verification("f-7c41e9") == row
+    sql, parameters = client.calls[-1]
+    assert "{finding_id:String}" in sql
+    assert "{job_id:String}" not in sql, "the console has no job_id to give"
+    assert parameters["finding_id"] == "f-7c41e9"
+    # Rule 2 is computed in the projection, not read from a column.
+    assert "runtime_verdict" in sql and "noise_floor_pct" in sql
+
+    # No row for the finding is None, not a fabricated verdict.
+    assert ReadStore(_VerifyClient(run_rows=[])).fix_verification("f-nope") is None
+    # An empty finding_id is refused rather than silently matching everything.
+    with pytest.raises(ApexStoreError):
+        ReadStore(_VerifyClient()).fix_verification("")
