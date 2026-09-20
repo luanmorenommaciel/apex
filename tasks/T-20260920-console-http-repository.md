@@ -9,7 +9,7 @@ budget_iterations: 15
 agent: any
 parent: (none)
 depends_on: [T-20260920-api-resource-routes]
-touches_paths: [front/src/data/repository.ts, front/src/data/runtimeConfig.ts, front/.env.example]
+touches_paths: [front/src/data/repository.ts, front/src/data/runtimeConfig.ts, front/src/data/env.d.ts, front/.env.example]
 creates_paths: [front/src/data/http.ts, front/src/data/httpRepository.test.ts]
 source_note: "front/src/data/clickhouse.ts"
 created: "2026-09-20T00:00:00Z"
@@ -24,12 +24,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: sidymar
+signed_off_at: 2026-09-20T21:24:58Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v2:5153084e:8e267b884a58deb9286e3d5f3dfd22b539edfa79143ffa7a91f1145ab1ecbb7d
 ---
 
 # Give the console an http data source

@@ -288,7 +288,7 @@ units:
     agent: any
     execution_backend: any
     depends_on: [T-20260920-api-resource-routes]
-    touches_paths: [front/src/data/repository.ts, front/src/data/runtimeConfig.ts, front/.env.example]
+    touches_paths: [front/src/data/repository.ts, front/src/data/runtimeConfig.ts, front/src/data/env.d.ts, front/.env.example]
     creates_paths: [front/src/data/http.ts, front/src/data/httpRepository.test.ts]
     source_note: front/src/data/clickhouse.ts
     why: clickhouse.ts already names the exit - swap ClickHouseRepository for an HTTP client against serve/, the Repository interface is the seam. This takes that exit without a big-bang cutover.
