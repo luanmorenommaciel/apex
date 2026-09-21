@@ -104,6 +104,39 @@ emitted one `TAIL_OUTLIER` result through `tail_outlier_watcher`, with zero LLM
 calls. The temporary containers and network were removed immediately after the
 proof.
 
+### Public package-wrapper proof
+
+On 2026-09-21, the public PowerShell package path was run on macOS in a
+dedicated Colima daemon against the exact candidate content later committed as
+`754f45e` and `5b41c77`. The package used its configured Spark 4.0.1 stack and
+resolved a real `python3` application before Docker or Spark work. The two
+ignored `dev/secrets/apex_s3_*` bridge files were absent; the package overlay
+instead consumed the generated `.apex/secrets/s3_*` paths exported by the
+wrapper.
+
+The commands ran serially and returned:
+
+```text
+bootstrap    exit 0  APEX_DOCTOR=ready spark=4.0.1 schema=3/3 secrets=local
+doctor       exit 0  APEX_DOCTOR=ready spark=4.0.1 schema=3/3 secrets=local
+tail-outlier exit 0  APEX_TAIL_OUTLIER_GATE=passed job_id=app-20260921024421-0001 llm_calls=0
+```
+
+The canonical scenario generated 10,000,000 rows, reached ClickHouse, and the
+Engine emitted `TAIL_OUTLIER` through `tail_outlier_watcher`. This proves the
+public wrapper, its Spark 4.0.1 preconditions, the macOS Python preflight, and
+the local Spark-to-Engine path for this candidate.
+
+This was not a fresh registry-backed cold start. Docker Hub would not serve the
+two immutable MinIO references, so their exact linux/arm64 identities were
+verified in an existing Docker Desktop cache, transferred to the dedicated
+daemon, and exposed to this process through local tags. The daemon also held
+partial APEX resources from the earlier fail-closed bootstrap attempts; the
+successful rerun recreated Spark services but reused the already-running
+MinIO service. No image pin or repository configuration was weakened. The run
+therefore does not prove upstream registry availability or a cold bootstrap
+from an empty daemon.
+
 The deterministic local checks also passed:
 
 | Check | Result | What it covers |
@@ -112,6 +145,7 @@ The deterministic local checks also passed:
 | `uv run --project dev python -m unittest discover -s dev/tests` | 20 passed | DEV test environment compatibility |
 | `cd dev && uv run --extra dev pytest -q` | 27 passed | DEV test runner coverage, including the opt-in POSIX selector and unchanged default scenario list |
 | `cd engine && uv run --extra dev pytest -q ../tests/test_tail_outlier_package.py -p no:warnings` | 3 passed | public package routing contract |
+| `uv run --offline --frozen --project dev --extra dev pytest dev/tests/test_e2e_canonical_runner.py` | 5 passed | Python preflight and package-overlay secret source contract |
 | `bash -n dev/scripts/e2e_canonical.sh` | passed | POSIX entry-point syntax |
 | `git diff --check` | passed | whitespace integrity |
 
@@ -122,9 +156,8 @@ following gates.
 
 | Required next check | Why it is still open | Safe completion condition |
 |---|---|---|
-| Public package-wrapper run | The isolated proof ran the core route directly, not `scripts/apex.ps1`, and on a cached Spark 4.1.2 image. The wrapper is gated on the configured Spark version (currently 4.0.1), so that proof does **not** validate the package wrapper or the 4.0.1 stack. The existing Apex Docker environment was preserved rather than being reused or mutated. | In a clean checkout, run `bootstrap` to completion, then `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/apex.ps1 tail-outlier`, and retain its fail-closed output. |
-| Exact current-image rebuild | Docker Hub metadata retrieval timed out before the exact image could be rebuilt. The proof used a cached Spark 4.1.2 image rather than the package's configured Spark version; the PR does not change the JAR, while the branch workload, assertion, and Engine were current. | Rebuild the canonical image when the registry is reachable, then repeat the public package-wrapper run. |
-| Python preflight on a real host | The PowerShell canonical runner now resolves Python 3 before Docker work. This is covered only by source-level tests and a resolver check against a controlled `PATH`; it has not run inside a real Windows or macOS gate. | Include it in the public package-wrapper run above on each supported host. |
+| Fresh registry-backed cold start | The public wrapper passed on the configured Spark 4.0.1 stack, but MinIO came from an identity-verified local cache and the daemon retained partial resources from earlier fail-closed attempts. | From an empty daemon with the immutable MinIO references available from an authoritative registry, run `bootstrap`, `doctor`, and `tail-outlier` serially and retain the markers. |
+| Python preflight on Windows | The resolver ran successfully on macOS and is covered by source-level tests for Windows ordering, but it has not run on a real Windows host. | Include the package gate in a supported Windows-host validation when one is available. |
 | Remote CI | GitHub Actions jobs did not receive runners or execute steps because the repository account is blocked by billing. This is external to the code change. | After billing is resolved, rerun CI and require real runner assignment, steps, and green results. |
 | Human review and merge | Local proof and automated tests do not replace an independent maintainer review. | Request review after the preceding evidence is available; merge only under the repository's normal policy. |
 

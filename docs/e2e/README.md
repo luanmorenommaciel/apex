@@ -46,8 +46,9 @@ merely a stage row or a high p99. The isolated local core-path proof, completed
 checks, remaining gates, and reasons are recorded in
 [Tail-outlier runtime gate — delivery record](TAIL_OUTLIER_RUNTIME_GATE.md).
 
-That record does **not** claim a public package-wrapper run, remote CI, or
-deployment. Those checks remain separate release evidence.
+That record now includes a public package-wrapper run on macOS against the
+configured Spark 4.0.1 stack. It does **not** claim a fresh registry-backed
+cold start, remote CI, or deployment; those remain separate release evidence.
 
 On a clean checkout, run `bootstrap` first: the public `tail-outlier` command
 only validates an already-bootstrapped package and refuses to run without it.
