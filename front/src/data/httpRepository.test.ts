@@ -141,6 +141,28 @@ describe("the interface", () => {
   });
 });
 
+describe("same-origin", () => {
+  it("calls /v1 relative when no apiUrl is configured", async () => {
+    // The ClickHouse path solved this years ago: proxy in dev and in nginx, so
+    // the browser stays on one origin and the upstream needs no CORS header.
+    // An absolute URL here would fail preflight in a real browser — which the
+    // stubbed fetch in every other test cannot show.
+    config.apiUrl = "";
+    stubFetch(() => respond(null));
+    await new HttpRepository().listRuns(5);
+    expect(calls[0].url).toBe("/v1/runs?limit=5");
+    expect(calls[0].url.startsWith("http")).toBe(false);
+  });
+
+  it("uses the absolute base when an apiUrl is configured, same-origin or not", async () => {
+    config.apiUrl = "http://api.test/";
+    stubFetch(() => respond(null));
+    await new HttpRepository().planShapes();
+    // The trailing slash is stripped rather than doubled into //v1.
+    expect(calls[0].url).toBe("http://api.test/v1/plans");
+  });
+});
+
 describe("failure", () => {
   it("surfaces a 401 instead of falling back to ClickHouse", async () => {
     stubFetch(() => respond({ detail: "unauthorized" }, { status: 401 }));

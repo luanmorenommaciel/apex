@@ -50,6 +50,15 @@ esc() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
   if [ "${DATA_SOURCE+set}" = set ]; then
     printf '  dataSource: "%s",\n' "$(esc "$DATA_SOURCE")"
   fi
+  # Only for DATA_SOURCE=http. Leave APEX_API_URL unset to call /v1 relative,
+  # which nginx forwards to APEX_API_UPSTREAM and keeps the browser on one
+  # origin — the same arrangement /clickhouse already uses.
+  if [ "${APEX_API_URL+set}" = set ]; then
+    printf '  apiUrl: "%s",\n' "$(esc "$APEX_API_URL")"
+  fi
+  if [ "${APEX_API_TOKEN+set}" = set ]; then
+    printf '  apiToken: "%s",\n' "$(esc "$APEX_API_TOKEN")"
+  fi
   echo "};"
 } > "$tmp"
 mv "$tmp" "$out"

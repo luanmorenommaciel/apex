@@ -162,20 +162,22 @@ VITE_APEX_API_TOKEN=local-dev-token-a1b2c3 \
 npm run dev
 ```
 
-**Not yet exercised.** The console's HTTP path is covered by unit tests
-against a stubbed `fetch`; nobody has driven the six data screens against a
-running API. Treat this block as the intended invocation, not a verified one.
+`VITE_APEX_API_URL` is the **proxy target**, not the address the browser calls.
+Leave the console's own `apiUrl` unset and it requests `/v1` relative; Vite
+forwards it here, nginx forwards it in the image. That keeps the browser on one
+origin, so apex-api needs no CORS header — the same arrangement `/clickhouse`
+has always used. Setting `apiUrl` to an absolute address makes the browser call
+the API cross-origin, which then **does** require CORS on the API; that is not
+configured, so leave it unset unless you add it.
 
-**Production is not wired yet.** `front/docker-entrypoint.d/30-apex-console-config.sh`
-writes only `CLICKHOUSE_UPSTREAM`, `CLICKHOUSE_DB`, `CLICKHOUSE_USER`,
-`CLICKHOUSE_PASSWORD` and `DATA_SOURCE` into `/config.js`. It does not write
-`apiUrl` or `apiToken`, so a production console container cannot be pointed at
-the API even with `DATA_SOURCE=http` — `runtimeConfig` would read both as empty
-and every request would go to a relative URL with no token. The dev-server
-invocation above works because Vite supplies the `VITE_*` values instead.
+In a container:
 
-Closing this needs two keys added to that entrypoint script. Until then, the
-http data source is a development and testing path only.
+| Variable | Purpose |
+|---|---|
+| `DATA_SOURCE=http` | select the API path |
+| `APEX_API_UPSTREAM` | where nginx forwards `/v1` (defaults to an unroutable address, so a ClickHouse-mode image still boots) |
+| `APEX_API_TOKEN` | the bearer token, written into `/config.js` |
+| `APEX_API_URL` | only for a deliberate cross-origin call; normally unset |
 
 ---
 
@@ -215,9 +217,6 @@ empty store.
   `0`, so `ifNull(…, -1)` never fires. The console then renders a measured
   zero for a number nobody measured. Pre-existing in the console's SQL and
   carried into `ch.py` by the port; not yet fixed.
-- **The console's production image cannot use the API.** Its entrypoint never
-  writes `apiUrl` / `apiToken` into `/config.js` (see §5), so `DATA_SOURCE=http`
-  is a dev-only path until that script is updated.
 - The MCP server still reads ClickHouse directly. Routing it through this API
   was planned and dropped: its tools need store primitives (`search`,
   `similar_plans`, `prior_outcomes`, …) that no route exposes.

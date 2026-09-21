@@ -20,6 +20,14 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: (p) => p.replace(/^\/clickhouse/, ""),
         },
+        // Same reason, same shape: with no VITE_APEX_API_URL the console calls
+        // /v1 relative and this forwards it, so the API needs no CORS header
+        // and the browser never leaves its origin. No rewrite — the API serves
+        // /v1 itself, unlike ClickHouse which serves at the root.
+        "/v1": {
+          target: env.VITE_APEX_API_URL || "http://127.0.0.1:8099",
+          changeOrigin: true,
+        },
       },
     },
   };
