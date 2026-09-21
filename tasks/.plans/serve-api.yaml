@@ -391,3 +391,65 @@ units:
       - Gating /openapi.json on a token so the docs cannot be read by the consumer who needs them.
     do_not_touch:
       - serve/src/apex_api/auth.py
+
+  - id: T-20260921-console-same-origin-api
+    title: Reach the API same-origin, the way the console reaches ClickHouse
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260920-console-http-repository]
+    touches_paths: [front/vite.config.ts, front/nginx.conf, front/Dockerfile, front/docker-entrypoint.d/30-apex-console-config.sh, front/src/data/httpRepository.test.ts, front/.env.example, serve/RUNBOOK.md]
+    creates_paths: []
+    source_note: front/src/data/clickhouse.ts
+    why: HttpRepository calls an ABSOLUTE url and the API sends no CORS header, so in a real browser every request fails preflight. The console's tests stub fetch, which is why nothing caught it. The ClickHouse path already solved this - "same-origin is achieved with a proxy (Vite in dev, nginx in prod), so ClickHouse itself never needs add_http_cors_header" - and the API deserves the same treatment rather than a second, weaker answer.
+    goal: With no apiUrl configured the console calls /v1 same-origin, and both proxies forward it; the container can be pointed at an API without a rebuild.
+    context: http.ts already produces a relative /v1 path when apiUrl is empty, so the client half is done - what is missing is the two proxies and the two config keys. Leaving apiUrl set remains supported for a direct cross-origin call, which then DOES need CORS on the API and is documented as such rather than silently broken. The entrypoint must keep emitting no key for an unset variable, because an emitted empty string is a real value the bundle would take over its own default. APEX_API_UPSTREAM is defaulted in the DOCKERFILE, not the entrypoint: the image's own 20-envsubst-on-templates.sh runs before 30-apex-console-config.sh, so a default exported there would arrive too late, and NGINX_ENVSUBST_FILTER must be widened or the placeholder survives into the served config and nginx refuses to start.
+    behaviors:
+      - id: B-1
+        given: no apiUrl configured
+        when: any HttpRepository method is called
+        then: the request path is relative and begins /v1, so the browser stays same-origin
+      - id: B-2
+        given: an apiUrl is configured
+        when: any HttpRepository method is called
+        then: the absolute url is used, unchanged from today
+      - id: B-3
+        given: the dev server
+        when: its config is read
+        then: it proxies /v1 to the API the same way it already proxies /clickhouse
+      - id: B-4
+        given: APEX_API_URL and APEX_API_TOKEN are set in the container
+        when: the entrypoint runs
+        then: config.js carries apiUrl and apiToken, and carries neither key when they are unset
+      - id: B-5
+        given: nginx
+        when: its config is read
+        then: it forwards /v1 to an APEX_API_UPSTREAM, and still refuses to start with an unset CLICKHOUSE_UPSTREAM only when that path is in use
+    evals:
+      - id: eval_1
+        description: the relative and absolute bases both behave
+        command: ( cd front && npm run test -- --run src/data/httpRepository.test.ts -t "same-origin" )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_2
+        description: both proxies declare the route
+        command: ( cd front && grep -qE '"/v1"[[:space:]]*:' vite.config.ts && grep -q 'APEX_API_UPSTREAM' nginx.conf && grep -q 'APEX_API_UPSTREAM' Dockerfile )
+        verifies: [B-3, B-5]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_3
+        description: the entrypoint emits the keys, and omits them when unset
+        command: ( cd front && bash -c 'set -e; d=$(mktemp -d); mkdir -p "$d/usr/share/nginx/html"; CLICKHOUSE_UPSTREAM=http://ch:8123 APEX_API_URL=http://api:8099 APEX_API_TOKEN=tok sh -c "sed \"s#/usr/share/nginx/html#$d/usr/share/nginx/html#\" docker-entrypoint.d/30-apex-console-config.sh | sh"; grep -q apiUrl "$d/usr/share/nginx/html/config.js"; grep -q apiToken "$d/usr/share/nginx/html/config.js"; CLICKHOUSE_UPSTREAM=http://ch:8123 sh -c "sed \"s#/usr/share/nginx/html#$d/usr/share/nginx/html#\" docker-entrypoint.d/30-apex-console-config.sh | sh"; ! grep -q apiUrl "$d/usr/share/nginx/html/config.js"' )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Adding CORS to the API instead of proxying, which makes the store's own answer to this question inconsistent with the API's and widens what any origin may call.
+      - Emitting an empty apiUrl key when the variable is unset; an empty string is a real value and would override the bundle's default.
+      - Requiring APEX_API_UPSTREAM unconditionally, which would break every ClickHouse-mode deployment that has no API.
+    do_not_touch:
+      - front/src/screens/
+      - front/src/data/repository.ts
+
