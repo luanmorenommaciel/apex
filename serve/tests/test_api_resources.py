@@ -149,3 +149,21 @@ def test_unbounded_listing_is_truncated_and_reported():
     # A short page carries no truncation claim.
     short = build(_ConsoleClient(run_rows=[RUN_ROW])).get("/v1/runs", headers=AUTH)
     assert TRUNCATED_HEADER not in short.headers
+
+
+def test_stages_route_returns_the_console_projection():
+    """Three screens call ratioOf on these timings; the MCP's names give NaN."""
+    row = {
+        "job_id": "j", "app_name": "nightly", "stage_id": 4, "stage_name": None,
+        "stage_attempt": 0, "task_count": 50, "shuffle_read_bytes": 0,
+        "shuffle_write_bytes": 0, "input_bytes": 0, "spill_mem_bytes": 0,
+        "spill_disk_bytes": 0, "peak_execution_mem_bytes": 0, "gc_time_ms": 0,
+        "task_duration_p50_ms": 20, "task_duration_p99_ms": 460,
+        "plan_fingerprint": "a" * 64, "ts": "2026-09-20 10:00:00",
+    }
+    got = build(_ConsoleClient(run_rows=[row])).get("/v1/runs/j/stages", headers=AUTH).json()
+    assert got, "the stages route returned nothing"
+    for field in ("task_duration_p50_ms", "task_duration_p99_ms", "job_id", "stage_name", "ts"):
+        assert field in got[0], f"the console reads {field} and the route omits it"
+    # And the MCP's aliases must not leak through in their place.
+    assert "p50_ms" not in got[0] and "p99_ms" not in got[0]

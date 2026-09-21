@@ -88,8 +88,12 @@ async def run(request: Request, job_id: str) -> dict[str, Any]:
 
 @router.get(RESOURCE_ROUTES["stages"][1])
 async def stages(request: Request, job_id: str) -> list[dict[str, Any]]:
-    """Latest attempt per stage, as the contract projection returns it."""
-    return _store(request).stages(job_id)
+    """Latest attempt per stage, in the CONSOLE's projection.
+
+    console_stages(), not stages(): the latter answers the MCP's StageView and
+    aliases the timings to p50_ms/p99_ms, which the console does not read.
+    """
+    return _store(request).console_stages(job_id)
 
 
 @router.get(RESOURCE_ROUTES["jobConf"][1])

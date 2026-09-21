@@ -157,18 +157,21 @@ In Swagger: **Authorize** → paste the token → every `/v1` operation but
 ```bash
 cd front
 VITE_DATA_SOURCE=http \
-VITE_APEX_API_URL=http://127.0.0.1:8099 \
+VITE_APEX_API_PROXY_TARGET=http://127.0.0.1:8099 \
 VITE_APEX_API_TOKEN=local-dev-token-a1b2c3 \
 npm run dev
 ```
 
-`VITE_APEX_API_URL` is the **proxy target**, not the address the browser calls.
-Leave the console's own `apiUrl` unset and it requests `/v1` relative; Vite
-forwards it here, nginx forwards it in the image. That keeps the browser on one
-origin, so apex-api needs no CORS header — the same arrangement `/clickhouse`
-has always used. Setting `apiUrl` to an absolute address makes the browser call
-the API cross-origin, which then **does** require CORS on the API; that is not
-configured, so leave it unset unless you add it.
+`VITE_APEX_API_PROXY_TARGET` configures the **dev server**, not the bundle. The
+browser keeps calling `/v1` relative; Vite forwards it here and nginx forwards
+it in the image, so the browser stays on one origin and apex-api needs no CORS
+header — the same arrangement `/clickhouse` has always used.
+
+`VITE_APEX_API_URL` is a different thing: it sets the browser's own base and
+makes it call the API **directly, cross-origin**, bypassing the proxy. The API
+sends no CORS header, so a browser blocks that. Leave it empty unless you mean
+it. (These were one variable until the PR #129 review; sharing them made the
+documented command defeat its own proxy.)
 
 In a container:
 

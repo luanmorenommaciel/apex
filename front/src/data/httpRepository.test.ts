@@ -163,6 +163,27 @@ describe("same-origin", () => {
   });
 });
 
+describe("proxy target", () => {
+  it("leaves apiUrl empty under the documented dev setup, so requests stay same-origin", async () => {
+    // VITE_APEX_API_PROXY_TARGET configures the dev server, not the bundle.
+    // When the two shared one variable, the documented command made the
+    // browser call an absolute url and bypass the proxy — and the API sends
+    // no CORS header, so a real browser blocked every request.
+    config.apiUrl = "";
+    stubFetch(() => respond(null));
+    await new HttpRepository().stages("j");
+    expect(calls[0].url).toBe("/v1/runs/j/stages");
+    expect(calls[0].url.startsWith("http")).toBe(false);
+  });
+
+  it("still honours an explicit absolute apiUrl for a deliberate cross-origin call", async () => {
+    config.apiUrl = "http://api.test";
+    stubFetch(() => respond(null));
+    await new HttpRepository().stages("j");
+    expect(calls[0].url).toBe("http://api.test/v1/runs/j/stages");
+  });
+});
+
 describe("failure", () => {
   it("surfaces a 401 instead of falling back to ClickHouse", async () => {
     stubFetch(() => respond({ detail: "unauthorized" }, { status: 401 }));

@@ -941,3 +941,57 @@ def test_fix_verification_keys_on_finding_id_alone():
     # An empty finding_id is refused rather than silently matching everything.
     with pytest.raises(ApexStoreError):
         ReadStore(_VerifyClient()).fix_verification("")
+
+
+def test_console_stages_projects_what_the_console_reads():
+    """console_stages is not stages(): different consumer, different names.
+
+    STAGES_SQL aliases the timings AS p50_ms/p99_ms for the MCP's StageView
+    and projects no job_id, stage_name or ts. The console reads all five, so
+    serving one as the other gave it undefined timings and NaN ratios.
+    """
+    sql = ch.CONSOLE_STAGES_SQL
+    for column in (
+        "job_id", "app_name", "stage_id", "stage_name", "stage_attempt",
+        "task_count", "shuffle_read_bytes", "shuffle_write_bytes",
+        "input_bytes", "spill_mem_bytes", "spill_disk_bytes",
+        "peak_execution_mem_bytes", "gc_time_ms",
+        "task_duration_p50_ms", "task_duration_p99_ms", "plan_fingerprint", "ts",
+    ):
+        assert f"AS {column}" in sql, f"the console reads {column} and this omits it"
+    # The MCP's own aliases must NOT appear here, or the two drift back together.
+    assert "AS p50_ms" not in sql and "AS p99_ms" not in sql
+    # And it binds, like every other method.
+    client = _ConsoleClient(run_rows=[{"stage_id": 4}])
+    ReadStore(client).console_stages(INJECTION)
+    sql, parameters = client.calls[-1]
+    assert INJECTION not in sql
+    assert parameters["job_id"] == INJECTION
+
+
+def test_fix_verification_needs_no_plan_memory_table():
+    """FIX_VERIFICATION_SQL reads run_outcomes and fix_verifications, not plan_memory.
+
+    Requiring the whole v0.3 pair hid stored verifications during a partial
+    rollout — an absent plan_memory says nothing about whether the verify lane
+    reached this finding.
+    """
+    row = {"fix_id": "v1", "finding_id": "f1", "job_id": "j", "runtime_verdict": "unresolved"}
+
+    class _PartialClient(_ConsoleClient):
+        def query(self, query: str, parameters: dict | None = None):
+            self.calls.append((query, parameters or {}))
+            if "system.tables" in query:
+                rows = [{"name": n} for n in self.tables]
+            elif "system.columns" in query:
+                rows = [{"name": "verification_id"}] if "fix_verifications" in str(parameters) else []
+                rows = [{"name": "verification_id"}]
+            elif "runtime_verdict" in query:
+                rows = self.run_rows
+            else:
+                rows = []
+            return type("R", (), {"named_results": lambda _s: list(rows)})()
+
+    # run_outcomes present, plan_memory absent — the row must still come back.
+    got = ReadStore(_PartialClient(run_rows=[row], tables=("run_outcomes",))).fix_verification("f1")
+    assert got == row
