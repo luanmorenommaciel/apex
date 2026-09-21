@@ -453,3 +453,70 @@ units:
       - front/src/screens/
       - front/src/data/repository.ts
 
+  - id: T-20260921-pr129-review-fixes
+    title: Fix the four defects Codex found on PR 129
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260921-console-same-origin-api]
+    touches_paths: [front/nginx.conf, front/vite.config.ts, front/src/data/runtimeConfig.ts, front/src/data/env.d.ts, front/src/data/httpRepository.test.ts, front/.env.example, serve/src/apex_mcp/ch.py, serve/tests/test_ch.py, serve/src/apex_api/routes/resources.py, serve/tests/test_api_resources.py, serve/RUNBOOK.md]
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/pull/129
+    why: Two P1s and two P2s, all reproduced. The nginx block was spliced INSIDE the clickhouse proxy_pass because the insertion matched the brace inside ${CLICKHOUSE_UPSTREAM}, so no container starts at all - and the eval that was meant to guard it only grepped for a string, which passes on the broken file. The stages route returns the MCP's p50_ms/p99_ms and omits job_id, stage_name and ts, so three screens would render NaN.
+    goal: nginx validates in a real container, the stages route returns the console's projection, the dev proxy target stops forcing a cross-origin apiUrl, and fix_verification gates only on the tables it reads.
+    context: The stages gap is a PORT, not a rename - LATEST_STAGES also projects job_id, stage_name and ts, which STAGES_SQL has never carried. That makes it the eighth console query to move server-side, and the fourth time this plan mapped a console method onto a ReadStore method by name without comparing projections. Every eval here executes the thing it claims to check; the previous nginx eval did not.
+    behaviors:
+      - id: B-1
+        given: the nginx template with both upstreams set
+        when: the image renders it and runs nginx -t
+        then: the configuration is valid, with /clickhouse and /v1 as sibling location blocks
+      - id: B-2
+        given: a job_id
+        when: GET /v1/runs/{job_id}/stages is called
+        then: every field SparkEventRow declares is present, including task_duration_p50_ms, task_duration_p99_ms, job_id, stage_name and ts
+      - id: B-3
+        given: the documented development environment
+        when: runtimeConfig is resolved
+        then: apiUrl is empty, so requests stay relative and reach the API through the proxy rather than cross-origin
+      - id: B-4
+        given: an explicit absolute apiUrl
+        when: runtimeConfig is resolved
+        then: it is honoured, because a deliberate cross-origin deployment is still supported
+      - id: B-5
+        given: apex.fix_verifications and apex.run_outcomes present but apex.plan_memory absent
+        when: fix_verification is called
+        then: it returns the row, because that query reads neither plan_memory nor anything derived from it
+    evals:
+      - id: eval_1
+        description: nginx renders and validates in the real image
+        command: ( cd front && docker run --rm -e CLICKHOUSE_UPSTREAM=http://127.0.0.1:8123 -e APEX_API_UPSTREAM=http://127.0.0.1:8099 -e 'NGINX_ENVSUBST_FILTER=^(CLICKHOUSE_UPSTREAM|APEX_API_UPSTREAM)$' -v "$PWD/nginx.conf:/etc/nginx/templates/default.conf.template:ro" nginx:1.27-alpine nginx -t )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_2
+        description: the stages route carries the console's projection
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_resources.py::test_stages_route_returns_the_console_projection" "tests/test_ch.py::test_console_stages_projects_what_the_console_reads" )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 90
+      - id: eval_3
+        description: the documented dev setup stays same-origin
+        command: ( cd front && npm run test -- --run src/data/httpRepository.test.ts -t "proxy target" )
+        verifies: [B-3, B-4]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_4
+        description: verification does not require the plan-memory table
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_fix_verification_needs_no_plan_memory_table" )
+        verifies: [B-5]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Guarding a config file with a grep for a substring; it passed on a file nginx rejects, which is how this shipped.
+      - Renaming two timing fields and calling the stages gap closed; job_id, stage_name and ts are missing too.
+      - Making the browser's apiUrl and the dev proxy target the same variable, which is the fault being fixed.
+    do_not_touch:
+      - front/src/screens/
+      - front/src/data/repository.ts
+
