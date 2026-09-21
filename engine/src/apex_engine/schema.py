@@ -34,6 +34,11 @@ class FindingType(str, Enum):
     # `findings.type` is an open `String` column in the contract DDL, so this is
     # an additive value, not a schema change.
     TASK_SKEW = "TASK_SKEW"
+    # A sparse duration-tail candidate is not evidence of join skew or of a
+    # root cause.  Keeping it distinct prevents the duration fallback from
+    # laundering itself through the stronger skew finding contract.
+    # `findings.type` is an open `String` column, so this is additive.
+    TAIL_OUTLIER = "TAIL_OUTLIER"
     MEMORY = "MEMORY"
     DRIVER_OOM = "DRIVER_OOM"
     COST = "COST"
@@ -192,8 +197,8 @@ class StageAggregate(BaseModel):
     successful_task_sample_count: int = Field(default=0, ge=0)
     successful_task_shuffle_read_bytes_max: int = Field(default=0, ge=0)
     successful_task_shuffle_read_bytes_sample_count: int = Field(default=0, ge=0)
-    # Missed by the raw-fields unit above; tail_outlier reads this directly
-    # as a plain value, not through a computed ratio.
+    # Retry-safe shuffle-read p50 retained alongside the max/sample fields
+    # above. It is not part of the duration-only tail-outlier signal.
     successful_task_shuffle_read_bytes_p50: int = Field(default=0, ge=0)
 
     @property

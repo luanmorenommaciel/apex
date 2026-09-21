@@ -675,13 +675,6 @@ function Stop-Package {
 }
 
 function Invoke-TailOutlierGate {
-    # BLOCKED: dev/jobs/tail_outlier.py and the 'tail_outlier' scenario in
-    # dev/scripts/e2e_canonical.ps1's own ValidateSet don't exist in this
-    # repo yet (proposed separately, not merged). Refuse loudly rather than
-    # let PowerShell's parameter-validation error stand in for a real message.
-    throw "tail-outlier: dev/jobs/tail_outlier.py and the 'tail_outlier' " +
-        "scenario are not available in this repo yet."
-
     Assert-RuntimeConfiguration
     Invoke-Doctor
     Set-CanonicalProcessEnvironment

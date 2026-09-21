@@ -167,13 +167,13 @@ bootstrap: ## Build and start the full six-lane local package
 doctor: ## Verify the local package runtime
 	$(PACKAGE_RUN) doctor
 
-smoke: ## Run the one-pathology product gate
+smoke: ## Run the one-pathology product gate (needs `bootstrap` first)
 	$(PACKAGE_RUN) smoke
 
-e2e: ## Run all canonical pathologies and product gates
+e2e: ## Run all canonical pathologies and product gates (needs `bootstrap` first)
 	$(PACKAGE_RUN) e2e
 
-tail-outlier: ## Run the 200-task tail-outlier regression
+tail-outlier: ## Run the tail-outlier runtime gate (needs `bootstrap` first)
 	$(PACKAGE_RUN) tail-outlier
 
 pilot-clean: ## Run the fail-closed clean-machine pilot

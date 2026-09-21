@@ -6,8 +6,8 @@ something the others do not, and the naming does not make that obvious. This pag
 ```
         ┌─────────────────────────────────────────────────────────────┐
         │  dev/scripts/e2e_canonical.{sh,ps1}                         │
-        │  GENERATE — 4 pathologies through plugin → OTLP → collect    │
-        │  → infra. Produces real telemetry at volume.                 │
+        │  GENERATE — 4 default pathologies, plus opt-in tail_outlier  │
+        │  through plugin → OTLP → collect → infra at real volume.    │
         └────────────────────────────┬────────────────────────────────┘
                                      │  emits  APEX_SESSION job_id=…
                                      ▼
@@ -29,7 +29,7 @@ something the others do not, and the naming does not make that obvious. This pag
 | Script | Scope | Starts infrastructure? | Use it when |
 |---|---|---|---|
 | `scripts/e2e_six_lanes.py` | **all six lanes** | no — validates what already exists | **This is the gate.** Proving the system agrees with itself on one job. |
-| `dev/scripts/e2e_canonical.{sh,ps1}` | dev → jar → collect → infra, ×4 pathologies | keeps collect/infra running | Generating the telemetry the gate will then check. |
+| `dev/scripts/e2e_canonical.{sh,ps1}` | dev → jar → collect → infra, ×4 default pathologies plus opt-in `tail_outlier` | keeps collect/infra running | Generating the telemetry the gate will then check. |
 | `tests/e2e/run.sh` | dev → jar → collect → infra, ×1 pathology | yes, including network glue | Smoke-testing the plumbing from cold, e.g. after a compose change. |
 
 **The normal sequence is generate → verify:** run `e2e_canonical`, take the `job_id` it prints,
@@ -37,6 +37,25 @@ then run the gate against it.
 
 For an opt-in, pre-submit custody chain for a particular E2E run, see
 [Pre-submit provenance](PRE_SUBMIT_PROVENANCE.md).
+
+## Tail-outlier runtime gate — delivery status
+
+`tail_outlier` is intentionally opt-in: the default canonical scenario list
+remains unchanged. Its assertion requires a real sparse duration tail, not
+merely a stage row or a high p99. The isolated local core-path proof, completed
+checks, remaining gates, and reasons are recorded in
+[Tail-outlier runtime gate — delivery record](TAIL_OUTLIER_RUNTIME_GATE.md).
+
+That record now includes a public package-wrapper run on macOS against the
+configured Spark 4.0.1 stack. It does **not** claim a fresh registry-backed
+cold start, remote CI, or deployment; those remain separate release evidence.
+
+On a clean checkout, run `bootstrap` first: the public `tail-outlier` command
+only validates an already-bootstrapped package and refuses to run without it.
+It exercises the Spark version the package is configured for (currently
+4.0.1), not the 4.1.2 image used by the earlier isolated proof, and it copies
+the package's generated `.apex/dev.env` over `dev/.env` — see the delivery
+record before running it next to your own `dev/.env`.
 
 ## What the canonical gate asserts
 

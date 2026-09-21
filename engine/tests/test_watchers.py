@@ -1,9 +1,10 @@
 """Tier-1 watcher rules. Every case here is deterministic and LLM-free."""
 
-from apex_engine import FindingType, Severity, StageAggregate
+from apex_engine import Confidence, FindingType, Severity, StageAggregate
 from apex_engine.context import JobContext
 from apex_engine.jobconf import operator_width
-from apex_engine.watchers import code, cost, memory, retry_pressure, shuffle, skew
+from apex_engine.validation import validate_finding
+from apex_engine.watchers import code, cost, memory, retry_pressure, shuffle, skew, tail_outlier
 from apex_engine.watchers.base import GIB, MIB
 
 # Redacted tree-strings copied in shape from real rows in this store.
@@ -132,6 +133,99 @@ def test_skew_never_divides_by_zero():
 def test_skew_ignores_a_ratio_from_too_few_tasks():
     """A p99 over 2 tasks is not a distribution."""
     assert skew.evaluate(joined(task_duration_p50_ms=10, task_duration_p99_ms=900, task_count=2), at(8)) is None
+
+
+# --- sparse tail outlier: duration candidate outside skew ownership ---------
+
+def test_tail_outlier_prefers_retry_safe_population():
+    raw_only_tail = stage(
+        task_count=200, task_duration_sample_count=200,
+        task_duration_p50_ms=100, task_duration_p99_ms=100, task_duration_max_ms=3_000,
+        successful_task_duration_p50_ms=100, successful_task_duration_p99_ms=100,
+        successful_task_duration_max_ms=100, successful_task_sample_count=200,
+    )
+    assert tail_outlier.evaluate(raw_only_tail, at(8)) is None
+
+    successful_tail = stage(
+        task_count=200, task_duration_sample_count=200,
+        task_duration_p50_ms=100, task_duration_p99_ms=100, task_duration_max_ms=100,
+        successful_task_duration_p50_ms=100, successful_task_duration_p99_ms=100,
+        successful_task_duration_max_ms=3_000, successful_task_sample_count=200,
+    )
+    finding = tail_outlier.evaluate(successful_tail, at(8))
+    assert finding is not None
+    assert finding.type is FindingType.TAIL_OUTLIER
+    assert finding.severity is Severity.WARNING
+    assert finding.confidence is Confidence.MEDIUM
+    assert finding.detected_by == tail_outlier.NAME
+    assert finding.details == {
+        "tail_ratio": 30,
+        "skew_ratio": 1,
+        "legacy_skew_ratio": 1,
+        "task_count": 200,
+        "duration_sample_count": 200,
+        "duration_sample_source": "successful_tasks",
+        "effective_task_duration_p50_ms": 100,
+        "effective_task_duration_p99_ms": 100,
+        "effective_task_duration_max_ms": 3_000,
+    }
+    assert validate_finding(finding)["accepted"] is True
+
+
+def test_tail_outlier_uses_legacy_fallback():
+    historical = stage(
+        task_count=200, task_duration_sample_count=200,
+        task_duration_p50_ms=100, task_duration_p99_ms=100, task_duration_max_ms=3_000,
+        successful_task_sample_count=0,
+    )
+    finding = tail_outlier.evaluate(historical, at(8))
+    assert finding is not None
+    assert finding.details["tail_ratio"] == 30
+    assert finding.details["duration_sample_source"] == "legacy_all_attempts"
+    assert "source=legacy_all_attempts" in finding.evidence
+
+
+def test_tail_outlier_boundaries_are_silent():
+    common = {
+        "task_count": 200, "task_duration_sample_count": 200,
+        "task_duration_p50_ms": 100, "task_duration_p99_ms": 100,
+        "task_duration_max_ms": 3_000,
+    }
+    assert tail_outlier.evaluate(stage(**{**common, "task_count": 99}), at(8)) is None
+    assert tail_outlier.evaluate(stage(**{**common, "task_duration_sample_count": 99}), at(8)) is None
+    assert tail_outlier.evaluate(stage(**{**common, "task_duration_max_ms": 1_000}), at(8)) is None
+    assert tail_outlier.evaluate(stage(**{**common, "task_duration_p50_ms": 0}), at(8)) is None
+
+
+def test_tail_outlier_defers_to_current_skew_owner():
+    candidate = joined(
+        task_duration_p50_ms=100, task_duration_p99_ms=3_000, task_duration_max_ms=3_000,
+        task_duration_sample_count=100,
+    )
+    assert skew.evaluate(candidate, at(8)) is not None
+    assert tail_outlier.evaluate(candidate, at(8)) is None
+
+
+def test_tail_outlier_allows_high_volume_without_skew_owner():
+    candidate = joined(
+        task_duration_p50_ms=100, task_duration_p99_ms=100, task_duration_max_ms=3_000,
+        task_duration_sample_count=100,
+    )
+    assert skew.evaluate(candidate, at(8)) is None
+    assert tail_outlier.evaluate(candidate, at(8)) is not None
+
+
+def test_tail_outlier_is_registered_and_reachable():
+    from apex_engine.watchers import STAGE_WATCHERS, WATCHER_NAMES, run_all_offline
+
+    candidate = stage(
+        task_count=200, task_duration_sample_count=200,
+        task_duration_p50_ms=100, task_duration_p99_ms=100, task_duration_max_ms=3_000,
+    )
+    assert tail_outlier in STAGE_WATCHERS
+    assert tail_outlier.NAME in WATCHER_NAMES
+    findings = run_all_offline([candidate], ctx=at(8))
+    assert [f.detected_by for f in findings].count(tail_outlier.NAME) == 1
 
 
 # --- T5 shuffle ------------------------------------------------------------

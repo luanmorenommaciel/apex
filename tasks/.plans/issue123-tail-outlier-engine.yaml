@@ -1,0 +1,137 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: issue123-tail-outlier-engine
+  source: https://github.com/luanmorenommaciel/apex/issues/123
+units:
+  - id: T-20260918-tail-outlier-finding-contract
+    title: Add an honest tail-outlier finding contract
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - engine/src/apex_engine/schema.py
+      - engine/src/apex_engine/validation.py
+      - engine/tests/test_contract_engine.py
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/issues/123
+    why: Historical tail-outlier code labeled a duration-only candidate as SKEW_ON_JOIN, but the current validator correctly requires volume, closed-form tail-bound evidence and a join node for that type.
+    goal: Add an additive TAIL_OUTLIER finding type and a narrow validator that accepts only structured sparse-duration-tail evidence without weakening the current skew validator.
+    context: findings.type is an open String, so this needs no DDL migration. The new type is a warning-level diagnostic candidate, not proof of join skew or root cause. This leaf does not implement or register a watcher.
+    behaviors:
+      - id: B-1
+        given: a Finding typed TAIL_OUTLIER
+        when: it is serialized or validated
+        then: it remains an additive distinct type and is not coerced to SKEW_ON_JOIN or TASK_SKEW
+      - id: B-2
+        given: structured evidence with task_count and duration_sample_count at least 100, positive effective p50/max, and tail_ratio strictly greater than 10
+        when: the finding is validated
+        then: it is accepted without requiring shuffle bytes, join evidence or a cluster-width verdict
+      - id: B-3
+        given: missing, non-numeric or out-of-range tail measurements
+        when: the finding is validated
+        then: it is rejected with a deterministic tail-outlier validation issue
+      - id: B-4
+        given: an existing SKEW_ON_JOIN or TASK_SKEW finding
+        when: validation runs
+        then: all current volume, join, closed-form and confidence requirements remain unchanged
+    evals:
+      - id: eval_1
+        description: focused contract tests accept coherent tail evidence and reject incomplete or boundary evidence
+        command: ( cd engine && uv run --extra dev pytest -q "tests/test_contract_engine.py::test_tail_outlier_contract_accepts_coherent_duration_candidate" "tests/test_contract_engine.py::test_tail_outlier_contract_rejects_incomplete_or_boundary_evidence" "tests/test_contract_engine.py::test_tail_outlier_type_does_not_weaken_skew_validation" -p no:warnings )
+        verifies: [B-1, B-2, B-3, B-4]
+        terminal: true
+        expected_duration_sec: 45
+      - id: eval_2
+        description: complete offline Engine suite remains green after the additive type
+        command: ( cd engine && uv run --extra dev pytest -q -p no:warnings )
+        verifies: [B-1, B-4]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Reusing SKEW_ON_JOIN for duration-only evidence.
+      - Weakening _skew_issues or adding an exception that lets skew bypass volume and plan checks.
+      - Adding a DDL migration for an open String field.
+      - Implementing a watcher or DEV/package wiring in this contract leaf.
+    do_not_touch:
+      - engine/src/apex_engine/watchers
+      - dev
+      - scripts
+      - contract/findings.ddl.sql
+      - infra
+
+  - id: T-20260918-tail-outlier-watcher-offline
+    title: Implement and register the deterministic tail-outlier watcher
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260918-tail-outlier-finding-contract]
+    touches_paths:
+      - engine/src/apex_engine/watchers/__init__.py
+      - engine/tests/test_watchers.py
+    creates_paths:
+      - engine/src/apex_engine/watchers/tail_outlier.py
+    source_note: https://github.com/luanmorenommaciel/apex/issues/123
+    why: The v0.5 data fields and ADR describe a sparse duration-tail signal, but current main has no watcher implementation or registration, so the public gate can never observe tail_outlier_watcher.
+    goal: Add a pure deterministic watcher that emits an honest TAIL_OUTLIER warning only for a large sparse effective-duration tail not already owned by the current skew watcher.
+    context: This is Engine Slice A only. It does not add the canonical DEV scenario, remove the package throw, run a live workload, or call Crew/LLM. Historical code is evidence only and must not be copied verbatim because its fixed p99 threshold and SKEW_ON_JOIN type conflict with the current contract.
+    behaviors:
+      - id: B-1
+        given: at least 100 tasks and 100 effective duration samples with effective max/p50 strictly greater than 10
+        when: current skew evaluation produces no finding
+        then: the watcher emits a warning/MEDIUM TAIL_OUTLIER candidate with the effective p50, p99, max, ratios, source and counts in structured details
+      - id: B-2
+        given: successful-task samples exist
+        when: the watcher evaluates the stage
+        then: it uses the retry-safe successful population and ignores a tail visible only in raw attempts
+      - id: B-3
+        given: no successful-task sample exists
+        when: the watcher evaluates a historical stage
+        then: it uses the declared legacy duration and sample-count fallback and labels that source
+      - id: B-4
+        given: 99 tasks, 99 effective samples, an exact 10 ratio or zero p50
+        when: evaluation runs
+        then: no finding is emitted
+      - id: B-5
+        given: current skew.evaluate returns a volume-aware finding
+        when: tail evaluation runs
+        then: tail_outlier returns none rather than duplicating ownership
+      - id: B-6
+        given: high volume that does not satisfy current skew policy
+        when: a valid sparse duration tail exists
+        then: the tail candidate may still emit because suppression is based on actual skew ownership, not volume presence alone
+      - id: B-7
+        given: the watcher registry and run_all_offline
+        when: Engine evaluates eligible aggregates
+        then: tail_outlier_watcher is registered, reachable, deterministic and makes no Crew/LLM calls
+    evals:
+      - id: eval_1
+        description: focused watcher tests cover retry-safe, historical, boundaries, ownership and registry reachability
+        command: ( cd engine && uv run --extra dev pytest -q "tests/test_watchers.py::test_tail_outlier_prefers_retry_safe_population" "tests/test_watchers.py::test_tail_outlier_uses_legacy_fallback" "tests/test_watchers.py::test_tail_outlier_boundaries_are_silent" "tests/test_watchers.py::test_tail_outlier_defers_to_current_skew_owner" "tests/test_watchers.py::test_tail_outlier_allows_high_volume_without_skew_owner" "tests/test_watchers.py::test_tail_outlier_is_registered_and_reachable" -p no:warnings )
+        verifies: [B-1, B-2, B-3, B-4, B-5, B-6, B-7]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: contract validator and complete offline Engine suite remain green
+        command: ( cd engine && uv run --extra dev pytest -q -p no:warnings )
+        verifies: [B-1, B-5, B-7]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Copying historical fixed p99/p50 <= 5 logic or emitting SKEW_ON_JOIN.
+      - Suppressing every stage merely because shuffle-volume samples exist.
+      - Duplicating skew policy instead of asking current skew.evaluate whether it owns the verdict.
+      - Adding SQL, store I/O, Crew, LLM, DEV/package wiring or runtime evidence.
+      - Lowering the strict max/p50 greater-than-10 boundary or reducing the 100-sample gate.
+    do_not_touch:
+      - dev
+      - scripts
+      - jar
+      - collect
+      - infra
+      - serve
+      - front
