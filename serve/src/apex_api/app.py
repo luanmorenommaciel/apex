@@ -25,7 +25,7 @@ from fastapi.responses import JSONResponse
 from apex_mcp import ch
 from apex_mcp.ch import ApexStoreError, ReadStore
 
-from .auth import build_middleware
+from .auth import PUBLIC_PATHS, build_middleware
 from .config import Settings, load_settings
 from .routes import discover_routers
 
@@ -36,6 +36,45 @@ API_PREFIX = "/v1"
 # A store failure is an upstream failure, not a client error: the request was
 # well formed and the API is up. 502 says that; 500 would blame this service.
 STORE_ERROR_STATUS = 502
+
+# Named once so the scheme in the schema and the requirement on each operation
+# cannot drift apart.
+BEARER_SCHEME = "apexToken"
+
+
+def _document_auth(app: FastAPI) -> None:
+    """Declare in the schema that /v1 needs a bearer token.
+
+    DECLARED, not enforced. auth.py stays the enforcement point: a
+    dependency-based scheme would move admission behind routing, and an
+    unauthenticated caller would then learn which routes exist from the
+    difference between 401 and 404. This only makes the published schema tell
+    the truth about what the middleware already does — otherwise a consumer
+    reads the docs, calls a route, gets 401, and has nothing to explain it.
+    """
+    original = app.openapi
+
+    def openapi() -> dict[str, Any]:
+        schema = original()
+        schema.setdefault("components", {}).setdefault("securitySchemes", {})[
+            BEARER_SCHEME
+        ] = {
+            "type": "http",
+            "scheme": "bearer",
+            "description": (
+                "An Apex API token. Configured server-side in APEX_API_TOKENS; "
+                "never a database credential."
+            ),
+        }
+        for path, operations in schema.get("paths", {}).items():
+            if not path.startswith(API_PREFIX) or path in PUBLIC_PATHS:
+                # A liveness probe that needs a secret is not a liveness probe.
+                continue
+            for operation in operations.values():
+                operation["security"] = [{BEARER_SCHEME: []}]
+        return schema
+
+    app.openapi = openapi  # type: ignore[method-assign]
 
 
 class _LazyClient:
@@ -129,6 +168,9 @@ def create_app(
 
     for router in discover_routers():
         app.include_router(router, prefix=API_PREFIX)
+
+    # After the routers, so every operation they added is in the schema.
+    _document_auth(app)
 
     return app
 
