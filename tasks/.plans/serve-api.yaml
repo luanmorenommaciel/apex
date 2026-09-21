@@ -342,59 +342,52 @@ units:
       - front/src/screens/
       - front/src/components/
 
-  - id: T-20260920-mcp-store-selection
-    title: Let the MCP server read through the API when configured
+  - id: T-20260920-api-openapi-auth
+    title: Say in the OpenAPI schema that /v1 needs a token
     effort: S
     profile: standard
     agent: any
     execution_backend: any
     depends_on: [T-20260920-api-resource-routes]
-    touches_paths: [serve/src/apex_mcp/server.py]
-    creates_paths: [serve/src/apex_mcp/http_store.py, serve/tests/test_store_selection.py]
-    source_note: brain/01-projects/apex/08-meetings/krisp/2026-09-15-weekly-sync-crew-a-apex.md
-    why: Luan asked for the MCP to route its queries through the API so one process holds the credentials and every query is auditable. Making that a configuration rather than the only path keeps uvx apex-mcp working for someone with direct ClickHouse access.
-    goal: An HttpReadStore with the same method surface as ReadStore, selected when APEX_API_URL is set and not otherwise.
-    context: create_server(store) is already parameterised on the store and the tests already inject a fake, so no tool changes. The tool surface must stay byte-identical under either store, or the two front doors stop agreeing.
+    touches_paths: [serve/src/apex_api/app.py]
+    creates_paths: [serve/tests/test_api_openapi.py]
+    source_note: serve/src/apex_api/auth.py
+    why: FastAPI already serves Swagger at /docs and the schema at /openapi.json, but admission is MIDDLEWARE, so the schema says nothing about needing a credential. A consumer reads the docs, calls a route, gets 401 and has nothing to tell them why - and Swagger offers no Authorize button to try it with.
+    goal: The schema declares a bearer scheme, every /v1 operation but health requires it, and health does not.
+    context: The requirement is declared, not enforced, here - auth.py stays the enforcement point, because a dependency-based scheme would move admission behind routing and reopen the route oracle it exists to close. This unit only makes the schema tell the truth about what auth.py already does.
     behaviors:
       - id: B-1
-        given: APEX_API_URL is unset
-        when: the server starts
-        then: it uses the ClickHouse-backed ReadStore, exactly as today
+        given: the OpenAPI schema
+        when: it is read
+        then: it declares an http bearer security scheme
       - id: B-2
-        given: APEX_API_URL is set
-        when: the server starts
-        then: it uses HttpReadStore and issues no direct ClickHouse connection
+        given: any /v1 operation other than health
+        when: its schema entry is read
+        then: it carries that security requirement
       - id: B-3
-        given: either store
-        when: list_tools() is called
-        then: the tool set, annotations and output schemas are identical
+        given: /v1/health
+        when: its schema entry is read
+        then: it carries no security requirement, because a liveness probe holds no token
       - id: B-4
-        given: HttpReadStore and an API that returns 401 or is unreachable
-        when: a tool is called
-        then: the failure is reported as a sanitized store error and never as an empty result
+        given: no Authorization header
+        when: /docs, /redoc and /openapi.json are fetched
+        then: they answer, because a schema is a description and carries no row from the store
     evals:
       - id: eval_1
-        description: the store is selected by configuration
-        command: ( cd serve && uv run --extra dev pytest "tests/test_store_selection.py::test_unset_url_uses_clickhouse" "tests/test_store_selection.py::test_set_url_uses_http_and_opens_no_clickhouse_connection" )
-        verifies: [B-1, B-2]
+        description: the scheme is declared and applied to exactly the right operations
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_openapi.py::test_schema_declares_a_bearer_scheme" "tests/test_api_openapi.py::test_every_v1_operation_but_health_requires_it" )
+        verifies: [B-1, B-2, B-3]
         terminal: true
         expected_duration_sec: 60
       - id: eval_2
-        description: the tool surface is identical under either store
-        command: ( cd serve && uv run --extra dev pytest "tests/test_store_selection.py::test_tool_surface_is_identical_under_both_stores" "tests/test_server_tools.py::test_the_contracted_tool_surface" )
-        verifies: [B-3]
-        terminal: true
-        expected_duration_sec: 60
-      - id: eval_3
-        description: an unreachable API is an error, not an empty answer
-        command: ( cd serve && uv run --extra dev pytest "tests/test_store_selection.py::test_unreachable_api_is_an_error_not_an_empty_result" )
+        description: the docs stay readable and carry no data
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_openapi.py::test_docs_are_reachable_without_a_token" )
         verifies: [B-4]
         terminal: true
         expected_duration_sec: 60
     anti_patterns:
-      - Falling back to ClickHouse when the API is unreachable, which defeats the single-credential-holder property.
-      - Returning [] on an HTTP failure, which a model reads as "this run has no stages".
-      - Changing any tool signature or docstring; only the store behind them changes.
+      - Replacing the middleware with a route dependency to get the schema for free; that moves admission behind routing and tells an anonymous caller which routes exist.
+      - Marking health as secured, which would tell an orchestrator to hold a secret to run a liveness probe.
+      - Gating /openapi.json on a token so the docs cannot be read by the consumer who needs them.
     do_not_touch:
-      - serve/src/apex_mcp/diagnose.py
-      - serve/src/apex_mcp/models.py
+      - serve/src/apex_api/auth.py
