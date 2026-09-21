@@ -49,6 +49,13 @@ checks, remaining gates, and reasons are recorded in
 That record does **not** claim a public package-wrapper run, remote CI, or
 deployment. Those checks remain separate release evidence.
 
+On a clean checkout, run `bootstrap` first: the public `tail-outlier` command
+only validates an already-bootstrapped package and refuses to run without it.
+It exercises the Spark version the package is configured for (currently
+4.0.1), not the 4.1.2 image used by the earlier isolated proof, and it copies
+the package's generated `.apex/dev.env` over `dev/.env` — see the delivery
+record before running it next to your own `dev/.env`.
+
 ## What the canonical gate asserts
 
 `scripts/e2e_six_lanes.py` validates one already-submitted Spark application. It does **not**

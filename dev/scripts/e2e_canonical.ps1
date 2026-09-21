@@ -20,6 +20,30 @@ if ([string]::IsNullOrWhiteSpace($env:APEX_CANONICAL_CH_PASSWORD)) {
     throw 'APEX_CANONICAL_CH_PASSWORD is required for canonical ClickHouse assertions.'
 }
 
+function Get-PythonApplication {
+    # `python` is the usual Windows launcher; macOS/Linux normally expose only
+    # `python3`. Resolve a real executable (never an alias or function) and
+    # require Python 3 so a Python 2 or Store stub cannot be picked up.
+    $onWindows = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
+    $names = if ($onWindows) { @('python', 'python3') } else { @('python3', 'python') }
+    foreach ($name in $names) {
+        $application = Get-Command $name -CommandType Application -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if (-not $application) {
+            continue
+        }
+        & $application.Source -c 'import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)' 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            return $application.Source
+        }
+    }
+    throw 'Python 3 is required on PATH (python on Windows, python3 on macOS/Linux) for canonical ClickHouse assertions.'
+}
+
+# Resolve Python before any Docker or Spark work so a missing interpreter fails
+# fast instead of after the Spark job has already run.
+$pythonExe = Get-PythonApplication
+
 $compose = @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.c3-otlp.yml', '--env-file', '.env')
 $outDir = Join-Path $root 'out'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
@@ -71,7 +95,7 @@ function Get-JobId {
 function Assert-Canonical {
     param([string]$Name, [string]$JobId)
 
-    python scripts/canonical_e2e_assert.py --job-id $JobId --scenario $Name
+    & $pythonExe scripts/canonical_e2e_assert.py --job-id $JobId --scenario $Name
     if ($LASTEXITCODE -ne 0) {
         throw "Canonical ClickHouse assertion failed for $Name ($JobId)."
     }

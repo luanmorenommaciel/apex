@@ -42,6 +42,8 @@ Apex macOS package entry point
 
 `install` installs PowerShell, uv, and Docker Desktop when absent. Start
 Docker Desktop and wait until its engine is running before `bootstrap`.
+On a clean checkout, `bootstrap` must succeed before doctor, smoke, e2e or
+tail-outlier: they refuse to run without its generated runtime configuration.
 EOF
 }
 

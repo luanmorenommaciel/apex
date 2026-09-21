@@ -42,6 +42,40 @@ It runs the PowerShell canonical scenario and then checks that Engine emits
 `tail_outlier_watcher` in dry-run/no-Crew mode. PowerShell 7+ (`pwsh`) is
 therefore required for this particular public package gate.
 
+### Prerequisites on a clean checkout
+
+`tail-outlier` does not create or start anything. It validates a package that
+`bootstrap` has already built, and refuses to run otherwise:
+
+1. `bootstrap` must have completed first (`make bootstrap`, `./scripts/apex.sh bootstrap`,
+   or `scripts/apex.ps1 bootstrap`). It generates the ignored `.apex` runtime
+   configuration and starts the INFRA, COLLECT and DEV containers. Without
+   it the gate stops at "Run bootstrap first" before any Spark work.
+2. Docker, `uv`, `pwsh` and `bash` must be on `PATH`, and the Docker engine
+   must be running.
+3. A real Python 3 executable must be on `PATH` (`python` on Windows,
+   `python3` on macOS/Linux). The canonical runner resolves it before any
+   Docker or Spark work and fails closed with a clear message if it is missing;
+   shell aliases and functions are not used.
+
+### Which Spark version the public gate exercises
+
+The public gate runs against the Spark version configured by the package
+bootstrap. `doctor`, which the gate runs first, currently requires
+`SPARK_VERSION=4.0.1` and fails closed on anything else, so a default
+`bootstrap` followed by `tail-outlier` exercises Spark 4.0.1. The 4.1.2 overlay
+(`make env-spark41` in `dev/`) is not what the package wrapper runs.
+
+### Do not run it over an operator-owned `dev/.env`
+
+Before invoking the canonical runner, the package copies its generated
+`.apex/dev.env` over the ignored `dev/.env` unconditionally
+(`Sync-DevEnvForCanonicalScript` in `scripts/apex.ps1`). `smoke` and `e2e` do
+the same. If you keep your own `dev/.env` for lane-level work, the gate will
+replace it without warning. Move or back it up first; use a separate
+checkout if you need both. This is a known limitation, tracked under
+[Follow-ups](#follow-ups-not-part-of-this-change).
+
 ## Evidence completed locally
 
 On 2026-09-20, the core path was run in an isolated, disposable local Docker
@@ -88,8 +122,9 @@ following gates.
 
 | Required next check | Why it is still open | Safe completion condition |
 |---|---|---|
-| Public package-wrapper run | The isolated proof ran the core route directly, not `scripts/apex.ps1`. The existing Apex Docker environment was preserved rather than being reused or mutated. | In a clean, freshly bootstrapped canonical package environment, run `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/apex.ps1 tail-outlier` and retain its fail-closed output. |
-| Exact current-image rebuild | Docker Hub metadata retrieval timed out before the exact image could be rebuilt. The proof used a cached Spark 4.1.2 image; the PR does not change the JAR, while the branch workload, assertion, and Engine were current. | Rebuild the canonical image when the registry is reachable, then repeat the public package-wrapper run. |
+| Public package-wrapper run | The isolated proof ran the core route directly, not `scripts/apex.ps1`, and on a cached Spark 4.1.2 image. The wrapper is gated on the configured Spark version (currently 4.0.1), so that proof does **not** validate the package wrapper or the 4.0.1 stack. The existing Apex Docker environment was preserved rather than being reused or mutated. | In a clean checkout, run `bootstrap` to completion, then `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/apex.ps1 tail-outlier`, and retain its fail-closed output. |
+| Exact current-image rebuild | Docker Hub metadata retrieval timed out before the exact image could be rebuilt. The proof used a cached Spark 4.1.2 image rather than the package's configured Spark version; the PR does not change the JAR, while the branch workload, assertion, and Engine were current. | Rebuild the canonical image when the registry is reachable, then repeat the public package-wrapper run. |
+| Python preflight on a real host | The PowerShell canonical runner now resolves Python 3 before Docker work. This is covered only by source-level tests and a resolver check against a controlled `PATH`; it has not run inside a real Windows or macOS gate. | Include it in the public package-wrapper run above on each supported host. |
 | Remote CI | GitHub Actions jobs did not receive runners or execute steps because the repository account is blocked by billing. This is external to the code change. | After billing is resolved, rerun CI and require real runner assignment, steps, and green results. |
 | Human review and merge | Local proof and automated tests do not replace an independent maintainer review. | Request review after the preceding evidence is available; merge only under the repository's normal policy. |
 
@@ -104,3 +139,23 @@ The gate does not deploy code, change a remote environment, or prove GitHub
 Actions. Its purpose is narrower and testable: demonstrate that a real sparse
 duration tail survives the local Spark-to-Engine route and is detected by the
 existing deterministic watcher.
+
+## Follow-ups (not part of this change)
+
+These need a new task with its own sign-off, because the signed
+[`T-20260920-tail-outlier-runtime-gate`](../../tasks/T-20260920-tail-outlier-runtime-gate.md)
+Task-Spec lists `scripts/apex.ps1` as Do-Not-Touch and is not edited here.
+
+- **Stop the silent `dev/.env` overwrite.** In `Sync-DevEnvForCanonicalScript`,
+  refuse (fail closed, without printing values) when `dev/.env` already exists
+  and differs from `.apex/dev.env`, and copy only when it is absent or
+  identical. Fail before the first `apex-*` container is inspected, and add
+  offline tests for: absent, identical, differing (refused, file untouched),
+  and message contents (no values). Until then the warning above is the only
+  protection.
+- **Confirm the fixed-name resources belong to this checkout.** The gate
+  addresses `apex-*` containers and networks by name, so a stack from another
+  checkout would be reused silently. The same task should add an ownership
+  check before `Invoke-Doctor` that refuses unrelated resources instead of
+  reusing them; `pilot-clean` already has a fail-closed inventory that can be
+  reused as the pattern.
