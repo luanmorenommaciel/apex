@@ -112,6 +112,43 @@ GROUP BY job_id, stage_id
 ORDER BY stage_id
 """
 
+# Every apex.spark_events column STAGE_EVENTS_SQL and STAGE_AGGREGATES_SQL read
+# as input — aggregate/query aliases that do not name a spark_events column
+# (`attempt`, `failure_reason`, `shape_fingerprint`, ...) are deliberately
+# excluded. `EngineStore.connect()` checks this set against the live schema
+# before any job is analyzed (see `_preflight_schema` / issue #95): a store
+# missing one of these fails at connect time with a legible error instead of
+# mid-analyze() with a raw ClickHouse `Code: 47` naming one column and nothing
+# about the schema being behind.
+#
+# Kept as an explicit constant, not derived from the SQL text at runtime: the
+# two queries above change rarely, and a constant is checked at review time
+# instead of trusted to a regex that could quietly change what it means.
+REQUIRED_SPARK_EVENTS_COLUMNS = frozenset({
+    "job_id", "app_id", "app_name", "stage_id", "stage_attempt", "ts",
+    "shuffle_read_bytes", "shuffle_write_bytes", "spill_disk_bytes", "spill_mem_bytes",
+    "gc_time_ms", "input_bytes", "output_bytes", "peak_execution_mem_bytes", "task_count",
+    "task_duration_p50_ms", "task_duration_p99_ms", "task_duration_max_ms",
+    "task_duration_sample_count",
+    "successful_task_duration_p50_ms", "successful_task_duration_p99_ms",
+    "successful_task_duration_max_ms", "successful_task_sample_count",
+    "successful_task_shuffle_read_bytes_p50",
+    "successful_task_shuffle_read_bytes_max",
+    "successful_task_shuffle_read_bytes_sample_count",
+    "task_attempt_count", "task_failed_attempt_count",
+    "task_counted_failure_attempt_count", "task_killed_attempt_count",
+    "task_speculative_attempt_count",
+    "plan_fingerprint", "plan_json", "executor_run_time_ms", "attributes",
+})
+
+# `database` is a server-side parameter for the same reason job_id is in every
+# query above: it is caller-supplied (`ClickHouseSettings.database`) and must
+# never be string-interpolated into SQL.
+SCHEMA_COLUMNS_SQL = """
+SELECT name FROM system.columns
+WHERE database = {database:String} AND table = 'spark_events'
+"""
+
 PLAN_TRANSITIONS_SQL = """
 SELECT job_id, execution_id, update_seq, transition_type, detail, before, after, confidence
 FROM apex.plan_transitions
@@ -193,6 +230,44 @@ class ClickHouseClient(Protocol):
     def insert(self, table: str, data: list[Any], column_names: tuple[str, ...], database: str) -> Any: ...
 
 
+class SchemaOutOfDateError(RuntimeError):
+    """`EngineStore.connect()` found `database`.spark_events missing a column
+    the engine's queries require.
+
+    `infra/docker-compose.yml` mounts `infra/sql` as ClickHouse's
+    `docker-entrypoint-initdb.d`, which only runs on a volume's first init — a
+    volume created before a migration landed never receives it, and nothing
+    tells the operator until a query fails mid-analyze() naming one column
+    (issue #95). This is that failure, moved to connect time and named for
+    what it is.
+    """
+
+    def __init__(self, database: str, missing: frozenset[str]) -> None:
+        self.database = database
+        self.missing_columns = missing
+        names = ", ".join(sorted(missing))
+        super().__init__(
+            f"apex schema is behind: {database}.spark_events is missing "
+            f"{len(missing)} column(s) the engine's queries require: {names}. "
+            "Run infra/scripts/apply_schema_migrations.ps1 to apply pending "
+            "migrations, then retry."
+        )
+
+
+def _preflight_schema(client: ClickHouseClient, database: str) -> None:
+    """Fail fast if `database`.spark_events lacks a column the engine reads.
+
+    Runs once, from `EngineStore.connect()`, before any job is analyzed. Does
+    not catch or wrap the client's own connection errors — those still surface
+    as-is; this only adds a check on top of an already-open connection.
+    """
+    result = client.query(SCHEMA_COLUMNS_SQL, parameters={"database": database})
+    existing = {row["name"] for row in result.named_results()}
+    missing = REQUIRED_SPARK_EVENTS_COLUMNS - existing
+    if missing:
+        raise SchemaOutOfDateError(database, frozenset(missing))
+
+
 class EngineStore:
     def __init__(self, client: ClickHouseClient, *, database: str = "apex") -> None:
         self._client = client
@@ -206,9 +281,17 @@ class EngineStore:
 
     @classmethod
     def connect(cls, settings: ClickHouseSettings | None = None) -> "EngineStore":
-        """Open a real clickhouse-connect client from the environment."""
+        """Open a real clickhouse-connect client from the environment.
+
+        Runs the schema preflight before returning: a store missing a column
+        the engine reads fails here, legibly, instead of mid-analyze() with a
+        raw ClickHouse error naming one column and nothing about the schema
+        (issue #95).
+        """
         settings = settings or ClickHouseSettings()
-        return cls(settings.connect(), database=settings.database)
+        client = settings.connect()
+        _preflight_schema(client, settings.database)
+        return cls(client, database=settings.database)
 
     @property
     def client(self) -> ClickHouseClient:
