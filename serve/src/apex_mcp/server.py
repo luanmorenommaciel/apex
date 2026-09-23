@@ -632,7 +632,9 @@ def _configure_logging() -> None:
 def main() -> None:
     _configure_logging()
     log.info("apex-mcp starting (stdio transport)")
-    create_server(ReadStore(LazyClient())).run(transport="stdio")
+    create_server(
+        ReadStore(LazyClient(), database=ch.configured_database())
+    ).run(transport="stdio")
 
 
 if __name__ == "__main__":

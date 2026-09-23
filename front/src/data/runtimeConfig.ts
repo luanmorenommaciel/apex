@@ -22,8 +22,12 @@
  * This changes WHO sets the credential, not who can read it. It still ships to
  * every browser, which is why `contract/01-readonly-user.sql` grants SELECT and
  * nothing else. See the README — "Querying ClickHouse from the browser".
+ *
+ * The `http` data source is the way out of that: against the Apex API the
+ * browser carries an API token instead of a database user, and the API decides
+ * what it may see. `database`, `user` and `password` are then unused.
  */
-const DATA_SOURCES = ["auto", "clickhouse", "fixtures"] as const;
+const DATA_SOURCES = ["auto", "clickhouse", "fixtures", "http"] as const;
 
 export type DataSource = (typeof DATA_SOURCES)[number];
 
@@ -32,6 +36,15 @@ export interface RuntimeConfig {
   user: string;
   password: string;
   dataSource: DataSource;
+  /** Base URL of the Apex API. Empty means no API is configured. */
+  apiUrl: string;
+  /**
+   * Bearer token for that API. Still ships to the browser — a client-side
+   * console cannot hide a credential — but it is a credential for the API and
+   * never for the store, so it can be scoped, rotated and revoked per
+   * consumer, and it cannot read a table nobody exposed a route for.
+   */
+  apiToken: string;
 }
 
 declare global {
@@ -41,6 +54,8 @@ declare global {
       user?: string;
       password?: string;
       dataSource?: string;
+      apiUrl?: string;
+      apiToken?: string;
     };
   }
 }
@@ -62,4 +77,6 @@ export const runtimeConfig: RuntimeConfig = {
   user: deployed?.user ?? import.meta.env.VITE_CLICKHOUSE_USER ?? "apex_ro",
   password: deployed?.password ?? import.meta.env.VITE_CLICKHOUSE_PASSWORD ?? "",
   dataSource: asDataSource(deployed?.dataSource ?? import.meta.env.VITE_DATA_SOURCE),
+  apiUrl: deployed?.apiUrl ?? import.meta.env.VITE_APEX_API_URL ?? "",
+  apiToken: deployed?.apiToken ?? import.meta.env.VITE_APEX_API_TOKEN ?? "",
 };

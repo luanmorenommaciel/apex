@@ -6,7 +6,7 @@ import pytest
 
 from apex_mcp import ch
 from apex_mcp.ch import ApexStoreError, ReadStore
-from tests.conftest import FakeClient, finding_row, stage_row
+from tests.conftest import FakeClient, finding_row, reads, stage_row
 
 
 def test_every_query_uses_server_side_binding():
@@ -90,8 +90,8 @@ def test_search_covers_findings_and_plan_text():
     client = FakeClient(search=[])
     ReadStore(client).search(["spill"], 5)
     queried = " ".join(sql for sql, _ in client.calls)
-    assert "apex.findings" in queried
-    assert "apex.spark_events" in queried
+    assert reads(queried, "findings")
+    assert reads(queried, "spark_events")
 
 
 @pytest.mark.parametrize(
@@ -187,7 +187,7 @@ def test_store_health_sql_is_bound_not_interpolated():
     sql, parameters = store._client.calls[0]  # noqa: SLF001 — asserting the wire
     assert "{" not in sql
     assert parameters == {}
-    assert "apex.spark_events" in sql
+    assert reads(sql, "spark_events")
 
 
 
@@ -485,7 +485,7 @@ class _MemoryClient:
             return type("R", (), {"named_results": lambda _s: rows})()
         if self.raises:
             raise self.raises
-        rows = self.outcomes if "apex.run_outcomes" in query else self.plans
+        rows = self.outcomes if reads(query, "run_outcomes") else self.plans
         return type("R", (), {"named_results": lambda _s: list(rows)})()
 
 
@@ -654,8 +654,8 @@ def test_plan_memory_absent_tables_degrade(caplog):
     assert store.memory_tables_present() is False
     assert "cross-run memory unavailable" in caplog.text
     # Absent means absent: neither read reached the table.
-    assert all("apex.plan_memory" not in sql for sql, _ in client.calls)
-    assert all("apex.run_outcomes" not in sql for sql, _ in client.calls)
+    assert all(not reads(sql, "plan_memory") for sql, _ in client.calls)
+    assert all(not reads(sql, "run_outcomes") for sql, _ in client.calls)
 
 
 def test_schema_error_degrades_only_when_the_tables_really_are_gone(caplog):
@@ -734,3 +734,264 @@ def test_memory_reads_short_circuit_on_empty_input():
     assert store.similar_plans("") == []
     assert store.prior_outcomes([]) == []
     assert client.calls == []
+
+
+# --------------------------------------------------------------------------
+# Console reads ported out of front/src/data/queries.ts.
+#
+# These ran in the BROWSER against a credential that shipped to every visitor.
+# The port's acceptance criterion is that the console's rendered numbers do not
+# move, so these tests pin the result SHAPE rather than the SQL text.
+# --------------------------------------------------------------------------
+
+INJECTION = "x' OR 1=1 --"
+
+
+class _ConsoleClient:
+    """Routes on the ported SQL's shape, like FakeClient does for the tools."""
+
+    def __init__(
+        self,
+        *,
+        run_rows: list[dict] | None = None,
+        conf_rows: list[dict] | None = None,
+        shape_rows: list[dict] | None = None,
+        sample_rows: list[dict] | None = None,
+        candidate_rows: list[dict] | None = None,
+        tables: tuple[str, ...] = ("plan_memory", "run_outcomes"),
+    ) -> None:
+        self.run_rows = run_rows or []
+        self.conf_rows = conf_rows or []
+        self.shape_rows = shape_rows or []
+        self.sample_rows = sample_rows or []
+        self.candidate_rows = candidate_rows or []
+        self.tables = tables
+        self.calls: list[tuple[str, dict]] = []
+
+    def query(self, query: str, parameters: dict | None = None):
+        self.calls.append((query, parameters or {}))
+        if "system.tables" in query:
+            rows = [{"name": name} for name in self.tables]
+        elif "system.columns" in query:
+            rows = [{"name": "job_id"}]
+        elif "ARRAY JOIN" in query:
+            rows = self.conf_rows
+        elif "sample_plan_json" in query:
+            rows = self.sample_rows
+        elif "shared_shapes" in query:
+            rows = self.candidate_rows
+        elif "severity_rank" in query or "node_count" in query:
+            rows = self.shape_rows
+        else:
+            rows = self.run_rows
+        return type("R", (), {"named_results": lambda _s: list(rows)})()
+
+
+def test_run_returns_one_rollup_row():
+    row = {
+        "job_id": "j", "app_name": "nightly-rollup", "stage_count": 34,
+        "started_at": "2026-09-20 10:00:00", "finding_count": 3,
+        "has_critical": 1, "task_time_ms": 91000, "plan_fingerprint": "a" * 64,
+        "shape_count": 2, "shaped_stage_count": 30, "config_source": "observed",
+        "conf_executor_instances": 8, "conf_shuffle_partitions": 200,
+    }
+    got = ReadStore(_ConsoleClient(run_rows=[row])).run("j")
+    assert got == row
+
+
+def test_run_returns_none_for_unknown_job():
+    """None, never a zero-filled row: the console renders that as a real run."""
+    assert ReadStore(_ConsoleClient(run_rows=[])).run("nope") is None
+
+
+def test_job_conf_returns_rows_and_empty_when_absent():
+    rows = [
+        {"job_id": "j", "key": "spark.executor.cores", "value": "4", "ts": None},
+        {"job_id": "j", "key": "spark.sql.shuffle.partitions", "value": "200", "ts": None},
+    ]
+    assert ReadStore(_ConsoleClient(conf_rows=rows)).job_conf("j") == rows
+    # A jar that emitted no job_conf is an absence of capture, not a run with
+    # no configuration — and it stays empty rather than gaining a default.
+    assert ReadStore(_ConsoleClient(conf_rows=[])).job_conf("j") == []
+
+
+def test_shape_runs_and_plan_sample():
+    runs = [
+        {"job_id": "old", "observed_at": "2026-09-01", "task_time_ms": 10},
+        {"job_id": "new", "observed_at": "2026-09-20", "task_time_ms": 20},
+    ]
+    store = ReadStore(
+        _ConsoleClient(
+            shape_rows=runs, sample_rows=[{"sample_plan_json": "== Physical Plan =="}]
+        )
+    )
+    assert [r["job_id"] for r in store.shape_runs("a" * 64)] == ["old", "new"]
+    assert store.plan_sample("a" * 64) == "== Physical Plan =="
+    # Unindexed shape: None, so "the lane has not reached this shape" stays
+    # distinguishable from "this shape's plan text is empty".
+    assert ReadStore(_ConsoleClient(sample_rows=[])).plan_sample("b" * 64) is None
+    assert (
+        ReadStore(_ConsoleClient(sample_rows=[{"sample_plan_json": ""}])).plan_sample(
+            "b" * 64
+        )
+        is None
+    )
+
+
+def test_new_methods_bind_parameters():
+    """A value carrying SQL syntax is bound, never interpolated."""
+    client = _ConsoleClient()
+    store = ReadStore(client)
+    store.run(INJECTION)
+    store.job_conf(INJECTION)
+    store.baseline_candidates(INJECTION)
+    store.plan_shapes()
+    store.plan_sample(INJECTION)
+    store.shape_runs(INJECTION)
+
+    bound = False
+    for sql, parameters in client.calls:
+        assert INJECTION not in sql, "the value reached the statement text"
+        if parameters.get("job_id") == INJECTION or parameters.get("fingerprint") == INJECTION:
+            bound = True
+            assert "{job_id:String}" in sql or "{fingerprint:String}" in sql
+    assert bound, "no call carried the value as a bound parameter"
+
+
+def test_plan_shapes_reports_absent_memory_tables():
+    """Absence of a TABLE is not an empty history, and is not reported as one."""
+    store = ReadStore(_ConsoleClient(tables=()))
+    for call in (
+        lambda: store.plan_shapes(),
+        lambda: store.shape_runs("a" * 64),
+        lambda: store.plan_sample("a" * 64),
+        lambda: store.baseline_candidates("j"),
+    ):
+        with pytest.raises(ApexStoreError) as caught:
+            call()
+        assert str(caught.value).startswith("memory_unavailable")
+    # The reads that do not depend on v0.3 still work on the same deployment.
+    assert ReadStore(_ConsoleClient(tables=(), conf_rows=[])).job_conf("j") == []
+
+
+def test_run_list_returns_the_console_rollup():
+    """run_list is NOT runs(): same subject, different projection.
+
+    runs() answers the MCP's RunSummary — app_id, first/last ts, spill,
+    worst p99. The console needs task_time_ms, finding_count and the shape
+    columns, which runs() does not carry. Serving one as the other would give
+    the console a payload it cannot render.
+    """
+    row = {
+        "job_id": "j", "app_name": "nightly-rollup", "stage_count": 34,
+        "started_at": "2026-09-20 10:00:00", "finding_count": 3,
+        "has_critical": 1, "task_time_ms": 91000, "plan_fingerprint": "a" * 64,
+        "shape_count": 2, "shaped_stage_count": 30, "config_source": "observed",
+        "conf_executor_instances": 8, "conf_shuffle_partitions": 200,
+    }
+    client = _ConsoleClient(run_rows=[row])
+    assert ReadStore(client).run_list(limit=10) == [row]
+
+    sql, parameters = client.calls[-1]
+    for column in ("task_time_ms", "finding_count", "shape_count", "config_source"):
+        assert column in sql, f"the console needs {column} and runs() has none"
+    assert parameters["limit"] == 10
+    # The limit is clamped, not trusted — a caller cannot ask for the table.
+    ReadStore(client).run_list(limit=10_000)
+    assert client.calls[-1][1]["limit"] == ReadStore.MAX_RUNS
+    # And the two forms share one body, so they cannot drift.
+    assert "{job_id:String}" not in ch.RUN_LIST_SQL
+    assert "{job_id:String}" in ch.RUN_ONE_SQL
+
+
+def test_fix_verification_keys_on_finding_id_alone():
+    """Both console call sites hold a finding_id and no job_id."""
+    row = {
+        "fix_id": "v1", "finding_id": "f-7c41e9", "job_id": "j",
+        "mechanism_confirmed": None, "runtime_certified": 0,
+        "runtime_verdict": "unresolved", "predicted_saving_pct": 11.0,
+        "noise_floor_pct": 17.4, "replay_count": 5, "cluster_slots": 32,
+        "proposed_diff": "- 200\n+ 800",
+    }
+
+    class _VerifyClient(_ConsoleClient):
+        def query(self, query: str, parameters: dict | None = None):
+            self.calls.append((query, parameters or {}))
+            if "system.tables" in query:
+                rows = [{"name": n} for n in self.tables]
+            elif "system.columns" in query:
+                rows = [{"name": "verification_id"}]
+            elif "runtime_verdict" in query:
+                rows = self.run_rows
+            else:
+                rows = []
+            return type("R", (), {"named_results": lambda _s: list(rows)})()
+
+    client = _VerifyClient(run_rows=[row])
+    assert ReadStore(client).fix_verification("f-7c41e9") == row
+    sql, parameters = client.calls[-1]
+    assert "{finding_id:String}" in sql
+    assert "{job_id:String}" not in sql, "the console has no job_id to give"
+    assert parameters["finding_id"] == "f-7c41e9"
+    # Rule 2 is computed in the projection, not read from a column.
+    assert "runtime_verdict" in sql and "noise_floor_pct" in sql
+
+    # No row for the finding is None, not a fabricated verdict.
+    assert ReadStore(_VerifyClient(run_rows=[])).fix_verification("f-nope") is None
+    # An empty finding_id is refused rather than silently matching everything.
+    with pytest.raises(ApexStoreError):
+        ReadStore(_VerifyClient()).fix_verification("")
+
+
+def test_console_stages_projects_what_the_console_reads():
+    """console_stages is not stages(): different consumer, different names.
+
+    STAGES_SQL aliases the timings AS p50_ms/p99_ms for the MCP's StageView
+    and projects no job_id, stage_name or ts. The console reads all five, so
+    serving one as the other gave it undefined timings and NaN ratios.
+    """
+    sql = ch.CONSOLE_STAGES_SQL
+    for column in (
+        "job_id", "app_name", "stage_id", "stage_name", "stage_attempt",
+        "task_count", "shuffle_read_bytes", "shuffle_write_bytes",
+        "input_bytes", "spill_mem_bytes", "spill_disk_bytes",
+        "peak_execution_mem_bytes", "gc_time_ms",
+        "task_duration_p50_ms", "task_duration_p99_ms", "plan_fingerprint", "ts",
+    ):
+        assert f"AS {column}" in sql, f"the console reads {column} and this omits it"
+    # The MCP's own aliases must NOT appear here, or the two drift back together.
+    assert "AS p50_ms" not in sql and "AS p99_ms" not in sql
+    # And it binds, like every other method.
+    client = _ConsoleClient(run_rows=[{"stage_id": 4}])
+    ReadStore(client).console_stages(INJECTION)
+    sql, parameters = client.calls[-1]
+    assert INJECTION not in sql
+    assert parameters["job_id"] == INJECTION
+
+
+def test_fix_verification_needs_no_plan_memory_table():
+    """FIX_VERIFICATION_SQL reads run_outcomes and fix_verifications, not plan_memory.
+
+    Requiring the whole v0.3 pair hid stored verifications during a partial
+    rollout — an absent plan_memory says nothing about whether the verify lane
+    reached this finding.
+    """
+    row = {"fix_id": "v1", "finding_id": "f1", "job_id": "j", "runtime_verdict": "unresolved"}
+
+    class _PartialClient(_ConsoleClient):
+        def query(self, query: str, parameters: dict | None = None):
+            self.calls.append((query, parameters or {}))
+            if "system.tables" in query:
+                rows = [{"name": n} for n in self.tables]
+            elif "system.columns" in query:
+                rows = [{"name": "verification_id"}] if "fix_verifications" in str(parameters) else []
+                rows = [{"name": "verification_id"}]
+            elif "runtime_verdict" in query:
+                rows = self.run_rows
+            else:
+                rows = []
+            return type("R", (), {"named_results": lambda _s: list(rows)})()
+
+    # run_outcomes present, plan_memory absent — the row must still come back.
+    got = ReadStore(_PartialClient(run_rows=[row], tables=("run_outcomes",))).fix_verification("f1")
+    assert got == row

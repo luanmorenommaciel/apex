@@ -160,6 +160,7 @@ import asyncio
 
 from apex_mcp.ch import ReadStore
 from apex_mcp.server import create_server
+from tests.conftest import reads
 
 FP_NEAR = "b" * 64
 
@@ -183,9 +184,9 @@ class _RecallClient:
     def query(self, query: str, parameters: dict | None = None):
         if "system.tables" in query:
             rows = [{"name": name} for name in self.tables]
-        elif "apex.plan_memory" in query:
+        elif reads(query, "plan_memory"):
             rows = list(self.plans)
-        elif "apex.run_outcomes" in query:
+        elif reads(query, "run_outcomes"):
             rows = list(self.outcomes)
         else:
             rows = list(self.stages)

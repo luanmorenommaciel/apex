@@ -10,21 +10,28 @@ dependencies = [
   "mcp[cli]>=1.27,<2",
   "clickhouse-connect>=1.4,<2",
   "pydantic>=2.11,<3",
+  # The API layer. FastAPI is Starlette, which the SDK-bundled FastMCP already
+  # pulls in — this adds a router and validation layer, not a second runtime.
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<9"]
+# httpx backs starlette.testclient; without it TestClient raises on import.
+dev = ["pytest>=8,<9", "httpx>=0.27,<1"]
 
 [project.scripts]
 # enables `uvx apex-mcp` — the single-command install path
 apex-mcp = "apex_mcp.server:main"
+# enables `uvx --from apex-mcp apex-api`
+apex-api = "apex_api.app:main"
 
 [build-system]
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/apex_mcp"]
+packages = ["src/apex_mcp", "src/apex_api"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
