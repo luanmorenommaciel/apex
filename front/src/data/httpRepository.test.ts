@@ -18,6 +18,15 @@ const config = vi.hoisted(() => ({
 
 vi.mock("./runtimeConfig", () => ({ runtimeConfig: config }));
 
+// Both stores' probes, so `auto` can be exercised without a network. The real
+// ClickHouse ping is replaced; the API probe (apiPing) is NOT — it is the unit
+// under test and runs against the stubbed fetch.
+const chPing = vi.hoisted(() => vi.fn<() => Promise<boolean>>());
+vi.mock("./clickhouse", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./clickhouse")>()),
+  ping: chPing,
+}));
+
 import { ApiAuthError } from "./http";
 import {
   ClickHouseRepository,
@@ -52,6 +61,8 @@ beforeEach(() => {
   config.apiUrl = "http://api.test";
   config.apiToken = "tok-123";
   vi.unstubAllGlobals();
+  chPing.mockReset();
+  chPing.mockResolvedValue(false);
 });
 
 describe("selection", () => {
@@ -73,6 +84,80 @@ describe("selection", () => {
     await resolveRepository();
     // Pinned means pinned: no /v1/health ping, no ClickHouse ping.
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe("auto", () => {
+  beforeEach(() => {
+    config.dataSource = "auto";
+  });
+
+  const health = (body: unknown = { status: "ok", store: "ok" }) =>
+    respond(body);
+
+  it("probes the same-origin /v1/health when apiUrl is empty and selects the API", async () => {
+    // The supported same-origin deployment: VITE_APEX_API_PROXY_TARGET reaches
+    // the dev server and APEX_API_UPSTREAM reaches nginx, never the bundle, so
+    // apiUrl is deliberately empty. Skipping the probe there made `auto` fall
+    // back to ClickHouse in the one setup this data source was built for.
+    config.apiUrl = "";
+    stubFetch(() => health());
+    const repo = await resolveRepository();
+    expect(repo).toBeInstanceOf(HttpRepository);
+    expect(calls.map((c) => c.url)).toEqual(["/v1/health"]);
+    expect(chPing).not.toHaveBeenCalled();
+  });
+
+  it("probes an absolute apiUrl when one is configured", async () => {
+    stubFetch(() => health());
+    expect(await resolveRepository()).toBeInstanceOf(HttpRepository);
+    expect(calls.map((c) => c.url)).toEqual(["http://api.test/v1/health"]);
+  });
+
+  it("falls back to ClickHouse when no API answers", async () => {
+    config.apiUrl = "";
+    // A proxy whose upstream is absent answers 502.
+    stubFetch(() => respond({}, { status: 502 }));
+    chPing.mockResolvedValue(true);
+    expect(await resolveRepository()).toBeInstanceOf(ClickHouseRepository);
+  });
+
+  it("falls back to fixtures when neither store answers", async () => {
+    config.apiUrl = "";
+    vi.stubGlobal("fetch", () => Promise.reject(new TypeError("refused")));
+    expect(await resolveRepository()).toBeInstanceOf(FixtureRepository);
+  });
+
+  it("does not mistake an SPA fallback page for the API", async () => {
+    // A static host answers /v1/health with index.html and a 200. The probe
+    // must see that the body is not the API's liveness document.
+    config.apiUrl = "";
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: "",
+        headers: new Headers(),
+        json: async () => {
+          throw new SyntaxError("Unexpected token '<'");
+        },
+      } as unknown as Response),
+    );
+    chPing.mockResolvedValue(true);
+    expect(await resolveRepository()).toBeInstanceOf(ClickHouseRepository);
+  });
+
+  it("never falls back on a 401: a gated API is still the API", async () => {
+    config.apiUrl = "";
+    stubFetch(() => respond({ detail: "unauthorized" }, { status: 401 }));
+    // ClickHouse is reachable, and must still not be chosen: that would quietly
+    // restore the browser-side database credential the API exists to remove.
+    chPing.mockResolvedValue(true);
+    const repo = await resolveRepository();
+    expect(repo).toBeInstanceOf(HttpRepository);
+    expect(chPing).not.toHaveBeenCalled();
+    // And the refusal then surfaces from the API's own calls.
+    await expect(repo.listRuns()).rejects.toBeInstanceOf(ApiAuthError);
   });
 });
 

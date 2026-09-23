@@ -12,6 +12,8 @@ import os
 from dataclasses import dataclass
 from typing import Mapping
 
+from apex_mcp.ch import DATABASE_VAR, DEFAULT_DATABASE
+
 # Comma-separated. Whitespace around an entry is stripped; empty entries are
 # dropped, so a trailing comma is not a nameless token.
 TOKENS_VAR = "APEX_API_TOKENS"
@@ -27,9 +29,15 @@ class Settings:
 
     ``tokens`` is a frozenset so a caller cannot mutate the accepted set after
     the app is built.
+
+    ``database`` is ``CLICKHOUSE_DATABASE``, the database the service reads.
+    Queries name tables unqualified and resolve them in the client's session
+    database, which ``ch.get_client`` opens from the same variable; the store
+    is handed this value so its ``system.*`` probes look at that database too.
     """
 
     tokens: frozenset[str]
+    database: str = DEFAULT_DATABASE
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
@@ -48,4 +56,5 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
             f"comma-separated list of tokens. The server does not serve "
             f"without one."
         )
-    return Settings(tokens=tokens)
+    database = source.get(DATABASE_VAR, "").strip() or DEFAULT_DATABASE
+    return Settings(tokens=tokens, database=database)

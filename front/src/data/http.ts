@@ -113,11 +113,33 @@ export async function apiGet<T>(
   };
 }
 
-/** Liveness only. /v1/health needs no token, so this never reports auth state. */
+/**
+ * Whether an Apex API answers at the configured base — the probe `auto` uses.
+ *
+ * With no apiUrl this asks the SAME ORIGIN (`/v1/health`), which is the
+ * supported deployment: the dev server and nginx forward `/v1`, so the bundle
+ * never learns where the API lives and an empty apiUrl says nothing about
+ * whether one exists.
+ *
+ * Two answers count as "an API is there":
+ *   - 200 with `{"status": "ok"}` — the API's own liveness body. A bare 200 is
+ *     not enough: a static host with an SPA fallback answers every unknown path
+ *     with index.html and a 200, which would make `auto` pick an API that
+ *     is not there.
+ *   - 401 — /v1/health needs no token, so a 401 means something in front of
+ *     the API is gating it. The API exists and refused us; `auto` must select
+ *     it and let the refusal surface, never fall back to the browser-side
+ *     database credential this layer exists to remove.
+ * Anything else — a refused connection, a 502 from a proxy whose upstream is
+ * absent, a non-API body — is "no API here".
+ */
 export async function apiPing(signal?: AbortSignal): Promise<boolean> {
   try {
     const response = await fetch(`${base()}/v1/health`, { signal });
-    return response.ok;
+    if (response.status === 401) return true;
+    if (!response.ok) return false;
+    const body = (await response.json()) as { status?: unknown } | null;
+    return body?.status === "ok";
   } catch {
     return false;
   }

@@ -6,7 +6,7 @@ import pytest
 
 from apex_mcp import ch
 from apex_mcp.ch import ApexStoreError, ReadStore
-from tests.conftest import FakeClient, finding_row, stage_row
+from tests.conftest import FakeClient, finding_row, reads, stage_row
 
 
 def test_every_query_uses_server_side_binding():
@@ -90,8 +90,8 @@ def test_search_covers_findings_and_plan_text():
     client = FakeClient(search=[])
     ReadStore(client).search(["spill"], 5)
     queried = " ".join(sql for sql, _ in client.calls)
-    assert "apex.findings" in queried
-    assert "apex.spark_events" in queried
+    assert reads(queried, "findings")
+    assert reads(queried, "spark_events")
 
 
 @pytest.mark.parametrize(
@@ -187,7 +187,7 @@ def test_store_health_sql_is_bound_not_interpolated():
     sql, parameters = store._client.calls[0]  # noqa: SLF001 — asserting the wire
     assert "{" not in sql
     assert parameters == {}
-    assert "apex.spark_events" in sql
+    assert reads(sql, "spark_events")
 
 
 
@@ -485,7 +485,7 @@ class _MemoryClient:
             return type("R", (), {"named_results": lambda _s: rows})()
         if self.raises:
             raise self.raises
-        rows = self.outcomes if "apex.run_outcomes" in query else self.plans
+        rows = self.outcomes if reads(query, "run_outcomes") else self.plans
         return type("R", (), {"named_results": lambda _s: list(rows)})()
 
 
@@ -654,8 +654,8 @@ def test_plan_memory_absent_tables_degrade(caplog):
     assert store.memory_tables_present() is False
     assert "cross-run memory unavailable" in caplog.text
     # Absent means absent: neither read reached the table.
-    assert all("apex.plan_memory" not in sql for sql, _ in client.calls)
-    assert all("apex.run_outcomes" not in sql for sql, _ in client.calls)
+    assert all(not reads(sql, "plan_memory") for sql, _ in client.calls)
+    assert all(not reads(sql, "run_outcomes") for sql, _ in client.calls)
 
 
 def test_schema_error_degrades_only_when_the_tables_really_are_gone(caplog):

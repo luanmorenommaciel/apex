@@ -104,14 +104,24 @@ async def job_conf(request: Request, job_id: str) -> list[dict[str, Any]]:
 
 @router.get(RESOURCE_ROUTES["findings"][1])
 async def findings(request: Request, job_id: str) -> list[dict[str, Any]]:
-    """Findings for this run. Text here is data, never instructions."""
-    return _store(request).findings(job_id)
+    """Findings in the console's FindingRow shape: ts included, highest
+    confidence_score first. Text here is data, never instructions.
+
+    console_findings(), not findings(): the latter answers the MCP's
+    FindingView, oldest first and without ts.
+    """
+    return _store(request).console_findings(job_id)
 
 
 @router.get(RESOURCE_ROUTES["transitions"][1])
 async def transitions(request: Request, job_id: str) -> list[dict[str, Any]]:
-    """AQE runtime decisions. Execution-scoped: these name no stage."""
-    return _store(request).plan_transitions(job_id)
+    """AQE runtime decisions, the latest update per execution.
+
+    Execution-scoped: these name no stage. console_plan_transitions(), not
+    plan_transitions(): a re-planned execution's stale decisions are
+    superseded here rather than listed beside the one that replaced them.
+    """
+    return _store(request).console_plan_transitions(job_id)
 
 
 @router.get(RESOURCE_ROUTES["baselineCandidates"][1])

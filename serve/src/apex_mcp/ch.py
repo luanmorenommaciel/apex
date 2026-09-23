@@ -71,7 +71,7 @@ SELECT
   argMax(task_duration_p50_ms, ts)     AS p50_ms,
   argMax(task_duration_p99_ms, ts)     AS p99_ms,
   argMax(toString(plan_fingerprint), ts) AS plan_fingerprint
-FROM apex.spark_events
+FROM spark_events
 WHERE job_id = {job_id:String}
 GROUP BY stage_id
 ORDER BY stage_id
@@ -115,7 +115,7 @@ SELECT
   uniqExact(stage_id)            AS stage_count,
   sum(spill_disk_bytes)          AS spill_disk_bytes,
   max(task_duration_p99_ms)      AS worst_p99_ms
-FROM apex.spark_events AS e
+FROM spark_events AS e
 WHERE e.ts >= {since:DateTime}
   AND ({app_name:String} = '' OR e.app_name = {app_name:String})
 GROUP BY job_id
@@ -128,7 +128,7 @@ SELECT
   count()           AS row_count,
   uniqExact(job_id) AS job_count,
   max(ts)           AS latest_ts
-FROM apex.spark_events
+FROM spark_events
 """
 
 COLUMNS_SQL = """
@@ -144,7 +144,7 @@ def _findings_sql(present: set[str]) -> str:
     return f"""
 SELECT
   {', '.join(projections)}
-FROM apex.findings
+FROM findings
 WHERE job_id = {{job_id:String}}
 ORDER BY ts ASC, finding_id ASC
 """
@@ -153,7 +153,7 @@ PLAN_TRANSITIONS_SQL = """
 SELECT
   execution_id, update_seq, toString(transition_type) AS transition_type,
   detail, before, after, toString(confidence) AS confidence
-FROM apex.plan_transitions
+FROM plan_transitions
 WHERE job_id = {job_id:String}
 ORDER BY execution_id, update_seq
 """
@@ -198,7 +198,7 @@ SELECT
   caveats,
   toString(verify_version)  AS verify_version,
   verified_at
-FROM apex.fix_verifications
+FROM fix_verifications
 WHERE job_id = {job_id:String}
   AND ({finding_id:String} = '' OR finding_id = {finding_id:String})
 ORDER BY verified_at DESC, verification_id ASC
@@ -268,10 +268,10 @@ SELECT * FROM (
     p.exchange_count                              AS exchange_count,
     p.scan_count                                  AS scan_count,
     p.last_seen                                   AS last_seen
-  FROM apex.plan_memory AS p FINAL
+  FROM plan_memory AS p FINAL
   INNER JOIN (
     SELECT embedding, dim, encoder_version
-    FROM apex.plan_memory FINAL
+    FROM plan_memory FINAL
     WHERE plan_fingerprint = toFixedString(substring({fingerprint:String}, 1, 64), 64)
       AND length(embedding) > 0
     ORDER BY last_seen DESC
@@ -303,7 +303,7 @@ SELECT
   toString(worst_severity)           AS worst_severity,
   toString(outcome_source)           AS outcome_source,
   observed_at
-FROM apex.run_outcomes FINAL
+FROM run_outcomes FINAL
 WHERE plan_fingerprint IN {fingerprints:Array(String)}
   AND job_id != {exclude_job_id:String}
 ORDER BY observed_at DESC
@@ -340,14 +340,14 @@ WITH
 base AS (
   SELECT job_id, argMax(app_name, ts) AS app_name,
          uniqExact(stage_id) AS stage_count, min(ts) AS started_at
-  FROM apex.spark_events
+  FROM spark_events
   {where}
   GROUP BY job_id
 ),
 f AS (
   SELECT job_id, count() AS finding_count,
          max(severity IN ('critical', 'blocker')) AS has_critical
-  FROM apex.findings GROUP BY job_id
+  FROM findings GROUP BY job_id
 ),
 shapes AS (
   SELECT ro.job_id AS job_id,
@@ -358,7 +358,7 @@ shapes AS (
          argMax(ro.config_source, ro.observed_at)              AS config_source,
          max(ro.conf_executor_instances)                       AS conf_executor_instances,
          max(ro.conf_shuffle_partitions)                       AS conf_shuffle_partitions
-  FROM apex.run_outcomes AS ro FINAL
+  FROM run_outcomes AS ro FINAL
   GROUP BY ro.job_id
 )
 SELECT
@@ -399,7 +399,7 @@ FIX_VERIFICATION_SQL = """
 WITH slots AS (
   SELECT job_id,
          max(conf_executor_instances) * max(conf_executor_cores) AS cluster_slots
-  FROM apex.run_outcomes FINAL
+  FROM run_outcomes FINAL
   GROUP BY job_id
 )
 SELECT
@@ -420,7 +420,7 @@ SELECT
   v.replay_reps                       AS replay_count,
   s.cluster_slots                     AS cluster_slots,
   v.proposed_config                   AS proposed_diff
-FROM apex.fix_verifications AS v
+FROM fix_verifications AS v
 LEFT JOIN slots s ON s.job_id = v.job_id
 WHERE v.finding_id = {finding_id:String}
 ORDER BY v.verified_at DESC
@@ -437,7 +437,7 @@ SELECT
   entry.1 AS key,
   entry.2 AS value,
   ts
-FROM apex.job_conf
+FROM job_conf
 ARRAY JOIN CAST(conf, 'Array(Tuple(String, String))') AS entry
 WHERE job_id = {job_id:String}
 ORDER BY key
@@ -449,7 +449,7 @@ ORDER BY key
 BASELINE_CANDIDATES_SQL = """
 WITH mine AS (
   SELECT DISTINCT plan_fingerprint
-  FROM apex.run_outcomes FINAL
+  FROM run_outcomes FINAL
   WHERE job_id = {job_id:String}
 )
 SELECT
@@ -457,7 +457,7 @@ SELECT
   any(o.app_name)                AS app_name,
   uniqExact(o.plan_fingerprint)  AS shared_shapes,
   max(o.observed_at)             AS observed_at
-FROM apex.run_outcomes AS o FINAL
+FROM run_outcomes AS o FINAL
 INNER JOIN mine ON mine.plan_fingerprint = o.plan_fingerprint
 WHERE o.job_id != {job_id:String}
 GROUP BY o.job_id
@@ -473,7 +473,7 @@ WITH r AS (
          uniqExact(job_id) AS run_count,
          min(observed_at)  AS first_run,
          max(observed_at)  AS last_run
-  FROM apex.run_outcomes FINAL
+  FROM run_outcomes FINAL
   GROUP BY plan_fingerprint
 )
 SELECT
@@ -488,7 +488,7 @@ SELECT
   pm.scan_count     AS scan_count,
   pm.max_depth      AS max_depth,
   pm.has_udf        AS has_udf
-FROM apex.plan_memory AS pm FINAL
+FROM plan_memory AS pm FINAL
 INNER JOIN r ON r.plan_fingerprint = pm.plan_fingerprint
 ORDER BY r.run_count DESC, r.last_run DESC
 LIMIT {limit:UInt32}
@@ -500,7 +500,7 @@ LIMIT {limit:UInt32}
 # one. The text is carried verbatim and nothing is parsed out of it.
 PLAN_SAMPLE_SQL = """
 SELECT toString(sample_plan_json) AS sample_plan_json
-FROM apex.plan_memory FINAL
+FROM plan_memory FINAL
 WHERE plan_fingerprint = toFixedString(substring({fingerprint:String}, 1, 64), 64)
 ORDER BY indexed_at DESC
 LIMIT 1
@@ -523,9 +523,72 @@ SELECT
   conf_executor_cores     AS conf_executor_cores,
   conf_executor_memory_mb AS conf_executor_memory_mb,
   observed_at             AS observed_at
-FROM apex.run_outcomes FINAL
+FROM run_outcomes FINAL
 WHERE plan_fingerprint = toFixedString(substring({fingerprint:String}, 1, 64), 64)
 ORDER BY observed_at
+"""
+
+
+# The console's findings projection. NOT _findings_sql(): that one answers the
+# MCP's FindingView, orders oldest-first for a diagnosis to read in detection
+# order, and projects no ts. The console's FindingRow carries ts, and its list
+# is ranked by the RAW confidence_score, highest first — the enum tier is only
+# the display value. `finding_id` breaks ties so the order is deterministic.
+# Like _findings_sql, the v0.2 additive column is projected only when present.
+def _console_findings_sql(present: set[str]) -> str:
+    score = _FINDINGS_ADDITIVE["confidence_score"]
+    score_projection = score[0] if "confidence_score" in present else score[1]
+    return f"""
+SELECT
+  finding_id, job_id, stage_id, toString(type) AS type,
+  toString(severity) AS severity, toString(confidence) AS confidence,
+  {score_projection}, detected_by, evidence, impact, fix, hot_key, ts
+FROM findings
+WHERE job_id = {{job_id:String}}
+ORDER BY confidence_score DESC, finding_id ASC
+"""
+
+
+# The console's AQE transitions, one row per execution_id. NOT
+# PLAN_TRANSITIONS_SQL: that one returns EVERY update for the MCP's
+# PlanTransitionView, so an execution AQE re-planned three times is three rows,
+# and a skew_split that a later update replaced is still on the list. Here every
+# column comes from the row with the greatest update_seq (argMax), so the stale
+# decision is SUPERSEDED rather than shown beside the one that replaced it.
+#
+# plan_fingerprint is not a column of plan_transitions — it lives on
+# spark_events — so it is joined in. any() over the job's fingerprinted stages
+# is sound only because the console uses it as the run's shape identity; a
+# stage-accurate fingerprint would need an execution -> stage map the contract
+# does not carry. The CTE's aggregate is aliased `fingerprint`, not
+# `plan_fingerprint`: on ClickHouse 24.8 an aggregate that shadows the source
+# column turns this CTE's own WHERE into an illegal aggregate expression.
+# `ts` is max(t.ts), qualified for the same shadowing reason.
+CONSOLE_PLAN_TRANSITIONS_SQL = """
+WITH fp AS (
+  SELECT job_id, any(toString(plan_fingerprint)) AS fingerprint
+  FROM spark_events
+  WHERE job_id = {job_id:String}
+    AND match(toString(plan_fingerprint), '^[0-9a-f]{64}$')
+    AND plan_fingerprint != toFixedString(repeat('0', 64), 64)
+  GROUP BY job_id
+)
+SELECT
+  t.job_id                            AS job_id,
+  t.execution_id                      AS execution_id,
+  argMax(t.update_seq, t.update_seq)  AS update_seq,
+  argMax(t.transition_type, t.update_seq) AS transition_type,
+  argMax(t.detail, t.update_seq)      AS detail,
+  argMax(t.before, t.update_seq)      AS before,
+  argMax(t.after, t.update_seq)       AS after,
+  argMax(t.confidence, t.update_seq)  AS confidence,
+  ifNull(any(fp.fingerprint), '')      AS plan_fingerprint,
+  max(t.ts)                           AS ts
+FROM plan_transitions AS t
+LEFT JOIN fp ON fp.job_id = t.job_id
+WHERE t.job_id = {job_id:String}
+GROUP BY t.job_id, t.execution_id
+ORDER BY t.execution_id
 """
 
 
@@ -563,7 +626,7 @@ SELECT
   -- the source column inside each argMax and ClickHouse rejects the statement
   -- with ILLEGAL_AGGREGATION.
   max(se.ts)                                      AS ts
-FROM apex.spark_events AS se
+FROM spark_events AS se
 WHERE se.job_id = {job_id:String}
 GROUP BY se.job_id, se.stage_id
 ORDER BY se.stage_id
@@ -591,7 +654,7 @@ SELECT * FROM (
     concat(toString(type),' | ',evidence,' | ',impact,' | ',fix) AS snippet,
     {score} AS score,
     arrayFilter(x -> x != '', [{matched}]) AS matched_tokens
-  FROM apex.findings
+  FROM findings
 ) WHERE score > 0
 ORDER BY score DESC, job_id ASC, stage_id ASC
 LIMIT {{top_k:UInt32}}
@@ -621,7 +684,7 @@ SELECT * FROM (
     toString(plan_fingerprint) AS plan_fingerprint,
     {score} AS score,
     arrayFilter(x -> x != '', [{matched}]) AS matched_tokens
-  FROM apex.spark_events
+  FROM spark_events
   WHERE plan_json != ''
   GROUP BY job_id, plan_fingerprint
 ) WHERE score > 0
@@ -729,8 +792,9 @@ class ReadStore:
             missing = set(_FINDINGS_ADDITIVE) - self._findings_columns
             if missing and self._findings_columns:
                 log.warning(
-                    "apex.findings is missing additive contract column(s): %s — "
+                    "%s.findings is missing additive contract column(s): %s — "
                     "serving defaults. Apply contract/findings.ddl.sql (infra).",
+                    self._database,
                     ", ".join(sorted(missing)),
                 )
         return self._findings_columns
@@ -974,10 +1038,10 @@ class ReadStore:
         # a partial v0.3 rollout. Gate on what this query reads, nothing else.
         if not self.table_exists("run_outcomes"):
             raise ApexStoreError(
-                "memory_unavailable: apex.run_outcomes is not present on this "
-                "deployment, and this verification joins it for cluster_slots. "
-                "This is not an absent verification. Apply the v0.3 DDL via "
-                "the infra lane."
+                f"memory_unavailable: {self._database}.run_outcomes is not "
+                "present on this deployment, and this verification joins it "
+                "for cluster_slots. This is not an absent verification. Apply "
+                "the v0.3 DDL via the infra lane."
             )
         return next(iter(self._query(FIX_VERIFICATION_SQL, {"finding_id": finding_id})), None)
 
@@ -990,6 +1054,32 @@ class ReadStore:
         so serving one as the other gave it undefined values and NaN ratios.
         """
         return self._query(CONSOLE_STAGES_SQL, {"job_id": _require_job_id(job_id)})
+
+    def console_findings(self, job_id: str) -> list[dict[str, Any]]:
+        """Findings in the CONSOLE's FindingRow shape, highest score first.
+
+        Not ``findings()``. That one answers the MCP's FindingView: oldest
+        first, no ts. The console's FindingRow carries ts and is ranked on
+        confidence_score descending, so serving one as the other dropped a
+        field and reordered a screen.
+        """
+        job_id = _require_job_id(job_id)
+        return self._query(
+            _console_findings_sql(self.findings_columns()), {"job_id": job_id}
+        )
+
+    def console_plan_transitions(self, job_id: str) -> list[dict[str, Any]]:
+        """AQE transitions in the CONSOLE's shape: latest update per execution.
+
+        Not ``plan_transitions()``. That one returns every update for the
+        MCP's PlanTransitionView, so a re-planned execution's stale decisions
+        (a skew_split a later update replaced) are still on the list. This one
+        collapses each execution_id to its greatest update_seq and adds the
+        job_id, plan_fingerprint and ts the console's PlanTransitionRow reads.
+        """
+        return self._query(
+            CONSOLE_PLAN_TRANSITIONS_SQL, {"job_id": _require_job_id(job_id)}
+        )
 
     def job_conf(self, job_id: str) -> list[dict[str, Any]]:
         """This job's configuration, one row per key.
@@ -1047,9 +1137,10 @@ class ReadStore:
         if not self.memory_tables_present():
             raise ApexStoreError(
                 "memory_unavailable: the contract v0.3 tables "
-                "apex.plan_memory and apex.run_outcomes are not present on "
-                "this deployment. This is not an empty history. Apply the "
-                "v0.3 DDL via the infra lane and run the memory lane's indexer."
+                f"{self._database}.plan_memory and {self._database}.run_outcomes "
+                "are not present on this deployment. This is not an empty "
+                "history. Apply the v0.3 DDL via the infra lane and run the "
+                "memory lane's indexer."
             )
 
     # -- plumbing ---------------------------------------------------------
@@ -1110,6 +1201,23 @@ def _sanitize(exc: Exception) -> ApexStoreError:
 # --------------------------------------------------------------------------
 # Connection factory
 # --------------------------------------------------------------------------
+DATABASE_VAR = "CLICKHOUSE_DATABASE"
+DEFAULT_DATABASE = "apex"
+
+
+def configured_database() -> str:
+    """The database every query runs against: ``CLICKHOUSE_DATABASE``.
+
+    SQL in this module names tables unqualified and resolves them in the
+    client's SESSION database, so this one value — read by ``get_client`` for
+    the session and by ``ReadStore`` for its ``system.*`` probes — is what
+    keeps the two from pointing at different databases. It is never
+    interpolated into a statement: identifiers cannot be bound, so the session
+    is the only channel it travels.
+    """
+    return os.getenv(DATABASE_VAR, "").strip() or DEFAULT_DATABASE
+
+
 @functools.lru_cache(maxsize=1)
 def get_client() -> ClickHouseClient:
     """Build the shared client from the environment.
@@ -1127,7 +1235,7 @@ def get_client() -> ClickHouseClient:
             port=int(os.getenv("CLICKHOUSE_PORT", "8123")),
             username=os.getenv("CLICKHOUSE_USER", "apex"),
             password=os.getenv("CLICKHOUSE_PASSWORD", ""),
-            database=os.getenv("CLICKHOUSE_DATABASE", "apex"),
+            database=configured_database(),
             secure=os.getenv("CLICKHOUSE_SECURE", "").lower()
             in {"1", "true", "yes"},
         )
@@ -1136,4 +1244,4 @@ def get_client() -> ClickHouseClient:
 
 
 def get_store() -> ReadStore:
-    return ReadStore(get_client())
+    return ReadStore(get_client(), database=configured_database())

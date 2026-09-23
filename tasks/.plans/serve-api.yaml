@@ -519,4 +519,3 @@ units:
     do_not_touch:
       - front/src/screens/
       - front/src/data/repository.ts
-

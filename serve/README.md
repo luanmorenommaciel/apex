@@ -214,7 +214,7 @@ session start — the config is committed, the secret is not.
 | `CLICKHOUSE_PORT` | `8123` | HTTP port (Port Map) |
 | `CLICKHOUSE_USER` | `apex` | |
 | `CLICKHOUSE_PASSWORD` | *(empty)* | never commit a real value |
-| `CLICKHOUSE_DATABASE` | `apex` | |
+| `CLICKHOUSE_DATABASE` | `apex` | The database every query runs against. Tables are named unqualified and resolve in the session database opened from this variable; the API and MCP stores probe the same one. |
 | `CLICKHOUSE_SECURE` | `false` | `true` for TLS |
 | `APEX_LOG_LEVEL` | `INFO` | logs go to **stderr** only |
 

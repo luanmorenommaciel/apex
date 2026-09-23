@@ -360,8 +360,13 @@ export async function resolveRepository(): Promise<Repository> {
   // ClickHouse because the API refused would quietly restore the browser-side
   // database credential this data source exists to remove.
   if (mode === "http") return new HttpRepository();
-  // auto: prefer the API when one is configured and answering, because that is
-  // the deployment that no longer needs a database user at all.
-  if (runtimeConfig.apiUrl && (await apiPing())) return new HttpRepository();
+  // auto: prefer the API whenever one answers, because that is the deployment
+  // that no longer needs a database user at all. Probed UNCONDITIONALLY: in the
+  // supported same-origin setup apiUrl is deliberately empty (the dev server
+  // and nginx forward /v1 and the bundle never learns the target), so an empty
+  // apiUrl is not evidence that there is no API. apiPing() asks the same origin
+  // in that case. Once chosen, a 401 from the API surfaces as an error — there
+  // is no path from HttpRepository back to ClickHouse.
+  if (await apiPing()) return new HttpRepository();
   return (await ping()) ? new ClickHouseRepository() : new FixtureRepository();
 }

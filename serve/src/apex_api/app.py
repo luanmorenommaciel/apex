@@ -115,7 +115,11 @@ def create_app(
         version="0.1.0",
         summary="Read-only access to the Apex store, in front of ClickHouse.",
     )
-    app.state.store = store if store is not None else ReadStore(_LazyClient())
+    app.state.store = (
+        store
+        if store is not None
+        else ReadStore(_LazyClient(), database=resolved_settings.database)
+    )
     app.state.settings = resolved_settings
 
     app.middleware("http")(build_middleware(resolved_settings))
