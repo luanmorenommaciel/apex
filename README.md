@@ -6,7 +6,7 @@
 [![Spark](https://img.shields.io/badge/Spark-3.5%20%7C%204.0%20%7C%204.1-e25a1c.svg)](#compatibility)
 [![Scala](https://img.shields.io/badge/Scala-2.12%20%7C%202.13-dc322f.svg)](#compatibility)
 [![Tests](https://img.shields.io/badge/tests-401-brightgreen.svg)](#verify-everything)
-[![Contract](https://img.shields.io/badge/contract-v0.5-fabd2f.svg)](CONTRACT.md)
+[![Contract](https://img.shields.io/badge/contract-v0.6-fabd2f.svg)](CONTRACT.md)
 
 Apex captures Spark telemetry from inside the JVM, lands it in ClickHouse you own, reasons over it with deterministic detectors, and answers questions through an MCP server — so you ask *"why was this job slow?"* in your editor and get an answer backed by measurements.
 
@@ -155,7 +155,7 @@ flowchart LR
 | [`memory/`](memory/) | **recall** | "We've seen this plan shape before — here's what worked" | Python |
 | [`verify/`](verify/) | **refute** | Predicts a fix's effect, replays it, reports what can be certified | Python |
 
-**No lane imports another lane's code.** Every arrow above is a ClickHouse table defined by [`CONTRACT.md`](CONTRACT.md) — the frozen interface, now at v0.5 with **seven cross-lane rules**, each discovered by an implementation contradicting the spec. That's what let all eight lanes be built concurrently with **zero merge conflicts**.
+**No lane imports another lane's code.** Every arrow above is a ClickHouse table defined by [`CONTRACT.md`](CONTRACT.md) — the frozen interface, now at v0.6 with **seven cross-lane rules**, each discovered by an implementation contradicting the spec. That's what let all eight lanes be built concurrently with **zero merge conflicts**.
 
 ### Privacy: diagnosable, without your data
 
@@ -176,9 +176,13 @@ Every operator is visible. Every column is `none#N`. Every literal is gone. Emai
 
 | Tool | Read-only | Purpose |
 |---|:---:|---|
+| `list_runs` | ✅ | recent runs, so a user can discover a `job_id` |
 | `analyze_run` | ✅ | bottleneck stage, symptom, and any AQE decision corroborating it |
+| `explain_stage` | ✅ | metrics, symptoms, and findings for one stage of one run |
 | `compare_runs` | ✅ | stage-by-stage diff aligned on literal-normalized plan fingerprint |
 | `search_kb` | ✅ | token search over prior findings and redacted plan text |
+| `recall_similar_runs` | ✅ | prior runs with the same plan shape and their outcomes |
+| `verify_fix` | ✅ | the Verify lane's recorded mechanism and runtime verdicts |
 | `suggest_fix` | ⚠️ | proposes a unified diff — **applies nothing**, `requires_human_approval` is always true |
 
 Text from an observed Spark job is returned in a labelled `untrusted_fields[]` list. It is data, never instructions.
@@ -267,7 +271,7 @@ v0.1 is complete and honest about its edges. Next, in order of value:
 1. **Run on a real cluster.** Every run so far has been one master and one worker. `spark.executor.instances` was absent in 51 of 51 config rows, which means the `slots` term that makes the closed form work has **never been exercised with a real value**. This is the largest untested surface.
 2. **Certify runtime magnitude.** A small bench puts a 17–37% floor under everything; effects below it are structurally unresolvable no matter how many repetitions run.
 3. **Cross-host plan memory.** `memory/`'s corpus is a single environment, so its confidence is directionally right and magnitude-uncertain.
-4. **Reconstruct pre-intervention shape** for AQE-reshaped stages (contract rule 7) — needs an execution→stage map, a v0.5 change.
+4. **Reconstruct pre-intervention shape** for AQE-reshaped stages (contract rule 7). v0.6 emits optional producer-side `execution_id`; a read-side execution→stage mapping and runtime proof are still required.
 5. **Publish the plugin to Maven Central** so installation is two `spark-submit` flags with no build step.
 
 ---
