@@ -34,22 +34,23 @@ features that genuinely are blocked.
 
 ### F4.2 — per-`stage_id` plan-transition linkage
 
-`apex.plan_transitions` is keyed `(job_id, execution_id)`. The contract already documents
-the gap and the fix:
+`apex.plan_transitions` is keyed `(job_id, execution_id)`. This proposal predates
+the v0.6 producer change: an `apex.stage` payload may now include optional
+`execution_id`, which ingestion retains in `spark_events.attributes`. That is
+not yet a public execution-to-stage map: a read-side consumer and runtime proof
+are still required.
 
-> **Stage linkage:** keyed by `(job_id, execution_id)` first cut. Linking a transition to
-> specific `stage_id`s needs an `execution_id→job→stage` map (from `spark.sql.execution.id`
-> in `onJobStart` properties) — a later enhancement, not blocking.
-> — `CONTRACT.md:117`
+The corresponding wording in `CONTRACT.md` still describes the older
+`onJobStart` route. Because the contract is ratified authority, reconcile that
+wording only through a contract decision; this proposal does not amend it.
 
-**Owner: `jar`.** The mechanism is named and the data exists in Spark's own
-`onJobStart` properties. Shape of the work:
+**Remaining work:** define and test the read-side boundary. Shape of the work:
 
 | Step | Lane | Size |
 |---|---|---|
-| Emit `spark.sql.execution.id` at `onJobStart` | `jar` | small — the property is already in hand |
-| Additive column or `apex.job_executions` table | `contract` + `infra` + `collect` | small, additive |
-| Join transitions to stages on read | `serve` | small |
+| Read `spark_events.attributes['execution_id']` with explicit missing/conflict states | `engine` | small |
+| Prove the linkage with Spark SQL and a control workload | `jar` + `engine` | medium |
+| Surface only proven mappings on read | `serve` | small |
 
 This is the cheaper of the two blocked features and unlocks *"AQE split stage 4"* instead
 of *"AQE split something in this execution"* — which is the distinction commit `70f5714`
@@ -82,7 +83,7 @@ needs decisions nobody has taken:
 | Order | Work | Blocked on |
 |---|---|---|
 | 1 | **F4.3 as its own leg** — read `job_conf`, narrate AQE-vs-config | nothing |
-| 2 | **F4.2** — `execution_id` emission, then join on read | `jar` emission + one additive column |
+| 2 | **F4.2** — consume v0.6 `execution_id`, prove the mapping, then surface it | read-side implementation + runtime evidence |
 | 3 | **ADR for call-site correlation** — identity, redaction, stability | a decision, not code |
 | 4 | **F4.1** — implement whatever the ADR settles | the ADR |
 

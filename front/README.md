@@ -1,7 +1,7 @@
 # Apex Console — React front end
 
 A runnable Vite + React + TypeScript implementation of the seven console
-screens, styled with Tailwind and reading the frozen **contract v0.5** tables
+screens, styled with Tailwind and reading the frozen **contract v0.6** tables
 straight from ClickHouse.
 
 ```bash
@@ -99,7 +99,7 @@ surfaced once rule 2 became executable.
 | 2 | Rule 6 | Stage 11 refused as "2 tasks are not a distribution" | Named as rule 6: `n ≤ slots` makes rule 1's bar undefined, so the stage is **excluded**, not cleared |
 | 3 | Rule 3 | Absent | Plan memory counts **distinct configurations after canonicalisation** (`'5.0'` and `'5'` are one config). A fix with 3 attempts and 1 distinct config is shown as *not attributable to tuning* |
 | 4 | Rule 5 | Absent | A quiet transition log produces a `skew_absence_not_evidence` withholding on the run screen and a guardrail row on Verify |
-| 5 | Rule 7 | Footnoted a future execution→stage map as the remedy for the stage-29 near-miss | Rule 7 detects the reshape from `task_count` vs `spark.sql.shuffle.partitions`. Contract v0.5 still has no execution→stage map, so stage-level transition attribution remains unavailable |
+| 5 | Rule 7 | Footnoted a future execution→stage map as the remedy for the stage-29 near-miss | Rule 7 detects the reshape from `task_count` vs `spark.sql.shuffle.partitions`. Contract v0.6 can emit optional stage `execution_id`, but no read-side mapping has been proven, so stage-level transition attribution remains unavailable |
 | 6 | Support matrix | `spark 4.1.2` | `spark 4.0`, inside the published matrix |
 | 7 | Rule 2 | Replays `18m04s / 16m31s / 17m48s` yield an 8.9% floor, but the screens claimed 17.4% — which would have made the 11% prediction *resolvable* and broken the verdict | Replays are `16m03s / 17m48s / 19m07s`. `measureNoiseFloorPct()` computes **17.37%** from them, so `runtime_unresolved` is now a derived result rather than an asserted one |
 
@@ -144,7 +144,7 @@ needs either a materialised view or the `serve/` endpoint.
 ```
 src/
   contract/
-    types.ts        canonical v0.5 shape + backward-compatible projection
+    types.ts        canonical v0.6 shape + backward-compatible projection
     rules.ts        THE SEVEN RULES as pure functions + assessStage()
   data/
     clickhouse.ts   HTTP client, parameterised queries
@@ -225,7 +225,7 @@ and each screen says so on screen rather than faking the data. The ledger:
 | `/verify` | The two independent verdicts come from `apex.fix_verifications`, written by the verify lane; with no row the screen states the emptiness and which lane owes it. The proposed fix is also still prose — turning it into a testable config overlay is that lane's job | `verify` |
 | `/compare` | Needs a second run of the same plan fingerprint to align a baseline; shows *"no baseline"* until the store holds one | `collect` / `engine` (producing runs) |
 | `/runs` | `refused_count` renders `—` list-wide — the "honest gap" above: it needs a materialised view or the `serve/` endpoint | `infra` or `serve` |
-| `/runs/:jobId` | `attributionIsAvailable()` returns `false`: contract v0.5 still carries no execution→stage map, so a transition cannot name a stage. The noise floor cannot be recomputed live either — the contract stores only the two arms' medians, so the console falls back to the stored value and says it did | future contract revision |
+| `/runs/:jobId` | `attributionIsAvailable()` returns `false`: v0.6 emits optional producer-side `execution_id`, but no proven execution-to-stage mapping is available to the console. A transition therefore cannot name a stage. The noise floor also cannot be recomputed live because the contract stores only the two arms' medians, so the console falls back to the stored value and says it did | read-side mapping plus runtime evidence |
 
 The pattern is the same everywhere: an empty state that names the missing
 process beats a plausible number that was never computed.
