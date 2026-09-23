@@ -29,7 +29,7 @@ QUERIES: dict[str, str] = {
                argMax(gc_time_ms, ts)            AS gc_time_ms,
                argMax(input_bytes, ts)           AS input_bytes,
                argMax(task_count, ts)            AS task_count
-        FROM apex.spark_events
+        FROM spark_events
         WHERE job_id = {job_id:String} AND stage_id = {stage_id:Int32}
         GROUP BY stage_id
         LIMIT {limit:Int32}
@@ -40,7 +40,7 @@ QUERIES: dict[str, str] = {
                argMax(task_duration_p99_ms, ts) AS p99_ms,
                argMax(spill_disk_bytes, ts)     AS spill_disk_bytes,
                argMax(shuffle_read_bytes, ts)   AS shuffle_read_bytes
-        FROM apex.spark_events
+        FROM spark_events
         WHERE job_id = {job_id:String}
         GROUP BY stage_id
         ORDER BY p99_ms / nullIf(p50_ms, 0) DESC
@@ -48,7 +48,7 @@ QUERIES: dict[str, str] = {
     """,
     "plan_transitions": """
         SELECT execution_id, update_seq, transition_type, detail, before, after, confidence
-        FROM apex.plan_transitions
+        FROM plan_transitions
         WHERE job_id = {job_id:String}
         ORDER BY execution_id, update_seq
         LIMIT {limit:Int32}

@@ -14,6 +14,9 @@ test_integration_clickhouse.py and skips when infra is not up.
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 import pytest
 
 from apex_engine.clickhouse import (
@@ -21,6 +24,8 @@ from apex_engine.clickhouse import (
     EngineStore,
     SchemaOutOfDateError,
 )
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class FakeColumnsResult:
@@ -91,7 +96,11 @@ def test_connect_fails_fast_when_columns_are_missing():
     assert f"{len(missing)} column(s)" in message
     for name in missing:
         assert name in message
-    assert "infra/scripts/apply_schema_migrations.ps1" in message
+    assert "make -C infra apply-ddl" in message
+    assert "apply_schema_migrations" not in message
+    # The instruction must point at a target that exists in the repo.
+    makefile = (ROOT / "infra" / "Makefile").read_text(encoding="utf-8")
+    assert re.search(r"^apply-ddl:", makefile, re.MULTILINE)
 
 
 def test_connect_reports_every_missing_column_when_schema_is_empty():

@@ -3,6 +3,9 @@
 Two rules hold everywhere in this file:
   * reads bind every caller-supplied value as a server-side `{name:Type}`
     parameter — never string interpolation;
+  * reads name tables WITHOUT a database qualifier: the client is opened with
+    `database=ClickHouseSettings.database`, so the schema preflight and every
+    read resolve to the same database (a literal `apex.` would bypass it);
   * writes go through the native `client.insert(...)` (parameter binding is
     SELECT-only in clickhouse-connect) and are verified via `written_rows`.
 """
@@ -44,7 +47,7 @@ SELECT
   if(executor_run_time_ms > 0,
      executor_run_time_ms,
      toInt64OrZero(attributes['executor_run_time_ms'])) AS executor_run_time_ms
-FROM apex.spark_events
+FROM spark_events
 WHERE job_id = {job_id:String}
 ORDER BY stage_id, stage_attempt, ts
 """
@@ -106,7 +109,7 @@ SELECT
   argMax(successful_task_shuffle_read_bytes_p50, ts)   AS successful_task_shuffle_read_bytes_p50,
   argMax(successful_task_shuffle_read_bytes_max, ts)   AS successful_task_shuffle_read_bytes_max,
   argMax(successful_task_shuffle_read_bytes_sample_count, ts) AS successful_task_shuffle_read_bytes_sample_count
-FROM apex.spark_events
+FROM spark_events
 WHERE job_id = {job_id:String}
 GROUP BY job_id, stage_id
 ORDER BY stage_id
@@ -151,14 +154,14 @@ WHERE database = {database:String} AND table = 'spark_events'
 
 PLAN_TRANSITIONS_SQL = """
 SELECT job_id, execution_id, update_seq, transition_type, detail, before, after, confidence
-FROM apex.plan_transitions
+FROM plan_transitions
 WHERE job_id = {job_id:String}
 ORDER BY execution_id, update_seq
 """
 
 EXISTING_FINDINGS_SQL = """
 SELECT stage_id, type, detected_by, evidence
-FROM apex.findings
+FROM findings
 WHERE job_id = {job_id:String}
 """
 
@@ -168,7 +171,7 @@ WHERE job_id = {job_id:String}
 JOB_CONF_SQL = """
 SELECT job_id, argMax(app_id, ts) AS app_id, argMax(app_name, ts) AS app_name,
        argMax(conf, ts) AS conf
-FROM apex.job_conf
+FROM job_conf
 WHERE job_id = {job_id:String}
 GROUP BY job_id
 """
@@ -176,7 +179,7 @@ GROUP BY job_id
 JOB_CONFS_SQL = """
 SELECT job_id, argMax(app_id, ts) AS app_id, argMax(app_name, ts) AS app_name,
        argMax(conf, ts) AS conf
-FROM apex.job_conf
+FROM job_conf
 WHERE job_id IN {job_ids:Array(String)}
 GROUP BY job_id
 """
@@ -207,7 +210,7 @@ SELECT
   argMax(shuffle_read_bytes, ts)
     + argMax(shuffle_write_bytes, ts)
     + argMax(input_bytes, ts)       AS bytes_touched
-FROM apex.spark_events
+FROM spark_events
 WHERE plan_fingerprint IN {fingerprints:Array(String)}
 GROUP BY job_id, stage_id
 ORDER BY job_id, stage_id
@@ -249,7 +252,7 @@ class SchemaOutOfDateError(RuntimeError):
         super().__init__(
             f"apex schema is behind: {database}.spark_events is missing "
             f"{len(missing)} column(s) the engine's queries require: {names}. "
-            "Run infra/scripts/apply_schema_migrations.ps1 to apply pending "
+            "Run `make -C infra apply-ddl` from the repo root to apply pending "
             "migrations, then retry."
         )
 
