@@ -9,6 +9,19 @@ are corrections to Apex's own earlier claims.
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- The frozen contract has advanced through additive v0.5 and v0.6 extensions.
+  v0.6 permits an optional Spark SQL `execution_id` on an `apex.stage` payload;
+  it is producer-side correlation data, not yet a public execution-to-stage map.
+- `apex-mcp` now exposes eight tools: `list_runs`, `analyze_run`,
+  `explain_stage`, `compare_runs`, `search_kb`, `recall_similar_runs`,
+  `verify_fix`, and `suggest_fix`.
+
+---
+
 ## [0.1.0] — 2026-07-29
 
 First complete release. Eight lanes, one frozen contract, 400 tests.
