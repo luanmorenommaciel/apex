@@ -43,6 +43,7 @@ def verification_row(
     safety_verdict: str = "allow",
     safety_detail: str = "",
     measured_delta_pct: float | None = None,
+    noise_floor_pct: float | None = None,
     replay_reps: int = 0,
     proposed_config: str = '{"spark.sql.adaptive.skewJoin.enabled": "true"}',
 ) -> dict:
@@ -61,7 +62,7 @@ def verification_row(
         "measured_delta_pct": measured_delta_pct,
         "baseline_ms": None,
         "treatment_ms": None,
-        "noise_floor_pct": None,
+        "noise_floor_pct": noise_floor_pct,
         "replay_reps": replay_reps,
         "bench": "dev:skew_join" if replay_reps else "",
         "shape_fidelity": 0.8 if replay_reps else 0.0,
@@ -253,7 +254,7 @@ def test_suggestion_reports_prior_verification():
         findings=[_VERIFIED_FINDING],
         verifications=[
             verification_row(method="replayed", measured_delta_pct=-11.0,
-                             replay_reps=5)
+                             noise_floor_pct=3.0, replay_reps=5)
         ],
     )
 

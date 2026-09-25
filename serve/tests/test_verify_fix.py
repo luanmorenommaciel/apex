@@ -129,7 +129,7 @@ def test_a_positive_delta_is_reported_as_slower():
 def test_a_replayed_verification_reports_the_measurement():
     payload = _call(
         [_row(method="replayed", measured_delta_pct=-11.0, replay_reps=5,
-              bench="dev:skew_join")]
+              noise_floor_pct=3.0, bench="dev:skew_join")]
     )
 
     assert "measured 11.0% faster" in payload["summary"]
@@ -143,7 +143,49 @@ def test_a_measurement_under_the_noise_floor_is_not_reported_as_a_number():
               replay_reps=5)]
     )
 
-    assert "indistinguishable from zero" in payload["summary"]
+    assert "0.4%" not in payload["summary"]
+    assert "below the baseline arm's 3.0% noise floor" in payload["summary"]
+    assert "magnitude not resolvable" in payload["summary"]
+    assert "zero" not in payload["summary"]
+
+
+def test_a_measurement_above_the_noise_floor_is_reported():
+    payload = _call(
+        [_row(method="replayed", measured_delta_pct=4.0, noise_floor_pct=3.0)]
+    )
+
+    assert "measured 4.0% slower" in payload["summary"]
+
+
+def test_a_measurement_without_a_noise_floor_is_not_reported_as_a_number():
+    payload = _call(
+        [_row(method="replayed", measured_delta_pct=-11.0, noise_floor_pct=None)]
+    )
+
+    assert "11.0%" not in payload["summary"]
+    assert "noise floor was not measured" in payload["summary"]
+    assert "magnitude is not reportable" in payload["summary"]
+
+
+@pytest.mark.parametrize(
+    ("delta", "floor", "forbidden", "expected"),
+    [
+        (-0.4, 3.0, "0.4%", "magnitude not resolvable"),
+        (-11.0, None, "11.0%", "noise floor was not measured"),
+    ],
+)
+def test_suggestion_notes_apply_the_same_measurement_floor_rule(
+    delta, floor, forbidden, expected
+):
+    view = diagnose.VerificationView.model_validate(
+        _row(method="replayed", measured_delta_pct=delta, noise_floor_pct=floor)
+    )
+
+    notes = diagnose._verification_notes(view, view.proposed_config)
+
+    replay_note = next(note for note in notes if note.startswith("Replayed"))
+    assert forbidden not in replay_note
+    assert expected in replay_note
 
 
 def test_an_unreplayed_prediction_says_so():
