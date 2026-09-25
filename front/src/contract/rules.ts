@@ -284,15 +284,12 @@ export interface DualVerdict {
 }
 
 export function ruleFourNoInference(v: DualVerdict): { ok: boolean; violation?: string } {
+  // The only contradiction lives inside the runtime verdict itself.
   if (v.runtime_certified && v.runtime_verdict === "unresolved")
     return { ok: false, violation: "certified but unresolved — contradictory" };
-  // An UNKNOWN mechanism cannot convict: rule 4 forbids inferring one verdict
-  // from the other, and treating null as false would do exactly that.
-  if (v.mechanism_confirmed === false && v.runtime_certified)
-    return {
-      ok: false,
-      violation: "runtime certified without a confirmed mechanism — coincidence, not causation",
-    };
+  // The mechanism is deliberately not consulted: rule 4 keeps the two verdicts
+  // independent, so neither a false nor an unknown (null) mechanism may
+  // invalidate a resolved runtime verdict.
   return { ok: true };
 }
 

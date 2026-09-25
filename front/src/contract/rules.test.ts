@@ -10,6 +10,7 @@ import {
   dataState,
   fmt,
   parseProposal,
+  ruleFourNoInference,
   successfulTaskDurationState,
   VOLUME_FLOOR_BYTES_PER_TASK,
 } from "./rules";
@@ -292,5 +293,35 @@ describe("fmt renders absence as absence", () => {
     expect(fmt.verdict(null)).toBe("no source");
     expect(fmt.verdict(false)).toBe("false");
     expect(fmt.verdict(true)).toBe("true");
+  });
+});
+
+describe("ruleFourNoInference keeps mechanism and runtime independent", () => {
+  it("accepts a resolved runtime verdict when the mechanism did not fire", () => {
+    for (const runtime_verdict of ["improved", "regressed"] as const) {
+      expect(
+        ruleFourNoInference({ mechanism_confirmed: false, runtime_certified: true, runtime_verdict }),
+      ).toEqual({ ok: true });
+    }
+  });
+
+  it("accepts a resolved runtime verdict when the mechanism has no source", () => {
+    for (const runtime_verdict of ["improved", "regressed"] as const) {
+      expect(
+        ruleFourNoInference({ mechanism_confirmed: null, runtime_certified: true, runtime_verdict }),
+      ).toEqual({ ok: true });
+    }
+  });
+
+  it("rejects a certified but unresolved runtime whatever the mechanism says", () => {
+    for (const mechanism_confirmed of [true, false, null]) {
+      const result = ruleFourNoInference({
+        mechanism_confirmed,
+        runtime_certified: true,
+        runtime_verdict: "unresolved",
+      });
+      expect(result.ok).toBe(false);
+      expect(result.violation).toContain("certified but unresolved");
+    }
   });
 });
