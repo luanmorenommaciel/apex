@@ -22,6 +22,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 from apex_engine.clickhouse import STAGE_AGGREGATES_SQL, STAGE_EVENTS_SQL
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -37,8 +39,8 @@ DDL_SOURCES = (
 # Identifiers that appear in the SQL but are not spark_events columns.
 NOT_COLUMNS = {
     "argMax", "any", "max", "sum", "count", "if", "toInt64OrZero", "nullIf",
-    "toStartOfMinute", "round", "attributes", "apex", "spark_events",
-    "job_id", "SELECT", "FROM", "WHERE", "GROUP", "BY", "ORDER", "AS", "String",
+    "toStartOfMinute", "round", "apex", "spark_events", "SELECT", "FROM", "WHERE",
+    "GROUP", "BY", "ORDER", "AS", "String",
 }
 
 
@@ -120,3 +122,19 @@ def test_short_undeclared_identifier_cannot_escape_column_validation():
     undeclared = _columns_read_by(sql) - _declared_columns()
 
     assert undeclared == {"id"}
+
+
+@pytest.mark.parametrize("column", ["job_id", "attributes"])
+def test_removing_a_real_input_column_from_all_ddls_is_detected(column):
+    """The guard must not whitelist real columns as SQL syntax.
+
+    Model a contract regression by removing one declaration from the complete
+    declared set. Both columns are read by the production queries, so each
+    must then appear in the undeclared set.
+    """
+    declared_without_column = _declared_columns() - {column}
+    production_sql = STAGE_EVENTS_SQL + "\n" + STAGE_AGGREGATES_SQL
+
+    undeclared = _columns_read_by(production_sql) - declared_without_column
+
+    assert column in undeclared
