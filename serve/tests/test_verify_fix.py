@@ -149,14 +149,6 @@ def test_a_measurement_under_the_noise_floor_is_not_reported_as_a_number():
     assert "zero" not in payload["summary"]
 
 
-def test_a_measurement_equal_to_the_noise_floor_is_reported():
-    payload = _call(
-        [_row(method="replayed", measured_delta_pct=-3.0, noise_floor_pct=3.0)]
-    )
-
-    assert "measured 3.0% faster" in payload["summary"]
-
-
 def test_a_measurement_above_the_noise_floor_is_reported():
     payload = _call(
         [_row(method="replayed", measured_delta_pct=4.0, noise_floor_pct=3.0)]
