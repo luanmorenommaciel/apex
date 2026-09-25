@@ -1323,6 +1323,29 @@ def _refusal_reason(view: VerificationView) -> str:
     )
 
 
+def _replay_measurement(view: VerificationView) -> str:
+    """Render a replay without claiming precision the floor cannot support."""
+    if view.measured_delta_pct is None:
+        raise ValueError("a replay measurement requires measured_delta_pct")
+    if view.noise_floor_pct is None:
+        return (
+            "Replayed, but the noise floor was not measured, so the magnitude "
+            "is not reportable"
+        )
+    if abs(view.measured_delta_pct) < view.noise_floor_pct:
+        return (
+            "Replayed: effect below the baseline arm's "
+            f"{view.noise_floor_pct:.1f}% noise floor — magnitude not resolvable"
+        )
+
+    measured = f"Replayed: measured {_delta_phrase(view.measured_delta_pct)}"
+    if view.replay_reps:
+        measured += f" over {view.replay_reps} rep(s)" + (
+            f" on bench {view.bench}" if view.bench else ""
+        )
+    return measured
+
+
 def _verification_notes(
     view: VerificationView, proposed_config: dict[str, str]
 ) -> list[str]:
@@ -1346,20 +1369,7 @@ def _verification_notes(
             "backs the prediction above."
         )
     else:
-        measured = f"Replayed: measured {_delta_phrase(view.measured_delta_pct)}"
-        if (
-            view.noise_floor_pct is not None
-            and abs(view.measured_delta_pct) < view.noise_floor_pct
-        ):
-            measured += (
-                f" — below the baseline arm's {view.noise_floor_pct:.1f}% noise "
-                "floor, so it is indistinguishable from zero"
-            )
-        elif view.replay_reps:
-            measured += f" over {view.replay_reps} rep(s)" + (
-                f" on bench {view.bench}" if view.bench else ""
-            )
-        notes.append(measured + ".")
+        notes.append(_replay_measurement(view) + ".")
     if view.proposed_config and view.proposed_config != proposed_config:
         notes.append(
             "The verify lane evaluated a DIFFERENT overlay than the one "
@@ -1429,20 +1439,7 @@ def build_verdict(
         f"safety: {newest.safety_verdict or 'unknown'}",
     ]
     if newest.measured_delta_pct is not None:
-        measured = f"measured {_delta_phrase(newest.measured_delta_pct)}"
-        if newest.noise_floor_pct is not None and abs(
-            newest.measured_delta_pct
-        ) < newest.noise_floor_pct:
-            measured += (
-                f" — below the baseline arm's {newest.noise_floor_pct:.1f}% "
-                "noise floor, so it is indistinguishable from zero"
-            )
-        elif newest.replay_reps:
-            measured += (
-                f" over {newest.replay_reps} rep(s)"
-                + (f" on bench {newest.bench}" if newest.bench else "")
-            )
-        parts.insert(1, measured)
+        parts.insert(1, _replay_measurement(newest))
     else:
         notes.append(
             "This prediction was never replayed, so no measurement backs it."
