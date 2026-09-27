@@ -96,7 +96,8 @@ def test_connect_fails_fast_when_columns_are_missing():
     assert f"{len(missing)} column(s)" in message
     for name in missing:
         assert name in message
-    assert "make -C infra apply-ddl" in message
+    assert "Run `make -C infra apply-ddl` from the repo root" in message
+    assert "yourself" not in message
     assert "apply_schema_migrations" not in message
     # The instruction must point at a target that exists in the repo.
     makefile = (ROOT / "infra" / "Makefile").read_text(encoding="utf-8")
@@ -120,6 +121,34 @@ def test_preflight_respects_the_configured_database():
 
     query, params = client.query_calls[0]
     assert params == {"database": "apex_staging"}
+
+
+def test_alternate_database_is_not_told_apply_ddl_will_fix_it():
+    """apply-ddl replays infra/sql unchanged, and infra/sql targets `apex`.
+
+    For any other database, naming apply-ddl as the fix would migrate `apex`
+    and leave the checked database exactly as far behind.
+    """
+    present = sorted(REQUIRED_SPARK_EVENTS_COLUMNS)[:-2]
+    missing = sorted(set(REQUIRED_SPARK_EVENTS_COLUMNS) - set(present))
+    client = FakeSchemaClient(present)
+
+    with pytest.raises(SchemaOutOfDateError) as excinfo:
+        EngineStore.connect(FakeSettings(client, database="apex_staging"))
+
+    error = excinfo.value
+    assert error.database == "apex_staging"
+    assert error.missing_columns == frozenset(missing)
+    message = str(error)
+    assert "apex_staging.spark_events is missing 2 column(s)" in message
+    for name in missing:
+        assert name in message
+    assert "Run `make -C infra apply-ddl`" not in message
+    assert "migrates the `apex` database that infra/sql targets, not `apex_staging`" in message
+    assert "apply the pending infra/sql migrations to `apex_staging` yourself" in message
+    # The message's claim about infra/sql must stay true of this repo.
+    ddl = (ROOT / "infra" / "sql" / "001_database.sql").read_text(encoding="utf-8")
+    assert re.search(r"^CREATE DATABASE IF NOT EXISTS apex;$", ddl, re.MULTILINE)
 
 
 def test_preflight_does_not_swallow_connection_errors():

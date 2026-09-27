@@ -252,9 +252,32 @@ class SchemaOutOfDateError(RuntimeError):
         super().__init__(
             f"apex schema is behind: {database}.spark_events is missing "
             f"{len(missing)} column(s) the engine's queries require: {names}. "
+            + _schema_remediation(database)
+        )
+
+
+# The database `infra/sql` creates and qualifies every statement with
+# (001_database.sql). `make -C infra apply-ddl` replays those files unchanged,
+# so it can only bring THIS database up to date.
+INFRA_DATABASE = "apex"
+
+
+def _schema_remediation(database: str) -> str:
+    """The recovery step to name for the database the preflight checked.
+
+    Sending the operator of another database to apply-ddl would migrate `apex`
+    and leave theirs exactly as far behind as before.
+    """
+    if database == INFRA_DATABASE:
+        return (
             "Run `make -C infra apply-ddl` from the repo root to apply pending "
             "migrations, then retry."
         )
+    return (
+        f"`make -C infra apply-ddl` migrates the `{INFRA_DATABASE}` database "
+        f"that infra/sql targets, not `{database}`: apply the pending infra/sql "
+        f"migrations to `{database}` yourself, then retry."
+    )
 
 
 def _preflight_schema(client: ClickHouseClient, database: str) -> None:
