@@ -43,7 +43,8 @@ export const severityRank = (s: Severity): number => {
 
 
 /**
- * The engine's FindingType enum today (engine/src/apex_engine/schema.py).
+ * Known members of the engine's FindingType enum
+ * (engine/src/apex_engine/schema.py).
  * `SKEW` and `GC_PRESSURE` never existed; they were guesses.
  */
 export type KnownFindingType =
@@ -56,7 +57,8 @@ export type KnownFindingType =
   | "CARTESIAN_PRODUCT"
   | "AQE_REPLAN"
   | "SPILL"
-  | "DUPLICATE_SCAN";
+  | "DUPLICATE_SCAN"
+  | "RETRY_PRESSURE";
 
 /**
  * OPEN on purpose. `findings.type` is a plain `String` column in the contract
