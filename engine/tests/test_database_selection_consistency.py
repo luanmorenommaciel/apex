@@ -14,7 +14,12 @@ model of ClickHouse's name resolution, not ClickHouse: no server is involved.
 
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
 import re
+import subprocess
+import sys
 
 import pytest
 
@@ -136,3 +141,42 @@ def test_reads_send_the_module_sql_unchanged():
 
     sent = {sql for sql, _ in settings.client.read_calls}
     assert sent == set(READ_SQL.values())
+
+
+@pytest.mark.parametrize(
+    ("raw_database", "expected"),
+    [
+        (None, "apex"),
+        ("", "apex"),
+        ("  ", "apex"),
+        ("apex", "apex"),
+        ("apex_alt", "apex_alt"),
+        (" apex_alt ", "apex_alt"),
+    ],
+    ids=["unset", "empty", "whitespace", "default", "alternate", "padded"],
+)
+def test_database_environment_uses_the_same_defaults_as_the_api(raw_database, expected):
+    # Settings read the environment at import time. A fresh process exercises
+    # startup without changing modules already imported by the other tests.
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path(ch.__file__).resolve().parents[1])
+    if raw_database is None:
+        env.pop("CLICKHOUSE_DATABASE", None)
+    else:
+        env["CLICKHOUSE_DATABASE"] = raw_database
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import json; from apex_engine.config import ClickHouseSettings; "
+            "print(json.dumps(ClickHouseSettings().database))",
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=10,
+    )
+
+    assert json.loads(result.stdout) == expected

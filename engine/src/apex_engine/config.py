@@ -32,7 +32,7 @@ class ClickHouseSettings:
     port: int = int(os.getenv("CLICKHOUSE_PORT", "8123"))
     username: str = os.getenv("CLICKHOUSE_USER", "apex")
     password: str = os.getenv("CLICKHOUSE_PASSWORD", "apex_local_dev")
-    database: str = os.getenv("CLICKHOUSE_DATABASE", "apex")
+    database: str = os.getenv("CLICKHOUSE_DATABASE", "").strip() or "apex"
 
     def connect(self):
         """Open a clickhouse-connect client. Imported lazily so the pure
