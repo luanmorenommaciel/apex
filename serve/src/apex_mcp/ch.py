@@ -630,13 +630,15 @@ class ReadStore:
 
         Only a table that is REALLY GONE degrades, and absence is confirmed by
         re-probing rather than inferred from the error text. ``_sanitize``
-        routes on the exception's class name, and the driver's generic class is
-        ``DatabaseError`` — so nearly every server-side error arrives labelled
-        ``clickhouse_schema_missing``. Trusting that label was enough to
-        swallow a genuine SQL fault and report it as "no prior runs", which is
-        the one lie this lane can least afford. Proven live: it masked a code
-        125 for an entire session, and poisoned the probe cache so every later
-        recall claimed cross-run memory was unavailable.
+        used to route on the exception's class name, and the driver's generic
+        class is ``DatabaseError`` — so nearly every server-side error arrived
+        labelled ``clickhouse_schema_missing``. Trusting that label was enough
+        to swallow a genuine SQL fault and report it as "no prior runs", which
+        is the one lie this lane can least afford. Proven live: it masked a
+        code 125 for an entire session, and poisoned the probe cache so every
+        later recall claimed cross-run memory was unavailable. The label now
+        follows the server's error code, but a missing-column code can still
+        come from a query bug, so the re-probe stays.
         """
         try:
             return self._query(sql, parameters)
@@ -694,11 +696,41 @@ def _require_optional_id(value: str, name: str) -> str:
     return value
 
 
+# ClickHouse server error codes, checked against clickhouse-server 24.8
+# (`system.errors`). The driver reports the code as `Error.code`, read from the
+# X-ClickHouse-Exception-Code header, so classification never parses the
+# message — which is the part that carries the URL and must not travel.
+_SCHEMA_ERROR_CODES = frozenset({
+    16,   # NO_SUCH_COLUMN_IN_TABLE
+    47,   # UNKNOWN_IDENTIFIER
+    60,   # UNKNOWN_TABLE
+})
+_ACCESS_ERROR_CODES = frozenset({
+    192,  # UNKNOWN_USER
+    193,  # WRONG_PASSWORD
+    194,  # REQUIRED_PASSWORD
+    195,  # IP_ADDRESS_NOT_ALLOWED
+    497,  # ACCESS_DENIED
+    516,  # AUTHENTICATION_FAILED
+})
+_UNKNOWN_DATABASE_CODE = 81
+# `code` absent as an attribute (a driver predating it, or a test double) is
+# not the same as the driver saying the code is unknown (None).
+_NO_CODE_ATTRIBUTE = object()
+
+
 def _sanitize(exc: Exception) -> ApexStoreError:
     """Log the real failure to STDERR; hand the model an opaque code.
 
     Driver exceptions embed the host/user/password of the connection URL —
     forwarding one to the client would be plain info disclosure.
+
+    The driver's generic class is ``DatabaseError`` for EVERY server-side
+    failure, so its name says nothing about the schema: a rejected password or
+    a missing database routed on it told the operator to apply DDL. When the
+    driver supplies a server code, the code decides; a driver error with no
+    code (an HTTP error from something that is not ClickHouse) is reported as
+    an unclassified failure, never as a schema claim.
     """
     log.error("clickhouse query failed: %s", type(exc).__name__, exc_info=exc)
     name = type(exc).__name__.lower()
@@ -707,7 +739,23 @@ def _sanitize(exc: Exception) -> ApexStoreError:
             "clickhouse_unavailable: the Apex store did not answer. "
             "Check the CLICKHOUSE_* environment of the MCP server."
         )
-    if "database" in name or "table" in name:
+    code = getattr(exc, "code", _NO_CODE_ATTRIBUTE)
+    if code is _NO_CODE_ATTRIBUTE:
+        schema_shaped = "database" in name or "table" in name
+    elif code in _ACCESS_ERROR_CODES:
+        return ApexStoreError(
+            "clickhouse_access_denied: the Apex store rejected the configured "
+            "user or password. Check CLICKHOUSE_USER and CLICKHOUSE_PASSWORD of "
+            "the MCP server."
+        )
+    elif code == _UNKNOWN_DATABASE_CODE:
+        return ApexStoreError(
+            "clickhouse_database_missing: the configured database does not "
+            "exist on the Apex store. Check CLICKHOUSE_DATABASE of the MCP server."
+        )
+    else:
+        schema_shaped = code in _SCHEMA_ERROR_CODES
+    if schema_shaped:
         return ApexStoreError(
             "clickhouse_schema_missing: the apex schema is not applied. "
             "Apply contract/*.ddl.sql via the infra lane."

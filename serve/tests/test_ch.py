@@ -716,6 +716,93 @@ def test_memory_read_still_raises_when_the_store_is_down():
     assert "10.0.0.5" not in str(excinfo.value)
 
 
+# --------------------------------------------------------------------------
+# Classification of REAL driver exceptions. build_http_error() raises
+# DatabaseError for every server-side failure and carries the server's code
+# as `.code`; the doubles above have no `.code` and keep the legacy routing.
+# --------------------------------------------------------------------------
+def _server_error(code: int | None, name: str | None = None):
+    from clickhouse_connect.driver.exceptions import DatabaseError
+
+    return DatabaseError(
+        f"Received ClickHouse exception, code: {code}, server response: "
+        f"Code: {code}. DB::Exception: detail ({name}) (for url http://10.0.0.5:8123)",
+        code=code,
+        name=name,
+    )
+
+
+@pytest.mark.parametrize(
+    ("code", "name", "prefix"),
+    [
+        (516, "AUTHENTICATION_FAILED", "clickhouse_access_denied"),
+        (192, "UNKNOWN_USER", "clickhouse_access_denied"),
+        (193, "WRONG_PASSWORD", "clickhouse_access_denied"),
+        (194, "REQUIRED_PASSWORD", "clickhouse_access_denied"),
+        (195, "IP_ADDRESS_NOT_ALLOWED", "clickhouse_access_denied"),
+        (497, "ACCESS_DENIED", "clickhouse_access_denied"),
+        (81, "UNKNOWN_DATABASE", "clickhouse_database_missing"),
+        (241, "MEMORY_LIMIT_EXCEEDED", "clickhouse_query_failed"),
+        (125, "INCORRECT_RESULT_OF_SCALAR_SUBQUERY", "clickhouse_query_failed"),
+        (16, "NO_SUCH_COLUMN_IN_TABLE", "clickhouse_schema_missing"),
+        (47, "UNKNOWN_IDENTIFIER", "clickhouse_schema_missing"),
+        (60, "UNKNOWN_TABLE", "clickhouse_schema_missing"),
+        (None, None, "clickhouse_query_failed"),
+    ],
+    ids=lambda v: str(v),
+)
+def test_a_server_error_is_classified_by_its_code_not_its_class(code, name, prefix):
+    """B-1/B-2 — only a missing table or column is a schema claim.
+
+    A rejected password or an absent database used to come back as
+    "the apex schema is not applied", sending the operator to apply DDL for a
+    credential or configuration fault. A driver error with no server code (an
+    HTTP error from a proxy, say) makes no schema claim either.
+    """
+    error = ch._sanitize(_server_error(code, name))
+
+    message = str(error)
+    assert message.split(":")[0] == prefix
+    if prefix != "clickhouse_schema_missing":
+        assert "ddl" not in message.lower()
+        assert "schema" not in message.lower()
+    assert "10.0.0.5" not in message
+
+
+def test_connection_failures_stay_unavailable_even_with_a_server_code():
+    """B-2 — a retried request arrives as OperationalError; the code must not
+    turn an outage into a credential or schema claim."""
+    from clickhouse_connect.driver.exceptions import OperationalError as DriverOperationalError
+
+    error = ch._sanitize(DriverOperationalError("gave up after retry", code=516))
+
+    assert str(error).startswith("clickhouse_unavailable")
+
+
+def test_a_missing_table_reported_by_the_driver_still_degrades_recall(caplog):
+    """B-2 — the _recall contract with the real exception: code 60 on tables
+    that are really gone degrades to empty ..."""
+    client = _MemoryClient(raises=_server_error(60, "UNKNOWN_TABLE"))
+    store = ReadStore(client)
+    store.memory_tables_present()
+    client.tables = ()
+
+    with caplog.at_level("WARNING", logger="apex_mcp.ch"):
+        assert store.prior_outcomes([FP_SELF]) == []
+
+    assert "degraded to empty" in caplog.text
+
+
+@pytest.mark.parametrize("code", [516, 81, 241, 125, None])
+def test_a_non_schema_driver_error_during_recall_raises(code):
+    """... and anything else raises instead of reading as "no prior runs"."""
+    client = _MemoryClient(raises=_server_error(code))
+    store = ReadStore(client)
+
+    with pytest.raises(ApexStoreError):
+        store.prior_outcomes([FP_SELF])
+
+
 def test_memory_table_probe_happens_once_and_is_cached():
     client = _MemoryClient(plans=[])
     store = ReadStore(client)

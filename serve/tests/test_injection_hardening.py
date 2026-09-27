@@ -219,6 +219,38 @@ def test_errors_never_leak_the_connection_string(exc):
     }
 
 
+@pytest.mark.parametrize("code", [516, 192, 497, 81, 60, 47, 241, None])
+def test_code_classified_driver_errors_never_leak_the_connection_string(code):
+    """B-3 — the new code-based categories are fixed strings too: the server
+    text (which names the URL and, for auth failures, the user) never travels."""
+    from clickhouse_connect.driver.exceptions import DatabaseError
+
+    secret = "super-secret-password"
+    marker = "SYNTH-SENSITIVE-7f3a"
+    dsn = f"clickhouse://apex:{secret}@clickhouse.internal:8443/apex"
+
+    class ExplodingClient:
+        def query(self, query, parameters=None):  # noqa: ANN001, ANN201
+            raise DatabaseError(
+                f"Received ClickHouse exception, code: {code}, server response: "
+                f"Code: {code}. DB::Exception: {marker} (for url {dsn})",
+                code=code,
+            )
+
+    with pytest.raises(ApexStoreError) as caught:
+        ReadStore(ExplodingClient()).stages("job-1")
+
+    message = str(caught.value)
+    for fragment in (secret, marker, "clickhouse.internal", "8443", "DB::Exception"):
+        assert fragment not in message
+    assert message.split(":")[0] in {
+        "clickhouse_access_denied",
+        "clickhouse_database_missing",
+        "clickhouse_schema_missing",
+        "clickhouse_query_failed",
+    }
+
+
 def test_empty_and_oversized_job_ids_are_rejected_before_any_query():
     client = FakeClient()
     store = ReadStore(client)
