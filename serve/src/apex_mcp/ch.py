@@ -456,17 +456,21 @@ class ReadStore:
         """Which apex.findings columns this deployment actually has.
 
         The v0.2 additive columns land per-cluster whenever infra applies the
-        ALTER, so serve probes once instead of assuming. Probed lazily and
-        cached for the process lifetime.
+        ALTER, so serve probes once instead of assuming. Probed lazily; only
+        an ANSWER is cached for the process lifetime. A probe that answers
+        without some additive columns is an older deployment and those columns
+        are served as defaults. A probe that FAILS — connection, credentials,
+        missing database, denied metadata access, the query itself — says
+        nothing about the columns: its sanitized error is raised, nothing is
+        cached, and the next call probes again. It used to be cached as an
+        empty set, which served defaults for every additive column for the
+        life of the process, even after the store answered again.
         """
         if self._findings_columns is None:
-            try:
-                rows = self._query(
-                    COLUMNS_SQL, {"database": self._database, "table": "findings"}
-                )
-                self._findings_columns = {str(row["name"]) for row in rows}
-            except ApexStoreError:
-                self._findings_columns = set()
+            rows = self._query(
+                COLUMNS_SQL, {"database": self._database, "table": "findings"}
+            )
+            self._findings_columns = {str(row["name"]) for row in rows}
             missing = set(_FINDINGS_ADDITIVE) - self._findings_columns
             if missing and self._findings_columns:
                 log.warning(
