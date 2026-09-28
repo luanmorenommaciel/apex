@@ -217,21 +217,35 @@ export function measureNoiseFloorPct(replayDurationsMs: number[] | null): number
   return (spread / mean) * 100;
 }
 
-/** A predicted saving inside the measured floor is unresolvable — not zero. */
+/**
+ * A predicted saving inside the measured floor is unresolvable — not zero.
+ *
+ * Only a saving that clears the floor holds. A negative "saving" beyond the
+ * floor is not held either, but it is not inside the floor: it is a predicted
+ * slowdown, and the reason must say so rather than call it unresolvable. The
+ * verdict itself (held/vacant and the strict comparison) is unchanged.
+ */
 export function ruleTwoRuntimeResolvable(
   predictedSavingPct: number | null,
   noiseFloorPct: number | null,
 ): RuleVerdict {
   if (predictedSavingPct === null || noiseFloorPct === null)
     return { vacant: true, reason: "no replay set — nothing to resolve against" };
-  return predictedSavingPct > noiseFloorPct
-    ? { held: true, reason: `predicted ${predictedSavingPct.toFixed(1)}% clears the measured floor ${noiseFloorPct.toFixed(1)}%` }
-    : {
-        held: false,
-        reason:
-          `predicted ${predictedSavingPct.toFixed(1)}% sits inside the measured floor ` +
-          `${noiseFloorPct.toFixed(1)}% — unresolvable, which is not the same as zero`,
-      };
+  if (predictedSavingPct > noiseFloorPct)
+    return { held: true, reason: `predicted ${predictedSavingPct.toFixed(1)}% clears the measured floor ${noiseFloorPct.toFixed(1)}%` };
+  if (predictedSavingPct < -noiseFloorPct)
+    return {
+      held: false,
+      reason:
+        `predicted ${predictedSavingPct.toFixed(1)}% is a slowdown beyond the measured floor ` +
+        `${noiseFloorPct.toFixed(1)}% — a predicted regression, not a saving`,
+    };
+  return {
+    held: false,
+    reason:
+      `predicted ${predictedSavingPct.toFixed(1)}% sits inside the measured floor ` +
+      `${noiseFloorPct.toFixed(1)}% — unresolvable, which is not the same as zero`,
+  };
 }
 
 /* ------------------------------------------------------------------ rule 3 */

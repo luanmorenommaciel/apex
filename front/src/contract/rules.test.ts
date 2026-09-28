@@ -11,6 +11,7 @@ import {
   fmt,
   parseProposal,
   ruleFourNoInference,
+  ruleTwoRuntimeResolvable,
   successfulTaskDurationState,
   VOLUME_FLOOR_BYTES_PER_TASK,
 } from "./rules";
@@ -322,6 +323,45 @@ describe("ruleFourNoInference keeps mechanism and runtime independent", () => {
       });
       expect(result.ok).toBe(false);
       expect(result.violation).toContain("certified but unresolved");
+    }
+  });
+});
+
+describe("ruleTwoRuntimeResolvable narrates a predicted slowdown as a slowdown", () => {
+  it("does not call a slowdown beyond the floor 'inside the floor', nor a saving", () => {
+    expect(ruleTwoRuntimeResolvable(-12, 5)).toEqual({
+      held: false,
+      reason:
+        "predicted -12.0% is a slowdown beyond the measured floor 5.0% — " +
+        "a predicted regression, not a saving",
+    });
+  });
+
+  it("keeps a saving that clears the floor held, and a small delta unresolvable", () => {
+    expect(ruleTwoRuntimeResolvable(12, 5)).toEqual({
+      held: true,
+      reason: "predicted 12.0% clears the measured floor 5.0%",
+    });
+    for (const small of [3, -3]) {
+      expect(ruleTwoRuntimeResolvable(small, 5)).toEqual({
+        held: false,
+        reason:
+          `predicted ${small.toFixed(1)}% sits inside the measured floor 5.0% — ` +
+          "unresolvable, which is not the same as zero",
+      });
+    }
+  });
+
+  it("keeps the existing boundaries: equality, zero/zero and missing inputs", () => {
+    for (const [saving, floor] of [[5, 5], [-5, 5], [0, 0]] as const) {
+      expect(ruleTwoRuntimeResolvable(saving, floor)).toMatchObject({ held: false });
+      expect(ruleTwoRuntimeResolvable(saving, floor).reason).toContain("inside the measured floor");
+    }
+    for (const [saving, floor] of [[null, 5], [5, null]] as const) {
+      expect(ruleTwoRuntimeResolvable(saving, floor)).toEqual({
+        vacant: true,
+        reason: "no replay set — nothing to resolve against",
+      });
     }
   });
 });
