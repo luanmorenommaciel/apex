@@ -513,21 +513,21 @@ class ReadStore:
     def table_exists(self, table: str) -> bool:
         """Whether an ADDITIVE contract table is present on this deployment.
 
-        Same shape as ``findings_columns``: probed once against
-        ``system.columns`` and cached for the process lifetime, because the
-        answer only changes when infra applies DDL and restarts are cheap.
-        A failed probe is treated as absent — the caller degrades either way,
-        and guessing "present" would turn a probe failure into a tool failure.
+        Probed against ``system.columns`` and cached for the process lifetime,
+        because the answer only changes when infra applies DDL and restarts
+        are cheap. Only an ANSWER is cached: a probe that returns no rows is a
+        normal older deployment and reads as absent. A probe that FAILS —
+        connection, credentials, database, the query itself — says nothing
+        about the table, so its sanitized error is raised and nothing is
+        cached; the next call probes again. Reporting that failure as absence
+        turned an outage into "not assessed" for the life of the process.
         """
         cached = self._tables_present.get(table)
         if cached is None:
-            try:
-                rows = self._query(
-                    COLUMNS_SQL, {"database": self._database, "table": table}
-                )
-                cached = bool(rows)
-            except ApexStoreError:
-                cached = False
+            rows = self._query(
+                COLUMNS_SQL, {"database": self._database, "table": table}
+            )
+            cached = bool(rows)
             self._tables_present[table] = cached
             if not cached:
                 log.warning(
@@ -543,30 +543,26 @@ class ReadStore:
     def memory_tables_present(self) -> bool:
         """Does this deployment carry the v0.3 cross-run memory tables?
 
-        Probed once and cached, exactly like the additive findings columns.
-        A cluster without them is a normal older deployment, so the answer is
+        Probed once and cached, like ``table_exists``. A cluster without them
+        is a normal older deployment, so a probe that ANSWERS without them is
         reported rather than raised — the tools turn it into "cross-run memory
         is unavailable on this deployment", which a user can act on.
+
+        A probe that FAILS has told us nothing about which tables exist, so its
+        sanitized error is raised and nothing is cached. Only an outage used to
+        be re-raised; a rejected password, a missing database or a failed
+        query was swallowed into "no cross-run memory", with a note telling
+        the operator to apply DDL, and that answer stuck for the process.
+        Proven live for the outage case: the probe runs before every recall,
+        so swallowing it short-circuited the guard in _recall and made an
+        unreachable store answer "no neighbours".
         """
         if self._memory_tables is None:
-            try:
-                rows = self._query(
-                    TABLES_SQL,
-                    {"database": self._database, "names": list(MEMORY_TABLES)},
-                )
-            except ApexStoreError as exc:
-                # A store that could not be REACHED has told us nothing about
-                # which tables it carries. Swallowing that here would turn an
-                # outage into a confident architectural statement — "this
-                # deployment has no cross-run memory" — and the caller would
-                # never learn ClickHouse was down. Proven live: the probe runs
-                # before every recall, so this short-circuited the guard in
-                # _recall and made an unreachable store answer "no neighbours".
-                if str(exc).startswith("clickhouse_unavailable"):
-                    raise
-                self._memory_tables = set()
-            else:
-                self._memory_tables = {str(row["name"]) for row in rows}
+            rows = self._query(
+                TABLES_SQL,
+                {"database": self._database, "names": list(MEMORY_TABLES)},
+            )
+            self._memory_tables = {str(row["name"]) for row in rows}
             missing = set(MEMORY_TABLES) - self._memory_tables
             if missing:
                 log.warning(
@@ -646,6 +642,7 @@ class ReadStore:
             if not str(exc).startswith("clickhouse_schema_missing"):
                 raise
             self._memory_tables = None  # force a fresh probe, do not trust the label
+            # A re-probe that itself fails raises: absence needs an answer.
             if self.memory_tables_present():
                 raise
             log.warning(
