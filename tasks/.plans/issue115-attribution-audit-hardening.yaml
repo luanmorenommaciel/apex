@@ -1,0 +1,61 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: issue115-attribution-audit-hardening
+  source: https://github.com/luanmorenommaciel/apex/issues/115
+units:
+  - id: T-20260919-execution-attribution-audit-hardening
+    title: Harden offline execution attribution identity-boundary coverage
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - engine/src/apex_engine/attribution.py
+      - engine/tests/test_execution_attribution.py
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/issues/115
+    why: Independent review approved the pure attribution primitive but found that foreign job scope and the mixed None/non-target-ID outcome were not pinned by tests or documented.
+    goal: Add only documentation and regression coverage for the existing scoped attribution behavior, without changing resolver outcomes or integrating it with a public surface.
+    context: This is audit remediation for the already accepted offline #115 leaf. It deliberately does not add cross-lane wiring, queries, schema changes, runtime proof, or a new identity-validation policy.
+    behaviors:
+      - id: B-1
+        given: foreign application or job observations alongside an in-scope request
+        when: absent, not-found, or conflict attribution is resolved
+        then: foreign rows cannot alter the in-scope status or returned IDs
+      - id: B-2
+        given: in-scope observations mixing None and a non-target non-null execution identity
+        when: attribution is resolved
+        then: the explicit result is execution_id_not_found; None beside a target remains attributed and another non-null target-stage identity remains conflict
+      - id: B-3
+        given: the public resolver docstring
+        when: a reader inspects its status rules
+        then: it accurately states the in-scope absent, not-found, attributed, and conflict boundaries
+    evals:
+      - id: eval_1
+        description: focused attribution boundary tests pass
+        command: ( cd engine && PYTHONPATH=src uv run --extra dev pytest -q tests/test_execution_attribution.py -p no:warnings )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 45
+      - id: eval_2
+        description: complete offline Engine suite remains green
+        command: ( cd engine && PYTHONPATH=src uv run --extra dev pytest -q -p no:warnings )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Changing resolver status behavior, constructor validation, schema, ClickHouse, watcher, Serve, Front, or runtime infrastructure.
+      - Treating foreign job rows as in-scope evidence.
+      - Publishing, pushing, opening a PR, or running Spark/ClickHouse.
+    do_not_touch:
+      - engine/src/apex_engine/schema.py
+      - engine/src/apex_engine/clickhouse.py
+      - engine/src/apex_engine/watchers
+      - serve
+      - front
+      - jar
+      - infra
+      - collect

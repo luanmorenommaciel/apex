@@ -1,0 +1,53 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: issue115-attribution-conflict-collision
+  source: https://github.com/luanmorenommaciel/apex/issues/115
+units:
+  - id: T-20260919-execution-attribution-conflict-collision
+    title: Make foreign conflict-stage collision observable
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - engine/tests/test_execution_attribution.py
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/issues/115
+    why: Follow-up review found that the new conflict leak test used a foreign stage absent from the in-scope set, so its stage-ID collision requirement was not directly observable.
+    goal: Pin a true collision by placing a target-mapped stage in scope and a conflicting foreign mapping on that same stage, while preserving the expected conflict set.
+    context: Test-only follow-up. Resolver behavior, status semantics, docs, runtime and cross-lane integration remain unchanged.
+    behaviors:
+      - id: B-1
+        given: an in-scope target stage that is not conflicting and a foreign app/job row with the same stage ID and a non-target identity
+        when: attribution resolves another in-scope conflict
+        then: the foreign row cannot add that shared stage ID to the exact conflict set
+      - id: B-2
+        given: the test mutation
+        when: it runs
+        then: it remains limited to static offline regression coverage
+    evals:
+      - id: eval_1
+        description: focused attribution collision tests pass
+        command: ( cd engine && PYTHONPATH=src uv run --extra dev pytest -q tests/test_execution_attribution.py -p no:warnings )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 45
+      - id: eval_2
+        description: complete offline Engine suite remains green
+        command: ( cd engine && PYTHONPATH=src uv run --extra dev pytest -q -p no:warnings )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Changing resolver production code or status semantics.
+      - Adding public-surface, schema, watcher, runtime, PR, or publication work.
+    do_not_touch:
+      - engine/src
+      - serve
+      - front
+      - dev
+      - scripts
+      - infra
