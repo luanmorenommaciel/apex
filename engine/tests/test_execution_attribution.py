@@ -173,6 +173,35 @@ def test_zero_is_a_real_execution_identity():
     assert result.stage_ids == (2,)
 
 
+# B1-a: zero is an identity, None is its absence. Each case below turns into a
+# different outcome if either is read as falsy instead of compared exactly.
+def test_request_for_zero_over_only_absent_ids_is_absent_not_attributed():
+    result = resolve_stage_ids(
+        [observation(2, execution_id=None), observation(7, execution_id=None)],
+        request(0),
+    )
+
+    assert result == StageAttribution(status=AttributionStatus.EXECUTION_ID_ABSENT)
+
+
+def test_observed_zero_is_present_so_a_different_request_is_not_found():
+    result = resolve_stage_ids([observation(2, execution_id=0)], request(42))
+
+    assert result == StageAttribution(status=AttributionStatus.EXECUTION_ID_NOT_FOUND)
+
+
+def test_zero_beside_the_target_on_the_same_stage_is_a_conflict():
+    result = resolve_stage_ids(
+        [observation(2, execution_id=42), observation(2, attempt=1, execution_id=0)],
+        request(42),
+    )
+
+    assert result == StageAttribution(
+        status=AttributionStatus.CONFLICT,
+        conflicting_stage_ids=(2,),
+    )
+
+
 @pytest.mark.parametrize(
     "factory",
     [
