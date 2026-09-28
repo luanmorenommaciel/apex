@@ -821,3 +821,23 @@ def test_memory_reads_short_circuit_on_empty_input():
     assert store.similar_plans("") == []
     assert store.prior_outcomes([]) == []
     assert client.calls == []
+
+
+@pytest.mark.parametrize(
+    ("code", "guidance"),
+    [
+        (195, "source address"),  # IP_ADDRESS_NOT_ALLOWED: the address, not the password
+        (497, "grants"),          # ACCESS_DENIED: missing permissions, not the password
+        (516, "CLICKHOUSE_PASSWORD"),  # AUTHENTICATION_FAILED: still points at credentials
+    ],
+)
+def test_access_denied_points_at_the_cause_behind_each_code(code, guidance):
+    """195 and 497 are not credential faults: the message must name the source
+    address and the user's grants, not only CLICKHOUSE_PASSWORD. The public
+    prefix and the sanitization stay as they are."""
+    message = str(ch._sanitize(_server_error(code)))
+
+    assert message.split(":")[0] == "clickhouse_access_denied"
+    assert guidance in message
+    for fragment in ("10.0.0.5", "8123", "DB::Exception"):
+        assert fragment not in message

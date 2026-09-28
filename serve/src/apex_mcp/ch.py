@@ -745,9 +745,10 @@ def _sanitize(exc: Exception) -> ApexStoreError:
         schema_shaped = "database" in name or "table" in name
     elif code in _ACCESS_ERROR_CODES:
         return ApexStoreError(
-            "clickhouse_access_denied: the Apex store rejected the configured "
-            "user or password. Check CLICKHOUSE_USER and CLICKHOUSE_PASSWORD of "
-            "the MCP server."
+            "clickhouse_access_denied: the Apex store refused the configured "
+            "user: its credentials, its source address or its permissions. "
+            "Check CLICKHOUSE_USER and CLICKHOUSE_PASSWORD of the MCP server and "
+            "that user's grants on the configured database and system tables."
         )
     elif code == _UNKNOWN_DATABASE_CODE:
         return ApexStoreError(
