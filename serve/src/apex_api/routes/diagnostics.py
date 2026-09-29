@@ -23,15 +23,29 @@ router registration order.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from mcp.server.fastmcp import FastMCP
 
 from apex_mcp.ch import ApexStoreError, ReadStore
 from apex_mcp.server import create_server
 
 router = APIRouter(tags=["diagnostics"])
+
+# This value is a fraction: 0.159 means a 15.9% measured noise floor. A
+# negative or non-finite value cannot describe a measured floor.
+NoiseFloorParam = Annotated[
+    float | None,
+    Query(
+        ge=0,
+        allow_inf_nan=False,
+        description=(
+            "Measured noise floor as a non-negative fraction "
+            "(0.159 means 15.9%)."
+        ),
+    ),
+]
 
 # tool name -> (HTTP method, path). The single source both the router and the
 # parity test read. Adding a handler without adding it here, or the reverse,
@@ -127,7 +141,7 @@ async def compare_runs(
     request: Request,
     job_id: str,
     baseline_job_id: str = "",
-    noise_floor_pct: float | None = None,
+    noise_floor_pct: NoiseFloorParam = None,
 ) -> Any:
     """Compare against a baseline; omit it and Apex picks the same plan shape."""
     return await _call(
@@ -146,7 +160,7 @@ async def recall_similar_runs(
     request: Request,
     job_id: str,
     top_k: int = 5,
-    noise_floor_pct: float | None = None,
+    noise_floor_pct: NoiseFloorParam = None,
 ) -> Any:
     """Prior runs of this run's plan shape, as measurements."""
     return await _call(
