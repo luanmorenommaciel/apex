@@ -214,12 +214,6 @@ empty store.
 
 ## Known gaps
 
-- **A run the memory lane has not indexed reports `task_time_ms: 0`, not
-  `null`.** `front/src/data/repository.ts` treats `-1` as the "not indexed"
-  sentinel, but a ClickHouse `LEFT JOIN` miss fills a non-Nullable column with
-  `0`, so `ifNull(…, -1)` never fires. The console then renders a measured
-  zero for a number nobody measured. Pre-existing in the console's SQL and
-  carried into `ch.py` by the port; not yet fixed.
 - The MCP server still reads ClickHouse directly. Routing it through this API
   was planned and dropped: its tools need store primitives (`search`,
   `similar_plans`, `prior_outcomes`, …) that no route exposes.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pathlib
 import re
 
 import pytest
@@ -1094,3 +1095,48 @@ def test_console_findings_and_transitions_bind_parameters():
         store.console_findings("")
     with pytest.raises(ApexStoreError):
         store.console_plan_transitions("")
+
+
+# -- the run rollup on an unindexed run ------------------------------------
+
+
+def test_run_rollup_marks_a_missed_shapes_join():
+    """A missed LEFT JOIN is DEFAULTS, not NULLs — so the sentinel, not ifNull.
+
+    ClickHouse fills the miss with 0 / '' / the enum's first value, and the
+    ifNull(…, -1) the rollup used to read never fired: an unindexed run came
+    back as task_time_ms 0, a measured zero for a number nobody measured.
+    """
+    for sql in (ch.RUN_ONE_SQL, ch.RUN_LIST_SQL):
+        assert re.search(r"\b1\s+AS indexed\b", sql), "the shapes CTE emits no sentinel"
+        assert "if(s.indexed = 1, toInt64(s.task_time_ms), -1)" in sql
+        assert "if(s.indexed = 1, toInt64(s.shaped_stage_count), -1)" in sql
+        assert "if(s.indexed = 1, toString(s.config_source), 'unknown')" in sql
+        assert "if(s.indexed = 1, s.plan_fingerprint, '')" in sql
+        assert "ifNull(s." not in sql, "an ifNull on the shapes side never fires on a miss"
+
+
+def test_run_rollup_carries_no_settings_clause():
+    """apex_ro is readonly = 1; a per-query SETTINGS would be refused in the browser."""
+    for sql in (ch.RUN_ONE_SQL, ch.RUN_LIST_SQL):
+        without_comments = re.sub(r"--[^\n]*", "", sql)
+        assert "SETTINGS" not in without_comments.upper()
+
+
+QUERIES_TS = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "data" / "queries.ts"
+
+
+def test_run_rollup_matches_the_console_sql():
+    """One rollup, two hosts: ch.py and queries.ts must be the same statement.
+
+    Compared with comments and whitespace removed. Both name their tables
+    unqualified, so there is nothing else to normalise.
+    """
+    source = QUERIES_TS.read_text()
+    body = source.split("const runRollup = (where: string, tail: string) => `", 1)[1]
+    body = body.split("\n`;", 1)[0].replace("${where}", "").replace("${tail}", "")
+
+    def normalise(text: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"--[^\n]*", "", text)).strip()
+
+    assert normalise(body) == normalise(ch._run_rollup_sql("", ""))
