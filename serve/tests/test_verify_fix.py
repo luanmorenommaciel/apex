@@ -167,6 +167,35 @@ def test_a_measurement_without_a_noise_floor_is_not_reported_as_a_number():
     assert "magnitude is not reportable" in payload["summary"]
 
 
+@pytest.mark.parametrize("floor", [-0.1, float("nan"), float("inf"), float("-inf")])
+def test_an_invalid_noise_floor_cannot_support_a_replay_magnitude(floor):
+    view = diagnose.VerificationView.model_validate(
+        _row(method="replayed", measured_delta_pct=-11.0, noise_floor_pct=floor)
+    )
+
+    summary = diagnose._replay_measurement(view)
+    notes = diagnose._verification_notes(view, view.proposed_config)
+    replay_note = next(note for note in notes if note.startswith("Replayed"))
+    for text in (summary, replay_note):
+        assert "invalid noise floor" in text
+        assert "magnitude is not reportable" in text
+        assert "11.0%" not in text
+
+
+@pytest.mark.parametrize("floor", [-0.1, float("nan"), float("inf"), float("-inf")])
+def test_an_invalid_noise_floor_cannot_resolve_a_delta(floor):
+    assert not diagnose._resolves(floor, baseline=100.0, current=89.0)
+
+
+def test_zero_noise_floor_keeps_its_existing_behavior():
+    view = diagnose.VerificationView.model_validate(
+        _row(method="replayed", measured_delta_pct=-11.0, noise_floor_pct=0.0)
+    )
+    assert "measured 11.0% faster" in diagnose._replay_measurement(view)
+    assert diagnose._resolves(0.0, baseline=100.0, current=89.0)
+    assert not diagnose._resolves(0.0, baseline=100.0, current=100.0)
+
+
 @pytest.mark.parametrize(
     ("delta", "floor", "forbidden", "expected"),
     [
