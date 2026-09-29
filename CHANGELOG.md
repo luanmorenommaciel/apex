@@ -9,6 +9,87 @@ are corrections to Apex's own earlier claims.
 
 ---
 
+## [Unreleased]
+
+### Fixed — the console reads the same rows through either door
+
+Found by sweeping `apex-api` (PR #129) after its review fixes landed. The API
+exists so the console can stop querying ClickHouse from the browser; that only
+holds if a row is the same row whichever way it arrived. It was not, in four
+places, and the unit suite could not see any of them because a fake returns
+whatever rows it is handed — the projection lives in the SQL.
+
+- **An unindexed run rendered a measured zero.** Both run rollups read
+  `ifNull(s.task_time_ms, -1)` over a `LEFT JOIN` to `run_outcomes`, and
+  ClickHouse fills a missed join with each column's DEFAULT, never NULL. The
+  `ifNull` never fired: a run the memory lane had not reached came back as
+  `task_time_ms 0`, `shaped_stage_count 0` and a blank `config_source`. The
+  `shapes` CTE now emits `1 AS indexed` and the outer SELECT reads that.
+  `SETTINGS join_use_nulls = 1` was not an option — `apex_ro` is `readonly = 1`.
+  Confirmed live by putting the old statement back: `browser -1 != api 0`.
+- **One timestamp, three shapes.** Every time column is `DateTime64(3)`. The
+  browser read `2026-09-20 10:00:00.123`; the API emitted whatever Python's
+  `isoformat()` made of the driver's value — six fractional digits, or **none**
+  when the milliseconds were zero. There is one wire format now, the API's:
+  ISO 8601 with a `T`, UTC, millisecond precision, no offset. All three console
+  repositories return it, and a serve test reads the pattern out of the
+  TypeScript so the two hosts cannot drift.
+- **Four screens rendered a failed query as an empty store.** `useAsync`
+  returned the error and RunDetail, Compare, Memory and Finding never read it.
+  With the http source a wrong `APEX_API_TOKEN` looked like a connected console
+  with nothing in it, and the API's `memory_unavailable` — *there is no table* —
+  became "nothing indexed yet" — *there is no history*. One `QueryFailure`
+  molecule now renders before any empty state.
+- **The header named the wrong source.** `NavBar` branched two ways, so the http
+  source wore the fixtures badge while every row came from the API. The label is
+  an exhaustive map over `Repository["kind"]`.
+
+### Added
+
+- **`serve/tools/console_parity_gate.py`** — a live gate that issues every
+  console statement twice, as the browser does (ClickHouse HTTP, as `apex_ro`)
+  and through the API, and fails unless both return the same rows. Status codes
+  are what passed while three routes returned the wrong projection; this cannot
+  be satisfied by one. `--job-id` writes nothing and reports a check the data
+  cannot exercise as `NOT EXERCISED`, never as passed. Each of the five defects
+  it exists for was put back in a scratch copy and named by it.
+- **A control for the class of defect, not the instance.** Five times a console
+  method was mapped onto a `ReadStore` method *by name* and served a projection
+  the console does not read. `test_every_console_field_is_projected` reads eight
+  row interfaces from the TypeScript and fails when the statement that serves
+  one omits a field.
+- **The console's http mode from the repo's own entry points.** `docker compose`,
+  `make prod` and the README can now run it; before, only `serve/RUNBOOK.md`
+  could, by hand.
+
+### What it cost to learn
+
+- This branch and the base fixed `findings`, `transitions` and `auto`
+  **independently and on the same day**, and disagreed twice: the base keeps the
+  v0.2 additive-column probe this work proposed to drop, and treats a 401 on
+  `/v1/health` as "the API is there" where this work fell back to ClickHouse.
+  The base prevailed on both and the branch was rebuilt on top of it. Two
+  people solving the same defect without a claimed task is the cost; the
+  TaskSpec leaves were never transitioned, so nothing said the work was taken.
+- The first version of the gate **crashed** on the very defect it was written to
+  name — a findings row with no `ts` raised `KeyError` instead of reporting.
+  Found only because the gate was mutation-checked rather than trusted for
+  passing.
+
+### Known limits
+
+- The gate is recorded against `clickhouse-server:24.8` with the contract DDL in
+  a disposable container, **not** against the long-lived infra stack and not
+  with `--api-url` against a deployed API. `serve/RUNBOOK.md` §3.1 says what
+  that run needs.
+- The diagnostics tier keeps the MCP tools' own timestamp fields; the wire
+  format covers the resource tier and `/v1/health`.
+- `/ask` is still a scripted mockup. The pieces exist — eight tools over `/v1`,
+  an `HttpRepository` — and what is missing is a product decision on what Ask
+  does with them, recorded as `D-2026-09-23-ask-consumer`.
+
+---
+
 ## [0.1.0] — 2026-07-29
 
 First complete release. Eight lanes, one frozen contract, 400 tests.

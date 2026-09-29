@@ -431,3 +431,106 @@ the class of thing a fake cannot catch, one paragraph before it shipped.
 - Similarity is a brute-force `cosineDistance` scan of `apex.plan_memory`. Exact
   and cheap at a few thousand shapes; an ANN index would make it approximate,
   which is a correctness-visible change and not just a speed knob.
+
+---
+
+## API — console parity, recorded 2026-09-29
+
+Branch `fix/apex-api-review-sweep`, on top of `feat/add_apex_api` (PR #129) at
+`fab6620`. `apex-api` exists so the console can stop querying ClickHouse from
+the browser; this leg proves that a row is the same row whichever door it came
+through, which the unit suite cannot.
+
+### Unit suite — `314 passed` (289 on the base)
+
+| New coverage | Asserts |
+|---|---|
+| `tests/test_api_resources.py` (+4) | **projection parity**: eight row interfaces read from the TypeScript, each field emitted by the final SELECT that serves it — and the MCP's own findings projection fails it on `ts`; the findings and transitions routes; every timestamp of every route against the pattern the console declares |
+| `tests/test_ch.py` (+6) | the join sentinel in both rollup forms; no `SETTINGS` clause; the rollup is the console's `runRollup()` statement; findings order on a legacy table too; one transition per execution; binding and the refusal of an empty job id |
+| `tests/test_api_wire.py` (new, 7) | one shape whatever the precision; an aware datetime converted, not stripped; text reaching the same instant from five forms; untrusted text fields never read as timestamps; `/v1/health` |
+| `tests/test_console_parity_gate.py` (new, 8) | the gate reads the console's statements as written; numerics coerced by declared type like the browser; a Float32 is one number; a dropped column is reported, not raised; a check the data cannot exercise is never a pass; a privileged browser user voids the read-only proof |
+
+Front: `165 passed` (130 on the base), `tsc`, `eslint` and the production build
+clean.
+
+### `tools/console_parity_gate.py` — live ClickHouse `24.8`, `CONSOLE_PARITY_GATE=PASS`
+
+```text
+store    http://127.0.0.1:18123  database apex
+browser  ClickHouse HTTP as apex_ro, the way front/src/data/clickhouse.ts sends it
+api      in-process create_app() over a real ReadStore
+mode     seeded · its rows are removed afterwards
+
+  PASS  runs · run · stages · conf · findings · transitions ·
+        baseline-candidates · plans · shape runs · plan sample · verification ·
+        run (unindexed)                         same through both doors
+  PASS  unindexed run reads as not indexed      -1 / -1 / '' / 'unknown' on both doors
+  PASS  statements run as a read-only user      apex_ro has readonly = 1
+  PASS  findings ordered by confidence_score    first is not the oldest
+  PASS  one transition per execution            4 rows stored, 2 returned for 2 executions
+  PASS  timestamps in the wire format           18 timestamps match
+
+17 passed · 0 failed · 0 not exercised
+```
+
+- `--job-id`, on a run with one finding and no transitions: `12 passed · 0
+  failed · 2 not exercised`, and the row counts in the store did not move.
+- After every seeded run each of the seven contract tables held **0 rows**.
+- The store was the image `infra/docker-compose.yml` pins, with `infra/sql/`
+  001–032 and `front/contract/01-readonly-user.sql` applied, in a disposable
+  container — **not** the long-lived infra stack.
+
+### The gate was checked against the defects it exists for
+
+A gate that passes has proven nothing until it has been seen to fail. Each
+defect was put back in a scratch copy of the tree and the gate run on it:
+
+| Defect put back | Exit | What the gate said |
+|---|---|---|
+| *(control — nothing changed)* | 0 | `CONSOLE_PARITY_GATE=PASS` |
+| findings route serves the MCP's projection | 1 | `columns differ — browser only ['ts'], api only ['app_id']` |
+| transitions route serves every `update_seq` | 1 | `browser returned 2, api returned 4` |
+| serve's rollup reads `ifNull()` | 1 | `task_time_ms: browser -1 != api 0` |
+| the console's rollup reads `ifNull()` | 1 | `task_time_ms: browser 0 != api -1` |
+| the API stops pinning its timestamps | 1 | `browser '…T19:00:20.123' != api '…T19:00:20.123000'` |
+
+### What only a live database could show
+
+1. **The known gap was real, and worse than recorded.** RUNBOOK listed
+   `task_time_ms: 0` for an unindexed run. Live, the same miss also returned
+   `shaped_stage_count 0` and `config_source ''` — not `'unknown'` — so rule 1
+   was reading a blank as a configuration source.
+2. **The API had three timestamp shapes, not one.** `…T19:00:20.123000` with
+   milliseconds, `…T18:00:20` with none, against the browser's
+   `… 19:00:20.123`. The second form is the one a width-based parser breaks on.
+3. **`if()` needs a common type and `-1` has none with `UInt64`.**
+   `sum(stage_count)` is unsigned; the sentinel reads `toInt64()` of it. A fake
+   would have accepted the statement without it.
+4. **Every statement runs under `readonly = 1`.** Proven rather than assumed,
+   because the obvious fix for the join — `SETTINGS join_use_nulls = 1` — is
+   exactly what that user may not do.
+
+### Reconciled with the base
+
+`fab6620` landed on `feat/add_apex_api` while this leg was in progress and did
+three of the same things independently. Where they overlapped the base
+prevailed: its `console_findings` and `console_plan_transitions` serve the two
+routes, its `auto` probe stands (a 401 selects the API), and the
+`T-20260923-console-auto-prefers-api` leaf is parked as superseded. The
+sentinel was re-applied on the base's unqualified statements and satisfies
+`test_no_statement_names_a_database`.
+
+### Known limits
+
+- Not recorded against the long-lived infra stack, nor with `--api-url` against
+  a deployed API. RUNBOOK §3.1 lists what that run needs; it is what this leg
+  still owes.
+- The wire format covers the resource tier and `/v1/health`. The diagnostics
+  tier returns the MCP tools' own models, with their own timestamp fields.
+- On a cluster whose `apex.findings` predates the v0.2 additive columns, the
+  console's findings come back with `confidence_score 0` for every row, so
+  their order is `finding_id`'s. That is the base's choice — serve the legacy
+  table rather than fail — and the parity gate has not been run on such a store.
+- The seven leaves are implemented and their evals pass under `taskspec run`;
+  none is gated or accepted. That is the owner's signature, not the worker's.
+
