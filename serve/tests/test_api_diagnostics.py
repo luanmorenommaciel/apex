@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 from apex_api.app import create_app
 from apex_api.config import Settings
+from apex_api.routes import diagnostics
 from apex_api.routes.diagnostics import TOOL_ROUTES
 from apex_mcp.ch import ApexStoreError, ReadStore
 from apex_mcp.server import create_server
@@ -140,3 +142,64 @@ def test_store_error_is_sanitized_at_the_boundary():
     for secret in (DSN, "sup3rs3cr3t", "db.internal.example"):
         assert secret not in response.text
     assert "Traceback" not in response.text
+
+
+@pytest.mark.parametrize(
+    ("route", "tool"),
+    [("comparison", "compare_runs"), ("recall", "recall_similar_runs")],
+)
+@pytest.mark.parametrize("floor", ["-0.1", "nan", "inf", "-inf"])
+def test_http_noise_floor_rejects_negative_and_non_finite_values(
+    monkeypatch: pytest.MonkeyPatch, route: str, tool: str, floor: str
+) -> None:
+    calls: list[tuple[str, Any]] = []
+
+    async def capture(
+        request: Any, called_tool: str, arguments: dict[str, Any]
+    ) -> dict[str, bool]:
+        calls.append((called_tool, arguments["noise_floor_pct"]))
+        return {"ok": True}
+
+    monkeypatch.setattr(diagnostics, "_call", capture)
+    response = build().get(f"/v1/runs/j/{route}?noise_floor_pct={floor}", headers=AUTH)
+    assert response.status_code == 422
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    ("route", "tool"),
+    [("comparison", "compare_runs"), ("recall", "recall_similar_runs")],
+)
+@pytest.mark.parametrize(
+    ("floor", "expected"), [(None, None), ("0", 0.0), ("0.159", 0.159)]
+)
+def test_http_noise_floor_preserves_omitted_zero_and_fractions(
+    monkeypatch: pytest.MonkeyPatch,
+    route: str,
+    tool: str,
+    floor: str | None,
+    expected: float | None,
+) -> None:
+    calls: list[tuple[str, Any]] = []
+
+    async def capture(
+        request: Any, called_tool: str, arguments: dict[str, Any]
+    ) -> dict[str, bool]:
+        calls.append((called_tool, arguments["noise_floor_pct"]))
+        return {"ok": True}
+
+    monkeypatch.setattr(diagnostics, "_call", capture)
+    query = "" if floor is None else f"?noise_floor_pct={floor}"
+    response = build().get(f"/v1/runs/j/{route}{query}", headers=AUTH)
+    assert response.status_code == 200
+    assert calls == [(tool, expected)]
+
+
+@pytest.mark.parametrize("route", ["comparison", "recall"])
+def test_http_noise_floor_documents_fraction_units(route: str) -> None:
+    parameters = build().app.openapi()["paths"][f"/v1/runs/{{job_id}}/{route}"]["get"][
+        "parameters"
+    ]
+    floor = next(param for param in parameters if param["name"] == "noise_floor_pct")
+    assert "fraction" in floor["description"]
+    assert "0.159 means 15.9%" in floor["description"]
