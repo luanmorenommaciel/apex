@@ -7,6 +7,10 @@
 #
 # Start the store first:
 #   cd ../infra && docker compose up -d clickhouse otel-collector && ./scripts/seed.sh
+#
+# Or the Apex API, and no database user in the browser at all:
+#   (cd ../serve && APEX_API_TOKENS=<token> APEX_API_PORT=8099 uv run apex-api)
+#   VITE_DATA_SOURCE=http VITE_APEX_API_TOKEN=<token> docker compose up --build
 services:
   console:
     build:
@@ -27,3 +31,12 @@ services:
       VITE_CLICKHOUSE_USER: apex_ro
       VITE_CLICKHOUSE_PASSWORD: ""
       VITE_DATA_SOURCE: ${VITE_DATA_SOURCE:-clickhouse}
+      # The Apex API, for VITE_DATA_SOURCE=http. The dev server proxies /v1 to
+      # this target so the browser stays same-origin; inside the container
+      # 127.0.0.1 is the container itself, hence the host gateway alias, the
+      # same one VITE_CLICKHOUSE_URL uses. The token is passed through from the
+      # shell and never written here. VITE_APEX_API_URL is deliberately NOT
+      # passed: it makes the browser call the API cross-origin, which the API
+      # (no CORS header) refuses.
+      VITE_APEX_API_PROXY_TARGET: ${VITE_APEX_API_PROXY_TARGET:-http://host.docker.internal:8099}
+      VITE_APEX_API_TOKEN: ${VITE_APEX_API_TOKEN:-}
