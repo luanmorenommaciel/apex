@@ -1,6 +1,21 @@
+import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { useRepository } from "@/data/useRepository";
+import type { Repository } from "@/data/repository";
 import { CONTRACT_VERSION } from "@/contract/types";
+
+/**
+ * Where the rows on screen came from — by the repository that was RESOLVED,
+ * not by the configured data source, which may be `auto`. Exhaustive over
+ * Repository["kind"], so a fourth kind is a type error here rather than a
+ * fallthrough: this was `clickhouse ? … : fixtures`, and the http source wore
+ * the recorded run's badge while every row came from apex-api.
+ */
+const SOURCE: Record<Repository["kind"], ReactNode> = {
+  clickhouse: <>clickhouse <span className="text-certified">●</span> apex</>,
+  http: <>apex-api <span className="text-certified">●</span> http</>,
+  fixtures: <>source <span className="text-withheld">◐</span> fixtures</>,
+};
 
 const TABS = [
   { to: "/runs", label: "Runs" },
@@ -35,13 +50,7 @@ export function NavBar() {
         </nav>
       </div>
       <div className="flex items-center gap-2.5 font-mono text-[11px] text-sub">
-        <span>
-          {repo.kind === "clickhouse" ? (
-            <>clickhouse <span className="text-certified">●</span> apex</>
-          ) : (
-            <>source <span className="text-withheld">◐</span> fixtures</>
-          )}
-        </span>
+        <span>{SOURCE[repo.kind]}</span>
         <span className="text-dim">|</span>
         <span>
           contract <span className="text-body2">v{CONTRACT_VERSION}</span>
