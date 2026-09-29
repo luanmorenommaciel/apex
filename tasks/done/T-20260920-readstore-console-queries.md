@@ -1,7 +1,7 @@
 ---
 id: T-20260920-readstore-console-queries
 title: "Move the console's six remaining queries into ReadStore"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M

@@ -1,7 +1,7 @@
 ---
 id: T-20260920-api-openapi-auth
 title: "Say in the OpenAPI schema that /v1 needs a token"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: S

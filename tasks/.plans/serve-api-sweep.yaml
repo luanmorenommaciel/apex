@@ -1,0 +1,409 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: serve-api-sweep
+  source: tasks/.plans/serve-api.yaml
+  # A second manifest, not a second plan: `taskspec batch` refuses a manifest
+  # whose units are already materialised, so the six leaves drafted after the
+  # PR 129 sweep live here and depend on serve-api's leaves by id.
+  parent_plan: serve-api
+  # RECONCILED 2026-09-29. While these leaves were being implemented, the base
+  # branch gained fab6620 ("finish the PR 129 review fixes"), which did three of
+  # the same things independently. The base prevails where they overlap:
+  #   - findings and transitions are served by the base's console_findings and
+  #     console_plan_transitions. T-20260923-console-findings-transitions-
+  #     projection keeps its evals and contributes the projection parity test.
+  #     The base KEEPS the v0.2 additive-column probe this plan proposed to drop.
+  #   - T-20260923-console-auto-prefers-api is PARKED. The base's auto probes the
+  #     same-origin API and treats a 401 as "the API is there"; this plan had
+  #     proposed the opposite. The owner's code decided it.
+  #   - every statement is now unqualified (CLICKHOUSE_DATABASE selects the
+  #     database), so the sentinel leaf was re-applied on that SQL.
+  # A TaskPlan may only depend on units it declares, so the six do not name
+  # serve-api's leaves in depends_on. Every one of them presumes those eight,
+  # and all eight were accepted and transitioned to done on 2026-09-23.
+  # Decisions this plan cannot make for its owner. A leaf that guessed the
+  # answer would be the product decision made by whoever typed it. Recorded
+  # here so a later harness finds them without the conversation that found them.
+  open_decisions:
+    - id: D-2026-09-23-ask-consumer
+      found_by: sweep of PR 129 on 2026-09-23
+      question: What does /ask do against the diagnostics tier, and does it need a model? The eight MCP tools are served over /v1 (T-20260920-api-diagnostic-routes) and nothing in the console calls them - AskScreen is a scripted two-turn mockup and says so on screen. A natural-language box needs either a model that routes to analyze_run/search_kb/compare_runs, or a redesign of the screen into structured entry points (pick a run, ask for its diagnosis) that need no model. Those are different products and different lanes.
+      blocks: any leaf that gives AskScreen a real data path; the /ask row of front/README.md's ledger, which T-20260923-console-http-deployment-wiring rewrites to name this decision rather than pretend a leaf exists
+      owner: product (unassigned)
+      not_a_blocker_for: the six T-20260923 leaves
+units:
+  # ---------------------------------------------------------------------------
+  # Drafted 2026-09-23 from a sweep of PR #129 after the Codex fixes landed.
+  # Six leaves, one outcome each. The seventh thing the sweep found — the
+  # diagnostics tier has no consumer, /ask is still scripted — is NOT a leaf:
+  # see metadata.open_decisions. A leaf that guesses what Ask does would be
+  # the product decision made by whoever happened to type it.
+  # ---------------------------------------------------------------------------
+
+  - id: T-20260923-console-findings-transitions-projection
+    title: Serve findings and transitions in the console's projection
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/src/apex_mcp/ch.py, serve/src/apex_api/routes/resources.py, serve/tests/test_ch.py, serve/tests/test_api_resources.py]
+    creates_paths: []
+    source_note: front/src/data/queries.ts
+    why: The fifth time this plan mapped a console method onto a ReadStore method by NAME without comparing projections - runs, verifications and stages were the first three, and the stages fix (PR 129) corrected only stages. /v1/runs/{job}/findings serves ch._findings_sql, which omits ts and orders by ts ASC; the console's FINDINGS orders by confidence_score DESC and VerifyScreen.tsx:58 takes [0] as the highest-confidence finding, so /verify with no parameters opens on the OLDEST one. /v1/runs/{job}/transitions serves PLAN_TRANSITIONS_SQL, one row per update_seq with no job_id, plan_fingerprint or ts; the console's PLAN_TRANSITIONS collapses to one row per execution_id at max(update_seq), so a re-plan logged three times counts as three transitions on RunDetailScreen.tsx:354 and FindingScreen.tsx:139, and FindingScreen.tsx:54 renders the oldest before/after as the current one.
+    goal: ReadStore gains console_findings and console_transitions, ported from FINDINGS and PLAN_TRANSITIONS the way console_stages was; the two routes serve them; and a parity test reads the field lists from front/src/contract/types.ts and front/src/data/repository.ts and fails when any declared field is not projected by the SQL that serves it - so this class of defect cannot ship a sixth time.
+    context: These are PORTS, like the six in T-20260920-readstore-console-queries - the console's rendered numbers are the acceptance criterion. Two mechanical differences from the browser copies, both already handled by the earlier ports - tables are qualified apex. and the bound parameter is job_id, not job. One difference is a DECISION and is recorded here as a proposed choice, open for review - the MCP's _findings_sql probes system.columns for the v0.2 additive columns app_id and confidence_score and serves defaults when a cluster predates them; the console's FINDINGS never probed and reads confidence_score unconditionally, because FindingRow.confidence_score is required. The port keeps the console's behaviour and does not probe. If a pre-v0.2 cluster must be served by the API, that is a follow-up, not something to fold in silently. Why test_row_shapes_match_the_console_contract did not catch this - it asserts a SUBSET of columns per route, and the fakes return whatever rows they are handed, so the projection that lives in the SQL is never compared to the contract. The parity test closes that - it extracts each interface's field names from the TypeScript the same way repository_methods() already extracts the method names, and checks every field appears as a SELECT alias in the SQL constant that serves the route. Fields the console's own mapper supplies rather than the SQL (FixVerificationRow's replay_durations_ms, requires_human_approval, applied - see toFixVerification in repository.ts) are an explicit allow-list in the test, with the reason beside each. RunSummary is derived by toRunSummary from the RunRollupRow interface in repository.ts, so RunRollupRow is the wire shape the test reads for the runs routes. Live parity - the two routes against the infra stack compared row-for-row with the console's ClickHouse path - is the acceptor's terminal proof and is not automatable offline; RUNBOOK section 3 shows the walk.
+    behaviors:
+      - id: B-1
+        given: a job_id
+        when: GET /v1/runs/{job_id}/findings is called
+        then: every row carries every FindingRow field including ts, and the rows are ordered by confidence_score DESC - the order VerifyScreen assumes when it takes the first row
+      - id: B-2
+        given: a job whose execution_id was re-planned more than once
+        when: GET /v1/runs/{job_id}/transitions is called
+        then: there is ONE row per execution_id carrying the values at max(update_seq), plus job_id, plan_fingerprint joined from spark_events and ts, as the console's PLAN_TRANSITIONS returns
+      - id: B-3
+        given: the SQL constants that serve the console routes
+        when: the parity test reads FindingRow, PlanTransitionRow, JobConfRow and FixVerificationRow from front/src/contract/types.ts and RunRollupRow from front/src/data/repository.ts
+        then: every declared field is projected as an alias by the SQL that serves it, and removing one alias fails the test
+      - id: B-4
+        given: the MCP tools
+        when: findings() and plan_transitions() are called
+        then: they are unchanged - the MCP's own projections and the eight tools' tests still pass
+      - id: B-5
+        given: a job_id containing SQL syntax
+        when: console_findings or console_transitions is called
+        then: it is bound as a parameter and never interpolated, consistent with every existing method
+    evals:
+      - id: eval_1
+        description: the two routes return the console's projection and order
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_resources.py::test_findings_route_returns_the_console_projection" "tests/test_api_resources.py::test_transitions_route_returns_the_console_projection" )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 90
+      - id: eval_2
+        description: the ports order, collapse and bind the way the console's SQL does
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_console_findings_orders_by_confidence_score" "tests/test_ch.py::test_console_transitions_collapse_per_execution" "tests/test_ch.py::test_console_findings_and_transitions_bind_parameters" )
+        verifies: [B-1, B-2, B-5]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_3
+        description: every contract field is projected by the SQL that serves it
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_resources.py::test_every_console_field_is_projected" )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_4
+        description: the MCP side did not move
+        command: ( cd serve && uv run --extra dev pytest tests/test_server_tools.py tests/test_api_diagnostics.py )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 120
+    anti_patterns:
+      - Mapping a console method onto a ReadStore method by name; the five prior cases are the reason this leaf exists.
+      - Adding ts and the console's ORDER BY to the MCP's _findings_sql or PLAN_TRANSITIONS_SQL so one query serves both; two consumers, two projections, exactly as stages() and console_stages() already stand.
+      - A parity test that asserts a hand-kept subset of columns; the field list must come from the TypeScript.
+      - Folding the additive-column probe into the console SQL without recording it as the decision it is.
+    do_not_touch:
+      - serve/src/apex_mcp/server.py
+      - serve/tests/test_server_tools.py
+      - front/src/
+
+  - id: T-20260923-run-rollup-unindexed-sentinel
+    title: Report an unindexed run as null, not zero, in both rollups
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260923-console-findings-transitions-projection]
+    touches_paths: [serve/src/apex_mcp/ch.py, serve/tests/test_ch.py, front/src/data/queries.ts, front/src/data/queries.test.ts, serve/RUNBOOK.md]
+    creates_paths: []
+    source_note: serve/RUNBOOK.md
+    why: RUNBOOK's Known gaps records it and nothing fixes it - a run the memory lane has not indexed reports task_time_ms 0, not null. The rollup LEFT JOINs run_outcomes and writes ifNull(s.task_time_ms, -1), but ClickHouse fills a missed join's non-Nullable columns with DEFAULTS, not NULL (join_use_nulls is 0), so the ifNull never fires and -1 - the sentinel repository.ts turns into null - is never produced. The console then renders a measured zero for a number nobody measured, and the same miss turns shaped_stage_count into 0 instead of null and config_source into the enum's first value instead of 'unknown'. The bug is in the console's SQL and was carried into ch.py verbatim by the port, so both copies are wrong the same way.
+    goal: Both rollups mark a missed shapes join with a sentinel column and derive -1, '' and 'unknown' from it, so task_time_ms, shaped_stage_count, plan_fingerprint and config_source say "not indexed" for a run the memory lane never reached; a test on each side pins it; a third test pins the two copies to each other; the RUNBOOK gap is removed.
+    context: SETTINGS join_use_nulls = 1 is the obvious fix and is NOT available - front/contract/01-readonly-user.sql creates apex_ro with readonly = 1, and ClickHouse refuses query-level settings from a readonly = 1 user, so the browser copy would fail outright; it would also change the f join's semantics for no reason. The settings-free form is a column the shapes CTE always emits and a miss cannot - proposed as `1 AS indexed` - read as if(s.indexed = 1, s.task_time_ms, -1) and the same for shaped_stage_count, plan_fingerprint and config_source. The name is a proposed choice, open for review; the mechanism is not. repository.ts already maps -1 to null through notIndexed() and is not touched. The two copies must stay one rollup on two hosts - test_run_rollup_matches_the_console_sql reads runRollup() out of queries.ts and compares it, normalised for whitespace, the apex. qualification and the parameter names, against _run_rollup_sql; test_api_resources.py already reads repository.ts from serve, so the precedent exists. What no offline test can prove is the ClickHouse fill behaviour itself - the acceptor runs RUN_ONE against the infra stack for a job that has spark_events rows and no run_outcomes row and reads -1, which the RUNBOOK gap entry currently says comes back as 0. This leaf shares ch.py, test_ch.py and RUNBOOK.md with T-20260923-console-findings-transitions-projection; the depends_on is a WRITE-ORDER dependency, not an outcome one - nothing here reads that leaf's result, the two must simply not edit the same files at once.
+    behaviors:
+      - id: B-1
+        given: a job with spark_events rows and no run_outcomes row
+        when: RUN_ONE or RUN_LIST runs on either copy
+        then: task_time_ms is -1, shaped_stage_count is -1, plan_fingerprint is '' and config_source is 'unknown' - never 0, never the enum's first value
+      - id: B-2
+        given: a job the memory lane indexed
+        when: the rollups run
+        then: every value is what it is today
+      - id: B-3
+        given: the two rollup copies
+        when: they are compared normalised for the apex. qualification and parameter names
+        then: they are the same statement
+      - id: B-4
+        given: the browser copy
+        when: it is issued as apex_ro
+        then: it carries no SETTINGS clause, because readonly = 1 refuses one
+    evals:
+      - id: eval_1
+        description: the serve copy marks a missed join and carries no settings
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_run_rollup_marks_a_missed_shapes_join" "tests/test_ch.py::test_run_rollup_carries_no_settings_clause" )
+        verifies: [B-1, B-4]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: the browser copy marks a missed join and carries no settings
+        command: ( cd front && npm run test -- --run src/data/queries.test.ts -t "unindexed" )
+        verifies: [B-1, B-4]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_3
+        description: one rollup, two hosts
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_run_rollup_matches_the_console_sql" )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_4
+        description: the indexed path is untouched and the gap entry is gone
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_run_returns_one_rollup_row" "tests/test_ch.py::test_run_list_returns_the_console_rollup" && ! grep -q "has not indexed reports" RUNBOOK.md )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - SETTINGS join_use_nulls = 1; apex_ro is readonly = 1 and the browser copy would stop working.
+      - Fixing ch.py and leaving queries.ts, or the reverse; the clickhouse and http data sources would then disagree about whether a run was indexed.
+      - Testing the miss with s.job_id = '' instead of a named sentinel; it works and says nothing about why.
+      - Changing notIndexed() in repository.ts; the mapper is right, the SQL never gave it the sentinel.
+    do_not_touch:
+      - front/src/data/repository.ts
+      - front/src/screens/
+      - serve/src/apex_api/
+
+  - id: T-20260923-console-auto-prefers-api
+    title: Let auto reach the API without an absolute apiUrl
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [front/src/data/repository.ts, front/src/data/httpRepository.test.ts]
+    creates_paths: []
+    source_note: front/src/data/repository.ts
+    why: resolveRepository() only probes the API when runtimeConfig.apiUrl is set, and T-20260921 made the correct configuration one where apiUrl is EMPTY so the browser stays same-origin. So auto never chooses the API - the one data source that needs no database user is the one auto skips - and .env.example's promise that auto "prefers the API when one is configured and answering" is false for every documented setup. The fix makes that sentence true; the file is not edited here, T-20260923-console-http-deployment-wiring owns it.
+    goal: In auto mode the console probes /v1/health at the same base HttpRepository would use - relative when apiUrl is empty - and prefers the API when it answers 200; ClickHouse-mode and fixtures deployments still resolve as they do today, because their /v1/health does not answer 200.
+    context: apiPing() already builds its target from base(), so with apiUrl empty it already probes /v1/health relative; only the guard in resolveRepository is wrong. Dropping the guard is safe on every existing deployment - the production image forwards /v1 to APEX_API_UPSTREAM, which defaults to the unroutable http://127.0.0.1:1, so a ClickHouse-mode container answers the probe with 502 and auto moves on; the Vite dev server with nothing on the proxy target answers 500 for the same effect. The order stays API, then ClickHouse, then fixtures. The probe must stay TOKENLESS - health is public, and a credential on a probe is a credential sent before anyone asked for it - and only 200 is a yes; a 401 on a public route is a misconfiguration, not an answering API. One proposed choice, open for review - RepositoryProvider renders nothing until resolveRepository settles, so a proxy that hangs would hold the whole console blank; apiPing already accepts an AbortSignal, and passing AbortSignal.timeout(2000) from the resolver bounds that without touching http.ts. The 2000 is a proposal, not a requirement.
+    behaviors:
+      - id: B-1
+        given: dataSource auto and an empty apiUrl
+        when: /v1/health answers 200
+        then: resolveRepository returns an HttpRepository, and the only request issued before that decision was one relative probe of /v1/health with no Authorization header
+      - id: B-2
+        given: dataSource auto
+        when: /v1/health fails to connect, or answers 500, 502 or 401
+        then: resolution continues to the ClickHouse ping and then fixtures, exactly as today
+      - id: B-3
+        given: dataSource http
+        when: the repository is resolved
+        then: no probe is issued - pinned stays pinned
+      - id: B-4
+        given: dataSource auto and an absolute apiUrl
+        when: the repository is resolved
+        then: the probe goes to that absolute base, unchanged from today
+      - id: B-5
+        given: the change
+        when: the tree is diffed
+        then: no file under front/src/screens or front/src/components changed
+    evals:
+      - id: eval_1
+        description: auto prefers an answering API, relative or absolute, and moves on when it does not answer
+        command: ( cd front && npm run test -- --run src/data/httpRepository.test.ts -t "auto" )
+        verifies: [B-1, B-2, B-4]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_2
+        description: pinned http still issues no probe
+        command: ( cd front && npm run test -- --run src/data/httpRepository.test.ts -t "does not probe when pinned" )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_3
+        description: types check and no screen moved
+        command: ( cd front && npm run typecheck && git diff --exit-code --stat -- src/screens src/components )
+        verifies: [B-5]
+        terminal: true
+        expected_duration_sec: 120
+    anti_patterns:
+      - Sending the token on the probe; health is public and the token belongs on data requests only.
+      - Treating a 401 from /v1/health as "the API is there"; it is a misconfigured API and auto must not commit to it.
+      - Falling back to ClickHouse after the API was chosen and a later call returns 401; that is the silent restoration T-20260920-console-http-repository forbids.
+      - A test whose stubbed fetch answers 200 to everything, which proves nothing about which probe ran first.
+    do_not_touch:
+      - front/src/data/http.ts
+      - front/src/screens/
+      - front/src/components/
+
+  - id: T-20260923-navbar-source-badge
+    title: Name the http source in the console header
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [front/src/components/molecules/NavBar.tsx]
+    creates_paths: [front/src/components/molecules/NavBar.test.tsx]
+    source_note: front/src/components/molecules/NavBar.tsx
+    why: NavBar.tsx:39-43 is a two-way branch - clickhouse, else "source ◐ fixtures". With the http data source every row on screen came from apex-api and the header says the data is the recorded run. On a console whose whole argument is that it does not overclaim, the badge overclaims in the other direction. It was left this way because front/src/components was do-not-touch for every unit in this plan.
+    goal: The header renders one label per Repository kind - clickhouse, http naming apex-api, fixtures - through an exhaustive map, so a fourth kind is a type error rather than a fallthrough; a mounted test asserts each label.
+    context: NavBar reads repo.kind from useRepository(), and VerifyScreen.source-state.test.tsx already shows the pattern for mounting a component under jsdom with useRepository mocked to a chosen repository. A Record keyed on Repository["kind"] is what makes the map exhaustive under tsc. One proposed choice, open for the visual owner - http is live data, so it takes the same "●" certified tone clickhouse has, and fixtures keeps "◐" withheld; the ratified identity (modelo/Apex Console Visual Identity.pdf) has a semantic palette and this follows it, but the reviewer decides.
+    behaviors:
+      - id: B-1
+        given: a repository whose kind is http
+        when: NavBar mounts
+        then: the header names http and apex-api and does not say fixtures
+      - id: B-2
+        given: a repository whose kind is clickhouse or fixtures
+        when: NavBar mounts
+        then: the header text is what it is today
+      - id: B-3
+        given: a kind added to Repository["kind"] without a label
+        when: tsc runs
+        then: it fails
+    evals:
+      - id: eval_1
+        description: each kind renders its own label
+        command: ( cd front && npm run test -- --run src/components/molecules/NavBar.test.tsx )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_2
+        description: the map is exhaustive and lints clean
+        command: ( cd front && npm run typecheck && npm run lint )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 120
+    anti_patterns:
+      - A third else-if; the next kind falls through exactly as this one did.
+      - Reading runtimeConfig.dataSource instead of repo.kind; auto resolves to a kind, and the header must say what was resolved.
+    do_not_touch:
+      - front/src/screens/
+      - front/src/data/
+
+  - id: T-20260923-screens-surface-query-failures
+    title: Show a failed query on every screen, and name a rejected token
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [front/src/screens/RunsScreen.tsx, front/src/screens/RunDetailScreen.tsx, front/src/screens/CompareScreen.tsx, front/src/screens/MemoryScreen.tsx, front/src/screens/FindingScreen.tsx, front/src/components/molecules/index.ts]
+    creates_paths: [front/src/components/molecules/QueryFailure.tsx, front/src/screens/QueryFailure.test.tsx]
+    source_note: front/src/data/useRepository.tsx
+    why: useAsync returns error and four screens never read it - RunDetail, Compare, Memory and Finding render a rejected query as an empty store. With the http source that turns a wrong APEX_API_TOKEN into a console that looks connected and empty, and it turns the API's 502 memory_unavailable - which says there is no TABLE - into MemoryScreen's "nothing indexed yet", which says there is no HISTORY. RunsScreen does render the error, labelled "ClickHouse did not answer" whatever the source was. T-20260920-console-http-repository's B-4, "the console reports an authentication failure", is proven at the repository layer and nowhere a person looks.
+    goal: One QueryFailure molecule, rendered by the five screens whenever a query rejects and before any empty state; an ApiAuthError renders as a token problem naming APEX_API_TOKEN; an ApiError renders the API's detail; anything else renders a generic line; the source it names follows repo.kind. VerifyScreen keeps its own SourceState untouched.
+    context: The molecule reads the same AsyncState the screens already hold, so the change per screen is a render, not a data-flow change. Order matters on MemoryScreen - the failure must render before the "nothing indexed yet" branch, which today swallows it. ApiAuthError and ApiError are exported from http.ts and instanceof-checkable; neither carries the token. What text to show is a proposed choice, open for review, and it follows VerifyScreen's caution - VerifyScreen.error-state.test.ts asserts that a rejection's message never reaches the DOM, because a response body can carry text. So the molecule shows an ApiError's status and detail, which ch._sanitize already stripped of connection details server-side, and a fixed line for any other Error; RunsScreen's verbatim error.message goes away with this. VerifyScreen and useVerifyQuery are do-not-touch - their SourceState is a deliberate design with its own tests, and this leaf must not fork it. QueryFailure.test.tsx mounts each of the five screens with useRepository mocked to a repository whose methods reject, the way VerifyScreen.source-state.test.tsx mounts VerifyScreen.
+    behaviors:
+      - id: B-1
+        given: a repository whose method rejects with ApiAuthError
+        when: each of RunsScreen, RunDetailScreen, CompareScreen, MemoryScreen and FindingScreen mounts
+        then: the screen shows a token-rejected notice naming APEX_API_TOKEN, and none of its empty-state copy renders in its place
+      - id: B-2
+        given: planShapes rejecting with an ApiError whose detail begins memory_unavailable
+        when: MemoryScreen mounts
+        then: it shows that detail and not "nothing indexed yet"
+      - id: B-3
+        given: a repository whose method rejects with a plain Error carrying a secret in its message
+        when: a screen mounts
+        then: a failure notice renders and the secret does not appear in the DOM
+      - id: B-4
+        given: a repository whose kind is http
+        when: a failure notice renders
+        then: it names apex-api and never says ClickHouse
+      - id: B-5
+        given: VerifyScreen and useVerifyQuery
+        when: the tree is diffed and their tests run
+        then: neither file changed and both suites pass
+    evals:
+      - id: eval_1
+        description: every screen surfaces a rejection, names the token, and hides an untrusted message
+        command: ( cd front && npm run test -- --run src/screens/QueryFailure.test.tsx )
+        verifies: [B-1, B-2, B-3, B-4]
+        terminal: true
+        expected_duration_sec: 180
+      - id: eval_2
+        description: VerifyScreen's own design is untouched
+        command: ( cd front && npm run test -- --run src/screens/VerifyScreen.error-state.test.ts src/screens/VerifyScreen.source-state.test.tsx && git diff --exit-code --stat -- src/screens/VerifyScreen.tsx src/screens/useVerifyQuery.ts )
+        verifies: [B-5]
+        terminal: true
+        expected_duration_sec: 180
+      - id: eval_3
+        description: types and lint
+        command: ( cd front && npm run typecheck && npm run lint )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 120
+    anti_patterns:
+      - Catching inside useAsync and resolving to [] or null; that is the fault-as-empty-store this leaf removes.
+      - Rendering error.message verbatim for a non-API error; VerifyScreen's tests exist because a body can carry text.
+      - Five copies of a banner, one per screen; the molecule is the point.
+      - Reworking VerifyScreen's SourceState to use the molecule; it is do-not-touch here and has its own design.
+    do_not_touch:
+      - front/src/screens/VerifyScreen.tsx
+      - front/src/screens/useVerifyQuery.ts
+      - front/src/data/
+
+  - id: T-20260923-console-http-deployment-wiring
+    title: Let compose, make prod and the README run the console in http mode
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [front/docker-compose.yml, front/Makefile, front/README.md, front/.env.example]
+    creates_paths: []
+    source_note: serve/RUNBOOK.md
+    why: Everything RUNBOOK section 5 documents by hand, the repo's own entry points cannot do. docker-compose.yml passes no VITE_APEX_API_PROXY_TARGET or VITE_APEX_API_TOKEN, and inside the container the proxy's default 127.0.0.1:8099 is the container itself, so `make up` cannot reach an API on the host. `make prod` passes no APEX_API_UPSTREAM or APEX_API_TOKEN. README.md:129 still says HttpRepository "...is the one to write" and :223 says /ask is waiting on it being written. .env.example's closing NOTE lists the container variables and omits the three API ones.
+    goal: VITE_DATA_SOURCE=http make up reaches an API on the host through the dev proxy; make prod accepts APEX_API_UPSTREAM and APEX_API_TOKEN; the README describes the http data source as something that exists and how to select it in dev and in the image; .env.example's NOTE lists the container variables including the API ones.
+    context: In compose the proxy target defaults to http://host.docker.internal:8099, the same gateway alias VITE_CLICKHOUSE_URL already uses, and stays overridable; the token is passed through from the shell and never written into the file. In the Makefile APEX_API_UPSTREAM defaults to the same alias and both variables are passed with -e; APEX_API_URL is deliberately NOT passed - it makes the browser call cross-origin and the API sends no CORS header. Passing an unset APEX_API_TOKEN as an empty -e is fine - the entrypoint emits an empty apiToken key, which is the bundle's own default. PR 129's lesson applies to the evals - a grep on a config file passed on a file nginx rejected - so the compose change is checked by rendering it with `docker compose config`, which interpolates and validates, and the Makefile change by `make -n prod`, which prints the docker run it would execute. The README rows to rewrite are the fenced block under "Querying ClickHouse from the browser" and the /ask row of "What waits on other lanes" - which should now say the diagnostics tier exists over /v1 and what is missing is a consumer, the decision recorded in this plan's metadata.open_decisions. The docs greps in eval_3 are on prose, where a grep is the right tool.
+    behaviors:
+      - id: B-1
+        given: VITE_DATA_SOURCE=http in the shell
+        when: docker compose config renders the console service
+        then: it carries VITE_DATA_SOURCE http and VITE_APEX_API_PROXY_TARGET http://host.docker.internal:8099, and no VITE_APEX_API_URL
+      - id: B-2
+        given: make -n prod with APEX_API_UPSTREAM and APEX_API_TOKEN set
+        when: the docker run line is printed
+        then: it carries -e APEX_API_UPSTREAM and -e APEX_API_TOKEN and never -e APEX_API_URL
+      - id: B-3
+        given: the README
+        when: it is read
+        then: it no longer says HttpRepository is to be written, and it documents DATA_SOURCE=http for dev and for the image
+      - id: B-4
+        given: .env.example's closing NOTE
+        when: it is read
+        then: the container variable list includes APEX_API_UPSTREAM, APEX_API_TOKEN and APEX_API_URL
+    evals:
+      - id: eval_1
+        description: compose renders the http wiring and never a cross-origin url
+        command: ( cd front && VITE_DATA_SOURCE=http docker compose config > /dev/null && VITE_DATA_SOURCE=http docker compose config | grep -q "VITE_APEX_API_PROXY_TARGET.*host.docker.internal.8099" && VITE_DATA_SOURCE=http docker compose config | grep -q "VITE_DATA_SOURCE.*http$" && ! (docker compose config | grep -q VITE_APEX_API_URL) )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: make prod passes the two API variables and not the third
+        command: ( cd front && make -n prod CLICKHOUSE_UPSTREAM=http://ch.test.8123 APEX_API_UPSTREAM=http://api.test.8099 APEX_API_TOKEN=tok | grep -q -- "-e APEX_API_UPSTREAM" && make -n prod CLICKHOUSE_UPSTREAM=http://ch.test.8123 APEX_API_UPSTREAM=http://api.test.8099 APEX_API_TOKEN=tok | grep -q -- "-e APEX_API_TOKEN" && ! (make -n prod CLICKHOUSE_UPSTREAM=http://ch.test.8123 | grep -q APEX_API_URL) )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_3
+        description: the docs say what exists
+        command: ( cd front && ! grep -q "is the one to write" README.md && grep -q "DATA_SOURCE=http" README.md && grep -q "APEX_API_UPSTREAM" .env.example && grep -q "APEX_API_TOKEN" .env.example )
+        verifies: [B-3, B-4]
+        terminal: true
+        expected_duration_sec: 30
+    anti_patterns:
+      - A proxy target of 127.0.0.1 inside a container; it is the container.
+      - Passing APEX_API_URL to the image "for completeness"; it is the cross-origin path the API does not allow.
+      - A token literal in docker-compose.yml or the Makefile.
+      - Guarding the compose or Makefile change with a grep on the file instead of rendering it.
+    do_not_touch:
+      - front/nginx.conf
+      - front/Dockerfile
+      - front/docker-entrypoint.d/
+      - front/src/

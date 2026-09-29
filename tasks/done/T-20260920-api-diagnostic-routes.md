@@ -1,7 +1,7 @@
 ---
 id: T-20260920-api-diagnostic-routes
 title: "Expose the eight MCP tools as /v1 diagnostic routes"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M

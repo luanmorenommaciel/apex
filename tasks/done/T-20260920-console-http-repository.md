@@ -1,7 +1,7 @@
 ---
 id: T-20260920-console-http-repository
 title: "Give the console an http data source"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M
