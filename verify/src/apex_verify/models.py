@@ -139,9 +139,32 @@ class StageObservation(BaseModel):
     spill_disk_bytes: int = Field(default=0, ge=0)
     plan_fingerprint: str = ""
     plan_json: str = ""
+    # Historical rows have no successful-task sample; keep their legacy metrics.
+    successful_task_duration_p50_ms: float = Field(default=0.0, ge=0)
+    successful_task_duration_p99_ms: float = Field(default=0.0, ge=0)
+    successful_task_sample_count: int = Field(default=0, ge=0)
+
+    @property
+    def duration_sample_source(self) -> str:
+        return "successful_tasks" if self.successful_task_sample_count > 0 else "legacy_all_attempts"
+
+    @property
+    def effective_task_duration_p50_ms(self) -> float:
+        return self.successful_task_duration_p50_ms if self.successful_task_sample_count > 0 else self.task_duration_p50_ms
+
+    @property
+    def effective_task_duration_p99_ms(self) -> float:
+        return self.successful_task_duration_p99_ms if self.successful_task_sample_count > 0 else self.task_duration_p99_ms
 
     @property
     def skew_ratio(self) -> float:
+        """Retry-safe p99/p50, with legacy fallback for historical rows."""
+        p50 = self.effective_task_duration_p50_ms
+        return self.effective_task_duration_p99_ms / p50 if p50 else 0.0
+
+    @property
+    def legacy_skew_ratio(self) -> float:
+        """All-attempt ratio retained for audit of historical observations."""
         p50 = self.task_duration_p50_ms
         return self.task_duration_p99_ms / p50 if p50 else 0.0
 
