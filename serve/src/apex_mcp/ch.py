@@ -456,17 +456,21 @@ class ReadStore:
         """Which apex.findings columns this deployment actually has.
 
         The v0.2 additive columns land per-cluster whenever infra applies the
-        ALTER, so serve probes once instead of assuming. Probed lazily and
-        cached for the process lifetime.
+        ALTER, so serve probes once instead of assuming. Probed lazily; only
+        an ANSWER is cached for the process lifetime. A probe that answers
+        without some additive columns is an older deployment and those columns
+        are served as defaults. A probe that FAILS — connection, credentials,
+        missing database, denied metadata access, the query itself — says
+        nothing about the columns: its sanitized error is raised, nothing is
+        cached, and the next call probes again. It used to be cached as an
+        empty set, which served defaults for every additive column for the
+        life of the process, even after the store answered again.
         """
         if self._findings_columns is None:
-            try:
-                rows = self._query(
-                    COLUMNS_SQL, {"database": self._database, "table": "findings"}
-                )
-                self._findings_columns = {str(row["name"]) for row in rows}
-            except ApexStoreError:
-                self._findings_columns = set()
+            rows = self._query(
+                COLUMNS_SQL, {"database": self._database, "table": "findings"}
+            )
+            self._findings_columns = {str(row["name"]) for row in rows}
             missing = set(_FINDINGS_ADDITIVE) - self._findings_columns
             if missing and self._findings_columns:
                 log.warning(
@@ -513,21 +517,21 @@ class ReadStore:
     def table_exists(self, table: str) -> bool:
         """Whether an ADDITIVE contract table is present on this deployment.
 
-        Same shape as ``findings_columns``: probed once against
-        ``system.columns`` and cached for the process lifetime, because the
-        answer only changes when infra applies DDL and restarts are cheap.
-        A failed probe is treated as absent — the caller degrades either way,
-        and guessing "present" would turn a probe failure into a tool failure.
+        Probed against ``system.columns`` and cached for the process lifetime,
+        because the answer only changes when infra applies DDL and restarts
+        are cheap. Only an ANSWER is cached: a probe that returns no rows is a
+        normal older deployment and reads as absent. A probe that FAILS —
+        connection, credentials, database, the query itself — says nothing
+        about the table, so its sanitized error is raised and nothing is
+        cached; the next call probes again. Reporting that failure as absence
+        turned an outage into "not assessed" for the life of the process.
         """
         cached = self._tables_present.get(table)
         if cached is None:
-            try:
-                rows = self._query(
-                    COLUMNS_SQL, {"database": self._database, "table": table}
-                )
-                cached = bool(rows)
-            except ApexStoreError:
-                cached = False
+            rows = self._query(
+                COLUMNS_SQL, {"database": self._database, "table": table}
+            )
+            cached = bool(rows)
             self._tables_present[table] = cached
             if not cached:
                 log.warning(
@@ -543,30 +547,26 @@ class ReadStore:
     def memory_tables_present(self) -> bool:
         """Does this deployment carry the v0.3 cross-run memory tables?
 
-        Probed once and cached, exactly like the additive findings columns.
-        A cluster without them is a normal older deployment, so the answer is
+        Probed once and cached, like ``table_exists``. A cluster without them
+        is a normal older deployment, so a probe that ANSWERS without them is
         reported rather than raised — the tools turn it into "cross-run memory
         is unavailable on this deployment", which a user can act on.
+
+        A probe that FAILS has told us nothing about which tables exist, so its
+        sanitized error is raised and nothing is cached. Only an outage used to
+        be re-raised; a rejected password, a missing database or a failed
+        query was swallowed into "no cross-run memory", with a note telling
+        the operator to apply DDL, and that answer stuck for the process.
+        Proven live for the outage case: the probe runs before every recall,
+        so swallowing it short-circuited the guard in _recall and made an
+        unreachable store answer "no neighbours".
         """
         if self._memory_tables is None:
-            try:
-                rows = self._query(
-                    TABLES_SQL,
-                    {"database": self._database, "names": list(MEMORY_TABLES)},
-                )
-            except ApexStoreError as exc:
-                # A store that could not be REACHED has told us nothing about
-                # which tables it carries. Swallowing that here would turn an
-                # outage into a confident architectural statement — "this
-                # deployment has no cross-run memory" — and the caller would
-                # never learn ClickHouse was down. Proven live: the probe runs
-                # before every recall, so this short-circuited the guard in
-                # _recall and made an unreachable store answer "no neighbours".
-                if str(exc).startswith("clickhouse_unavailable"):
-                    raise
-                self._memory_tables = set()
-            else:
-                self._memory_tables = {str(row["name"]) for row in rows}
+            rows = self._query(
+                TABLES_SQL,
+                {"database": self._database, "names": list(MEMORY_TABLES)},
+            )
+            self._memory_tables = {str(row["name"]) for row in rows}
             missing = set(MEMORY_TABLES) - self._memory_tables
             if missing:
                 log.warning(
@@ -630,13 +630,15 @@ class ReadStore:
 
         Only a table that is REALLY GONE degrades, and absence is confirmed by
         re-probing rather than inferred from the error text. ``_sanitize``
-        routes on the exception's class name, and the driver's generic class is
-        ``DatabaseError`` — so nearly every server-side error arrives labelled
-        ``clickhouse_schema_missing``. Trusting that label was enough to
-        swallow a genuine SQL fault and report it as "no prior runs", which is
-        the one lie this lane can least afford. Proven live: it masked a code
-        125 for an entire session, and poisoned the probe cache so every later
-        recall claimed cross-run memory was unavailable.
+        used to route on the exception's class name, and the driver's generic
+        class is ``DatabaseError`` — so nearly every server-side error arrived
+        labelled ``clickhouse_schema_missing``. Trusting that label was enough
+        to swallow a genuine SQL fault and report it as "no prior runs", which
+        is the one lie this lane can least afford. Proven live: it masked a
+        code 125 for an entire session, and poisoned the probe cache so every
+        later recall claimed cross-run memory was unavailable. The label now
+        follows the server's error code, but a missing-column code can still
+        come from a query bug, so the re-probe stays.
         """
         try:
             return self._query(sql, parameters)
@@ -644,6 +646,7 @@ class ReadStore:
             if not str(exc).startswith("clickhouse_schema_missing"):
                 raise
             self._memory_tables = None  # force a fresh probe, do not trust the label
+            # A re-probe that itself fails raises: absence needs an answer.
             if self.memory_tables_present():
                 raise
             log.warning(
@@ -694,11 +697,41 @@ def _require_optional_id(value: str, name: str) -> str:
     return value
 
 
+# ClickHouse server error codes, checked against clickhouse-server 24.8
+# (`system.errors`). The driver reports the code as `Error.code`, read from the
+# X-ClickHouse-Exception-Code header, so classification never parses the
+# message — which is the part that carries the URL and must not travel.
+_SCHEMA_ERROR_CODES = frozenset({
+    16,   # NO_SUCH_COLUMN_IN_TABLE
+    47,   # UNKNOWN_IDENTIFIER
+    60,   # UNKNOWN_TABLE
+})
+_ACCESS_ERROR_CODES = frozenset({
+    192,  # UNKNOWN_USER
+    193,  # WRONG_PASSWORD
+    194,  # REQUIRED_PASSWORD
+    195,  # IP_ADDRESS_NOT_ALLOWED
+    497,  # ACCESS_DENIED
+    516,  # AUTHENTICATION_FAILED
+})
+_UNKNOWN_DATABASE_CODE = 81
+# `code` absent as an attribute (a driver predating it, or a test double) is
+# not the same as the driver saying the code is unknown (None).
+_NO_CODE_ATTRIBUTE = object()
+
+
 def _sanitize(exc: Exception) -> ApexStoreError:
     """Log the real failure to STDERR; hand the model an opaque code.
 
     Driver exceptions embed the host/user/password of the connection URL —
     forwarding one to the client would be plain info disclosure.
+
+    The driver's generic class is ``DatabaseError`` for EVERY server-side
+    failure, so its name says nothing about the schema: a rejected password or
+    a missing database routed on it told the operator to apply DDL. When the
+    driver supplies a server code, the code decides; a driver error with no
+    code (an HTTP error from something that is not ClickHouse) is reported as
+    an unclassified failure, never as a schema claim.
     """
     log.error("clickhouse query failed: %s", type(exc).__name__, exc_info=exc)
     name = type(exc).__name__.lower()
@@ -707,7 +740,24 @@ def _sanitize(exc: Exception) -> ApexStoreError:
             "clickhouse_unavailable: the Apex store did not answer. "
             "Check the CLICKHOUSE_* environment of the MCP server."
         )
-    if "database" in name or "table" in name:
+    code = getattr(exc, "code", _NO_CODE_ATTRIBUTE)
+    if code is _NO_CODE_ATTRIBUTE:
+        schema_shaped = "database" in name or "table" in name
+    elif code in _ACCESS_ERROR_CODES:
+        return ApexStoreError(
+            "clickhouse_access_denied: the Apex store refused the configured "
+            "user: its credentials, its source address or its permissions. "
+            "Check CLICKHOUSE_USER and CLICKHOUSE_PASSWORD of the MCP server and "
+            "that user's grants on the configured database and system tables."
+        )
+    elif code == _UNKNOWN_DATABASE_CODE:
+        return ApexStoreError(
+            "clickhouse_database_missing: the configured database does not "
+            "exist on the Apex store. Check CLICKHOUSE_DATABASE of the MCP server."
+        )
+    else:
+        schema_shaped = code in _SCHEMA_ERROR_CODES
+    if schema_shaped:
         return ApexStoreError(
             "clickhouse_schema_missing: the apex schema is not applied. "
             "Apply contract/*.ddl.sql via the infra lane."
