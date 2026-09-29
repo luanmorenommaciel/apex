@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import pathlib
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi.testclient import TestClient
 
 from apex_api.app import create_app
 from apex_api.config import Settings
+from apex_api.wire import TIMESTAMP_FIELDS
 from apex_api.routes.resources import (
     LIMIT_HEADER,
     RESOURCE_ROUTES,
@@ -27,6 +29,7 @@ AUTH = {"Authorization": f"Bearer {TOKEN}"}
 FRONT_SRC = pathlib.Path(__file__).resolve().parents[2] / "front" / "src"
 REPOSITORY_TS = FRONT_SRC / "data" / "repository.ts"
 CONTRACT_TS = FRONT_SRC / "contract" / "types.ts"
+TIMESTAMP_TS = FRONT_SRC / "data" / "timestamp.ts"
 
 RUN_ROW = {
     "job_id": "j", "app_name": "nightly-rollup", "stage_count": 34,
@@ -186,14 +189,17 @@ def test_findings_route_returns_the_console_projection():
 
 def test_transitions_route_returns_the_console_projection():
     """One row per execution, at max(update_seq), with the run's fingerprint and ts."""
+    # ts is a datetime, because that is what the driver hands back; it leaves
+    # in the wire format like every other timestamp.
     rows = [{
         "job_id": "j", "execution_id": 1, "update_seq": 2, "transition_type": "skew_split",
         "detail": "AQEShuffleRead skewed x4", "before": "1 skewed", "after": "4 skewed",
-        "confidence": "HIGH", "plan_fingerprint": "a" * 64, "ts": "2026-09-20 10:00:00",
+        "confidence": "HIGH", "plan_fingerprint": "a" * 64,
+        "ts": datetime(2026, 9, 20, 10, 0, 0, 123000),
     }]
     client = _ConsoleClient(transition_rows=rows)
     got = build(client).get("/v1/runs/j/transitions", headers=AUTH).json()
-    assert got == rows
+    assert got == [dict(rows[0], ts="2026-09-20T10:00:00.123")]
     sql = next(q for q, _ in client.calls if reads(q, "plan_transitions"))
     assert "GROUP BY t.job_id, t.execution_id" in sql
     for field in ("job_id", "plan_fingerprint", "ts"):
@@ -271,3 +277,71 @@ def test_every_console_field_is_projected():
     # And it is the MCP's own projection that fails it — the defect it is for.
     mcp_findings = projected_columns(ch._findings_sql(set(ch._FINDINGS_ADDITIVE)))
     assert "ts" in interface_fields(CONTRACT_TS, "FindingRow") - mcp_findings
+
+
+# -- the wire format -------------------------------------------------------
+
+
+def wire_pattern() -> re.Pattern[str]:
+    """WIRE_TIMESTAMP, read from the console's own source.
+
+    Not restated here: a pattern kept on both sides by hand is two patterns.
+    """
+    source = TIMESTAMP_TS.read_text()
+    literal = re.search(r"export const WIRE_TIMESTAMP = /(.+)/;", source)
+    assert literal, "could not read WIRE_TIMESTAMP from timestamp.ts"
+    return re.compile(literal.group(1))
+
+
+def declared_timestamps(source_path: pathlib.Path, name: str) -> set[str]:
+    """The fields one interface declares as WireTimestamp."""
+    source = source_path.read_text()
+    body = source.split(f"interface {name} {{", 1)[1].split("\n}", 1)[0]
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
+    body = re.sub(r"//[^\n]*", "", body)
+    return set(re.findall(r"\b(\w+)\??\s*:\s*WireTimestamp\b", body))
+
+
+def test_every_timestamp_leaves_in_the_wire_format():
+    pattern = wire_pattern()
+
+    # The allow-list covers every field the console declares as a timestamp.
+    declared: set[str] = set()
+    for source, name in [*CONSOLE_PROJECTIONS, (CONTRACT_TS, "RunSummary")]:
+        declared |= declared_timestamps(source, name)
+    assert {"ts", "started_at", "observed_at", "first_run", "last_run"} <= declared, (
+        f"the console's interfaces no longer declare their timestamps: {sorted(declared)}"
+    )
+    assert declared <= TIMESTAMP_FIELDS, (
+        f"declared by the console, unknown to the API: {sorted(declared - TIMESTAMP_FIELDS)}"
+    )
+
+    paths = (
+        "/v1/runs", "/v1/runs/j", "/v1/runs/j/stages", "/v1/runs/j/conf",
+        "/v1/runs/j/findings", "/v1/runs/j/transitions",
+        "/v1/runs/j/baseline-candidates", "/v1/plans", "/v1/plans/" + "a" * 64 + "/runs",
+    )
+    moment = datetime(2026, 9, 20, 10, 0, 0, 123000)
+    arrivals = (
+        moment,                                   # what the driver hands back
+        moment.replace(microsecond=0),            # isoformat() wrote NO fraction here
+        datetime(2026, 9, 20, 12, 0, 0, 123000, tzinfo=timezone(timedelta(hours=2))),
+        "2026-09-20 10:00:00.123",                # text, the way ClickHouse's JSON writes it
+    )
+    for value in arrivals:
+        row = {
+            "job_id": "j", "started_at": value, "ts": value, "observed_at": value,
+            "first_run": value, "last_run": value,
+        }
+        app = build(_ConsoleClient(
+            run_rows=[row], conf_rows=[row], shape_rows=[row], candidate_rows=[row],
+            finding_rows=[row], transition_rows=[row],
+        ))
+        for path in paths:
+            body = app.get(path, headers=AUTH).json()
+            seen = 0
+            for got in body if isinstance(body, list) else [body]:
+                for field in TIMESTAMP_FIELDS & set(got):
+                    assert pattern.fullmatch(got[field]), f"{path} {field}={got[field]!r} from {value!r}"
+                    seen += 1
+            assert seen, f"{path} returned no timestamp to check"

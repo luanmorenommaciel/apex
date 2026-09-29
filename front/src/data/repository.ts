@@ -8,20 +8,21 @@
  */
 import type {
   FindingRow, FixVerificationRow, JobConfRow, PlanTransitionRow,
-  RunSummary, SparkEventRow,
+  RunSummary, SparkEventRow, WireTimestamp,
 } from "@/contract/types";
 import * as fx from "./fixtures";
 import * as Q from "./queries";
 import { ping, query } from "./clickhouse";
 import { apiGet, apiPing } from "./http";
 import { runtimeConfig } from "./runtimeConfig";
+import { toWireTimestamp, withWireTimestamps } from "./timestamp";
 
 /** A plan shape the memory lane indexed, plus how often it has run. */
 export interface PlanShape {
   plan_fingerprint: string;
   run_count: number;
-  first_run: string;
-  last_run: string;
+  first_run: WireTimestamp;
+  last_run: WireTimestamp;
   node_count: number;
   join_count: number;
   agg_count: number;
@@ -43,7 +44,7 @@ export interface ShapeRun {
   conf_executor_instances: number | null;
   conf_executor_cores: number | null;
   conf_executor_memory_mb: number | null;
-  observed_at: string;
+  observed_at: WireTimestamp;
 }
 
 /** A run that shares at least one plan shape with the run being compared. */
@@ -51,7 +52,7 @@ export interface BaselineCandidate {
   job_id: string;
   app_name: string;
   shared_shapes: number;
-  observed_at: string;
+  observed_at: WireTimestamp;
 }
 
 export interface Repository {
@@ -80,6 +81,18 @@ const relativeAge = (iso: string): string => {
   const h = Math.max(0, Math.round((Date.now() - then) / 3600000));
   return h < 1 ? "now" : h < 24 ? `${h}h` : `${Math.round(h / 24)}d`;
 };
+
+/**
+ * Rows from any source, with the named timestamp fields in the wire format.
+ *
+ * Every repository returns through this, so a timestamp reads the same
+ * whichever door it came through: ClickHouse's JSON writes
+ * `2026-09-20 10:00:00.123`, the recording holds that same form, and the API
+ * writes `2026-09-20T10:00:00.123`. The API's is the format; the other two are
+ * brought to it here, the one place all three pass.
+ */
+const wireRows = <T extends object>(rows: T[], ...fields: (keyof T)[]): T[] =>
+  rows.map((row) => withWireTimestamps(row, fields));
 
 const statusOf = (findings: number, critical: boolean): RunSummary["status"] =>
   findings === 0 ? "healthy" : critical ? "degraded" : "warning";
@@ -121,7 +134,7 @@ const toRunSummary = (r: RunRollupRow): RunSummary & { age?: string } => ({
   config_source: r.config_source,
   conf_executor_instances: nullableInt(r.conf_executor_instances),
   conf_shuffle_partitions: nullableInt(r.conf_shuffle_partitions),
-  started_at: r.started_at,
+  started_at: toWireTimestamp(r.started_at),
   age: relativeAge(r.started_at),
 });
 
@@ -138,15 +151,15 @@ export class ClickHouseRepository implements Repository {
     return rows[0] ? toRunSummary(rows[0]) : null;
   }
 
-  baselineCandidates(jobId: string) {
-    return query<BaselineCandidate>(Q.RUNS_SHARING_SHAPE, { job: jobId });
+  async baselineCandidates(jobId: string) {
+    return wireRows(await query<BaselineCandidate>(Q.RUNS_SHARING_SHAPE, { job: jobId }), "observed_at");
   }
 
-  planShapes() {
-    return query<PlanShape>(Q.PLAN_SHAPES);
+  async planShapes() {
+    return wireRows(await query<PlanShape>(Q.PLAN_SHAPES), "first_run", "last_run");
   }
-  shapeRuns(fingerprint: string) {
-    return query<ShapeRun>(Q.SHAPE_RUNS, { fingerprint });
+  async shapeRuns(fingerprint: string) {
+    return wireRows(await query<ShapeRun>(Q.SHAPE_RUNS, { fingerprint }), "observed_at");
   }
   async planSample(fingerprint: string) {
     if (!fingerprint) return null;
@@ -156,17 +169,17 @@ export class ClickHouseRepository implements Repository {
     return rows[0]?.sample_plan_json || null;
   }
 
-  stages(jobId: string) {
-    return query<SparkEventRow>(Q.LATEST_STAGES, { job: jobId });
+  async stages(jobId: string) {
+    return wireRows(await query<SparkEventRow>(Q.LATEST_STAGES, { job: jobId }), "ts");
   }
-  jobConf(jobId: string) {
-    return query<JobConfRow>(Q.JOB_CONF, { job: jobId });
+  async jobConf(jobId: string) {
+    return wireRows(await query<JobConfRow>(Q.JOB_CONF, { job: jobId }), "ts");
   }
-  findings(jobId: string) {
-    return query<FindingRow>(Q.FINDINGS, { job: jobId });
+  async findings(jobId: string) {
+    return wireRows(await query<FindingRow>(Q.FINDINGS, { job: jobId }), "ts");
   }
-  transitions(jobId: string) {
-    return query<PlanTransitionRow>(Q.PLAN_TRANSITIONS, { job: jobId });
+  async transitions(jobId: string) {
+    return wireRows(await query<PlanTransitionRow>(Q.PLAN_TRANSITIONS, { job: jobId }), "ts");
   }
   async fixVerification(findingId: string) {
     const rows = await query<Record<string, unknown>>(Q.FIX_VERIFICATIONS, { finding: findingId });
@@ -218,11 +231,14 @@ const toFixVerification = (r: Record<string, unknown>): FixVerificationRow => ({
 export class FixtureRepository implements Repository {
   readonly kind = "fixtures" as const;
 
+  // The recording keeps the form it was captured in; it becomes a row here,
+  // in the wire format, like a row from any other source.
   async listRuns() {
-    return fx.runs;
+    return wireRows(fx.runs, "started_at");
   }
   async run(jobId: string) {
-    return fx.runs.find((r) => r.job_id === jobId) ?? null;
+    const found = fx.runs.find((r) => r.job_id === jobId);
+    return found ? withWireTimestamps(found, ["started_at"]) : null;
   }
   async baselineCandidates(jobId: string) {
     // The recording holds one comparable pair, and it is the pair the README's
@@ -233,13 +249,13 @@ export class FixtureRepository implements Repository {
     if (!other) return [];
     const r = fx.runs.find((x) => x.job_id === other);
     return r ? [{ job_id: r.job_id, app_name: r.app_name, shared_shapes: 1,
-                  observed_at: r.started_at }] : [];
+                  observed_at: toWireTimestamp(r.started_at) }] : [];
   }
   async planShapes() {
-    return fx.planShapes;
+    return wireRows(fx.planShapes, "first_run", "last_run");
   }
   async shapeRuns(fingerprint: string) {
-    return fingerprint === fx.PLAN_FINGERPRINT ? fx.shapeRuns : [];
+    return fingerprint === fx.PLAN_FINGERPRINT ? wireRows(fx.shapeRuns, "observed_at") : [];
   }
   async planSample(fingerprint: string) {
     // Only the recorded shape has an exemplar. Returning it for any fingerprint
@@ -247,16 +263,16 @@ export class FixtureRepository implements Repository {
     return fingerprint === fx.PLAN_FINGERPRINT ? fx.REDACTED_PLAN.join("\n") : null;
   }
   async stages(jobId: string) {
-    return fx.stagesByJob[jobId] ?? [];
+    return wireRows(fx.stagesByJob[jobId] ?? [], "ts");
   }
   async jobConf(jobId: string) {
-    return fx.jobConfByJob[jobId] ?? [];
+    return wireRows(fx.jobConfByJob[jobId] ?? [], "ts");
   }
   async findings(jobId: string) {
-    return fx.findingsByJob[jobId] ?? [];
+    return wireRows(fx.findingsByJob[jobId] ?? [], "ts");
   }
   async transitions(jobId: string) {
-    return fx.transitionsByJob[jobId] ?? [];
+    return wireRows(fx.transitionsByJob[jobId] ?? [], "ts");
   }
   async fixVerification(findingId: string) {
     return fx.fixVerifications.find((f) => f.finding_id === findingId) ?? null;
@@ -291,19 +307,19 @@ export class HttpRepository implements Repository {
     const { data } = await apiGet<BaselineCandidate[]>(
       `/v1/runs/${encodeURIComponent(jobId)}/baseline-candidates`,
     );
-    return data ?? [];
+    return wireRows(data ?? [], "observed_at");
   }
 
   async planShapes() {
     const { data } = await apiGet<PlanShape[]>("/v1/plans");
-    return data ?? [];
+    return wireRows(data ?? [], "first_run", "last_run");
   }
 
   async shapeRuns(fingerprint: string) {
     const { data } = await apiGet<ShapeRun[]>(
       `/v1/plans/${encodeURIComponent(fingerprint)}/runs`,
     );
-    return data ?? [];
+    return wireRows(data ?? [], "observed_at");
   }
 
   async planSample(fingerprint: string) {
@@ -320,26 +336,26 @@ export class HttpRepository implements Repository {
     const { data } = await apiGet<SparkEventRow[]>(
       `/v1/runs/${encodeURIComponent(jobId)}/stages`,
     );
-    return data ?? [];
+    return wireRows(data ?? [], "ts");
   }
 
   async jobConf(jobId: string) {
     const { data } = await apiGet<JobConfRow[]>(`/v1/runs/${encodeURIComponent(jobId)}/conf`);
-    return data ?? [];
+    return wireRows(data ?? [], "ts");
   }
 
   async findings(jobId: string) {
     const { data } = await apiGet<FindingRow[]>(
       `/v1/runs/${encodeURIComponent(jobId)}/findings`,
     );
-    return data ?? [];
+    return wireRows(data ?? [], "ts");
   }
 
   async transitions(jobId: string) {
     const { data } = await apiGet<PlanTransitionRow[]>(
       `/v1/runs/${encodeURIComponent(jobId)}/transitions`,
     );
-    return data ?? [];
+    return wireRows(data ?? [], "ts");
   }
 
   async fixVerification(findingId: string) {

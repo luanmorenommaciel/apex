@@ -28,6 +28,9 @@ vi.mock("./clickhouse", async (importOriginal) => ({
 }));
 
 import { ApiAuthError } from "./http";
+import * as fx from "./fixtures";
+import { WIRE_TIMESTAMP } from "./timestamp";
+import type { Repository } from "./repository";
 import {
   ClickHouseRepository,
   FixtureRepository,
@@ -290,5 +293,83 @@ describe("failure", () => {
   it("reports a store error without inventing an empty result", async () => {
     stubFetch(() => respond({ detail: "memory_unavailable: ..." }, { status: 502 }));
     await expect(new HttpRepository().planShapes()).rejects.toThrow("memory_unavailable");
+  });
+});
+
+describe("wire timestamp", () => {
+  // One row carrying every timestamp field the console reads, in a form that is
+  // NOT the wire format. Each repository is handed it through its own door.
+  const row = (raw: string) => ({
+    job_id: "j", app_name: "nightly", stage_count: 1, finding_count: 0, has_critical: 0,
+    task_time_ms: 1, plan_fingerprint: "a".repeat(64), shape_count: 1, shaped_stage_count: 1,
+    config_source: "observed", conf_executor_instances: null, conf_shuffle_partitions: null,
+    started_at: raw, ts: raw, observed_at: raw, first_run: raw, last_run: raw,
+  });
+  /**
+   * Every timestamp a repository returns, read from the fields each METHOD
+   * owns — a stage row's `ts`, a shape's `first_run` and `last_run`. The test
+   * row above carries all five on every row only so one fixture serves every
+   * route; a field a method does not declare is not that method's to convert.
+   */
+  async function everyTimestamp(repo: Repository, job: string, fingerprint: string): Promise<string[]> {
+    const owned: Array<[unknown[], readonly string[]]> = [
+      [await repo.listRuns(5), ["started_at"]],
+      [[await repo.run(job)], ["started_at"]],
+      [await repo.stages(job), ["ts"]],
+      [await repo.jobConf(job), ["ts"]],
+      [await repo.findings(job), ["ts"]],
+      [await repo.transitions(job), ["ts"]],
+      [await repo.baselineCandidates(job), ["observed_at"]],
+      [await repo.planShapes(), ["first_run", "last_run"]],
+      [await repo.shapeRuns(fingerprint), ["observed_at"]],
+    ];
+    return owned.flatMap(([rows, fields]) =>
+      rows.flatMap((r) =>
+        fields.flatMap((field) => {
+          const value = (r as Record<string, unknown> | null)?.[field];
+          return typeof value === "string" ? [value] : [];
+        }),
+      ),
+    );
+  }
+
+  it.each([
+    ["the API before it was pinned", "2026-09-20T10:00:00.123000"],
+    ["an API that dropped a zero fraction", "2026-09-20T10:00:00"],
+    ["an aware value", "2026-09-20T12:00:00.123+02:00"],
+  ])("HttpRepository returns the wire format from %s", async (_what, raw) => {
+    stubFetch((url) => respond(/\/v1\/runs\/j$/.test(url) ? row(raw) : [row(raw)]));
+    const times = await everyTimestamp(new HttpRepository(), "j", "a".repeat(64));
+    // Ten: one per method, and a shape has two.
+    expect(times).toHaveLength(10);
+    for (const value of times) expect(value).toMatch(WIRE_TIMESTAMP);
+  });
+
+  it("ClickHouseRepository returns the wire format from ClickHouse's own JSON", async () => {
+    // The browser path builds its url from window.location, which node has not.
+    vi.stubGlobal("window", { location: { origin: "http://console.test" } });
+    stubFetch(() => respond({ data: [row("2026-09-20 10:00:00.123")], meta: [], rows: 1 }));
+    const times = await everyTimestamp(new ClickHouseRepository(), "j", "a".repeat(64));
+    expect(times).toHaveLength(10);
+    for (const value of times) expect(value).toBe("2026-09-20T10:00:00.123");
+    expect(calls.every((c) => c.url.startsWith("http://console.test/clickhouse/"))).toBe(true);
+  });
+
+  it("FixtureRepository returns the wire format from the recording", async () => {
+    const times = await everyTimestamp(new FixtureRepository(), fx.CURRENT_JOB, fx.PLAN_FINGERPRINT);
+    expect(times.length).toBeGreaterThan(9);
+    for (const value of times) expect(value).toMatch(WIRE_TIMESTAMP);
+    // The recording itself is untouched: it becomes a row in the repository.
+    expect(fx.runs[0].started_at).not.toMatch(WIRE_TIMESTAMP);
+  });
+
+  it("derives the same age whichever form the timestamp arrived in", async () => {
+    const ages: Array<string | undefined> = [];
+    for (const raw of ["2026-09-20 10:00:00.123", "2026-09-20T10:00:00.123"]) {
+      stubFetch(() => respond(row(raw)));
+      ages.push((await new HttpRepository().run("j"))?.age);
+    }
+    expect(ages[0]).toBeTruthy();
+    expect(ages[0]).toBe(ages[1]);
   });
 });
