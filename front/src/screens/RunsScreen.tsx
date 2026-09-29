@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mono, Pill, Prose, StatusPill } from "@/components/atoms";
-import { DataTable, KpiCard, ScreenHeader, type Column } from "@/components/molecules";
+import { Mono, Pill, StatusPill } from "@/components/atoms";
+import { DataTable, KpiCard, ScreenHeader, type Column, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import { fmt } from "@/contract/rules";
 import { useAsync, useRepository } from "@/data/useRepository";
@@ -84,6 +84,19 @@ export function RunsScreen() {
     { key: "age", header: "AGE", width: "96px", align: "right", render: (r) => <span className="text-dim">{r.age ?? ""}</span> },
   ];
 
+  // A rejected query is not a store with no runs. This screen used to keep
+  // rendering around the error — "0 most recent applications", KPIs at 0,
+  // "No rows match this filter" — every one of them a measured-zero claim
+  // about a store it had not read.
+  if (error) {
+    return (
+      <Page>
+        <ScreenHeader title="Runs" subtitle="query failed" />
+        <QueryFailure error={error} source={repo.kind} what="runs" />
+      </Page>
+    );
+  }
+
   return (
     <Page>
       <ScreenHeader
@@ -120,13 +133,6 @@ export function RunsScreen() {
         }
       />
 
-      {error && (
-        <div className="bg-raised border border-edge2 border-l-2 border-l-finding rounded-sm p-4">
-          <Prose>
-            ClickHouse did not answer: <Mono className="text-finding">{error.message}</Mono>
-          </Prose>
-        </div>
-      )}
 
       <div className="grid grid-cols-4 gap-3">
         <KpiCard label="OPEN FINDINGS" value={totals.findings} note="ranked on confidence_score" accent="finding" />

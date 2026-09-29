@@ -4,7 +4,7 @@ import {
   ConfidencePill, Diff, Label, Metric, Mono, Pill, Prose, SeverityBadge, StatusPill,
 } from "@/components/atoms";
 import {
-  Button, LayerTabs, RefusalTable, SignalStrip, StageNode, WithheldPanel,
+  Button, LayerTabs, QueryFailure, RefusalTable, SignalStrip, StageNode, WithheldPanel,
   type Layer, type NodeTone, type Withholding,
 } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
@@ -121,6 +121,23 @@ export function RunDetailScreen() {
     return "clean";
   };
 
+  // A rejected query is not an empty run. Checked before the loading and
+  // empty branches, which swallowed it: with the http source a wrong token
+  // rendered as "No stage rows". The five reads the screen is built on take
+  // the page; the three that decorate it (verification, plan sample, shape
+  // history) are reported in place, because a missing memory table must not
+  // hide the run.
+  const failures = ([
+    ["run", runQ], ["stages", stagesQ], ["configuration", confQ],
+    ["findings", findingsQ], ["transitions", transQ],
+  ] as const).flatMap(([what, q]) => (q.error ? [{ what, error: q.error }] : []));
+  const decorations = ([
+    ["verification", fixQ], ["plan sample", planQ], ["shape history", shapeQ],
+  ] as const).flatMap(([what, q]) => (q.error ? [{ what, error: q.error }] : []));
+  if (failures[0]) {
+    return <Page><QueryFailure error={failures[0].error} source={repo.kind} what={failures[0].what} /></Page>;
+  }
+
   if (stagesQ.loading) return <Page><Prose>Loading run…</Prose></Page>;
   if (!current) return <Page><Prose>No stage rows for <Mono>{jobId}</Mono>.</Prose></Page>;
 
@@ -202,6 +219,11 @@ export function RunDetailScreen() {
 
   return (
     <Page className="!py-0 !px-0">
+      {decorations.map(({ what, error }) => (
+        <div key={what} className="px-6 pt-4">
+          <QueryFailure error={error} source={repo.kind} what={what} />
+        </div>
+      ))}
       <div className="flex items-center justify-between px-6 py-4 border-b border-edge shrink-0">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-3">

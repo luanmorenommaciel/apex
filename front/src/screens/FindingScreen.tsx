@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import {
   Bar, Card, ConfidencePill, FLOOR_PX, KeyValue, Label, Mono, Pill, Prose, SeverityBadge,
 } from "@/components/atoms";
-import { ScreenHeader } from "@/components/molecules";
+import { ScreenHeader, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import {
   assessStage, fmt, noOpGate, parseProposal, ratioOf, TAIL_SAMPLE,
@@ -40,6 +40,20 @@ export function FindingScreen() {
     [repo, fingerprint],
   );
 
+  // A rejected query is not a missing finding. Before the empty branch, which
+  // swallowed it; the reads that decorate the finding are reported in place.
+  if (findingsQ.error) {
+    return (
+      <Page>
+        <ScreenHeader title="Finding" subtitle="query failed" />
+        <QueryFailure error={findingsQ.error} source={repo.kind} what="findings" />
+      </Page>
+    );
+  }
+  const decorations = ([
+    ["stages", stagesQ], ["configuration", confQ], ["transitions", transQ],
+    ["verification", fixQ], ["shape history", shapeQ],
+  ] as const).flatMap(([what, q]) => (q.error ? [{ what, error: q.error }] : []));
   if (findingsQ.loading) return <Page><Prose>Loading finding…</Prose></Page>;
   if (!finding) return <Page><Prose>No finding <Mono>{findingId}</Mono>.</Prose></Page>;
 
@@ -87,6 +101,9 @@ export function FindingScreen() {
           </span>
         }
       />
+      {decorations.map(({ what, error }) => (
+        <QueryFailure key={what} error={error} source={repo.kind} what={what} />
+      ))}
 
       <div className="flex gap-5 flex-1 min-h-0">
         <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-auto pr-1">
