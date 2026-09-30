@@ -115,7 +115,7 @@ jobs:
         working-directory: collect
         run: |
           docker run --rm \
-            -e REDACTION_SECRET_KEY=$(openssl rand -hex 32) \
+            -e "REDACTION_SECRET_KEY=$(openssl rand -hex 32)" \
             -e CLICKHOUSE_ENDPOINT=tcp://clickhouse:9000 \
             -e CLICKHOUSE_USER=apex \
             -e CLICKHOUSE_PASSWORD=ci_placeholder \
