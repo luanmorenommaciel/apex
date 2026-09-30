@@ -2,7 +2,7 @@ name: CI
 
 # Every lane is a separate project with its own dependency set, so each gets its
 # own job. Tests that need live ClickHouse skip themselves, which keeps this
-# workflow fast and service-free — the live end-to-end gate is e2e.yml.
+# workflow fast and service-free; live end-to-end paths are not covered here.
 #
 # The jar job matrixes over JDK 17 and 21 because build.sbt publishes four
 # (Spark, Scala) cells and the two Spark 4.x cells cannot run on JDK 11. A
