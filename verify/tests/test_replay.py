@@ -358,11 +358,12 @@ def test_measurement_score_fails_closed():
 
 
 @pytest.mark.parametrize("floor", [-1.0, float("nan"), float("inf"), float("-inf")])
-def test_invalid_floor_cannot_certify_or_quote_a_replay(floor):
+@pytest.mark.parametrize("shape_fidelity", [1.0, 0.3])
+def test_invalid_floor_cannot_certify_or_quote_a_replay(floor, shape_fidelity):
     measurement = Measurement(
         delta_pct=-11.0, baseline_ms=100.0, treatment_ms=89.0,
         noise_floor_pct=floor, floor_measured=True, reps=3,
-        bench="probe", shape_fidelity=1.0, attributable=True,
+        bench="probe", shape_fidelity=shape_fidelity, attributable=True,
         mechanism_confirmed=True, mechanism_detail="synthetic split",
     )
     assert not measurement.valid_noise_floor
@@ -381,6 +382,7 @@ def test_invalid_floor_cannot_certify_or_quote_a_replay(floor):
     assert "invalid noise floor" in verdict.evidence
     assert "-11.0%" not in verdict.evidence
     assert "invalid noise floor" in verdict.caveats
+    assert "directional" not in verdict.caveats
     assert verdict.to_row()["noise_floor_pct"] is None
 
 

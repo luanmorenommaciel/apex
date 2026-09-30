@@ -455,7 +455,8 @@ def verdict_from_replay(
                 f"certified is its size. " + evidence
             )
 
-    if m.floor_measured and not m.valid_noise_floor:
+    invalid_noise_floor = m.floor_measured and not m.valid_noise_floor
+    if invalid_noise_floor:
         caveats = [
             "The replay has an invalid noise floor; no runtime magnitude is reportable."
         ]
@@ -464,7 +465,7 @@ def verdict_from_replay(
             f"Noise floor measured from the baseline arm's own {m.reps} samples at the "
             "compared level (contract rule 2); it is not transferable to another level or scale."
         ]
-    if m.shape_fidelity < FIDELITY_CAVEAT_BELOW:
+    if m.shape_fidelity < FIDELITY_CAVEAT_BELOW and not invalid_noise_floor:
         caveats.append(
             f"Shape fidelity is {m.shape_fidelity:.2f} — the bench only partially "
             "reproduces the observed shape (task count / skew ratio / bytes per task / "
