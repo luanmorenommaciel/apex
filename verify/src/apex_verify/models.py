@@ -19,6 +19,7 @@ at MEDIUM. See `PREDICTED_IMPROVEMENT_SCORE_CAP`.
 
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
@@ -256,10 +257,19 @@ class Measurement(BaseModel):
     treatment_samples_ms: list[float] = Field(default_factory=list)
 
     @property
+    def valid_noise_floor(self) -> bool:
+        """Only a measured, finite, non-negative floor can certify a delta."""
+        return (
+            self.floor_measured
+            and math.isfinite(self.noise_floor_pct)
+            and self.noise_floor_pct >= 0
+        )
+
+    @property
     def significant(self) -> bool:
         return (
             self.attributable
-            and self.floor_measured
+            and self.valid_noise_floor
             and abs(self.delta_pct) >= self.noise_floor_pct
         )
 
@@ -354,6 +364,11 @@ class Verdict(BaseModel):
                     "reps to measure the noise floor at this level and scale "
                     f"(contract rule 2); the observed {m.delta_pct:+.1f}% may not be quoted"
                 )
+            if not m.valid_noise_floor:
+                return (
+                    f"INVALID NOISE FLOOR — replayed on {m.bench}; the runtime "
+                    "magnitude is not reportable"
+                )
             resolved = m.resolved_delta_pct
             if resolved is None:
                 if m.mechanism_confirmed:
@@ -398,9 +413,8 @@ class Verdict(BaseModel):
             "measured_delta_pct": m.delta_pct if m else None,
             "baseline_ms": m.baseline_ms if m else None,
             "treatment_ms": m.treatment_ms if m else None,
-            # NULL when the baseline arm had too few reps to measure a floor —
-            # an unmeasured floor is not a 0% floor.
-            "noise_floor_pct": (m.noise_floor_pct if m and m.floor_measured else None) if m else None,
+            # NULL when the floor is unmeasured or invalid; neither is a 0% floor.
+            "noise_floor_pct": m.noise_floor_pct if m and m.valid_noise_floor else None,
             "replay_reps": m.reps if m else 0,
             "bench": m.bench if m else "",
             "shape_fidelity": m.shape_fidelity if m else 0.0,

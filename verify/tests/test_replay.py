@@ -357,6 +357,54 @@ def test_measurement_score_fails_closed():
     assert score_measurement(base.model_copy(update={"floor_measured": False})) == 0.45
 
 
+@pytest.mark.parametrize("floor", [-1.0, float("nan"), float("inf"), float("-inf")])
+@pytest.mark.parametrize("shape_fidelity", [1.0, 0.3])
+def test_invalid_floor_cannot_certify_or_quote_a_replay(floor, shape_fidelity):
+    measurement = Measurement(
+        delta_pct=-11.0, baseline_ms=100.0, treatment_ms=89.0,
+        noise_floor_pct=floor, floor_measured=True, reps=3,
+        bench="probe", shape_fidelity=shape_fidelity, attributable=True,
+        mechanism_confirmed=True, mechanism_detail="synthetic split",
+    )
+    assert not measurement.valid_noise_floor
+    assert not measurement.significant
+    assert measurement.resolved_delta_pct is None
+    assert measurement.runtime_verdict is ReplayVerdict.RUNTIME_UNRESOLVED
+    assert not evaluate_positive_control(measurement).passed
+    assert score_measurement(measurement) == 0.45
+
+    verdict = verdict_from_replay(
+        FINDING_SKEW_STAGE4, PROPOSED_CONFIG_SKEW,
+        _prediction(), measurement, SAFETY_OK,
+    )
+    assert "INVALID NOISE FLOOR" in verdict.headline()
+    assert "-11.0%" not in verdict.headline()
+    assert "invalid noise floor" in verdict.evidence
+    assert "-11.0%" not in verdict.evidence
+    assert "invalid noise floor" in verdict.caveats
+    assert "directional" not in verdict.caveats
+    assert verdict.to_row()["noise_floor_pct"] is None
+
+
+def test_zero_floor_keeps_existing_replay_behavior():
+    measurement = Measurement(
+        delta_pct=-11.0, baseline_ms=100.0, treatment_ms=89.0,
+        noise_floor_pct=0.0, floor_measured=True, reps=3,
+        bench="probe", shape_fidelity=1.0, attributable=True,
+        mechanism_confirmed=True, mechanism_detail="synthetic split",
+    )
+    assert measurement.valid_noise_floor
+    assert measurement.significant
+    assert measurement.resolved_delta_pct == -11.0
+    assert evaluate_positive_control(measurement).passed
+    assert score_measurement(measurement) == pytest.approx(0.90)
+    verdict = verdict_from_replay(
+        FINDING_SKEW_STAGE4, PROPOSED_CONFIG_SKEW,
+        _prediction(), measurement, SAFETY_OK,
+    )
+    assert verdict.to_row()["noise_floor_pct"] == 0.0
+
+
 # ── slots unknown: capped, never guessed (contract rule 1) ───────────────────
 def test_predict_withholds_the_bound_when_slots_are_unknown():
     p = predict(

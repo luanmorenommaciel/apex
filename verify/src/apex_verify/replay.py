@@ -352,6 +352,14 @@ def evaluate_positive_control(measurement: Measurement) -> PositiveControlResult
                 "delta — including the control's — may be quoted."
             ),
         )
+    if not measurement.valid_noise_floor:
+        return PositiveControlResult(
+            passed=False,
+            detail=(
+                "POSITIVE CONTROL FAILED — the noise floor is invalid, so this "
+                "bench cannot certify a runtime magnitude."
+            ),
+        )
     if measurement.mechanism_confirmed is not True:
         return PositiveControlResult(
             passed=False,
@@ -398,7 +406,7 @@ def score_measurement(measurement: Measurement) -> float:
     """
     if not measurement.attributable:
         return 0.35  # LOW — a comparison of a config with itself proves nothing
-    if not measurement.floor_measured:
+    if not measurement.valid_noise_floor:
         return 0.45  # LOW — timed runs without a floor are anecdotes
     return _MEASURED_BASE_SCORE + _MEASURED_FIDELITY_SPAN * measurement.shape_fidelity
 
@@ -421,6 +429,11 @@ def verdict_from_replay(
             "noise floor at this level and scale (contract rule 2), so the "
             f"observed {m.delta_pct:+.1f}% may not be quoted."
         )
+    elif not m.valid_noise_floor:
+        evidence = (
+            f"Replayed on {m.bench} with an invalid noise floor; the runtime "
+            "magnitude is not reportable."
+        )
     elif m.significant:
         evidence = (
             f"Replayed on {m.bench} ({m.reps} reps/arm, fidelity {m.shape_fidelity:.2f}): "
@@ -442,11 +455,17 @@ def verdict_from_replay(
                 f"certified is its size. " + evidence
             )
 
-    caveats = [
-        f"Noise floor measured from the baseline arm's own {m.reps} samples at the "
-        f"compared level (contract rule 2); it is not transferable to another level or scale.",
-    ]
-    if m.shape_fidelity < FIDELITY_CAVEAT_BELOW:
+    invalid_noise_floor = m.floor_measured and not m.valid_noise_floor
+    if invalid_noise_floor:
+        caveats = [
+            "The replay has an invalid noise floor; no runtime magnitude is reportable."
+        ]
+    else:
+        caveats = [
+            f"Noise floor measured from the baseline arm's own {m.reps} samples at the "
+            "compared level (contract rule 2); it is not transferable to another level or scale."
+        ]
+    if m.shape_fidelity < FIDELITY_CAVEAT_BELOW and not invalid_noise_floor:
         caveats.append(
             f"Shape fidelity is {m.shape_fidelity:.2f} — the bench only partially "
             "reproduces the observed shape (task count / skew ratio / bytes per task / "
