@@ -39,8 +39,11 @@ for f in sql/*.sql; do
   # unchecked, the gap surfaces later as a total, silent-at-bootstrap INSERT failure on
   # the MV's source table. Verify every target table this file declared actually exists,
   # right after applying it, so a broken ordering fails loudly here instead of on the
-  # first real span.
-  for target in $(grep -oiE 'MATERIALIZED VIEW[^;]*\bTO\b[[:space:]]+[A-Za-z0-9_.]+' "$f" \
+  # first real span. The file is flattened first (comments stripped, newlines -> spaces)
+  # because `CREATE MATERIALIZED VIEW <name>` and `TO <target>` may sit on separate lines
+  # (010_otel_traces.sql does), which a line-by-line grep never matches.
+  for target in $(sed 's/--.*$//' "$f" | tr '\n' ' ' \
+                    | grep -oiE 'MATERIALIZED[[:space:]]+VIEW[[:space:]]+(IF[[:space:]]+NOT[[:space:]]+EXISTS[[:space:]]+)?[A-Za-z0-9_.]+[[:space:]]+TO[[:space:]]+[A-Za-z0-9_.]+' \
                     | grep -oE '[A-Za-z0-9_.]+$'); do
     exists=$(docker exec -i "$CONTAINER" clickhouse-client \
         --user "$CH_USER" --password "$CH_PASS" \
