@@ -99,8 +99,11 @@ export async function apiGet<T>(
   if (!response.ok) {
     let detail = response.statusText;
     try {
-      const body = (await response.json()) as { detail?: string; error?: string };
-      detail = body.detail ?? body.error ?? detail;
+      const body = (await response.json()) as { detail?: unknown; error?: unknown };
+      // Only a string is a message. FastAPI's 422 sends `detail` as a list of
+      // validation errors, which interpolated as "[object Object]".
+      if (typeof body.detail === "string") detail = body.detail;
+      else if (typeof body.error === "string") detail = body.error;
     } catch {
       // A non-JSON error body is still a failure; the status carries it.
     }
