@@ -16,8 +16,8 @@ dev  →  jar  →  collect  →  infra  →  engine  →  serve
 | ④ | [`infra/`](infra/) | **store** — ClickHouse + HyperDX (ClickStack); **owns all DDL application** | SQL + Docker | contract | [INFRA.md](docs/lanes/INFRA.md) |
 | ⑤ | [`engine/`](engine/) | **reason** — deterministic watchers + gated CrewAI → findings | Python/CrewAI | infra, contract | [ENGINE.md](docs/lanes/ENGINE.md) |
 | ⑥ | [`serve/`](serve/) | **interface** — read-only MCP server | Python/FastMCP | infra, contract | [SERVE.md](docs/lanes/SERVE.md) |
-| ⑦ | [`memory/`](memory/) | **recall** — cross-job plan memory: "we have seen this shape, here is what worked" | Python | infra, contract v0.4 | [MEMORY.md](docs/lanes/MEMORY.md) |
-| ⑧ | [`verify/`](verify/) | **refute** — predict a fix, replay it, certify mechanism and runtime separately | Python | infra, contract v0.4 | [VERIFY.md](docs/lanes/VERIFY.md) |
+| ⑦ | [`memory/`](memory/) | **recall** — cross-job plan memory: "we have seen this shape, here is what worked" | Python | infra, contract v0.6 | [MEMORY.md](docs/lanes/MEMORY.md) |
+| ⑧ | [`verify/`](verify/) | **refute** — predict a fix, replay it, certify mechanism and runtime separately | Python | infra, contract v0.6 | [VERIFY.md](docs/lanes/VERIFY.md) |
 
 **⑦ and ⑧ were not in the original design.** Both were added mid-build in response to what the
 first six uncovered: `memory` because a single run cannot distinguish *"this config is better"*

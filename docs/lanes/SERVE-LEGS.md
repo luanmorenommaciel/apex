@@ -23,8 +23,9 @@ feature below is judged against one question:
 
 ## Two structural facts that shape every leg
 
-1. **`create_server()` registers four `@mcp.tool` and nothing else** (`server.py:51-149`).
-   No MCP `resources`, no `prompts`. Apex uses one of the protocol's primitives.
+1. **`create_server()` registers eight `@mcp.tool` and one MCP resource.** The
+   tools are listed above; `apex://runs` is the resource. Apex still defines no
+   prompts.
 2. **Every tool takes a `job_id` the user must already possess.** `ReadStore` exposes
    `stages` / `findings` / `plan_transitions` / `search` (`ch.py:206-254`) — there is no
    "list runs", no lookup by `app_name` or time. **The lane can diagnose a run but cannot
@@ -57,7 +58,7 @@ flowchart LR
 **Today:** five env vars; `uvx --from <path>` because the package is not on PyPI; a
 deliberately lazy client (`ch.py:302`) so the server finishes `initialize` and lists its
 tools even when ClickHouse is down. Correct for protocol reasons — and it means a
-misconfigured user sees four healthy-looking tools that fail on every call.
+misconfigured user sees eight healthy-looking tools that fail on every call.
 
 | # | Feature | Note |
 |---|---|---|
@@ -163,10 +164,12 @@ The north star, and the thinnest part of the lane. serve is where the correlatio
 | # | Feature | Note |
 |---|---|---|
 | F4.1 | Stage → source line / notebook cell | the actual Apex thesis |
-| F4.2 | Per-`stage_id` plan-transition linkage | today `(job_id, execution_id)`; flagged as a contract enhancement in `VALIDATION.md` |
+| F4.2 | Per-`stage_id` plan-transition linkage | transitions remain keyed by `(job_id, execution_id)`; v0.6 emits optional `execution_id` on stage payloads, but the store/read path and runtime proof still need to establish the mapping |
 | F4.3 | "AQE did X, your config says Y" | `_apply_ground_truth()` (`diagnose.py:224`) already knows the difference |
 
-**Blocked on:** contract work outside this lane. Sequence it last.
+**Blocked on:** F4.1 remains contract work outside this lane. F4.2 needs a
+read-side consumer and runtime proof; F4.3 is independently buildable from
+`apex.job_conf`. Do not sequence all three as one final leg.
 
 ---
 
