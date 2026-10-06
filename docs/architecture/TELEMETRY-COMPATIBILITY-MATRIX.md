@@ -86,8 +86,8 @@ O teste lê este JSON e compara seus fatos com arquivos independentes da base.
     {
       "id": "v05_sample_count_consumer_gap",
       "contract": "sample_count_zero_is_absent",
-      "observed_consumers_without_sample_count": ["memory", "verify"],
-      "legacy_p50_p99_consumers": ["engine", "memory"]
+      "observed_consumers_without_sample_count": ["memory"],
+      "legacy_p50_p99_consumers": ["engine", "memory", "verify"]
     },
     {
       "id": "verify_executor_runtime_claim_outdated",
@@ -139,9 +139,10 @@ por-tabela de leitores/escritores. A coluna
 ### Drift v0.5: semântica de contagem ainda não consumida
 
 O contrato v0.5 determina que `sample_count=0` significa **amostra ausente**,
-não medição zero. Engine agora consome `*_sample_count` com fallback para campos
-legados; Memory e Verify ainda não contêm referência a `*_sample_count`. Engine
-e Memory continuam com consultas legadas de `task_duration_p50_ms`/`task_duration_p99_ms`.
+não medição zero. Engine e Verify agora consomem `*_sample_count` com fallback
+para campos legados; Memory ainda não contém referência a `*_sample_count`.
+Engine, Memory e Verify continuam com consultas legadas de
+`task_duration_p50_ms`/`task_duration_p99_ms`.
 Isto é gap de consumo, não uma autorização para corrigir código, DDL ou contrato
 silenciosamente.
 

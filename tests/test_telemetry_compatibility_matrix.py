@@ -148,8 +148,8 @@ def _validate(manifest: dict[str, Any]) -> None:
 
     sample_count_gap = _drift(manifest, "v05_sample_count_consumer_gap")
     assert sample_count_gap["contract"] == "sample_count_zero_is_absent"
-    assert sample_count_gap["observed_consumers_without_sample_count"] == ["memory", "verify"]
-    assert sample_count_gap["legacy_p50_p99_consumers"] == ["engine", "memory"]
+    assert sample_count_gap["observed_consumers_without_sample_count"] == ["memory"]
+    assert sample_count_gap["legacy_p50_p99_consumers"] == ["engine", "memory", "verify"]
     assert "sample_count=0" in _text("CONTRACT.md")
     for lane in sample_count_gap["observed_consumers_without_sample_count"]:
         assert "sample_count" not in _lane_source(lane)
