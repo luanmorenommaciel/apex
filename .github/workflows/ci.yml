@@ -45,7 +45,7 @@ jobs:
         run: npm run lint
       - name: test
         working-directory: front
-        run: npm test -- --run --passWithNoTests
+        run: npm test -- --run
       - name: build
         working-directory: front
         run: npm run build
