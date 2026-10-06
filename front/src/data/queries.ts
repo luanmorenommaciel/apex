@@ -184,7 +184,7 @@ SELECT finding_id, job_id, stage_id, type, severity, confidence,
        confidence_score, detected_by, evidence, impact, fix, hot_key, ts
 FROM findings
 WHERE job_id = {job:String}
-ORDER BY confidence_score DESC
+ORDER BY confidence_score DESC, finding_id ASC
 `;
 
 /**
