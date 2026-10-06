@@ -1,0 +1,73 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: issue123-tail-outlier-runtime-gate
+  source: https://github.com/luanmorenommaciel/apex/issues/123
+units:
+  - id: T-20260920-tail-outlier-runtime-gate
+    title: Prove the tail-outlier public path against real canonical telemetry
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - dev/scripts/canonical_e2e_assert.py
+      - dev/scripts/e2e_canonical.sh
+      - dev/tests/test_canonical_e2e_assert.py
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/issues/123
+    why: The offline route can prove source wiring but cannot show that a real Spark job emits sufficient duration-tail telemetry, that it reaches canonical ClickHouse, or that the public gate reaches the Engine watcher. The current canonical assertion rejects tail_outlier before that proof can occur.
+    goal: Make tail_outlier a manually runnable, fail-closed local Docker runtime gate that validates fresh Spark telemetry before the existing public package gate checks for tail_outlier_watcher.
+    context: The user explicitly authorized local runtime validation. This is not a GitHub Actions job and must not claim remote CI evidence. It uses the existing package bootstrap and canonical Docker topology only when the operator elects to provision it; it must not stop, remove, or overwrite pre-existing Docker resources.
+    behaviors:
+      - id: B-1
+        given: canonical ClickHouse stage rows for a tail_outlier job
+        when: the canonical assertion evaluates them
+        then: it accepts only a stage with at least 100 tasks and effective duration samples, positive effective p50, and strict effective max/p50 greater than 10
+      - id: B-2
+        given: absent, incomplete, or non-qualifying tail telemetry
+        when: the assertion evaluates it
+        then: it fails with a diagnostic rather than treating generic stage telemetry or p99 data alone as proof
+      - id: B-3
+        given: dev/scripts/e2e_canonical.sh is asked for tail_outlier
+        when: a canonical Docker platform is already provisioned
+        then: it submits the real tail_outlier Spark workload and waits for canonical ClickHouse evidence using the new scenario
+      - id: B-4
+        given: the existing public package command runs after canonical evidence arrives
+        when: Engine analyzes that fresh job in dry-run/no-Crew mode
+        then: its existing fail-closed tail_outlier_watcher check remains the final public success condition
+      - id: B-5
+        given: configuration or canonical Docker prerequisites are absent
+        when: a runtime gate is requested
+        then: it refuses without starting, stopping, deleting, or reusing unrelated resources
+    evals:
+      - id: eval_1
+        description: focused canonical assertion tests discriminate the tail-outlier telemetry shape without Docker
+        command: python3 -m unittest dev/tests/test_canonical_e2e_assert.py
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: manually run the public tail-outlier gate against a freshly bootstrapped local canonical Docker platform
+        command: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/apex.ps1 tail-outlier
+        verifies: [B-1, B-2, B-3, B-4, B-5]
+        terminal: true
+        expected_duration_sec: 1800
+    anti_patterns:
+      - Lowering the 100-sample or strict max/p50 greater-than-10 proof threshold.
+      - Treating a prior log, a DryRun, source inspection, or generic ClickHouse row as runtime proof.
+      - Changing Engine watcher policy, Spark telemetry schema, DDL, Collector behavior, or CI configuration.
+      - Starting, stopping, deleting, or mutating an unrelated pre-existing Docker environment.
+      - Claiming this local gate proves GitHub Actions or remote deployment.
+    do_not_touch:
+      - engine/src
+      - engine/tests
+      - infra
+      - collect
+      - jar
+      - serve
+      - front
+      - .github
+      - scripts/apex.ps1

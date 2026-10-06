@@ -1,0 +1,71 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: issue123-tail-outlier-package-wiring
+  source: https://github.com/luanmorenommaciel/apex/issues/123
+units:
+  - id: T-20260918-tail-outlier-package-wiring-offline
+    title: Wire tail-outlier through the canonical runner and package command
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - dev/scripts/e2e_canonical.ps1
+      - scripts/apex.ps1
+    creates_paths:
+      - tests/test_tail_outlier_package.py
+    source_note: https://github.com/luanmorenommaciel/apex/issues/123
+    why: The workload and deterministic watcher now exist, but the canonical runner rejects tail_outlier and the public package command still aborts with a stale message before it can reach the Engine assertion.
+    goal: Complete the offline routing path from the public package command to the canonical tail_outlier workload while preserving explicit failure checks and leaving the live Spark/OTLP/ClickHouse proof unexecuted.
+    context: This is package wiring only. The Engine watcher is already accepted locally. Tests may inspect and dry-run routing, but must not start containers, Spark, ClickHouse, Collector, or external services. Runtime success remains separately authorized.
+    behaviors:
+      - id: B-1
+        given: the canonical E2E script
+        when: tail_outlier is selected
+        then: parameter validation accepts it and the workload map resolves it to tail_outlier.py
+      - id: B-2
+        given: the public tail-outlier action
+        when: non-DryRun execution reaches Invoke-TailOutlierGate
+        then: it no longer stops at the stale unconditional throw and invokes the canonical runner with Scenario tail_outlier
+      - id: B-3
+        given: missing job identity, nonzero Engine exit, or absent tail_outlier_watcher output
+        when: the gate evaluates the result
+        then: it remains fail closed with an explicit error
+      - id: B-4
+        given: a successful live result in a separately authorized environment
+        when: the gate completes
+        then: it emits APEX_TAIL_OUTLIER_GATE=passed and llm_calls=0
+      - id: B-5
+        given: offline package validation
+        when: tests run
+        then: they prove workload presence, allowlist/mapping, stale-block removal and watcher assertion without claiming runtime execution
+    evals:
+      - id: eval_1
+        description: focused offline package wiring tests discriminate the complete tail-outlier route
+        command: ( cd engine && uv run --extra dev pytest -q "../tests/test_tail_outlier_package.py::test_canonical_runner_accepts_and_maps_tail_outlier" "../tests/test_tail_outlier_package.py::test_public_gate_reaches_canonical_tail_outlier" "../tests/test_tail_outlier_package.py::test_public_gate_remains_fail_closed_and_llm_free" -p no:warnings )
+        verifies: [B-1, B-2, B-3, B-4, B-5]
+        terminal: true
+        expected_duration_sec: 45
+      - id: eval_2
+        description: complete root gate remains green without running external services
+        command: ( cd engine && uv run --extra dev pytest ../tests -q -p no:warnings )
+        verifies: [B-1, B-2, B-3, B-5]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Running the canonical workload, Docker, Spark, Collector or ClickHouse during offline acceptance.
+      - Removing negative checks for job identity, Engine exit or watcher output.
+      - Treating DryRun or source assertions as runtime proof.
+      - Editing Engine watcher semantics in this leaf.
+      - Publishing, pushing, opening a PR or commenting on GitHub.
+    do_not_touch:
+      - engine/src
+      - engine/tests
+      - jar
+      - collect
+      - infra
+      - serve
+      - front

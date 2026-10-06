@@ -254,6 +254,7 @@ The plugin cross-builds four `(Spark, Scala)` cells; every one is tested in CI.
 | [PIPELINE.md](PIPELINE.md) | Lane map, dependency graph, build order |
 | [docs/lanes/](docs/lanes/) | Research-backed build brief per lane |
 | [docs/e2e/](docs/e2e/) | End-to-end entry points and recorded runs |
+| [docs/e2e/TAIL_OUTLIER_RUNTIME_GATE.md](docs/e2e/TAIL_OUTLIER_RUNTIME_GATE.md) | Tail-outlier runtime proof, boundaries, and remaining release gates |
 | [CHANGELOG.md](CHANGELOG.md) | What shipped — and what each fix cost to learn |
 
 Every lane also carries its own `README.md` with as-built detail.

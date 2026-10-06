@@ -1,0 +1,165 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: issue123-audit-remediation
+  source: https://github.com/luanmorenommaciel/apex/issues/123
+units:
+  - id: T-20260919-tail-outlier-contract-audit-hardening
+    title: Harden tail-outlier contract rejection boundaries
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - engine/src/apex_engine/validation.py
+      - engine/tests/test_contract_engine.py
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/issues/123
+    why: Independent review found that an enormous Python integer can escape the tail-outlier validator through OverflowError, contradicting the fail-closed invalid-evidence contract.
+    goal: Make tail-outlier numeric rejection fail closed for unrepresentable values and pin every declared threshold and skew-isolation boundary without changing the finding type, threshold policy, watcher, or persistence.
+    context: This is contract-only audit remediation. It may make numeric conversion safe but must not alter TAIL_OUTLIER acceptance semantics for finite valid values or weaken SKEW_ON_JOIN/TASK_SKEW validation.
+    behaviors:
+      - id: B-1
+        given: an enormous integer, bool, string, NaN, or infinity in a tail numeric field
+        when: validation runs
+        then: it returns deterministic invalid-tail evidence issues and never raises conversion overflow
+      - id: B-2
+        given: tail evidence at 99/100 task or sample counts, zero/negative p50 or max, and exact/above-10 tail ratio
+        when: validation runs
+        then: only the stated inclusive and strict boundaries are accepted
+      - id: B-3
+        given: tail-shaped details attached to SKEW_ON_JOIN or TASK_SKEW
+        when: required skew evidence remains missing
+        then: skew validation still rejects it rather than laundering it through the tail contract
+    evals:
+      - id: eval_1
+        description: tail-outlier contract boundary and skew-isolation tests pass
+        command: ( cd engine && uv run --extra dev pytest -q tests/test_contract_engine.py -p no:warnings )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: complete offline Engine suite remains green
+        command: ( cd engine && uv run --extra dev pytest -q -p no:warnings )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Changing the 100-count or strict greater-than-10 threshold policy.
+      - Weakening skew validation, adding DDL, watcher behavior, DEV/package wiring, or runtime proof.
+      - Coercing invalid numeric evidence into accepted values.
+    do_not_touch:
+      - engine/src/apex_engine/schema.py
+      - engine/src/apex_engine/watchers
+      - dev
+      - scripts
+      - contract/findings.ddl.sql
+      - infra
+
+  - id: T-20260919-tail-outlier-watcher-audit-hardening
+    title: Harden emitted tail-outlier watcher contract coverage
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260919-tail-outlier-contract-audit-hardening]
+    touches_paths:
+      - engine/src/apex_engine/schema.py
+      - engine/src/apex_engine/watchers/__init__.py
+      - engine/tests/test_watchers.py
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/issues/123
+    why: Independent review approved watcher behavior but found unpinned emitted identity/validator integration and two stale comments.
+    goal: Add regression coverage for the actual watcher-emitted finding contract and correct only confirmed stale watcher documentation, without changing watcher detection behavior.
+    context: The preceding remediation hardens the validator. This leaf is test and documentation hardening only; it does not adjust thresholds, source fallback, registry behavior, DEV/package wiring, or runtime proof.
+    behaviors:
+      - id: B-1
+        given: a qualifying retry-safe duration tail
+        when: the watcher emits a finding
+        then: tests assert its type, warning severity, medium confidence, detector identity, and required structured details
+      - id: B-2
+        given: the actual watcher-emitted finding
+        when: it is sent through the validator
+        then: it is accepted as the same contract the watcher claims to emit
+      - id: B-3
+        given: watcher-adjacent comments and registry documentation
+        when: they describe watcher count or fields used by tail_outlier
+        then: stale wording is corrected without changing production behavior
+    evals:
+      - id: eval_1
+        description: focused watcher contract tests pass
+        command: ( cd engine && uv run --extra dev pytest -q tests/test_watchers.py -p no:warnings )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: complete offline Engine suite remains green
+        command: ( cd engine && uv run --extra dev pytest -q -p no:warnings )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Changing detection thresholds, source fallback, skew ownership, registry membership, or confidence policy.
+      - Adding I/O, Crew, LLM, DEV/package wiring, DDL, or runtime claims.
+    do_not_touch:
+      - dev
+      - scripts
+      - jar
+      - collect
+      - infra
+      - serve
+      - front
+
+  - id: T-20260919-tail-outlier-wiring-audit-hardening
+    title: Harden tail-outlier package fail-closed regression coverage
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - tests/test_tail_outlier_package.py
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/issues/123
+    why: Independent review found that current static tests can pass after a guard condition is removed because they only search for bare messages and watcher substrings.
+    goal: Prove the existing package gate remains fail closed through condition-plus-throw structural assertions, without changing the PowerShell production gate or claiming runtime success.
+    context: This is a static test-only leaf. The gate still does not prove Spark, OTLP, ClickHouse or live watcher behavior.
+    behaviors:
+      - id: B-1
+        given: the tail-outlier public gate
+        when: static package regression tests inspect its three failure paths
+        then: each missing-job, nonzero-engine, and absent-watcher check is asserted as its own condition followed by its own throw
+      - id: B-2
+        given: the telemetry failure path
+        when: static tests inspect it
+        then: the watcher identifier alone cannot satisfy the assertion outside the negative-match guard and throw
+      - id: B-3
+        given: the successful route
+        when: static tests inspect it
+        then: no-Crew invocation and the passed marker remain checked without asserting live runtime behavior
+    evals:
+      - id: eval_1
+        description: focused package guard regression tests pass
+        command: ( cd engine && uv run --extra dev pytest -q ../tests/test_tail_outlier_package.py -p no:warnings )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 45
+      - id: eval_2
+        description: complete root offline test gate remains green
+        command: ( cd engine && uv run --extra dev pytest -q ../tests -p no:warnings )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Editing dev/scripts/e2e_canonical.ps1 or scripts/apex.ps1 unless a stronger test exposes a real production defect.
+      - Starting containers, Spark, ClickHouse, OTLP, or Crew/LLM.
+      - Treating static string checks as live proof.
+    do_not_touch:
+      - dev
+      - scripts
+      - engine/src
+      - front
+      - serve
+      - infra

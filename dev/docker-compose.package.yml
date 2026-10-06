@@ -1,5 +1,12 @@
 # Initial-package overlay. The orchestrator generates this bind source under
 # ignored .apex/ with MinIO credentials matching the local installation.
+# The DEV secret sources come from the wrapper-exported file paths, never from
+# the ignored dev/secrets/ files used by the base file.
+secrets:
+  apex_s3_access_key:
+    file: ${APEX_S3_ACCESS_KEY_FILE:?set APEX_S3_ACCESS_KEY_FILE}
+  apex_s3_secret_key:
+    file: ${APEX_S3_SECRET_KEY_FILE:?set APEX_S3_SECRET_KEY_FILE}
 services:
   spark-master:
     volumes:
