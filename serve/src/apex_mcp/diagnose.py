@@ -14,6 +14,7 @@ hunks or markdown structure.
 
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
 
 from .models import (
@@ -664,6 +665,15 @@ def _align(
     return pairs
 
 
+def _valid_noise_floor(noise_floor_pct: float | None) -> bool:
+    """A measured floor must be finite and non-negative; zero stays valid."""
+    return (
+        noise_floor_pct is not None
+        and math.isfinite(noise_floor_pct)
+        and noise_floor_pct >= 0
+    )
+
+
 def _resolves(
     noise_floor_pct: float | None, baseline: float, current: float
 ) -> bool:
@@ -677,7 +687,7 @@ def _resolves(
     measurement and is never called a regression. Noise proves a delta is
     unresolvable — never that it is zero.
     """
-    if noise_floor_pct is None or baseline <= 0:
+    if not _valid_noise_floor(noise_floor_pct) or baseline <= 0:
         return False
     return abs(current - baseline) > baseline * noise_floor_pct
 
@@ -996,6 +1006,11 @@ def compare(
             "own). Pass noise_floor_pct to adjudicate them; an unresolvable "
             "delta is not proof of zero change."
         )
+    elif not _valid_noise_floor(noise_floor_pct):
+        notes.append(
+            "An invalid noise floor was supplied, so metric deltas above remain "
+            "measurements, not adjudicated regressions."
+        )
     else:
         notes.append(
             f"Metric deltas were adjudicated against a caller-supplied noise "
@@ -1104,14 +1119,24 @@ def summarise_recall(
     # compare_runs uses for a delta against its baseline.
     spread = (slowest.wall_clock_ms - fastest.wall_clock_ms) / slowest.wall_clock_ms
 
+    measurement_claim = (
+        f"{len(timed)} prior runs are reported as measurements, "
+        f"spanning {spread:.1%} of wall clock. No configuration is "
+        f"called faster or slower: without a measured noise floor "
+        f"that spread is not distinguishable from run-to-run variation."
+    )
+    if noise_floor_pct is not None and not _valid_noise_floor(noise_floor_pct):
+        return RecallSummary(
+            claim=measurement_claim,
+            notes=[
+                "An invalid noise floor was supplied; no faster or slower "
+                "claim can be adjudicated from it."
+            ],
+        )
+
     if noise_floor_pct is None or noise_floor_pct <= 0:
         return RecallSummary(
-            claim=(
-                f"{len(timed)} prior runs are reported as measurements, "
-                f"spanning {spread:.1%} of wall clock. No configuration is "
-                f"called faster or slower: without a measured noise floor "
-                f"that spread is not distinguishable from run-to-run variation."
-            ),
+            claim=measurement_claim,
             notes=[
                 "No noise floor was supplied (CONTRACT.md rule 2: the floor is "
                 "MEASURED per shape and scale, and these runs cannot measure "
@@ -1330,6 +1355,11 @@ def _replay_measurement(view: VerificationView) -> str:
     if view.noise_floor_pct is None:
         return (
             "Replayed, but the noise floor was not measured, so the magnitude "
+            "is not reportable"
+        )
+    if not _valid_noise_floor(view.noise_floor_pct):
+        return (
+            "Replayed, but the invalid noise floor means the magnitude "
             "is not reportable"
         )
     if abs(view.measured_delta_pct) < view.noise_floor_pct:

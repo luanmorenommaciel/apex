@@ -491,6 +491,17 @@ def test_p99_regression_needs_a_floor_and_absolute_movement():
     assert any("p99_regressed" in r for r in real.regressions)
 
 
+@pytest.mark.parametrize("floor", [-0.1, float("nan"), float("inf"), float("-inf")])
+def test_invalid_floor_does_not_adjudicate_compare_metrics(floor):
+    result = diagnose.compare(
+        "a", "b", [stage_row(2, p99_ms=1000)], [stage_row(2, p99_ms=3000)],
+        [], [], noise_floor_pct=floor,
+    )
+    assert not any("p99_regressed" in item for item in result.regressions)
+    assert result.status != "regressed"
+    assert any("invalid noise floor" in note for note in result.notes)
+
+
 def test_stages_align_by_fingerprint_when_stage_ids_shift():
     """Stage ids are not stable across runs; the literal-normalized
     fingerprint is. Same work must still be compared."""
@@ -679,6 +690,27 @@ def test_no_floor_means_no_better_claim():
     assert "better" not in summary.claim.lower()
     assert "measurements" in summary.claim
     assert any("noise floor" in note for note in summary.notes)
+
+
+@pytest.mark.parametrize("floor", [-0.1, float("nan"), float("inf"), float("-inf")])
+def test_invalid_floor_keeps_recall_as_measurements(floor):
+    summary = diagnose.summarise_recall(
+        [_prior_run("job-fast", 60_000), _prior_run("job-slow", 120_000)],
+        noise_floor_pct=floor,
+    )
+    assert summary.compared is False
+    assert summary.faster_job_id is None
+    assert "measurements" in summary.claim
+    assert any("invalid noise floor" in note for note in summary.notes)
+
+
+def test_zero_floor_recall_keeps_its_existing_behavior():
+    summary = diagnose.summarise_recall(
+        [_prior_run("job-fast", 60_000), _prior_run("job-slow", 120_000)],
+        noise_floor_pct=0.0,
+    )
+    assert summary.compared is False
+    assert "measurements" in summary.claim
 
 
 def test_difference_inside_floor_is_indistinguishable():
