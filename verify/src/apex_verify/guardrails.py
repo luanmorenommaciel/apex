@@ -239,7 +239,7 @@ def noise_floor(
          detectable effect. No predicted improvement below it can be confirmed by
          replay, however many repetitions we run.
     """
-    sib = [s for s in siblings if s.task_duration_p50_ms > 0]
+    sib = [s for s in siblings if s.effective_task_duration_p50_ms > 0]
     ratios = [s.skew_ratio for s in sib]
     parts: list[str] = []
     score: float | None = None

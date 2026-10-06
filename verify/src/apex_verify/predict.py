@@ -86,8 +86,8 @@ def work_bracket(stage: StageObservation) -> tuple[float, float]:
     smaller of the two, so do not assume an ordering.
     """
     n = stage.task_count
-    p50 = stage.task_duration_p50_ms
-    p99 = stage.task_duration_p99_ms
+    p50 = stage.effective_task_duration_p50_ms
+    p99 = stage.effective_task_duration_p99_ms
     if n <= 0:
         return 0.0, 0.0
     w_outlier = (n - 1) * p50 + p99
@@ -128,9 +128,9 @@ def _stage_delta_ms(stage: StageObservation, work_ms: float, slots: int) -> tupl
     slots = max(1, slots)
     n_after = max(stage.task_count, slots)
     throughput_ms = work_ms / slots
-    t_before = max(stage.task_duration_p99_ms, throughput_ms)
+    t_before = max(stage.effective_task_duration_p99_ms, throughput_ms)
     t_after = max(work_ms / n_after if n_after else 0.0, throughput_ms)
-    regime = "work_bound" if throughput_ms >= stage.task_duration_p99_ms else "tail_bound"
+    regime = "work_bound" if throughput_ms >= stage.effective_task_duration_p99_ms else "tail_bound"
     return t_after - t_before, regime
 
 
@@ -152,12 +152,12 @@ def bound_analysis(
     throughput_lo = w_lo / max(1, slots)
 
     detail = (
-        f"Stage {stage.stage_id}: {stage.task_count} tasks, p50={stage.task_duration_p50_ms:.0f}ms, "
-        f"p99={stage.task_duration_p99_ms:.0f}ms on {slots} task slot(s). "
+        f"Stage {stage.stage_id}: {stage.task_count} tasks, p50={stage.effective_task_duration_p50_ms:.0f}ms, "
+        f"p99={stage.effective_task_duration_p99_ms:.0f}ms on {slots} task slot(s). "
         f"Estimated total task-time W is bracketed {w_lo:,.0f}–{w_hi:,.0f}ms "
         f"(W is not measured: executor_run_time_ms is not a spark_events column). "
         f"Throughput floor W/slots = {throughput_lo:,.0f}ms vs tail p99 = "
-        f"{stage.task_duration_p99_ms:.0f}ms -> {regime_lo.upper()}. "
+        f"{stage.effective_task_duration_p99_ms:.0f}ms -> {regime_lo.upper()}. "
     )
     if both_zero:
         detail += (
