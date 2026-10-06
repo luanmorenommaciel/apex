@@ -1,0 +1,521 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: serve-api
+  source: brain/01-projects/apex/08-meetings/krisp/2026-09-15-weekly-sync-crew-a-apex.md
+units:
+  - id: T-20260920-api-skeleton
+    title: Stand up the apex-api FastAPI application
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/pyproject.toml, serve/uv.lock]
+    creates_paths: [serve/src/apex_api/__init__.py, serve/src/apex_api/app.py, serve/src/apex_api/config.py, serve/src/apex_api/auth.py, serve/src/apex_api/routes/__init__.py, serve/tests/test_api_app.py]
+    source_note: brain/01-projects/apex/08-meetings/krisp/2026-09-15-weekly-sync-crew-a-apex.md
+    why: The console queries ClickHouse from the browser with a credential that ships to every visitor (front/contract/01-readonly-user.sql). Nothing can move off that connection until there is a service to move it to.
+    goal: A FastAPI app with an injectable ReadStore, a /v1/health route, bearer-token auth, an error envelope that cannot leak the DSN, and a router registry the later route units extend without editing app.py.
+    context: apex-mcp already depends on the SDK-bundled FastMCP, which is Starlette and uvicorn underneath, so FastAPI adds no new runtime. ch.py already has _sanitize() and server.py has _fail() - the API needs the same guarantee at the HTTP boundary, not a second sanitizer with different rules. app.py discovers routers under apex_api/routes/ rather than importing them by name, so the diagnostic and resource units add a file each instead of all three editing app.py. Auth belongs here rather than in a follow-up unit: a service that is open between two tasks has been open in someone's environment. Tokens come from server configuration, never a committed file, and /v1/health is the one route probe-able without one, because a liveness check that needs a secret is not a liveness check.
+    behaviors:
+      - id: B-1
+        given: a running app with a reachable store
+        when: GET /v1/health is called
+        then: it returns the ReadStore.store_health() payload and HTTP 200
+      - id: B-2
+        given: a store whose client raises with the DSN in the exception text
+        when: any route is called
+        then: the response body and status line contain no part of the DSN, and the detail is logged to stderr instead
+      - id: B-3
+        given: the app factory
+        when: it is constructed in a test
+        then: a ReadStore can be injected without a live ClickHouse, the same way serve/tests/conftest.py injects a fake client today
+      - id: B-4
+        given: ClickHouse is down
+        when: GET /v1/health is called
+        then: the app still answers, reporting the store as unreachable, rather than failing to start
+      - id: B-5
+        given: a module exposing a router is added under apex_api/routes/
+        when: the app is constructed
+        then: its routes are served without app.py being edited
+      - id: B-6
+        given: no Authorization header, or a token that is not configured
+        when: any /v1 route other than health is called
+        then: the response is 401, no query is issued to the store, and the body does not reveal whether the route or the token was wrong
+      - id: B-7
+        given: a configured token
+        when: a /v1 route is called with it
+        then: the request is served normally
+      - id: B-8
+        given: no token is configured at all
+        when: the app starts
+        then: it refuses to start rather than serving open
+    evals:
+      - id: eval_1
+        description: health and injectability tests exist and pass
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_app.py::test_health_reports_store_health" "tests/test_api_app.py::test_app_accepts_an_injected_store" )
+        verifies: [B-1, B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: the DSN never reaches a response, and a down store still answers
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_app.py::test_dsn_never_appears_in_a_response" "tests/test_api_app.py::test_health_answers_when_the_store_is_unreachable" )
+        verifies: [B-2, B-4]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_3
+        description: routers are discovered without editing app.py
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_app.py::test_a_router_dropped_into_routes_is_served" )
+        verifies: [B-5]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_4
+        description: tokens are required, accepted, and mandatory to start
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_app.py::test_missing_token_is_refused_without_querying" "tests/test_api_app.py::test_unknown_token_is_refused" "tests/test_api_app.py::test_configured_token_is_accepted" "tests/test_api_app.py::test_startup_refuses_when_no_token_is_configured" )
+        verifies: [B-6, B-7, B-8]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_5
+        description: health stays probe-able and no token literal is committed
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_app.py::test_health_is_reachable_without_a_token" "tests/test_api_app.py::test_no_token_literal_in_the_package" )
+        verifies: [B-6]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Constructing a ClickHouse client at import time; the MCP server defers it via LazyClient for exactly this reason.
+      - Writing a second sanitizer; reuse ch.ApexStoreError and the existing _sanitize path.
+      - Adding the separate PyPI fastmcp 3.x package. The pin in pyproject.toml is mcp[cli]>=1.27,<2 and the import root differs.
+      - Importing each router by name in app.py, which puts every later route unit back into this file.
+      - Defaulting to allow-all when no token is configured; refuse to start instead.
+      - Different error bodies for unknown route and bad token, which turns 401 into a route oracle.
+    do_not_touch:
+      - serve/src/apex_mcp/server.py
+      - serve/tests/test_server_tools.py
+
+  - id: T-20260920-readstore-console-queries
+    title: Move the console's six remaining queries into ReadStore
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/src/apex_mcp/ch.py, serve/tests/test_ch.py]
+    creates_paths: []
+    source_note: front/src/data/queries.ts
+    why: Six of the console's queries exist only as SQL in the browser bundle - RUN_ONE, JOB_CONF, RUNS_SHARING_SHAPE, PLAN_SHAPES, PLAN_SAMPLE, SHAPE_RUNS. Until they have a server-side home, the console cannot leave its direct ClickHouse connection no matter what routes exist.
+    goal: ReadStore gains run, job_conf, baseline_candidates, plan_shapes, plan_sample and shape_runs, parameter-bound like every method already there.
+    context: These are ports, not redesigns. The console's SQL is the reference behaviour; a port that returns different rows is a regression the console will surface as changed numbers on screen. Every existing ReadStore method binds parameters server-side - these must too.
+    behaviors:
+      - id: B-1
+        given: a job_id that exists
+        when: ReadStore.run is called
+        then: it returns the same single rollup row the console's RUN_ONE returns, and None for an unknown job_id rather than a synthesised zero
+      - id: B-2
+        given: a job_id
+        when: ReadStore.job_conf is called
+        then: it returns the job's configuration rows, empty when the jar emitted no job_conf
+      - id: B-3
+        given: a plan fingerprint
+        when: ReadStore.shape_runs and ReadStore.plan_sample are called
+        then: they return that shape's runs oldest-first and its redacted exemplar, and plan_sample returns None for an unindexed shape rather than an empty string
+      - id: B-4
+        given: any of the six methods
+        when: a caller passes a value containing SQL syntax
+        then: it is bound as a parameter and never interpolated, consistent with the existing methods
+      - id: B-5
+        given: the contract v0.3 memory tables are absent
+        when: plan_shapes or shape_runs is called
+        then: the absence is reported the way memory_tables_present already reports it, not as an empty history
+    evals:
+      - id: eval_1
+        description: the six ports return the console's shapes
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_run_returns_one_rollup_row" "tests/test_ch.py::test_run_returns_none_for_unknown_job" "tests/test_ch.py::test_job_conf_returns_rows_and_empty_when_absent" "tests/test_ch.py::test_shape_runs_and_plan_sample" )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 90
+      - id: eval_2
+        description: parameters are bound and missing memory tables are reported honestly
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_new_methods_bind_parameters" "tests/test_ch.py::test_plan_shapes_reports_absent_memory_tables" )
+        verifies: [B-4, B-5]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Rewriting the SQL while porting it; the console's rendered numbers are the acceptance criterion.
+      - String-interpolating a fingerprint or job_id into the query text.
+      - Returning an empty list when the memory tables are missing, which reads as "no history" instead of "no table".
+    do_not_touch:
+      - front/src/data/queries.ts
+      - serve/src/apex_mcp/server.py
+
+  - id: T-20260920-api-diagnostic-routes
+    title: Expose the eight MCP tools as /v1 diagnostic routes
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260920-api-skeleton]
+    touches_paths: []
+    creates_paths: [serve/src/apex_api/routes/diagnostics.py, serve/tests/test_api_diagnostics.py]
+    source_note: serve/src/apex_mcp/server.py
+    why: The console's chat and any external consumer need the verdict-level answers, and those already exist as eight tested MCP tools. Re-implementing them against ClickHouse would give two answers to the same question.
+    goal: Eight routes that dispatch through create_server(store).call_tool(), with a test that fails when the tool set and the route set diverge.
+    context: serve/tests/test_server_tools.py already drives list_tools() and call_tool() in-process with no transport, so this is a dispatch adapter, not new analysis. call_tool returns Sequence[ContentBlock] | dict - the adapter must normalise both, as that test does. test_the_contracted_tool_surface asserts exact tool-set equality because an unnoticed tool a model can call is a security event; that control has to extend here rather than be duplicated.
+    behaviors:
+      - id: B-1
+        given: the app
+        when: the route table is compared against create_server(store).list_tools()
+        then: every tool name has exactly one route and every route maps to exactly one tool, with no extras on either side
+      - id: B-2
+        given: a job_id
+        when: GET /v1/runs/{job_id}/diagnosis is called
+        then: the body validates against the Diagnosis model and equals what call_tool("analyze_run") returns for the same store
+      - id: B-3
+        given: call_tool returns a tuple rather than a dict
+        when: any diagnostic route is called
+        then: the adapter normalises it and the client sees the structured payload either way
+      - id: B-4
+        given: POST /v1/runs/{job_id}/fix-suggestion
+        when: it succeeds
+        then: the payload reports applied false and requires_human_approval true, and nothing is written
+      - id: B-5
+        given: a tool that raises ApexStoreError
+        when: its route is called
+        then: the response is a sanitized error, not a traceback
+    evals:
+      - id: eval_1
+        description: routes and tools cannot drift apart
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_diagnostics.py::test_every_tool_has_exactly_one_route" "tests/test_api_diagnostics.py::test_every_route_maps_to_a_tool" )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: a route returns what the tool returns, however call_tool shapes it
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_diagnostics.py::test_diagnosis_route_matches_the_tool" "tests/test_api_diagnostics.py::test_tuple_and_dict_results_are_both_normalised" )
+        verifies: [B-2, B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_3
+        description: the proposal tool stays a proposal and errors stay sanitized
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_diagnostics.py::test_fix_suggestion_route_applies_nothing" "tests/test_api_diagnostics.py::test_store_error_is_sanitized_at_the_boundary" )
+        verifies: [B-4, B-5]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Hand-listing the eight route handlers so a ninth tool can ship without a route and without a failure.
+      - Calling diagnose.analyze() directly and bypassing the tool layer, which drops the annotations and the docstring contract.
+      - Making fix-suggestion a GET because it happens not to write anything.
+    do_not_touch:
+      - serve/src/apex_mcp/server.py
+      - serve/src/apex_mcp/diagnose.py
+
+  - id: T-20260920-api-resource-routes
+    title: Serve the console's row-level data over /v1
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260920-api-skeleton, T-20260920-readstore-console-queries]
+    touches_paths: [serve/src/apex_mcp/ch.py, serve/tests/test_ch.py, serve/tests/test_api_app.py]
+    creates_paths: [serve/src/apex_api/routes/resources.py, serve/tests/test_api_resources.py]
+    source_note: front/src/data/repository.ts
+    why: The six data screens need rows, not verdicts. Without these routes the console keeps its browser-side database credential regardless of what the diagnostic tier offers.
+    goal: A route for each of the twelve Repository methods, returning the same row shapes the console renders today.
+    context: front/src/data/repository.ts is the contract - ELEVEN methods plus a `kind` property, whose return types the screens already consume. The response shapes must match those types, because the acceptance test on the other side is that no screen changes. This task also carries two query ports the readstore task missed: `listRuns` and `fixVerification` were mapped to ReadStore.runs() and ReadStore.verifications() by NAME, but those return different projections - runs() has no task_time_ms or finding_count, and verifications() requires a job_id and derives none of rule 2's columns. RUN_LIST and FIX_VERIFICATIONS therefore land in ch.py here, which is why this task writes it.
+    behaviors:
+      - id: B-1
+        given: each of the twelve Repository methods
+        when: the route table is enumerated
+        then: there is exactly one route per method
+      - id: B-2
+        given: a known job_id
+        when: the runs, stages, findings, transitions and conf routes are called
+        then: each returns the row shape declared in front/src/contract/types for that query
+      - id: B-3
+        given: an unknown job_id
+        when: the single-run route is called
+        then: the response is 404 and never a zero-filled row
+      - id: B-4
+        given: the contract v0.3 memory tables are absent
+        when: the plan-shape routes are called
+        then: the response says the tables are absent rather than returning an empty list
+      - id: B-5
+        given: a list route
+        when: it is called without bounds
+        then: the same MAX_RUNS-style truncation ReadStore already applies is applied and reported
+      - id: B-6
+        given: the console's RUN_LIST and FIX_VERIFICATIONS projections
+        when: ReadStore.run_list and ReadStore.fix_verification are called
+        then: they return the console's RunSummary and FixVerificationRow shapes, and fix_verification is keyed on finding_id alone rather than requiring a job_id
+    evals:
+      - id: eval_1
+        description: every Repository method has a route and the row shapes match
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_resources.py::test_every_repository_method_has_a_route" "tests/test_api_resources.py::test_row_shapes_match_the_console_contract" )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 90
+      - id: eval_2
+        description: absence is reported as absence
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_resources.py::test_unknown_job_is_404_not_a_zero_row" "tests/test_api_resources.py::test_absent_memory_tables_are_reported" )
+        verifies: [B-3, B-4]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_3
+        description: unbounded listings are truncated and say so
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_resources.py::test_unbounded_listing_is_truncated_and_reported" )
+        verifies: [B-5]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_4
+        description: the two missed console projections are ported faithfully
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_run_list_returns_the_console_rollup" "tests/test_ch.py::test_fix_verification_keys_on_finding_id_alone" )
+        verifies: [B-6]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Returning 200 with an empty body for an unknown job; the console renders that as a real but empty run.
+      - Inventing a new row shape and making the console adapt, which turns a swap into a rewrite.
+      - Accepting raw SQL from the client on any route.
+      - Serving listRuns from ReadStore.runs(); it is a different projection and the console cannot render it.
+      - Leaving the skeleton's admission test asserting 404 on /v1/runs; this task gives that path a handler, so admission must be proven against a path that will never be routed.
+    do_not_touch:
+      - front/src/
+
+  - id: T-20260920-console-http-repository
+    title: Give the console an http data source
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260920-api-resource-routes]
+    touches_paths: [front/src/data/repository.ts, front/src/data/runtimeConfig.ts, front/src/data/env.d.ts, front/.env.example]
+    creates_paths: [front/src/data/http.ts, front/src/data/httpRepository.test.ts]
+    source_note: front/src/data/clickhouse.ts
+    why: clickhouse.ts already names the exit - swap ClickHouseRepository for an HTTP client against serve/, the Repository interface is the seam. This takes that exit without a big-bang cutover.
+    goal: An HttpRepository implementing Repository, selected by a new "http" data source, with clickhouse and fixtures still selectable.
+    context: runtimeConfig.ts:26 declares DATA_SOURCES as auto, clickhouse, fixtures and repository.ts:246 picks by mode; adding http is a typed change in three places. The token is deployment configuration, resolved the same runtime way the ClickHouse credential is today, so one image can still be pointed anywhere. No screen may change - that is the proof the seam held.
+    behaviors:
+      - id: B-1
+        given: DATA_SOURCE=http
+        when: the repository is constructed
+        then: an HttpRepository is returned and its kind reports http
+      - id: B-2
+        given: an HttpRepository
+        when: each of the twelve Repository methods is called
+        then: each issues one request to its /v1 route and returns the declared type
+      - id: B-3
+        given: DATA_SOURCE=clickhouse or fixtures
+        when: the repository is constructed
+        then: the existing implementations are returned unchanged
+      - id: B-4
+        given: the API answers 401
+        when: a screen loads
+        then: the console reports an authentication failure and does not fall back to a direct ClickHouse query
+      - id: B-5
+        given: the http data source
+        when: the screens are rendered against it
+        then: no file under front/src/screens is modified
+    evals:
+      - id: eval_1
+        description: the http mode is selectable and covers the interface
+        command: ( cd front && npm run test -- --run src/data/httpRepository.test.ts )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_2
+        description: types still check and no screen changed
+        command: ( cd front && npm run typecheck && git diff --exit-code --stat -- src/screens )
+        verifies: [B-5]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_3
+        description: a 401 surfaces instead of silently falling back
+        command: ( cd front && npm run test -- --run src/data/httpRepository.test.ts -t "401" )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 120
+    anti_patterns:
+      - Letting auto fall back from http to clickhouse on a 401, which quietly restores the credential this work removes.
+      - Changing a screen to fit the HTTP response instead of matching the Repository types.
+      - Baking the API token into the built bundle rather than resolving it at container start like the existing config.
+    do_not_touch:
+      - front/src/screens/
+      - front/src/components/
+
+  - id: T-20260920-api-openapi-auth
+    title: Say in the OpenAPI schema that /v1 needs a token
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260920-api-resource-routes]
+    touches_paths: [serve/src/apex_api/app.py]
+    creates_paths: [serve/tests/test_api_openapi.py]
+    source_note: serve/src/apex_api/auth.py
+    why: FastAPI already serves Swagger at /docs and the schema at /openapi.json, but admission is MIDDLEWARE, so the schema says nothing about needing a credential. A consumer reads the docs, calls a route, gets 401 and has nothing to tell them why - and Swagger offers no Authorize button to try it with.
+    goal: The schema declares a bearer scheme, every /v1 operation but health requires it, and health does not.
+    context: The requirement is declared, not enforced, here - auth.py stays the enforcement point, because a dependency-based scheme would move admission behind routing and reopen the route oracle it exists to close. This unit only makes the schema tell the truth about what auth.py already does.
+    behaviors:
+      - id: B-1
+        given: the OpenAPI schema
+        when: it is read
+        then: it declares an http bearer security scheme
+      - id: B-2
+        given: any /v1 operation other than health
+        when: its schema entry is read
+        then: it carries that security requirement
+      - id: B-3
+        given: /v1/health
+        when: its schema entry is read
+        then: it carries no security requirement, because a liveness probe holds no token
+      - id: B-4
+        given: no Authorization header
+        when: /docs, /redoc and /openapi.json are fetched
+        then: they answer, because a schema is a description and carries no row from the store
+    evals:
+      - id: eval_1
+        description: the scheme is declared and applied to exactly the right operations
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_openapi.py::test_schema_declares_a_bearer_scheme" "tests/test_api_openapi.py::test_every_v1_operation_but_health_requires_it" )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: the docs stay readable and carry no data
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_openapi.py::test_docs_are_reachable_without_a_token" )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Replacing the middleware with a route dependency to get the schema for free; that moves admission behind routing and tells an anonymous caller which routes exist.
+      - Marking health as secured, which would tell an orchestrator to hold a secret to run a liveness probe.
+      - Gating /openapi.json on a token so the docs cannot be read by the consumer who needs them.
+    do_not_touch:
+      - serve/src/apex_api/auth.py
+
+  - id: T-20260921-console-same-origin-api
+    title: Reach the API same-origin, the way the console reaches ClickHouse
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260920-console-http-repository]
+    touches_paths: [front/vite.config.ts, front/nginx.conf, front/Dockerfile, front/docker-entrypoint.d/30-apex-console-config.sh, front/src/data/httpRepository.test.ts, front/.env.example, serve/RUNBOOK.md]
+    creates_paths: []
+    source_note: front/src/data/clickhouse.ts
+    why: HttpRepository calls an ABSOLUTE url and the API sends no CORS header, so in a real browser every request fails preflight. The console's tests stub fetch, which is why nothing caught it. The ClickHouse path already solved this - "same-origin is achieved with a proxy (Vite in dev, nginx in prod), so ClickHouse itself never needs add_http_cors_header" - and the API deserves the same treatment rather than a second, weaker answer.
+    goal: With no apiUrl configured the console calls /v1 same-origin, and both proxies forward it; the container can be pointed at an API without a rebuild.
+    context: http.ts already produces a relative /v1 path when apiUrl is empty, so the client half is done - what is missing is the two proxies and the two config keys. Leaving apiUrl set remains supported for a direct cross-origin call, which then DOES need CORS on the API and is documented as such rather than silently broken. The entrypoint must keep emitting no key for an unset variable, because an emitted empty string is a real value the bundle would take over its own default. APEX_API_UPSTREAM is defaulted in the DOCKERFILE, not the entrypoint: the image's own 20-envsubst-on-templates.sh runs before 30-apex-console-config.sh, so a default exported there would arrive too late, and NGINX_ENVSUBST_FILTER must be widened or the placeholder survives into the served config and nginx refuses to start.
+    behaviors:
+      - id: B-1
+        given: no apiUrl configured
+        when: any HttpRepository method is called
+        then: the request path is relative and begins /v1, so the browser stays same-origin
+      - id: B-2
+        given: an apiUrl is configured
+        when: any HttpRepository method is called
+        then: the absolute url is used, unchanged from today
+      - id: B-3
+        given: the dev server
+        when: its config is read
+        then: it proxies /v1 to the API the same way it already proxies /clickhouse
+      - id: B-4
+        given: APEX_API_URL and APEX_API_TOKEN are set in the container
+        when: the entrypoint runs
+        then: config.js carries apiUrl and apiToken, and carries neither key when they are unset
+      - id: B-5
+        given: nginx
+        when: its config is read
+        then: it forwards /v1 to an APEX_API_UPSTREAM, and still refuses to start with an unset CLICKHOUSE_UPSTREAM only when that path is in use
+    evals:
+      - id: eval_1
+        description: the relative and absolute bases both behave
+        command: ( cd front && npm run test -- --run src/data/httpRepository.test.ts -t "same-origin" )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_2
+        description: both proxies declare the route
+        command: ( cd front && grep -qE '"/v1"[[:space:]]*:' vite.config.ts && grep -q 'APEX_API_UPSTREAM' nginx.conf && grep -q 'APEX_API_UPSTREAM' Dockerfile )
+        verifies: [B-3, B-5]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_3
+        description: the entrypoint emits the keys, and omits them when unset
+        command: ( cd front && bash -c 'set -e; d=$(mktemp -d); mkdir -p "$d/usr/share/nginx/html"; CLICKHOUSE_UPSTREAM=http://ch:8123 APEX_API_URL=http://api:8099 APEX_API_TOKEN=tok sh -c "sed \"s#/usr/share/nginx/html#$d/usr/share/nginx/html#\" docker-entrypoint.d/30-apex-console-config.sh | sh"; grep -q apiUrl "$d/usr/share/nginx/html/config.js"; grep -q apiToken "$d/usr/share/nginx/html/config.js"; CLICKHOUSE_UPSTREAM=http://ch:8123 sh -c "sed \"s#/usr/share/nginx/html#$d/usr/share/nginx/html#\" docker-entrypoint.d/30-apex-console-config.sh | sh"; ! grep -q apiUrl "$d/usr/share/nginx/html/config.js"' )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Adding CORS to the API instead of proxying, which makes the store's own answer to this question inconsistent with the API's and widens what any origin may call.
+      - Emitting an empty apiUrl key when the variable is unset; an empty string is a real value and would override the bundle's default.
+      - Requiring APEX_API_UPSTREAM unconditionally, which would break every ClickHouse-mode deployment that has no API.
+    do_not_touch:
+      - front/src/screens/
+      - front/src/data/repository.ts
+
+  - id: T-20260921-pr129-review-fixes
+    title: Fix the four defects Codex found on PR 129
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260921-console-same-origin-api]
+    touches_paths: [front/nginx.conf, front/vite.config.ts, front/src/data/runtimeConfig.ts, front/src/data/env.d.ts, front/src/data/httpRepository.test.ts, front/.env.example, serve/src/apex_mcp/ch.py, serve/tests/test_ch.py, serve/src/apex_api/routes/resources.py, serve/tests/test_api_resources.py, serve/RUNBOOK.md]
+    creates_paths: []
+    source_note: https://github.com/luanmorenommaciel/apex/pull/129
+    why: Two P1s and two P2s, all reproduced. The nginx block was spliced INSIDE the clickhouse proxy_pass because the insertion matched the brace inside ${CLICKHOUSE_UPSTREAM}, so no container starts at all - and the eval that was meant to guard it only grepped for a string, which passes on the broken file. The stages route returns the MCP's p50_ms/p99_ms and omits job_id, stage_name and ts, so three screens would render NaN.
+    goal: nginx validates in a real container, the stages route returns the console's projection, the dev proxy target stops forcing a cross-origin apiUrl, and fix_verification gates only on the tables it reads.
+    context: The stages gap is a PORT, not a rename - LATEST_STAGES also projects job_id, stage_name and ts, which STAGES_SQL has never carried. That makes it the eighth console query to move server-side, and the fourth time this plan mapped a console method onto a ReadStore method by name without comparing projections. Every eval here executes the thing it claims to check; the previous nginx eval did not.
+    behaviors:
+      - id: B-1
+        given: the nginx template with both upstreams set
+        when: the image renders it and runs nginx -t
+        then: the configuration is valid, with /clickhouse and /v1 as sibling location blocks
+      - id: B-2
+        given: a job_id
+        when: GET /v1/runs/{job_id}/stages is called
+        then: every field SparkEventRow declares is present, including task_duration_p50_ms, task_duration_p99_ms, job_id, stage_name and ts
+      - id: B-3
+        given: the documented development environment
+        when: runtimeConfig is resolved
+        then: apiUrl is empty, so requests stay relative and reach the API through the proxy rather than cross-origin
+      - id: B-4
+        given: an explicit absolute apiUrl
+        when: runtimeConfig is resolved
+        then: it is honoured, because a deliberate cross-origin deployment is still supported
+      - id: B-5
+        given: apex.fix_verifications and apex.run_outcomes present but apex.plan_memory absent
+        when: fix_verification is called
+        then: it returns the row, because that query reads neither plan_memory nor anything derived from it
+    evals:
+      - id: eval_1
+        description: nginx renders and validates in the real image
+        command: ( cd front && docker run --rm -e CLICKHOUSE_UPSTREAM=http://127.0.0.1:8123 -e APEX_API_UPSTREAM=http://127.0.0.1:8099 -e 'NGINX_ENVSUBST_FILTER=^(CLICKHOUSE_UPSTREAM|APEX_API_UPSTREAM)$' -v "$PWD/nginx.conf:/etc/nginx/templates/default.conf.template:ro" nginx:1.27-alpine nginx -t )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_2
+        description: the stages route carries the console's projection
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_resources.py::test_stages_route_returns_the_console_projection" "tests/test_ch.py::test_console_stages_projects_what_the_console_reads" )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 90
+      - id: eval_3
+        description: the documented dev setup stays same-origin
+        command: ( cd front && npm run test -- --run src/data/httpRepository.test.ts -t "proxy target" )
+        verifies: [B-3, B-4]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_4
+        description: verification does not require the plan-memory table
+        command: ( cd serve && uv run --extra dev pytest "tests/test_ch.py::test_fix_verification_needs_no_plan_memory_table" )
+        verifies: [B-5]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Guarding a config file with a grep for a substring; it passed on a file nginx rejects, which is how this shipped.
+      - Renaming two timing fields and calling the stages gap closed; job_id, stage_name and ts are missing too.
+      - Making the browser's apiUrl and the dev proxy target the same variable, which is the fault being fixed.
+    do_not_touch:
+      - front/src/screens/
+      - front/src/data/repository.ts

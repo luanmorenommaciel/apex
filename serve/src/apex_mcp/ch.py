@@ -71,7 +71,7 @@ SELECT
   argMax(task_duration_p50_ms, ts)     AS p50_ms,
   argMax(task_duration_p99_ms, ts)     AS p99_ms,
   argMax(toString(plan_fingerprint), ts) AS plan_fingerprint
-FROM apex.spark_events
+FROM spark_events
 WHERE job_id = {job_id:String}
 GROUP BY stage_id
 ORDER BY stage_id
@@ -115,7 +115,7 @@ SELECT
   uniqExact(stage_id)            AS stage_count,
   sum(spill_disk_bytes)          AS spill_disk_bytes,
   max(task_duration_p99_ms)      AS worst_p99_ms
-FROM apex.spark_events AS e
+FROM spark_events AS e
 WHERE e.ts >= {since:DateTime}
   AND ({app_name:String} = '' OR e.app_name = {app_name:String})
 GROUP BY job_id
@@ -128,7 +128,7 @@ SELECT
   count()           AS row_count,
   uniqExact(job_id) AS job_count,
   max(ts)           AS latest_ts
-FROM apex.spark_events
+FROM spark_events
 """
 
 COLUMNS_SQL = """
@@ -144,7 +144,7 @@ def _findings_sql(present: set[str]) -> str:
     return f"""
 SELECT
   {', '.join(projections)}
-FROM apex.findings
+FROM findings
 WHERE job_id = {{job_id:String}}
 ORDER BY ts ASC, finding_id ASC
 """
@@ -153,7 +153,7 @@ PLAN_TRANSITIONS_SQL = """
 SELECT
   execution_id, update_seq, toString(transition_type) AS transition_type,
   detail, before, after, toString(confidence) AS confidence
-FROM apex.plan_transitions
+FROM plan_transitions
 WHERE job_id = {job_id:String}
 ORDER BY execution_id, update_seq
 """
@@ -198,7 +198,7 @@ SELECT
   caveats,
   toString(verify_version)  AS verify_version,
   verified_at
-FROM apex.fix_verifications
+FROM fix_verifications
 WHERE job_id = {job_id:String}
   AND ({finding_id:String} = '' OR finding_id = {finding_id:String})
 ORDER BY verified_at DESC, verification_id ASC
@@ -268,10 +268,10 @@ SELECT * FROM (
     p.exchange_count                              AS exchange_count,
     p.scan_count                                  AS scan_count,
     p.last_seen                                   AS last_seen
-  FROM apex.plan_memory AS p FINAL
+  FROM plan_memory AS p FINAL
   INNER JOIN (
     SELECT embedding, dim, encoder_version
-    FROM apex.plan_memory FINAL
+    FROM plan_memory FINAL
     WHERE plan_fingerprint = toFixedString(substring({fingerprint:String}, 1, 64), 64)
       AND length(embedding) > 0
     ORDER BY last_seen DESC
@@ -303,11 +303,333 @@ SELECT
   toString(worst_severity)           AS worst_severity,
   toString(outcome_source)           AS outcome_source,
   observed_at
-FROM apex.run_outcomes FINAL
+FROM run_outcomes FINAL
 WHERE plan_fingerprint IN {fingerprints:Array(String)}
   AND job_id != {exclude_job_id:String}
 ORDER BY observed_at DESC
 LIMIT {limit:UInt32}
+"""
+
+
+# --------------------------------------------------------------------------
+# Console reads (ported from front/src/data/queries.ts).
+#
+# These six answered the console's screens from the BROWSER, against a
+# read-only ClickHouse user that shipped to every visitor. They live here so
+# the API can serve them and that credential can be retired. The SQL is a
+# PORT, not a redesign: the console's rendered numbers are the acceptance
+# criterion, so the shape of every result matches what queries.ts returned.
+# --------------------------------------------------------------------------
+
+# spark_events is authoritative for WHAT RAN: every stage is here, including
+# ones no plan shape claims, so a run stays listed even when the memory lane
+# has never indexed it. run_outcomes is read ONLY for shape-attributable
+# outcome data — its own stage_count and finding_count exclude unfingerprinted
+# stages and stage-less findings, so both would under-report the run, and its
+# wall_clock_ms is a per-shape timestamp span rather than a job duration.
+def _run_rollup_sql(where: str, tail: str) -> str:
+    """The console's run rollup, parameterised by filter and ordering.
+
+    ``where`` and ``tail`` are LITERALS from this module, never a caller's
+    value — every user-supplied value in the result is still bound. Sharing
+    one body is what stops the single-run and list forms from drifting into
+    two different answers to "what is this run".
+    """
+    return f"""
+WITH
+base AS (
+  SELECT job_id, argMax(app_name, ts) AS app_name,
+         uniqExact(stage_id) AS stage_count, min(ts) AS started_at
+  FROM spark_events
+  {where}
+  GROUP BY job_id
+),
+f AS (
+  SELECT job_id, count() AS finding_count,
+         max(severity IN ('critical', 'blocker')) AS has_critical
+  FROM findings GROUP BY job_id
+),
+shapes AS (
+  SELECT ro.job_id AS job_id,
+         sum(ro.task_time_ms)                                  AS task_time_ms,
+         toString(argMax(ro.plan_fingerprint, ro.stage_count)) AS plan_fingerprint,
+         uniqExact(ro.plan_fingerprint)                        AS shape_count,
+         sum(ro.stage_count)                                   AS shaped_stage_count,
+         argMax(ro.config_source, ro.observed_at)              AS config_source,
+         max(ro.conf_executor_instances)                       AS conf_executor_instances,
+         max(ro.conf_shuffle_partitions)                       AS conf_shuffle_partitions
+  FROM run_outcomes AS ro FINAL
+  GROUP BY ro.job_id
+)
+SELECT
+  b.job_id      AS job_id,
+  b.app_name    AS app_name,
+  b.stage_count AS stage_count,
+  b.started_at  AS started_at,
+  ifNull(f.finding_count, 0) AS finding_count,
+  ifNull(f.has_critical, 0)  AS has_critical,
+  ifNull(s.task_time_ms, -1)       AS task_time_ms,
+  ifNull(s.plan_fingerprint, '')   AS plan_fingerprint,
+  ifNull(s.shape_count, 0)         AS shape_count,
+  ifNull(s.shaped_stage_count, -1) AS shaped_stage_count,
+  ifNull(s.config_source, 'unknown') AS config_source,
+  s.conf_executor_instances, s.conf_shuffle_partitions
+FROM base b
+LEFT JOIN f        ON f.job_id = b.job_id
+LEFT JOIN shapes s ON s.job_id = b.job_id
+{tail}
+"""
+
+
+RUN_ONE_SQL = _run_rollup_sql(
+    "WHERE job_id = {job_id:String}", "LIMIT 1"
+)
+RUN_LIST_SQL = _run_rollup_sql(
+    "", "ORDER BY b.started_at DESC LIMIT {limit:UInt32}"
+)
+
+# Rule 2 lives in this projection, not in the table. A delta inside the
+# measured floor is UNRESOLVABLE, which is not the same as zero, so
+# runtime_verdict becomes 'unresolved' and never a direction.
+# predicted_saving_pct flips the sign of the stored column, which is signed
+# with negative meaning faster. mechanism_confirmed has no source at all and
+# stays NULL: deriving it from the safety verdict would collapse rule 4's two
+# independent verdicts into one.
+FIX_VERIFICATION_SQL = """
+WITH slots AS (
+  SELECT job_id,
+         max(conf_executor_instances) * max(conf_executor_cores) AS cluster_slots
+  FROM run_outcomes FINAL
+  GROUP BY job_id
+)
+SELECT
+  v.verification_id AS fix_id,
+  v.finding_id      AS finding_id,
+  v.job_id          AS job_id,
+  CAST(NULL AS Nullable(UInt8))       AS mechanism_confirmed,
+  toUInt8(v.measured_delta_pct IS NOT NULL
+          AND v.noise_floor_pct IS NOT NULL
+          AND abs(v.measured_delta_pct) > v.noise_floor_pct) AS runtime_certified,
+  multiIf(v.measured_delta_pct IS NULL
+            OR v.noise_floor_pct IS NULL
+            OR abs(v.measured_delta_pct) <= v.noise_floor_pct, 'unresolved',
+          v.measured_delta_pct < 0, 'improved',
+          'regressed')                AS runtime_verdict,
+  -v.predicted_delta_pct              AS predicted_saving_pct,
+  v.noise_floor_pct                   AS noise_floor_pct,
+  v.replay_reps                       AS replay_count,
+  s.cluster_slots                     AS cluster_slots,
+  v.proposed_config                   AS proposed_diff
+FROM fix_verifications AS v
+LEFT JOIN slots s ON s.job_id = v.job_id
+WHERE v.finding_id = {finding_id:String}
+ORDER BY v.verified_at DESC
+LIMIT 1
+"""
+
+# job_conf holds ONE row per job with conf as a Map, while every consumer reads
+# one row per key. ARRAY JOIN does the reshape in SQL. An absent key stays
+# absent — no LEFT JOIN or COALESCE invents one — which is what lets rule 1
+# declare itself vacant rather than assume a cluster width.
+JOB_CONF_SQL = """
+SELECT
+  job_id,
+  entry.1 AS key,
+  entry.2 AS value,
+  ts
+FROM job_conf
+ARRAY JOIN CAST(conf, 'Array(Tuple(String, String))') AS entry
+WHERE job_id = {job_id:String}
+ORDER BY key
+"""
+
+# Runs that executed at least one of this run's plan shapes. Runs sharing
+# nothing are not returned, so the screen can say "no comparable run" instead
+# of differencing two unrelated jobs.
+BASELINE_CANDIDATES_SQL = """
+WITH mine AS (
+  SELECT DISTINCT plan_fingerprint
+  FROM run_outcomes FINAL
+  WHERE job_id = {job_id:String}
+)
+SELECT
+  o.job_id                       AS job_id,
+  any(o.app_name)                AS app_name,
+  uniqExact(o.plan_fingerprint)  AS shared_shapes,
+  max(o.observed_at)             AS observed_at
+FROM run_outcomes AS o FINAL
+INNER JOIN mine ON mine.plan_fingerprint = o.plan_fingerprint
+WHERE o.job_id != {job_id:String}
+GROUP BY o.job_id
+ORDER BY observed_at DESC
+LIMIT {limit:UInt32}
+"""
+
+# The INNER JOIN is deliberate: a shape with no outcome row has no history to
+# show, and a run whose shape was never indexed is not a shape we know.
+PLAN_SHAPES_SQL = """
+WITH r AS (
+  SELECT plan_fingerprint,
+         uniqExact(job_id) AS run_count,
+         min(observed_at)  AS first_run,
+         max(observed_at)  AS last_run
+  FROM run_outcomes FINAL
+  GROUP BY plan_fingerprint
+)
+SELECT
+  toString(pm.plan_fingerprint) AS plan_fingerprint,
+  r.run_count       AS run_count,
+  r.first_run       AS first_run,
+  r.last_run        AS last_run,
+  pm.node_count     AS node_count,
+  pm.join_count     AS join_count,
+  pm.agg_count      AS agg_count,
+  pm.exchange_count AS exchange_count,
+  pm.scan_count     AS scan_count,
+  pm.max_depth      AS max_depth,
+  pm.has_udf        AS has_udf
+FROM plan_memory AS pm FINAL
+INNER JOIN r ON r.plan_fingerprint = pm.plan_fingerprint
+ORDER BY r.run_count DESC, r.last_run DESC
+LIMIT {limit:UInt32}
+"""
+
+# ONE redacted exemplar per shape, which the contract's own DDL calls "for
+# citation". Read from plan_memory and never from spark_events.plan_json: the
+# latter is per stage, so a 34-stage run would ship 34 Catalyst trees to draw
+# one. The text is carried verbatim and nothing is parsed out of it.
+PLAN_SAMPLE_SQL = """
+SELECT toString(sample_plan_json) AS sample_plan_json
+FROM plan_memory FINAL
+WHERE plan_fingerprint = toFixedString(substring({fingerprint:String}, 1, 64), 64)
+ORDER BY indexed_at DESC
+LIMIT 1
+"""
+
+# task_time_ms is the cost metric, not wall_clock_ms. The conf_* columns stay
+# NULL unless the jar emitted job_conf for that run, and null travels through
+# as "not captured" so rule 3 can refuse to credit a difference rather than
+# compare against an invented default.
+SHAPE_RUNS_SQL = """
+SELECT
+  job_id                  AS job_id,
+  app_name                AS app_name,
+  task_time_ms            AS task_time_ms,
+  finding_count           AS finding_count,
+  indexOf(['info', 'warning', 'critical', 'blocker'], worst_severity) AS severity_rank,
+  config_source           AS config_source,
+  conf_shuffle_partitions AS conf_shuffle_partitions,
+  conf_executor_instances AS conf_executor_instances,
+  conf_executor_cores     AS conf_executor_cores,
+  conf_executor_memory_mb AS conf_executor_memory_mb,
+  observed_at             AS observed_at
+FROM run_outcomes FINAL
+WHERE plan_fingerprint = toFixedString(substring({fingerprint:String}, 1, 64), 64)
+ORDER BY observed_at
+"""
+
+
+# The console's findings projection. NOT _findings_sql(): that one answers the
+# MCP's FindingView, orders oldest-first for a diagnosis to read in detection
+# order, and projects no ts. The console's FindingRow carries ts, and its list
+# is ranked by the RAW confidence_score, highest first — the enum tier is only
+# the display value. `finding_id` breaks ties so the order is deterministic.
+# Like _findings_sql, the v0.2 additive column is projected only when present.
+def _console_findings_sql(present: set[str]) -> str:
+    score = _FINDINGS_ADDITIVE["confidence_score"]
+    score_projection = score[0] if "confidence_score" in present else score[1]
+    return f"""
+SELECT
+  finding_id, job_id, stage_id, toString(type) AS type,
+  toString(severity) AS severity, toString(confidence) AS confidence,
+  {score_projection}, detected_by, evidence, impact, fix, hot_key, ts
+FROM findings
+WHERE job_id = {{job_id:String}}
+ORDER BY confidence_score DESC, finding_id ASC
+"""
+
+
+# The console's AQE transitions, one row per execution_id. NOT
+# PLAN_TRANSITIONS_SQL: that one returns EVERY update for the MCP's
+# PlanTransitionView, so an execution AQE re-planned three times is three rows,
+# and a skew_split that a later update replaced is still on the list. Here every
+# column comes from the row with the greatest update_seq (argMax), so the stale
+# decision is SUPERSEDED rather than shown beside the one that replaced it.
+#
+# plan_fingerprint is not a column of plan_transitions — it lives on
+# spark_events — so it is joined in. any() over the job's fingerprinted stages
+# is sound only because the console uses it as the run's shape identity; a
+# stage-accurate fingerprint would need an execution -> stage map the contract
+# does not carry. The CTE's aggregate is aliased `fingerprint`, not
+# `plan_fingerprint`: on ClickHouse 24.8 an aggregate that shadows the source
+# column turns this CTE's own WHERE into an illegal aggregate expression.
+# `ts` is max(t.ts), qualified for the same shadowing reason.
+CONSOLE_PLAN_TRANSITIONS_SQL = """
+WITH fp AS (
+  SELECT job_id, any(toString(plan_fingerprint)) AS fingerprint
+  FROM spark_events
+  WHERE job_id = {job_id:String}
+    AND match(toString(plan_fingerprint), '^[0-9a-f]{64}$')
+    AND plan_fingerprint != toFixedString(repeat('0', 64), 64)
+  GROUP BY job_id
+)
+SELECT
+  t.job_id                            AS job_id,
+  t.execution_id                      AS execution_id,
+  argMax(t.update_seq, t.update_seq)  AS update_seq,
+  argMax(t.transition_type, t.update_seq) AS transition_type,
+  argMax(t.detail, t.update_seq)      AS detail,
+  argMax(t.before, t.update_seq)      AS before,
+  argMax(t.after, t.update_seq)       AS after,
+  argMax(t.confidence, t.update_seq)  AS confidence,
+  ifNull(any(fp.fingerprint), '')      AS plan_fingerprint,
+  max(t.ts)                           AS ts
+FROM plan_transitions AS t
+LEFT JOIN fp ON fp.job_id = t.job_id
+WHERE t.job_id = {job_id:String}
+GROUP BY t.job_id, t.execution_id
+ORDER BY t.execution_id
+"""
+
+
+# The console's stage projection. NOT STAGES_SQL: that one aliases the timings
+# AS p50_ms/p99_ms for the MCP's StageView and projects no job_id, stage_name
+# or ts at all. Serving it to the console gave undefined timings and NaN
+# ratios on three screens. Same table, same argMax discipline, different
+# consumer — so it is the eighth console query to move server-side.
+CONSOLE_STAGES_SQL = """
+SELECT
+  se.job_id                                       AS job_id,
+  any(se.app_name)                                AS app_name,
+  se.stage_id                                     AS stage_id,
+  -- No stage name exists in the contract. NULL, never a label invented from
+  -- plan_json, which the DDL marks as a tree-string that is never parsed.
+  CAST(NULL AS Nullable(String))                  AS stage_name,
+  max(se.stage_attempt)                           AS stage_attempt,
+  argMax(se.task_count, se.ts)                    AS task_count,
+  argMax(se.shuffle_read_bytes, se.ts)            AS shuffle_read_bytes,
+  argMax(se.shuffle_write_bytes, se.ts)           AS shuffle_write_bytes,
+  argMax(se.input_bytes, se.ts)                   AS input_bytes,
+  argMax(se.spill_mem_bytes, se.ts)               AS spill_mem_bytes,
+  argMax(se.spill_disk_bytes, se.ts)              AS spill_disk_bytes,
+  argMax(se.peak_execution_mem_bytes, se.ts)      AS peak_execution_mem_bytes,
+  argMax(se.gc_time_ms, se.ts)                    AS gc_time_ms,
+  argMax(se.task_duration_p50_ms, se.ts)          AS task_duration_p50_ms,
+  argMax(se.task_duration_p99_ms, se.ts)          AS task_duration_p99_ms,
+  -- The pairing key for /compare. A stage with no real fingerprint returns ''
+  -- and is reported as unmatched rather than paired on its id, which would
+  -- silently compare two different operators.
+  if(match(toString(argMax(se.plan_fingerprint, se.ts)), '^[0-9a-f]{64}$')
+     AND argMax(se.plan_fingerprint, se.ts) != toFixedString(repeat('0', 64), 64),
+     toString(argMax(se.plan_fingerprint, se.ts)), '') AS plan_fingerprint,
+  -- Qualified `se.`, every one: the output alias `ts` would otherwise shadow
+  -- the source column inside each argMax and ClickHouse rejects the statement
+  -- with ILLEGAL_AGGREGATION.
+  max(se.ts)                                      AS ts
+FROM spark_events AS se
+WHERE se.job_id = {job_id:String}
+GROUP BY se.job_id, se.stage_id
+ORDER BY se.stage_id
 """
 
 
@@ -332,7 +654,7 @@ SELECT * FROM (
     concat(toString(type),' | ',evidence,' | ',impact,' | ',fix) AS snippet,
     {score} AS score,
     arrayFilter(x -> x != '', [{matched}]) AS matched_tokens
-  FROM apex.findings
+  FROM findings
 ) WHERE score > 0
 ORDER BY score DESC, job_id ASC, stage_id ASC
 LIMIT {{top_k:UInt32}}
@@ -362,7 +684,7 @@ SELECT * FROM (
     toString(plan_fingerprint) AS plan_fingerprint,
     {score} AS score,
     arrayFilter(x -> x != '', [{matched}]) AS matched_tokens
-  FROM apex.spark_events
+  FROM spark_events
   WHERE plan_json != ''
   GROUP BY job_id, plan_fingerprint
 ) WHERE score > 0
@@ -470,8 +792,9 @@ class ReadStore:
             missing = set(_FINDINGS_ADDITIVE) - self._findings_columns
             if missing and self._findings_columns:
                 log.warning(
-                    "apex.findings is missing additive contract column(s): %s — "
+                    "%s.findings is missing additive contract column(s): %s — "
                     "serving defaults. Apply contract/findings.ddl.sql (infra).",
+                    self._database,
                     ", ".join(sorted(missing)),
                 )
         return self._findings_columns
@@ -663,6 +986,163 @@ class ReadStore:
         rows += self._query(_plans_search_sql(names), params)
         return rows
 
+    # -- console reads (ported from the browser) ---------------------------
+    MAX_SHAPES = 50
+    MAX_BASELINE_CANDIDATES = 20
+
+    def run(self, job_id: str) -> dict[str, Any] | None:
+        """One run's rollup row, or None when the job_id is unknown.
+
+        None rather than a zero-filled row on purpose: the console renders a
+        synthesised zero as a real but empty run, which is a claim the store
+        never made.
+        """
+        return next(
+            iter(self._query(RUN_ONE_SQL, {"job_id": _require_job_id(job_id)})), None
+        )
+
+    def run_list(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Recent runs in the CONSOLE's rollup shape, newest first.
+
+        Not ``runs()``. That one projects app_id, first_ts, last_ts,
+        spill_disk_bytes and worst_p99_ms for the MCP's RunSummary; the console
+        needs task_time_ms, finding_count and the shape columns, which runs()
+        does not carry. Same name, different question.
+
+        The limit is clamped rather than trusted, and the caller is told when
+        the clamp bit so a truncated page is never read as a complete one.
+        """
+        return self._query(
+            RUN_LIST_SQL, {"limit": max(1, min(int(limit), self.MAX_RUNS))}
+        )
+
+    def fix_verification(self, finding_id: str) -> dict[str, Any] | None:
+        """The verify lane's row for ONE finding, keyed on the finding alone.
+
+        Not ``verifications()``: that requires a job_id and reports the stored
+        columns, while this derives rule 2's verdict from the measured delta
+        against the measured floor. Both call sites in the console have only a
+        finding_id in hand.
+
+        None when the additive table is absent or holds no row for this
+        finding — the screen states the emptiness and names the lane that owes
+        it, rather than showing a verdict nobody reached.
+        """
+        finding_id = _require_optional_id(finding_id, "finding_id")
+        if not finding_id:
+            raise ApexStoreError("finding_id_required: pass a non-empty finding_id.")
+        if not self.table_exists("fix_verifications"):
+            return None
+        # cluster_slots joins run_outcomes, so THAT table is required — but
+        # plan_memory is not, and demanding it hid stored verifications during
+        # a partial v0.3 rollout. Gate on what this query reads, nothing else.
+        if not self.table_exists("run_outcomes"):
+            raise ApexStoreError(
+                f"memory_unavailable: {self._database}.run_outcomes is not "
+                "present on this deployment, and this verification joins it "
+                "for cluster_slots. This is not an absent verification. Apply "
+                "the v0.3 DDL via the infra lane."
+            )
+        return next(iter(self._query(FIX_VERIFICATION_SQL, {"finding_id": finding_id})), None)
+
+    def console_stages(self, job_id: str) -> list[dict[str, Any]]:
+        """Stages in the CONSOLE's projection, one row per stage.
+
+        Not ``stages()``. That one answers the MCP's StageView, aliasing the
+        timings to p50_ms/p99_ms and projecting no job_id, stage_name or ts.
+        The console reads task_duration_p50_ms/p99_ms and all three of those,
+        so serving one as the other gave it undefined values and NaN ratios.
+        """
+        return self._query(CONSOLE_STAGES_SQL, {"job_id": _require_job_id(job_id)})
+
+    def console_findings(self, job_id: str) -> list[dict[str, Any]]:
+        """Findings in the CONSOLE's FindingRow shape, highest score first.
+
+        Not ``findings()``. That one answers the MCP's FindingView: oldest
+        first, no ts. The console's FindingRow carries ts and is ranked on
+        confidence_score descending, so serving one as the other dropped a
+        field and reordered a screen.
+        """
+        job_id = _require_job_id(job_id)
+        return self._query(
+            _console_findings_sql(self.findings_columns()), {"job_id": job_id}
+        )
+
+    def console_plan_transitions(self, job_id: str) -> list[dict[str, Any]]:
+        """AQE transitions in the CONSOLE's shape: latest update per execution.
+
+        Not ``plan_transitions()``. That one returns every update for the
+        MCP's PlanTransitionView, so a re-planned execution's stale decisions
+        (a skew_split a later update replaced) are still on the list. This one
+        collapses each execution_id to its greatest update_seq and adds the
+        job_id, plan_fingerprint and ts the console's PlanTransitionRow reads.
+        """
+        return self._query(
+            CONSOLE_PLAN_TRANSITIONS_SQL, {"job_id": _require_job_id(job_id)}
+        )
+
+    def job_conf(self, job_id: str) -> list[dict[str, Any]]:
+        """This job's configuration, one row per key.
+
+        Empty when the jar emitted no job_conf for the run. That is an absence
+        of capture, not a run with no configuration.
+        """
+        return self._query(JOB_CONF_SQL, {"job_id": _require_job_id(job_id)})
+
+    def baseline_candidates(self, job_id: str) -> list[dict[str, Any]]:
+        """Other runs sharing at least one of this run's plan shapes."""
+        self._require_memory()
+        return self._query(
+            BASELINE_CANDIDATES_SQL,
+            {
+                "job_id": _require_job_id(job_id),
+                "limit": self.MAX_BASELINE_CANDIDATES,
+            },
+        )
+
+    def plan_shapes(self) -> list[dict[str, Any]]:
+        """Plan shapes the memory lane has indexed, most-run first."""
+        self._require_memory()
+        return self._query(PLAN_SHAPES_SQL, {"limit": self.MAX_SHAPES})
+
+    def plan_sample(self, fingerprint: str) -> str | None:
+        """The redacted exemplar for a shape, or None when unindexed.
+
+        None rather than "" so a caller can tell "the memory lane has not
+        reached this shape" from "this shape's plan text is empty".
+        """
+        self._require_memory()
+        rows = self._query(
+            PLAN_SAMPLE_SQL,
+            {"fingerprint": _require_optional_id(fingerprint, "fingerprint")},
+        )
+        sample = str(rows[0].get("sample_plan_json") or "") if rows else ""
+        return sample or None
+
+    def shape_runs(self, fingerprint: str) -> list[dict[str, Any]]:
+        """Every run of one shape, oldest first — the history rule 3 reads."""
+        self._require_memory()
+        return self._query(
+            SHAPE_RUNS_SQL,
+            {"fingerprint": _require_optional_id(fingerprint, "fingerprint")},
+        )
+
+    def _require_memory(self) -> None:
+        """Refuse a memory read on a deployment without the v0.3 tables.
+
+        Raised, not degraded to []. An empty list here would read as "this
+        store has no history", when the truth is that it has no TABLE to hold
+        one — and the caller acts differently on each.
+        """
+        if not self.memory_tables_present():
+            raise ApexStoreError(
+                "memory_unavailable: the contract v0.3 tables "
+                f"{self._database}.plan_memory and {self._database}.run_outcomes "
+                "are not present on this deployment. This is not an empty "
+                "history. Apply the v0.3 DDL via the infra lane and run the "
+                "memory lane's indexer."
+            )
+
     # -- plumbing ---------------------------------------------------------
     def _query(self, sql: str, parameters: dict[str, Any]) -> list[dict[str, Any]]:
         try:
@@ -721,6 +1201,23 @@ def _sanitize(exc: Exception) -> ApexStoreError:
 # --------------------------------------------------------------------------
 # Connection factory
 # --------------------------------------------------------------------------
+DATABASE_VAR = "CLICKHOUSE_DATABASE"
+DEFAULT_DATABASE = "apex"
+
+
+def configured_database() -> str:
+    """The database every query runs against: ``CLICKHOUSE_DATABASE``.
+
+    SQL in this module names tables unqualified and resolves them in the
+    client's SESSION database, so this one value — read by ``get_client`` for
+    the session and by ``ReadStore`` for its ``system.*`` probes — is what
+    keeps the two from pointing at different databases. It is never
+    interpolated into a statement: identifiers cannot be bound, so the session
+    is the only channel it travels.
+    """
+    return os.getenv(DATABASE_VAR, "").strip() or DEFAULT_DATABASE
+
+
 @functools.lru_cache(maxsize=1)
 def get_client() -> ClickHouseClient:
     """Build the shared client from the environment.
@@ -738,7 +1235,7 @@ def get_client() -> ClickHouseClient:
             port=int(os.getenv("CLICKHOUSE_PORT", "8123")),
             username=os.getenv("CLICKHOUSE_USER", "apex"),
             password=os.getenv("CLICKHOUSE_PASSWORD", ""),
-            database=os.getenv("CLICKHOUSE_DATABASE", "apex"),
+            database=configured_database(),
             secure=os.getenv("CLICKHOUSE_SECURE", "").lower()
             in {"1", "true", "yes"},
         )
@@ -747,4 +1244,4 @@ def get_client() -> ClickHouseClient:
 
 
 def get_store() -> ReadStore:
-    return ReadStore(get_client())
+    return ReadStore(get_client(), database=configured_database())

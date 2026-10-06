@@ -18,6 +18,7 @@ import pytest
 from apex_mcp import diagnose
 from apex_mcp.ch import ReadStore
 from apex_mcp.server import create_server
+from tests.conftest import reads
 
 
 class _VerifyClient:
@@ -34,7 +35,7 @@ class _VerifyClient:
     def query(self, query: str, parameters: dict | None = None):
         if "system.columns" in query:
             payload = [{"name": "verification_id"}] if self.table else []
-        elif "apex.fix_verifications" in query:
+        elif reads(query, "fix_verifications"):
             finding_id = (parameters or {}).get("finding_id") or ""
             payload = [
                 r for r in self.rows

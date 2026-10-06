@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import re
+
 import pytest
 
 from apex_mcp.ch import ReadStore
@@ -107,6 +109,16 @@ def transition_row(
     }
 
 
+def reads(query: str, table: str) -> bool:
+    """Does this statement read ``table``?
+
+    Tables are named unqualified — the client's session database resolves them
+    — so a fake routes on the table name after FROM/JOIN, not on an ``apex.``
+    prefix that no statement carries any more.
+    """
+    return re.search(rf"\b(?:FROM|JOIN)\s+{re.escape(table)}\b", query) is not None
+
+
 class FakeResult:
     def __init__(self, rows: list[dict]) -> None:
         self._rows = rows
@@ -161,9 +173,9 @@ class FakeClient:
             return FakeResult([{"name": name} for name in names])
         if "positionCaseInsensitive" in query:
             return FakeResult(list(self.search))
-        if "apex.plan_transitions" in query:
+        if reads(query, "plan_transitions"):
             return FakeResult(list(self.transitions.get(job_id, [])))
-        if "apex.findings" in query:
+        if reads(query, "findings"):
             return FakeResult(list(self.findings.get(job_id, [])))
         return FakeResult(list(self.stages.get(job_id, [])))
 
