@@ -81,12 +81,21 @@ run-pathology: up ## Run a pathology: JOB=skew_join|spill|bad_shuffle|driver_oom
 	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
 	  $${dm:+--driver-memory $$dm} /opt/apex/jobs/$(JOB).py
 
+# On the C3 overlay the master has TWO networks. Spark advertises the driver by
+# the container's hostname, which Docker DNS resolves to whichever network's
+# address it likes, while the driver's RPC binds to the first interface — so an
+# executor connecting to the advertised address can be refused, and the job
+# spins "Initial job has not accepted any resources" forever. Which run hits it
+# depends on interface order, so it looks intermittent. Advertise the service
+# name and bind everywhere, as scripts/e2e_canonical.sh already does.
+C3_DRIVER_CONF := --conf spark.driver.host=spark-master --conf spark.driver.bindAddress=0.0.0.0
+
 c3-up: env ## Join infra's OTLP network and wait for the Spark driver service
 	$(C3_COMPOSE) up -d --wait
 
 c3-plugin-skew: c3-up ## C3: ApexPlugin -> infra OTLP collector
 	$(C3_COMPOSE) exec -T -e APEX_AQE=off -e APEX_FIX=off -e APEX_SAFE=off spark-master \
-	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
 	  --conf spark.plugins=apex.ApexPlugin \
 	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
 	  --conf spark.apex.aqe.enabled=false \
@@ -94,7 +103,7 @@ c3-plugin-skew: c3-up ## C3: ApexPlugin -> infra OTLP collector
 
 c4-aqe-skew: c3-up ## C4: AQE skew split + ApexPlugin plan_transition -> infra OTLP collector
 	$(C3_COMPOSE) exec -T -e APEX_AQE=on -e APEX_FIX=off -e APEX_SAFE=off spark-master \
-	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
 	  --conf spark.plugins=apex.ApexPlugin \
 	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
 	  --conf spark.apex.aqe.enabled=true \
@@ -105,7 +114,7 @@ c4-aqe-skewsplit: c3-up ## C4 calibration: force a real AQE skew_split without c
 	  -e APEX_AQE_SKEW_THRESHOLD=1m -e APEX_AQE_ADVISORY_PARTITION=512k \
 	  -e APEX_AQE_SKEW_FACTOR=2 -e APEX_AQE_COALESCE=false \
 	  -e APEX_AQE_FORCE_OPTIMIZE_SKEW=true spark-master \
-	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
 	  --conf spark.plugins=apex.ApexPlugin \
 	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
 	  --conf spark.apex.aqe.enabled=true \
@@ -113,7 +122,7 @@ c4-aqe-skewsplit: c3-up ## C4 calibration: force a real AQE skew_split without c
 
 c4-aqe-probe: c3-up ## C4 calibration probe: mirror the JAR AQE transition test at runtime
 	$(C3_COMPOSE) exec -T spark-master \
-	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
 	  --conf spark.plugins=apex.ApexPlugin \
 	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
 	  --conf spark.apex.aqe.enabled=true \
