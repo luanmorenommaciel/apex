@@ -60,7 +60,7 @@ eval_1() {
 
 # eval_2: LIVE - needs infra up and an analysed job - the gate passes on the newest job
 eval_2() {
-  ( cd serve && uv run --extra dev python ../scripts/e2e_six_lanes.py --job-id "$(docker exec apex-infra-clickhouse clickhouse-client --user apex --password apex_local_dev -q "SELECT job_id FROM apex.spark_events GROUP BY job_id ORDER BY max(ts) DESC LIMIT 1")" | grep -q '"status": "passed"' )
+  ( set -a; . infra/.env; set +a; export CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT="${CLICKHOUSE_HTTP_HOST_PORT:-8123}" CLICKHOUSE_DATABASE="${CLICKHOUSE_DB:-apex}"; JOB=$(docker exec apex-infra-clickhouse clickhouse-client --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" -q "SELECT job_id FROM apex.spark_events GROUP BY job_id ORDER BY max(ts) DESC LIMIT 1"); cd serve && uv run --extra dev python ../scripts/e2e_six_lanes.py --job-id "$JOB" | grep '"status": "passed"' >/dev/null )
 }
 
 ```

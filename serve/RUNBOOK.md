@@ -194,9 +194,21 @@ CONSOLE_PARITY_GATE=PASS
 ```
 
 After every default run each contract table held 0 rows: the gate removed what
-it seeded. It has **not** yet been recorded against the long-lived infra stack
-or with `--api-url` against a deployed service; that run is what step 3 still
-owes.
+it seeded.
+
+**Recorded 2026-10-06 against the long-lived infra stack** (`infra/` compose,
+ClickHouse 24.8, `make apply-ddl` current), in both modes:
+
+| Mode | Job | Result |
+|---|---|---|
+| default (seeded) | — | `17 passed · 0 failed · 0 not exercised`, 0 rows left behind |
+| `--job-id --api-url` against a running `apex-api` | `app-20260728210428-0004` (July) | `15 passed · 1 not exercised` (indexed) |
+| `--job-id --api-url` | `app-20261006193136-0000` (generated, old image) | `14 passed · 2 not exercised` |
+| `--job-id --api-url` | `app-20261006195655-0002` (generated, current jar) | `13 passed · 3 not exercised` — its three findings happen to be in ts order too |
+
+Those three jobs went Spark → plugin → OTLP → this store → engine → memory →
+API → every console screen in one run of `tests/e2e/console_reflection.sh`;
+`serve/VALIDATION.md` has the record and what it found.
 
 **The gate was checked against the defects it exists for.** Each was put back
 in a scratch copy and the gate was run on it:

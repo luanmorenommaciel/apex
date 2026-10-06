@@ -19,6 +19,13 @@ something the others do not, and the naming does not make that obvious. This pag
         └─────────────────────────────────────────────────────────────┘
 
         ┌─────────────────────────────────────────────────────────────┐
+        │  tests/e2e/console_reflection.sh                             │
+        │  REFLECT — one job already in the store, through ENGINE →    │
+        │  MEMORY → apex-api → the real console App: every screen read │
+        │  against what the API returned. Proves what a person sees.   │
+        └─────────────────────────────────────────────────────────────┘
+
+        ┌─────────────────────────────────────────────────────────────┐
         │  tests/e2e/run.sh                                            │
         │  PLUMBING — brings up infra, runs ONE pathology, asserts     │
         │  rows land. Covers dev → jar → collect → infra only.         │
@@ -31,9 +38,10 @@ something the others do not, and the naming does not make that obvious. This pag
 | `scripts/e2e_six_lanes.py` | **all six lanes** | no — validates what already exists | **This is the gate.** Proving the system agrees with itself on one job. |
 | `dev/scripts/e2e_canonical.{sh,ps1}` | dev → jar → collect → infra, ×4 pathologies | keeps collect/infra running | Generating the telemetry the gate will then check. |
 | `tests/e2e/run.sh` | dev → jar → collect → infra, ×1 pathology | yes, including network glue | Smoke-testing the plumbing from cold, e.g. after a compose change. |
+| `tests/e2e/console_reflection.sh` | engine → memory → serve (`apex-api`) → **console**, ×1 job | no — infra must be up and the job in the store | Proving that what the console shows for a job is what the job did. Runs the console parity gate and `front/src/e2e/console.live.test.tsx`. |
 
-**The normal sequence is generate → verify:** run `e2e_canonical`, take the `job_id` it prints,
-then run the gate against it.
+**The normal sequence is generate → verify → reflect:** run `e2e_canonical`, take the `job_id`
+it prints, run the gate against it, then `tests/e2e/console_reflection.sh <job_id>`.
 
 For an opt-in, pre-submit custody chain for a particular E2E run, see
 [Pre-submit provenance](PRE_SUBMIT_PROVENANCE.md).
