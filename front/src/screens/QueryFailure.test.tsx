@@ -81,6 +81,17 @@ describe("a rejected query on every screen", () => {
     expect(text).not.toContain("nothing indexed yet");
   });
 
+  it("survives an API detail that is not text, as FastAPI's 422 sends", async () => {
+    // http.ts types `detail` as a string; a 422 body carries a list of
+    // validation errors there. Rendered as a React child it would throw.
+    const notText = [{ loc: ["query", "limit"], msg: "value is not a valid integer" }];
+    current.repo = rejecting(new ApiError(422, notText as unknown as string, "/v1/runs"));
+    const text = await mount("/runs", "/runs", <RunsScreen />);
+    expect(text).toContain("422");
+    expect(text).toContain("no readable detail");
+    expect(text).not.toContain("[object Object]");
+  });
+
   it("never renders a non-API error's message, which can carry a response body", async () => {
     current.repo = rejecting(Object.assign(new Error("PRIVATE response body"), { name: "PRIVATE name" }));
     const text = await mount("/runs", "/runs", <RunsScreen />);

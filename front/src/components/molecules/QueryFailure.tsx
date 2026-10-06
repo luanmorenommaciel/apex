@@ -31,6 +31,14 @@ export function QueryFailure({ error, source, what }: {
   what: string;
 }) {
   const name = SOURCE_NAME[source];
+  // Only a string is a message. http.ts takes `detail` from the response body,
+  // and FastAPI's 422 sends a LIST of validation errors there — rendered as a
+  // React child that would throw and take the whole screen down with it, on
+  // the one request that was already failing.
+  const detail =
+    error instanceof ApiError && typeof error.detail === "string" && error.detail
+      ? error.detail
+      : "no readable detail";
   return (
     <Card accent="finding" className="px-4 py-3.5">
       {error instanceof ApiAuthError ? (
@@ -44,7 +52,7 @@ export function QueryFailure({ error, source, what }: {
         <Prose>
           {name} answered <Mono className="text-finding">{error.status || "nothing"}</Mono> on the{" "}
           <Mono className="text-body2">{what}</Mono> query:{" "}
-          <Mono className="text-finding">{error.detail}</Mono>. No absence conclusion can be
+          <Mono className="text-finding">{detail}</Mono>. No absence conclusion can be
           drawn from what is shown below.
         </Prose>
       ) : (
