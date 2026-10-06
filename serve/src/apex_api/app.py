@@ -28,6 +28,7 @@ from apex_mcp.ch import ApexStoreError, ReadStore
 from .auth import PUBLIC_PATHS, build_middleware
 from .config import Settings, load_settings
 from .routes import discover_routers
+from .wire import wire
 
 log = logging.getLogger("apex_api")
 
@@ -166,7 +167,10 @@ def create_app(
         different people.
         """
         try:
-            return {"status": "ok", "store": "ok", **get_store(request).store_health()}
+            # latest_ts leaves in the wire format, like every other timestamp.
+            return wire(
+                {"status": "ok", "store": "ok", **get_store(request).store_health()}
+            )
         except ApexStoreError as exc:
             return {"status": "ok", "store": "unreachable", "detail": str(exc)}
 

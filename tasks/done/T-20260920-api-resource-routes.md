@@ -1,7 +1,7 @@
 ---
 id: T-20260920-api-resource-routes
 title: "Serve the console's row-level data over /v1"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M

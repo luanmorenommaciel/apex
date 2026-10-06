@@ -78,8 +78,13 @@ fi
 
 step "4/6 run instrumented pathology: skew_join, ApexPlugin, AQE on (CONTRACT §Activation)"
 LOG=$(mktemp)
+# spark.driver.host / bindAddress: on the C3 overlay the master has two networks and
+# Spark advertises the driver by container hostname, which may resolve to the network
+# the RPC is NOT bound on — executors are then refused and the job never schedules.
+# Same two confs dev/scripts/e2e_canonical.sh passes.
 "${DEV_COMPOSE[@]}" exec -T -e APEX_AQE=on -e APEX_FIX=off -e APEX_SAFE=off spark-master \
   /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+  --conf spark.driver.host=spark-master --conf spark.driver.bindAddress=0.0.0.0 \
   --conf spark.plugins=apex.ApexPlugin \
   --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
   --conf spark.apex.aqe.enabled=true \

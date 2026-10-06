@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card, Label, Mono, Pill, Prose } from "@/components/atoms";
-import { DataTable, KpiCard, ScreenHeader, type Column } from "@/components/molecules";
+import { DataTable, KpiCard, ScreenHeader, type Column, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import { fmt } from "@/contract/rules";
 import { useAsync, useRepository } from "@/data/useRepository";
@@ -207,9 +207,29 @@ export function CompareScreen() {
     return out;
   }, [curF.data, baseF.data]);
 
+  // A rejected query is not a run with nothing to compare. The runs list is
+  // what every selection derives from, so its failure takes the page; the
+  // rest are reported above the cards they would have filled.
+  if (runsQ.error) {
+    return (
+      <Page>
+        <ScreenHeader title="Compare runs" subtitle="query failed" />
+        <QueryFailure error={runsQ.error} source={repo.kind} what="runs" />
+      </Page>
+    );
+  }
+  const failures = ([
+    ["baseline candidates", candidatesQ], ["current run", curRunQ], ["baseline run", baseRunQ],
+    ["current stages", curQ], ["baseline stages", baseQ],
+    ["current findings", curF], ["baseline findings", baseF],
+  ] as const).flatMap(([what, q]) => (q.error ? [{ what, error: q.error }] : []));
+
   return (
     <Page>
       <ScreenHeader title="Compare runs" subtitle="aligned on plan fingerprint · stage ids move between runs, fingerprints do not" />
+      {failures.map(({ what, error }) => (
+        <QueryFailure key={what} error={error} source={repo.kind} what={what} />
+      ))}
 
       <div className="flex items-center gap-4">
         <Card className="flex-1 px-4 py-3.5 flex flex-col gap-1">

@@ -22,6 +22,12 @@ CH_DB ?= apex
 CH_USER ?= apex_ro
 CH_PASSWORD ?=
 DATA_SOURCE ?= clickhouse
+# For DATA_SOURCE=http: where nginx forwards /v1, and the token /config.js
+# carries. The same gateway alias as CLICKHOUSE_UPSTREAM, for the same reason.
+# APEX_API_URL is deliberately not passed — it would make the browser call the
+# API cross-origin, which the API refuses.
+APEX_API_UPSTREAM ?= http://host.docker.internal:8099
+APEX_API_TOKEN ?=
 
 .PHONY: help install dev up up-fixtures down logs sh build preview prod typecheck clean reset ch-ping ch-tables ch-user store
 
@@ -59,7 +65,7 @@ build: ## Type-check and build the production bundle
 preview: ## Serve the production bundle locally
 	npm run preview
 
-prod: ## Build and run the nginx production image on :8080 (override CLICKHOUSE_UPSTREAM)
+prod: ## Build and run the nginx production image on :8080 (override CLICKHOUSE_UPSTREAM; DATA_SOURCE=http with APEX_API_UPSTREAM/APEX_API_TOKEN)
 	@# The build stage already runs `npm run build`; the old compose pre-step
 	@# rebuilt the same assets in the dev container and threw them away.
 	@test -n "$(CLICKHOUSE_UPSTREAM)" || { \
@@ -75,6 +81,8 @@ prod: ## Build and run the nginx production image on :8080 (override CLICKHOUSE_
 		-e CLICKHOUSE_USER="$(CH_USER)" \
 		-e CLICKHOUSE_PASSWORD="$(CH_PASSWORD)" \
 		-e DATA_SOURCE="$(DATA_SOURCE)" \
+		-e APEX_API_UPSTREAM="$(APEX_API_UPSTREAM)" \
+		-e APEX_API_TOKEN="$(APEX_API_TOKEN)" \
 		apex-console:prod
 
 typecheck: ## tsc --noEmit

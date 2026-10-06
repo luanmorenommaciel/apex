@@ -132,6 +132,102 @@ All 200 on a store with data. Recorded result: 16/16 routes 200, unknown job
 404, missing and bad tokens both 401, `fix-suggestion` returning
 `applied: false`.
 
+### 3.1 · Prove the rows, not the status codes
+
+The walk above checks status codes, and status codes are what passed while
+three routes returned the wrong projection. A 200 says a route answered; it
+does not say the console can render what came back.
+
+`tools/console_parity_gate.py` issues every statement the console sends
+**twice** — as the browser does, over ClickHouse HTTP as `apex_ro`, and through
+the API — and fails unless both doors return the same rows. It reads the
+statements out of `front/src/data/queries.ts`, so it compares against what the
+console actually sends rather than against a copy.
+
+**What the infra stack needs first**
+
+| Need | How | Without it |
+|---|---|---|
+| The store is up with the contract applied | step 1 | nothing runs. If only `plan_memory` / `run_outcomes` are missing, the memory checks print `NOT EXERCISED` |
+| The console's read-only user | `cd front && make ch-user` | the browser door is `apex_ro`; every browser-side statement is refused and the gate fails on its first line |
+| The environment names the store | the `CLICKHOUSE_*` variables from step 2, `CLICKHOUSE_DATABASE` included | the gate connects to `127.0.0.1:8123`, database `apex` — wrong on a host where `infra/.env` moved the port (the shared dev host uses 28123) |
+| A user that may write, for the default mode | `CLICKHOUSE_USER=apex` locally | the gate seeds its own rows and deletes them; on a store nobody may write to, use `--job-id` |
+
+```bash
+cd serve
+CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT=8123 \
+CLICKHOUSE_USER=apex CLICKHOUSE_PASSWORD=apex_local_dev CLICKHOUSE_DATABASE=apex \
+uv run python tools/console_parity_gate.py
+```
+
+| Mode | What it does |
+|---|---|
+| *(default)* | Seeds its own rows under job ids carrying a random suffix, runs every check, and removes exactly those rows — the arrangement `tools/read_only_gate.py` already uses. Exercises everything. |
+| `--job-id <id>` | Writes **nothing**. Compares the two doors on a run the store already holds. A behaviour that run's data cannot exercise prints `NOT EXERCISED`, which is not a pass. |
+| `--api-url http://127.0.0.1:8099 --api-token $TOK` | The API door is the **running service** from step 2 instead of an in-process app. This is the one that signs off a deployment; combine it with either mode above. |
+
+On infra's own seed (`infra/scripts/seed.sh`) use
+`--job-id ax151sasadds114`: the seed writes stages and one finding per skewed
+job, no transitions and no `run_outcomes`, so parity, the sentinel, the
+read-only proof and the wire format are exercised, and the two ordering checks
+print `NOT EXERCISED`. The default mode is what exercises all of them.
+
+**What each line proves**
+
+| Check | Proves | Why a fake cannot |
+|---|---|---|
+| eleven `same through both doors` lines | each route returns the columns, values and order the console's own statement returns | the projection lives in the SQL; a fake returns whatever rows it is handed |
+| `unindexed run reads as not indexed` | a run with no `run_outcomes` row reports `task_time_ms -1`, `shaped_stage_count -1`, `plan_fingerprint ''`, `config_source 'unknown'` | ClickHouse fills a missed `LEFT JOIN` with column DEFAULTS, not NULLs — the fill is the database's |
+| `statements run as a read-only user` | every statement executes under `readonly = 1`: none needs a setting, and `if()` found a common type for every branch | the type check and the settings refusal are the server's |
+| `findings ordered by confidence_score` | the first finding is the most confident one even when it is not the oldest — what `/verify` opens on | the order is `ORDER BY`'s |
+| `one transition per execution` | an execution re-planned three times is one row, carrying its last `update_seq` | the collapse is `GROUP BY` and `argMax` |
+| `timestamps in the wire format` | every timestamp leaves as `YYYY-MM-DDTHH:MM:SS.mmm`, UTC, no offset — the pattern `front/src/data/timestamp.ts` declares | the driver decides what a `DateTime64(3)` becomes |
+
+**Recorded result**, 2026-09-29, `clickhouse/clickhouse-server:24.8` — the
+image `infra/docker-compose.yml` pins — with `infra/sql/` 001–032 and
+`front/contract/01-readonly-user.sql` applied, in a disposable container:
+
+```text
+17 passed · 0 failed · 0 not exercised          (default mode)
+12 passed · 0 failed · 2 not exercised          (--job-id, one finding, no transitions)
+CONSOLE_PARITY_GATE=PASS
+```
+
+After every default run each contract table held 0 rows: the gate removed what
+it seeded.
+
+**Recorded 2026-10-06 against the long-lived infra stack** (`infra/` compose,
+ClickHouse 24.8, `make apply-ddl` current), in both modes:
+
+| Mode | Job | Result |
+|---|---|---|
+| default (seeded) | — | `17 passed · 0 failed · 0 not exercised`, 0 rows left behind |
+| `--job-id --api-url` against a running `apex-api` | `app-20260728210428-0004` (July) | `15 passed · 1 not exercised` (indexed) |
+| `--job-id --api-url` | `app-20261006193136-0000` (generated, old image) | `14 passed · 2 not exercised` |
+| `--job-id --api-url` | `app-20261006195655-0002` (generated, current jar) | `13 passed · 3 not exercised` — its three findings happen to be in ts order too |
+
+Those three jobs went Spark → plugin → OTLP → this store → engine → memory →
+API → every console screen in one run of `tests/e2e/console_reflection.sh`;
+`serve/VALIDATION.md` has the record and what it found.
+
+**The gate was checked against the defects it exists for.** Each was put back
+in a scratch copy and the gate was run on it:
+
+| Defect put back | What the gate said |
+|---|---|
+| findings route serves the MCP's projection | `columns differ — browser only ['ts'], api only ['app_id']` |
+| transitions route serves every `update_seq` | `browser returned 2, api returned 4` |
+| serve's rollup reads `ifNull()` | `task_time_ms: browser -1 != api 0` |
+| the console's rollup reads `ifNull()` | `task_time_ms: browser 0 != api -1` |
+| the API stops pinning its timestamps | `browser '…T19:00:20.123' != api '…T19:00:20.123000'` |
+
+**Timestamps.** Every timestamp on the resource tier and on `/v1/health` leaves
+in one format — ISO 8601 with a `T`, UTC, millisecond precision, no offset —
+set in `src/apex_api/wire.py`. The console brings its ClickHouse and fixture
+paths to the same format, so a row reads the same whichever door it came
+through. The diagnostics tier is not covered: its payloads are the MCP tools'
+own models.
+
 ---
 
 ## 4 · The docs
@@ -214,12 +310,6 @@ empty store.
 
 ## Known gaps
 
-- **A run the memory lane has not indexed reports `task_time_ms: 0`, not
-  `null`.** `front/src/data/repository.ts` treats `-1` as the "not indexed"
-  sentinel, but a ClickHouse `LEFT JOIN` miss fills a non-Nullable column with
-  `0`, so `ifNull(…, -1)` never fires. The console then renders a measured
-  zero for a number nobody measured. Pre-existing in the console's SQL and
-  carried into `ch.py` by the port; not yet fixed.
 - The MCP server still reads ClickHouse directly. Routing it through this API
   was planned and dropped: its tools need store primitives (`search`,
   `similar_plans`, `prior_outcomes`, …) that no route exposes.

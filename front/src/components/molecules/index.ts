@@ -9,3 +9,4 @@ export { DualVerdictPanel } from "./DualVerdictPanel";
 export { GuardrailList, type Guardrail } from "./GuardrailList";
 export { LayerTabs, type Layer } from "./LayerTabs";
 export { DataTable, type Column } from "./DataTable";
+export { QueryFailure } from "./QueryFailure";

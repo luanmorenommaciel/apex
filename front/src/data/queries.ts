@@ -100,6 +100,14 @@ f AS (
 -- calls it a per-shape span and "NOT a job duration".
 shapes AS (
   SELECT ro.job_id AS job_id,
+         -- The join sentinel: 1 on every real row, and a missed LEFT JOIN
+         -- fills it with 0. ClickHouse fills a miss with each column's
+         -- DEFAULT, never NULL (join_use_nulls is 0), so the ifNull() this
+         -- used to read never fired and an unindexed run rendered a measured
+         -- zero. Not SETTINGS join_use_nulls = 1: apex_ro is readonly = 1
+         -- (contract/01-readonly-user.sql) and may not change a setting per
+         -- query. serve/src/apex_mcp/ch.py carries this same body.
+         1                                                     AS indexed,
          sum(ro.task_time_ms)                                  AS task_time_ms,
          -- RunSummary holds one fingerprint; report the dominant shape and send
          -- shape_count with it, so "this run is one shape" stays distinguishable
@@ -130,13 +138,15 @@ SELECT
   b.started_at  AS started_at,
   ifNull(f.finding_count, 0) AS finding_count,
   ifNull(f.has_critical, 0)  AS has_critical,
-  -- A run the memory lane has not indexed joins to nothing. -1 marks that as
-  -- "not indexed", which the repository turns into null — never a zero.
-  ifNull(s.task_time_ms, -1)       AS task_time_ms,
-  ifNull(s.plan_fingerprint, '')   AS plan_fingerprint,
-  ifNull(s.shape_count, 0)         AS shape_count,
-  ifNull(s.shaped_stage_count, -1) AS shaped_stage_count,
-  ifNull(s.config_source, 'unknown') AS config_source,
+  -- A run the memory lane has not indexed joins to nothing. s.indexed is 0 on
+  -- that miss — read it, not the value, because the value is a DEFAULT and a
+  -- default 0 is indistinguishable from a measured one. -1 marks "not indexed",
+  -- which the repository turns into null — never a zero.
+  if(s.indexed = 1, toInt64(s.task_time_ms), -1)          AS task_time_ms,
+  if(s.indexed = 1, s.plan_fingerprint, '')               AS plan_fingerprint,
+  if(s.indexed = 1, s.shape_count, 0)                     AS shape_count,
+  if(s.indexed = 1, toInt64(s.shaped_stage_count), -1)    AS shaped_stage_count,
+  if(s.indexed = 1, toString(s.config_source), 'unknown') AS config_source,
   s.conf_executor_instances, s.conf_shuffle_partitions
 FROM base b
 LEFT JOIN f      ON f.job_id = b.job_id

@@ -1,7 +1,7 @@
 ---
 id: T-20260920-api-skeleton
 title: "Stand up the apex-api FastAPI application"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M

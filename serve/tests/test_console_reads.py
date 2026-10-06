@@ -178,7 +178,9 @@ def test_findings_route_carries_ts_and_the_ranked_statement():
 
     assert [row["finding_id"] for row in got] == ["hi", "lo"]
     assert all(set(FINDING_ROW_FIELDS) <= set(row) for row in got)
-    assert got[0]["ts"] == "2026-09-20 10:00:00"
+    # The wire format (apex_api.wire): the row a fake hands over as text leaves
+    # the API in the one format every timestamp leaves in.
+    assert got[0]["ts"] == "2026-09-20T10:00:00.000"
     sql = [q for q, _ in client.calls if reads(q, "findings")][-1]
     assert "ORDER BY confidence_score DESC" in normalise(sql)
 

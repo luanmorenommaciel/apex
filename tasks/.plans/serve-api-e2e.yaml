@@ -1,0 +1,143 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: serve-api-e2e
+  source: tests/e2e/console_reflection.sh
+  parent_plan: serve-api-wire
+  # Fourth manifest for the same initiative, for the same reason as the
+  # second and third. These three leaves came out of running one job end to
+  # end on 2026-10-06, Spark to console, before opening the PR.
+units:
+  - id: T-20261006-console-e2e-reflection
+    title: Prove one real job from the Spark plugin to every console screen
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/RUNBOOK.md, serve/VALIDATION.md, CHANGELOG.md, docs/e2e/README.md]
+    creates_paths: [tests/e2e/console_reflection.sh, front/src/e2e/console.live.test.tsx]
+    source_note: docs/e2e/README.md
+    why: Three end-to-end entry points exist and none reaches the console. tests/e2e/run.sh stops at the store, scripts/e2e_six_lanes.py stops at the MCP, and every console test stubs a door. Nothing had ever shown a job going Spark - plugin - OTLP - ClickHouse - engine - memory - API - screen, so nothing could say whether what a person reads on a screen is what the job did.
+    goal: A fourth entry point that takes a job already in the store, runs engine and memory on it exactly as an operator would, starts apex-api over the same store, proves the console's rows through both doors, then mounts the REAL App against that API and reads every screen for the job - refusing NaN, undefined, [object Object], the console's own failure notices, and requiring the counts a screen shows to be the counts the API returned.
+    context: The live test is skipped unless APEX_E2E_API_URL, APEX_E2E_API_TOKEN and APEX_E2E_JOB_ID are set - skipped and reported, never passed. It mounts App inside RepositoryProvider and a MemoryRouter with runtimeConfig mocked to the live API, so the HttpRepository under test is the real one over node's fetch. APEX_E2E_DUMP=<file> writes what each screen showed, because the invariants catch what must never appear and a person still has to read what does. The orchestrator kills the API by its listening port, not by the subshell's pid, because `uv run` leaves uvicorn behind - the first version left an orphan on 8099. It warns when a job carries no apex.job_conf row, naming what that costs on screen and the most likely cause, a dev image older than jar/src. Recorded 2026-10-06 against the infra stack on three jobs - two generated in the session, one from July - all green, and the generated runs are what found the two leaves below and the stale image.
+    behaviors:
+      - id: B-1
+        given: a job_id with spark_events rows in infra's ClickHouse
+        when: the orchestrator runs
+        then: engine writes deterministic findings with llm_calls 0, memory indexes the job, apex-api answers health with store ok, the parity gate passes on that job, and the live console test passes - one PASS line per step and a non-zero exit on any FAIL
+      - id: B-2
+        given: the live variables are absent
+        when: the front suite runs
+        then: the live test file is reported skipped and the suite still passes
+      - id: B-3
+        given: a job with no apex.job_conf row
+        when: the orchestrator runs
+        then: it prints a WARN naming the consequence on screen and the likely cause, and continues
+      - id: B-4
+        given: the live test against a running API
+        when: each screen settles
+        then: no screen contains NaN, undefined, [object Object], Infinity, APEX_API_TOKEN, query failed, could not be reached or NO RUN ROW, and /runs/:job shows the API's stage and finding counts
+    evals:
+      - id: eval_1
+        description: the live file is skipped, not failed, without a live API; types and lint hold
+        command: ( cd front && npm run typecheck && npm run lint && npx vitest run src/e2e/console.live.test.tsx 2>&1 | grep "skipped" >/dev/null )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 180
+      - id: eval_2
+        description: the orchestrator is sound shell and refuses to run without a job id
+        command: ( bash -n tests/e2e/console_reflection.sh && ! tests/e2e/console_reflection.sh >/dev/null 2>&1 )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 10
+      - id: eval_3
+        description: LIVE - needs infra up and a job in the store - the whole chain on one job
+        command: ( tests/e2e/console_reflection.sh --latest )
+        verifies: [B-1, B-3, B-4]
+        terminal: true
+        expected_duration_sec: 300
+    anti_patterns:
+      - Stubbing any door in the live test; the point is that none is.
+      - Passing when the live variables are absent; a skip is reported as a skip.
+      - Killing the API by the subshell pid; uvicorn survives and the next run finds the port taken.
+    do_not_touch:
+      - front/src/screens/
+      - front/src/data/
+      - serve/src/
+
+  - id: T-20261006-six-lane-gate-full-detail
+    title: Ask analyze_run for the full diagnosis in the canonical gate
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [scripts/e2e_six_lanes.py, tests/test_e2e_six_lanes.py]
+    creates_paths: []
+    source_note: scripts/e2e_six_lanes.py
+    why: The canonical six-lane gate failed every job with mcp_stage_count_mismatch 0 vs N. Its MCP probe called analyze_run with no detail, and since serve's L3 leg (2026-08-20) the default summary trims stages and findings to an empty list - a trimmed list, which the gate read as the whole. The gate was last touched 2026-08-19. Found live on 2026-10-06 against a 20-stage job.
+    goal: The probe asks for detail full, a unit test pins the arguments the probe sends, and the gate passes on a real job - engine idempotent, MCP read-only, stage and finding counts equal.
+    context: The fix is one argument; the test fakes the mcp client modules in sys.modules so live_mcp_probe runs without a server and the call_tool arguments can be asserted. Recorded 2026-10-06 - the gate passes on two generated jobs with the fix and fails on both without it.
+    behaviors:
+      - id: B-1
+        given: the live probe
+        when: it calls analyze_run
+        then: the arguments carry detail full
+      - id: B-2
+        given: a job in the store with findings
+        when: the gate runs
+        then: it reports status passed with serve stage_count equal to the stage rows and finding_count equal to engine's
+    evals:
+      - id: eval_1
+        description: the probe's arguments are pinned, and the gate's unit suite holds
+        command: ( cd engine && uv run --extra dev pytest ../tests/test_e2e_six_lanes.py -q -p no:warnings )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: LIVE - needs infra up and an analysed job - the gate passes on the newest job
+        command: ( set -a; . infra/.env; set +a; export CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT="${CLICKHOUSE_HTTP_HOST_PORT:-8123}" CLICKHOUSE_DATABASE="${CLICKHOUSE_DB:-apex}"; JOB=$(docker exec apex-infra-clickhouse clickhouse-client --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" -q "SELECT job_id FROM apex.spark_events GROUP BY job_id ORDER BY max(ts) DESC LIMIT 1"); cd serve && uv run --extra dev python ../scripts/e2e_six_lanes.py --job-id "$JOB" | grep '"status": "passed"' >/dev/null )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 120
+    anti_patterns:
+      - Loosening the gate to accept an empty stage list; the list is empty because it was trimmed, not because the run was.
+    do_not_touch:
+      - serve/src/
+
+  - id: T-20261006-dev-c3-driver-host
+    title: Advertise the Spark driver by service name on the C3 overlay
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [dev/Makefile, tests/e2e/run.sh]
+    creates_paths: []
+    source_note: dev/scripts/e2e_canonical.sh
+    why: On the C3 overlay the Spark master has two networks. The driver advertises itself by the container's hostname, which Docker DNS resolves to one network's address, while its RPC binds to the first interface - so executors connect to an address nothing listens on, are refused, and the job spins on "Initial job has not accepted any resources" forever, relaunching an executor per second. Which run hits it depends on interface order, so it looks intermittent - the first run of the session passed and the second did not. dev/scripts/e2e_canonical.sh already passes spark.driver.host and spark.driver.bindAddress for this reason; the Makefile's c3 and c4 targets and tests/e2e/run.sh did not.
+    goal: Every C3 and C4 submit in the dev Makefile and the submit in tests/e2e/run.sh pass spark.driver.host=spark-master and spark.driver.bindAddress=0.0.0.0, and the Makefile says why.
+    context: Reproduced 2026-10-06 - the same job on the same image, with and without the plugin, failed identically, and passed once the two confs were added, in 25 seconds. The fix mirrors e2e_canonical.sh exactly.
+    behaviors:
+      - id: B-1
+        given: make -n on each c3 and c4 target
+        when: the printed spark-submit is read
+        then: it carries both confs
+      - id: B-2
+        given: tests/e2e/run.sh
+        when: its submit is read
+        then: it carries both confs and the script parses
+    evals:
+      - id: eval_1
+        description: all four targets and run.sh carry the driver conf
+        command: ( cd dev && for t in c3-plugin-skew c4-aqe-skew c4-aqe-skewsplit c4-aqe-probe; do make -n $t | grep -q "spark.driver.host=spark-master --conf spark.driver.bindAddress=0.0.0.0" || exit 1; done && cd .. && bash -n tests/e2e/run.sh && grep -q "spark.driver.bindAddress=0.0.0.0" tests/e2e/run.sh )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 20
+    anti_patterns:
+      - Setting spark.driver.host in spark-defaults.conf; local-mode runs such as fp-test have no spark-master to advertise.
+    do_not_touch:
+      - dev/conf/
+      - dev/docker-compose.yml

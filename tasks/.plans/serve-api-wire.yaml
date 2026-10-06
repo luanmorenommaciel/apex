@@ -1,0 +1,155 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: serve-api-wire
+  source: tasks/.plans/serve-api-sweep.yaml
+  # A third manifest for the same initiative, for the reason the second one
+  # exists: `taskspec batch` refuses a manifest whose units are already
+  # materialised. Both leaves presume serve-api-sweep's six, all implemented on
+  # fix/apex-api-review-sweep and awaiting acceptance.
+  parent_plan: serve-api-sweep
+units:
+  - id: T-20260929-wire-timestamp-format
+    title: Return timestamps in one format, the API's, from every data source
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: [serve/src/apex_api/routes/resources.py, serve/src/apex_api/app.py, serve/tests/test_api_resources.py, front/src/data/repository.ts, front/src/data/httpRepository.test.ts, front/src/contract/types.ts]
+    creates_paths: [serve/src/apex_api/wire.py, serve/tests/test_api_wire.py, front/src/data/timestamp.ts, front/src/data/timestamp.test.ts]
+    source_note: front/src/data/repository.ts
+    why: The same row carries a different timestamp depending on which door it came through. Every time column in the contract is DateTime64(3). The browser path reads ClickHouse's JSON and gets `2026-09-20 10:00:00.123`; the API hands FastAPI a Python datetime and gets whatever isoformat() makes of it - `2026-09-20T10:00:00.123000`, or `2026-09-20T10:00:00` with no fraction at all when the milliseconds are zero, or a `+00:00` suffix if the driver ever returns an aware value, which relativeAge() then breaks by appending Z. Nothing on screen shows it today only because one consumer normalises (relativeAge) and the other slices ten characters (MemoryScreen). The sweep of PR 129 found it and nothing pinned it.
+    goal: One wire format, the API's - ISO 8601 with a T, UTC, millisecond precision, no offset, `2026-09-20T10:00:00.123` - emitted deliberately by the API rather than by an encoder's default, and returned by ClickHouseRepository, HttpRepository and FixtureRepository alike, so a screen cannot tell which source a timestamp came from.
+    context: The owner's decision, recorded 2026-09-29 - the format the API serves is the target, and the other paths move to it. The API's T form is kept; what changes on the API side is only that the precision stops depending on the value - milliseconds always, because the columns are DateTime64(3), so the format is fixed-width and sorts as text. That is a proposed refinement of "the API's format", open for review - the alternative is to reproduce isoformat()'s variable width on the console side, which would make the console emulate an accident. Two normalisers, one per host, and a test that ties them - the serve test reads WIRE_TIMESTAMP out of front/src/data/timestamp.ts and asserts every timestamp the resource routes emit matches it, the same way the projection parity test reads the row types. On the serve side the conversion lives at the HTTP boundary (apex_api/wire.py), NOT in ReadStore - the MCP tools read ReadStore's rows as datetimes and do arithmetic on them, so ch.py is do-not-touch. Datetime VALUES are converted wherever they appear in a resource payload; timestamp STRINGS are normalised only under the known timestamp keys, because evidence, detail and fix are untrusted text and must never be pattern-matched into something else. On the console side the conversion lives in the repository mappers, the one place all three sources pass through; fixtures.ts keeps its recorded literals and FixtureRepository normalises on the way out, so the recording stays a recording. A value the normaliser does not recognise is carried verbatim - never replaced with a guess. The diagnostics tier is out of scope - its payloads are the MCP tools' own models with their own timestamp fields, and server.py is do-not-touch. The SQL is deliberately NOT where this is fixed - formatDateTime() in both rollups would make the two hosts agree by construction, but it rewrites every projection in two files that a live store has not yet confirmed, and every alias it adds is a candidate for the ILLEGAL_AGGREGATION shadowing this codebase has already hit four times.
+    behaviors:
+      - id: B-1
+        given: a resource route whose store returns a datetime - naive, aware in another zone, with or without milliseconds
+        when: the route is called
+        then: the JSON carries `YYYY-MM-DDTHH:MM:SS.mmm` in UTC with no offset, the aware value converted rather than truncated
+      - id: B-2
+        given: WIRE_TIMESTAMP as declared in front/src/data/timestamp.ts
+        when: every timestamp field of every resource route is checked against it
+        then: all match, and the check fails when the API's precision or separator changes
+      - id: B-3
+        given: a ClickHouse JSON timestamp `2026-09-20 10:00:00.123`, an isoformat one with six digits, one with no fraction, one with Z and one with a +02:00 offset
+        when: toWireTimestamp is called
+        then: each returns the wire form of the SAME instant, and an already-wire value is returned unchanged
+      - id: B-4
+        given: each of ClickHouseRepository, HttpRepository and FixtureRepository
+        when: any method returning rows with a timestamp field is called
+        then: every such field matches WIRE_TIMESTAMP - started_at, ts, observed_at, first_run and last_run
+      - id: B-5
+        given: a string the normaliser does not recognise, null, or an untrusted text field that happens to contain a date
+        when: a row passes through either normaliser
+        then: the value is carried verbatim
+      - id: B-6
+        given: the MCP tools and the diagnostics routes
+        when: their tests run
+        then: they pass unchanged, and ch.py and server.py have no diff
+    evals:
+      - id: eval_1
+        description: the API emits the wire format whatever the driver hands it
+        command: ( cd serve && uv run --extra dev pytest tests/test_api_wire.py )
+        verifies: [B-1, B-5]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: every route's timestamps match the pattern the console declares
+        command: ( cd serve && uv run --extra dev pytest "tests/test_api_resources.py::test_every_timestamp_leaves_in_the_wire_format" )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_3
+        description: the console normaliser converts every input form to the same instant
+        command: ( cd front && npm run test -- --run src/data/timestamp.test.ts )
+        verifies: [B-3, B-5]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_4
+        description: all three repositories return wire timestamps
+        command: ( cd front && npm run test -- --run src/data/httpRepository.test.ts -t "wire timestamp" && npm run typecheck && npm run lint )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 180
+      - id: eval_5
+        description: the MCP side and ReadStore did not move
+        command: ( cd serve && uv run --extra dev pytest tests/test_server_tools.py tests/test_api_diagnostics.py tests/test_ch.py && git diff --exit-code --stat -- src/apex_mcp )
+        verifies: [B-6]
+        terminal: true
+        expected_duration_sec: 180
+    anti_patterns:
+      - Converting in ReadStore; the MCP tools do arithmetic on those datetimes and would receive strings.
+      - Regex-matching every string in a payload; evidence, detail and fix are untrusted text written by the observed job.
+      - Dropping an offset instead of converting it; a plus-two-hours value with its offset stripped is a timestamp two hours wrong that still looks valid.
+      - Rewriting the fixtures' literals; the recording is a recording, and the repository is where a source becomes a row.
+      - formatDateTime() in the SQL of both hosts before a live store has confirmed the statements that are already there.
+    do_not_touch:
+      - serve/src/apex_mcp/
+      - front/src/data/fixtures.ts
+      - front/src/screens/
+
+  - id: T-20260929-console-parity-live-gate
+    title: Make RUNBOOK step 3 prove the console's rows against a live store
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20260929-wire-timestamp-format]
+    touches_paths: [serve/RUNBOOK.md]
+    creates_paths: [serve/tools/console_parity_gate.py, serve/tests/test_console_parity_gate.py]
+    source_note: serve/RUNBOOK.md
+    why: RUNBOOK step 3 checks status codes - 200, 401, 404 - and status codes are what passed while the stages route returned the wrong projection, and would have kept passing for findings, transitions and an unindexed run. Every SQL statement the sweep wrote or changed was proven against fakes that return whatever rows they are handed; the projection lives in the SQL, and no test here has ever run it. The sweep's own report says so. What is owed is a check that a status code cannot satisfy.
+    goal: One command in RUNBOOK step 3 that, against the infra stack, issues each console statement twice - as the browser does, over ClickHouse HTTP as apex_ro, and through the API - and fails unless the two return the same rows; plus the four behaviours only a live store can show, each exercised on rows the gate seeds and removes itself, and each named with what it proves.
+    context: serve/tools/ already holds the live gates (read_only_gate.py, mcp_stdio_gate.py) and VALIDATION.md lists them; this is a third, same conventions - CLICKHOUSE_* from the environment, exit 0 or 1, one line per check. It reads the browser's statements out of front/src/data/queries.ts rather than restating them, so it compares what the console actually sends. It builds the API in-process with create_app() over a real ReadStore, so no port and no token are needed to run it; RUNBOOK step 3 keeps its curl walk for the deployed service. Rows are compared after the wire-timestamp normalisation, which is why this leaf depends on that one. The four live-only behaviours - (1) an unindexed run returns -1, -1, '' and 'unknown', the sentinel a fake cannot exercise because the fill is ClickHouse's; (2) both rollups execute as apex_ro, readonly = 1, proving no statement needs a setting and that if() found a common type for every branch; (3) findings come back confidence_score DESC when that order differs from ts ASC; (4) an execution re-planned three times is one transition row carrying the last update_seq. infra's seed.sh cannot exercise all four - it writes spark_events and one finding per skewed job, no transitions and no run_outcomes - so the gate does what read_only_gate.py already does in this directory and seeds its OWN disposable rows under job ids carrying a random suffix, then removes exactly those rows. Those writes are the fixture's; every code path under test, on both doors, issues SELECTs only. With --job-id the gate seeds nothing and compares the two paths on a run the store already holds, which is the mode for a store nobody may write to; there a behaviour the run's data cannot exercise prints NOT EXERCISED and does not count as passed - an unexercised check that prints green is how the nginx eval shipped.
+    behaviors:
+      - id: B-1
+        given: a live store and a job_id
+        when: the gate runs
+        then: for each console statement it prints one line comparing the browser path's rows with the API's, and exits non-zero if any differ
+      - id: B-2
+        given: a store holding a run with no run_outcomes row
+        when: the gate runs
+        then: it asserts task_time_ms -1, shaped_stage_count -1, plan_fingerprint '' and config_source 'unknown' on both paths
+      - id: B-3
+        given: --job-id naming a run whose data cannot exercise a behaviour - no re-planned execution, a single finding, an indexed run
+        when: the gate runs
+        then: that check prints NOT EXERCISED with the data that would exercise it, does not count as passed, and nothing is written to the store
+      - id: B-4
+        given: the statements in front/src/data/queries.ts
+        when: the gate extracts them
+        then: it issues them verbatim, with the console's parameter names, as apex_ro
+      - id: B-5
+        given: RUNBOOK step 3
+        when: it is read
+        then: it names the command, the four live-only behaviours and what each proves, and how to bring the infra stack to a state that exercises all four
+    evals:
+      - id: eval_1
+        description: the gate extracts the console's statements and compares rows correctly, offline
+        command: ( cd serve && uv run --extra dev pytest tests/test_console_parity_gate.py )
+        verifies: [B-3, B-4]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: the runbook names the gate and the behaviours it proves
+        command: ( cd serve && grep -q "console_parity_gate.py" RUNBOOK.md && grep -q "NOT EXERCISED" RUNBOOK.md && grep -q "apex_ro" RUNBOOK.md )
+        verifies: [B-5]
+        terminal: true
+        expected_duration_sec: 10
+      - id: eval_3
+        description: LIVE - needs the infra stack up (RUNBOOK steps 1 and 3) - the two paths return the same rows
+        command: ( cd serve && uv run python tools/console_parity_gate.py )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 120
+    anti_patterns:
+      - Comparing status codes; they are what passed while three routes returned the wrong rows.
+      - Printing PASS for a check the store's data could not exercise.
+      - Restating the console's SQL in the gate; it must read queries.ts.
+      - Leaving a seeded row behind, or deleting by anything broader than the gate's own job ids.
+      - Seeding in --job-id mode; that mode exists for a store nobody may write to.
+    do_not_touch:
+      - serve/src/apex_mcp/
+      - front/src/
+      - infra/

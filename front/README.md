@@ -1,8 +1,9 @@
 # Apex Console — React front end
 
 A runnable Vite + React + TypeScript implementation of the seven console
-screens, styled with Tailwind and reading the frozen **contract v0.6** tables
-straight from ClickHouse.
+screens, styled with Tailwind and reading the frozen **contract v0.6** tables —
+straight from ClickHouse, or through the Apex API in `serve/` so the browser
+holds an API token and no database user (`DATA_SOURCE=http`).
 
 ```bash
 make store         # start infra/'s ClickHouse and seed it — the canonical store
@@ -18,6 +19,20 @@ of depending on a compose-only service name or shared network alias.
 
 Without Docker: `npm ci && make dev` — with no store reachable,
 `VITE_DATA_SOURCE=auto` falls back to the recorded gate run.
+
+Against the Apex API instead of a database user — start `serve/`'s `apex-api`
+first ([serve/RUNBOOK.md](../serve/RUNBOOK.md), it uses port 8099), then:
+
+```bash
+VITE_DATA_SOURCE=http VITE_APEX_API_TOKEN=<token> make dev   # Vite proxies /v1 to 127.0.0.1:8099
+VITE_DATA_SOURCE=http VITE_APEX_API_TOKEN=<token> make up    # compose: the host gateway, port 8099
+```
+
+`VITE_APEX_API_PROXY_TARGET` moves the dev proxy's target; the browser keeps
+calling `/v1` relative and stays same-origin either way. `auto` probes the API
+first, then ClickHouse, then falls back to fixtures. An API that answers the
+probe with 401 is still selected: the refusal is shown on screen, never
+bypassed by falling back to the database credential the API exists to remove.
 
 ### Configure a deployment
 
@@ -37,11 +52,14 @@ side. One image therefore serves every deployment:
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `CLICKHOUSE_UPSTREAM` | *required* | Where nginx proxies `/clickhouse`. An endpoint only, **never** a credential. Missing ⇒ the container refuses to start with a named error instead of nginx's `invalid URL prefix` |
+| `CLICKHOUSE_UPSTREAM` | *depends on `DATA_SOURCE`* | Where nginx proxies `/clickhouse`. An endpoint only, **never** a credential. Required for `clickhouse`; for `auto`, at least one of this or an API must be set; **not needed** for `http` or `fixtures`. When the data source needs it and it is missing, the container refuses to start with a named error instead of nginx's `invalid URL prefix` |
 | `CLICKHOUSE_DB` | `apex` | Database the queries name |
 | `CLICKHOUSE_USER` | `apex_ro` | Must stay the read-only user — it ships to the browser |
 | `CLICKHOUSE_PASSWORD` | *empty* | Set to `""` deliberately for `no_password`; unset means "keep the bundle's default" |
-| `DATA_SOURCE` | `auto` | `clickhouse`, `fixtures`, or `auto` (ping and fall back) |
+| `DATA_SOURCE` | `auto` | `clickhouse`, `http`, `fixtures`, or `auto` (probe the API, then ClickHouse, then fall back) |
+| `APEX_API_UPSTREAM` | `http://127.0.0.1:1` | Where nginx proxies `/v1` for `DATA_SOURCE=http`. Defaults to an unroutable address so a ClickHouse-mode image still boots |
+| `APEX_API_TOKEN` | *unset* | The bearer token written into `/config.js`. A credential for the API, never for the store — scope and rotate it per consumer |
+| `APEX_API_URL` | *unset* | Only for a deliberate cross-origin call. The API sends no CORS header, so a browser blocks that; leave it unset and let nginx forward `/v1` |
 
 ```bash
 docker build --target prod -t apex-console:prod .
@@ -55,7 +73,22 @@ docker run --rm -p 8080:80 \
 ```
 
 `make prod` does the same against infra's store through the host gateway;
-override any of the five on the command line.
+override any of the eight on the command line. For the API path:
+
+```bash
+make prod DATA_SOURCE=http APEX_API_UPSTREAM=http://host.docker.internal:8099 APEX_API_TOKEN=<token>
+```
+
+An `http` container needs no `CLICKHOUSE_UPSTREAM` at all — run directly, it
+boots on the API alone:
+
+```bash
+docker run --rm -p 8080:80 \
+  -e DATA_SOURCE=http \
+  -e APEX_API_UPSTREAM=http://apex-api.example.internal:8099 \
+  -e APEX_API_TOKEN=<token> \
+  apex-console:prod
+```
 
 No short hostname is mandatory: deployments may use a Compose address, host
 gateway, private DNS name, or HTTPS reverse proxy without rebuilding assets.
@@ -124,13 +157,19 @@ interpolated, so a job id from the URL cannot become SQL.
 
 ```
 src/data/repository.ts   <- the seam
-  ClickHouseRepository   queries the database (the current choice)
+  ClickHouseRepository   queries the database from the browser (DATA_SOURCE=clickhouse)
+  HttpRepository         reads the same rows over serve/'s /v1 (DATA_SOURCE=http):
+                         the browser holds an API token and no database user
   FixtureRepository      serves the recorded gate run
-  HttpRepository         ...is the one to write when serve/ becomes the front door
 ```
 
-Swapping to `serve/` means implementing one interface. No screen changes,
-because no screen knows where a row came from.
+`HttpRepository` is that swap, made: one interface, and no screen changed,
+because no screen knows where a row came from. The rows come from the same SQL
+this file's `queries.ts` runs in the browser, now run server-side in
+`serve/src/apex_mcp/ch.py` — and a test on the serve side reads the row types
+from `src/contract/types.ts` and fails when a route stops projecting a field,
+so the two paths cannot drift apart. `/v1` is proxied the way `/clickhouse` is
+(Vite in dev, nginx in the image), so the API needs no CORS header either.
 
 **One honest gap:** `refused_count` is derived from the stage rows, not stored,
 so the runs list cannot compute it in a single query. It renders as `—`, never
@@ -220,7 +259,7 @@ and each screen says so on screen rather than faking the data. The ledger:
 
 | Screen | What is inert today | Which lane owes it |
 |--------|--------------------|--------------------|
-| `/ask` | The conversation is the two-turn script above. Real diagnostics need `serve/`'s tool endpoints — and, on this side, writing `HttpRepository` against the existing `Repository` interface | `serve` |
+| `/ask` | The conversation is the two-turn script above. The pieces now exist — `serve/` serves the eight MCP tools over `/v1`, and `HttpRepository` is written — and what is missing is a product decision on what `/ask` does with them and whether it needs a model. Recorded as `D-2026-09-23-ask-consumer` in `tasks/.plans/serve-api-sweep.yaml` | product |
 | `/memory` | Renders *"nothing indexed yet"*: `apex.plan_memory` is written by the memory lane, not the console. Until that lane runs over a job there is no history to recall | `memory` |
 | `/verify` | The two independent verdicts come from `apex.fix_verifications`, written by the verify lane; with no row the screen states the emptiness and which lane owes it. The proposed fix is also still prose — turning it into a testable config overlay is that lane's job | `verify` |
 | `/compare` | Needs a second run of the same plan fingerprint to align a baseline; shows *"no baseline"* until the store holds one | `collect` / `engine` (producing runs) |

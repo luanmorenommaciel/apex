@@ -1,7 +1,7 @@
 ---
 id: T-20260921-pr129-review-fixes
 title: "Fix the four defects Codex found on PR 129"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import pathlib
+import re
+
 import pytest
 
 from apex_mcp import ch
@@ -845,6 +848,8 @@ class _ConsoleClient:
         shape_rows: list[dict] | None = None,
         sample_rows: list[dict] | None = None,
         candidate_rows: list[dict] | None = None,
+        finding_rows: list[dict] | None = None,
+        transition_rows: list[dict] | None = None,
         tables: tuple[str, ...] = ("plan_memory", "run_outcomes"),
     ) -> None:
         self.run_rows = run_rows or []
@@ -852,6 +857,8 @@ class _ConsoleClient:
         self.shape_rows = shape_rows or []
         self.sample_rows = sample_rows or []
         self.candidate_rows = candidate_rows or []
+        self.finding_rows = finding_rows or []
+        self.transition_rows = transition_rows or []
         self.tables = tables
         self.calls: list[tuple[str, dict]] = []
 
@@ -869,6 +876,14 @@ class _ConsoleClient:
             rows = self.candidate_rows
         elif "severity_rank" in query or "node_count" in query:
             rows = self.shape_rows
+        # The rollup reads findings in a CTE, so it is recognised FIRST, by a
+        # column only it projects; the console's two statements come after.
+        elif "shaped_stage_count" in query:
+            rows = self.run_rows
+        elif reads(query, "plan_transitions"):
+            rows = self.transition_rows
+        elif reads(query, "findings"):
+            rows = self.finding_rows
         else:
             rows = self.run_rows
         return type("R", (), {"named_results": lambda _s: list(rows)})()
@@ -1102,3 +1117,133 @@ def test_access_denied_points_at_the_cause_behind_each_code(code, guidance):
     assert guidance in message
     for fragment in ("10.0.0.5", "8123", "DB::Exception"):
         assert fragment not in message
+
+
+# -- the console's findings and transitions, through the store ---------------
+
+
+def _select_clause(sql: str) -> str:
+    """The final SELECT's projection: what the client actually receives."""
+    head = sql.rindex("\nSELECT")
+    return sql[head: sql.index("\nFROM", head)]
+
+
+def test_console_findings_orders_by_confidence_score():
+    """console_findings is not findings(): different consumer, different order.
+
+    findings() serves the MCP — ts ASC, no ts column. VerifyScreen takes the
+    FIRST row as the highest-confidence finding and FindingRow requires ts, so
+    serving one as the other opened /verify on the oldest finding.
+    """
+    for present in (set(ch._FINDINGS_ADDITIVE), set()):
+        sql = ch._console_findings_sql(present)
+        assert "ORDER BY confidence_score DESC" in sql
+        assert "ORDER BY ts" not in sql
+        projection = _select_clause(sql)
+        for column in (
+            "finding_id", "job_id", "stage_id", "type", "severity", "confidence",
+            "confidence_score", "detected_by", "evidence", "impact", "fix",
+            "hot_key", "ts",
+        ):
+            assert re.search(rf"\b{column}\b", projection), (
+                f"the console reads {column} and this omits it"
+            )
+    rows = [
+        {"finding_id": "f-hi", "confidence_score": 0.9},
+        {"finding_id": "f-lo", "confidence_score": 0.2},
+    ]
+    client = _ConsoleClient(finding_rows=rows)
+    assert ReadStore(client).console_findings("j") == rows
+
+
+def test_console_transitions_collapse_per_execution():
+    """console_plan_transitions is not plan_transitions(): one row per execution.
+
+    PLAN_TRANSITIONS_SQL returns every update_seq row and projects no job_id,
+    plan_fingerprint or ts. The console counts rows as transitions and renders
+    the first row's before/after, so a thrice re-planned execution counted as
+    three and showed its oldest re-plan as the current one.
+    """
+    sql = ch.CONSOLE_PLAN_TRANSITIONS_SQL
+    assert "GROUP BY t.job_id, t.execution_id" in sql
+    for column in (
+        "job_id", "execution_id", "update_seq", "transition_type", "detail",
+        "before", "after", "confidence", "plan_fingerprint", "ts",
+    ):
+        assert f"AS {column}" in sql, f"the console reads {column} and this omits it"
+    # The LATEST re-plan wins: every per-execution column is argMax'd on update_seq.
+    for column in ("transition_type", "detail", "before", "after", "confidence"):
+        assert re.search(rf"argMax\(t\.{column}, t\.update_seq\)", sql), column
+    # The fingerprint is joined from spark_events, where it lives — and the CTE's
+    # aggregate is not named after the public alias, which 24.8 would shadow.
+    assert reads(sql, "spark_events")
+    assert "any(toString(plan_fingerprint)) AS fingerprint" in sql
+    assert not re.search(r"any\(toString\(plan_fingerprint\)\)\s+AS plan_fingerprint", sql)
+    rows = [{"execution_id": 1, "update_seq": 2, "transition_type": "skew_split"}]
+    client = _ConsoleClient(transition_rows=rows)
+    assert ReadStore(client).console_plan_transitions("j") == rows
+
+
+def test_console_findings_and_transitions_bind_parameters():
+    """A value carrying SQL syntax is bound, never interpolated — and empty is refused."""
+    client = _ConsoleClient()
+    store = ReadStore(client)
+    store.console_findings(INJECTION)
+    store.console_plan_transitions(INJECTION)
+    # The findings read probes the catalogue for the v0.2 additive columns
+    # first; that probe binds the database and table, not the job.
+    statements = [(q, p) for q, p in client.calls if "system.columns" not in q]
+    assert len(statements) == 2
+    for sql, parameters in statements:
+        assert INJECTION not in sql, "the value reached the statement text"
+        assert "{job_id:String}" in sql
+        assert parameters["job_id"] == INJECTION
+    with pytest.raises(ApexStoreError):
+        store.console_findings("")
+    with pytest.raises(ApexStoreError):
+        store.console_plan_transitions("")
+
+
+# -- the run rollup on an unindexed run ------------------------------------
+
+
+def test_run_rollup_marks_a_missed_shapes_join():
+    """A missed LEFT JOIN is DEFAULTS, not NULLs — so the sentinel, not ifNull.
+
+    ClickHouse fills the miss with 0 / '' / the enum's first value, and the
+    ifNull(…, -1) the rollup used to read never fired: an unindexed run came
+    back as task_time_ms 0, a measured zero for a number nobody measured.
+    """
+    for sql in (ch.RUN_ONE_SQL, ch.RUN_LIST_SQL):
+        assert re.search(r"\b1\s+AS indexed\b", sql), "the shapes CTE emits no sentinel"
+        assert "if(s.indexed = 1, toInt64(s.task_time_ms), -1)" in sql
+        assert "if(s.indexed = 1, toInt64(s.shaped_stage_count), -1)" in sql
+        assert "if(s.indexed = 1, toString(s.config_source), 'unknown')" in sql
+        assert "if(s.indexed = 1, s.plan_fingerprint, '')" in sql
+        assert "ifNull(s." not in sql, "an ifNull on the shapes side never fires on a miss"
+
+
+def test_run_rollup_carries_no_settings_clause():
+    """apex_ro is readonly = 1; a per-query SETTINGS would be refused in the browser."""
+    for sql in (ch.RUN_ONE_SQL, ch.RUN_LIST_SQL):
+        without_comments = re.sub(r"--[^\n]*", "", sql)
+        assert "SETTINGS" not in without_comments.upper()
+
+
+QUERIES_TS = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "data" / "queries.ts"
+
+
+def test_run_rollup_matches_the_console_sql():
+    """One rollup, two hosts: ch.py and queries.ts must be the same statement.
+
+    Compared with comments and whitespace removed. Both name their tables
+    unqualified, so there is nothing else to normalise.
+    """
+    source = QUERIES_TS.read_text()
+    body = source.split("const runRollup = (where: string, tail: string) => `", 1)[1]
+    body = body.split("\n`;", 1)[0].replace("${where}", "").replace("${tail}", "")
+
+    def normalise(text: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"--[^\n]*", "", text)).strip()
+
+    assert normalise(body) == normalise(ch._run_rollup_sql("", ""))

@@ -334,6 +334,10 @@ def _run_rollup_sql(where: str, tail: str) -> str:
     value — every user-supplied value in the result is still bound. Sharing
     one body is what stops the single-run and list forms from drifting into
     two different answers to "what is this run".
+
+    This body and ``runRollup`` in front/src/data/queries.ts are ONE statement
+    on two hosts; a test compares them with comments and whitespace removed.
+    Edit both or neither.
     """
     return f"""
 WITH
@@ -351,6 +355,13 @@ f AS (
 ),
 shapes AS (
   SELECT ro.job_id AS job_id,
+         -- The join sentinel: 1 on every real row, and a missed LEFT JOIN
+         -- fills it with 0. ClickHouse fills a miss with each column's
+         -- DEFAULT, never NULL (join_use_nulls is 0), so the ifNull() this
+         -- used to read never fired and an unindexed run rendered a measured
+         -- zero. Not SETTINGS join_use_nulls = 1: the console's apex_ro is
+         -- readonly = 1 and may not change a setting per query.
+         1                                                     AS indexed,
          sum(ro.task_time_ms)                                  AS task_time_ms,
          toString(argMax(ro.plan_fingerprint, ro.stage_count)) AS plan_fingerprint,
          uniqExact(ro.plan_fingerprint)                        AS shape_count,
@@ -368,11 +379,14 @@ SELECT
   b.started_at  AS started_at,
   ifNull(f.finding_count, 0) AS finding_count,
   ifNull(f.has_critical, 0)  AS has_critical,
-  ifNull(s.task_time_ms, -1)       AS task_time_ms,
-  ifNull(s.plan_fingerprint, '')   AS plan_fingerprint,
-  ifNull(s.shape_count, 0)         AS shape_count,
-  ifNull(s.shaped_stage_count, -1) AS shaped_stage_count,
-  ifNull(s.config_source, 'unknown') AS config_source,
+  -- s.indexed is 0 on a miss — read it, not the value, because the value is
+  -- a DEFAULT and a default 0 is indistinguishable from a measured one. -1
+  -- marks "not indexed", which the console's repository turns into null.
+  if(s.indexed = 1, toInt64(s.task_time_ms), -1)          AS task_time_ms,
+  if(s.indexed = 1, s.plan_fingerprint, '')               AS plan_fingerprint,
+  if(s.indexed = 1, s.shape_count, 0)                     AS shape_count,
+  if(s.indexed = 1, toInt64(s.shaped_stage_count), -1)    AS shaped_stage_count,
+  if(s.indexed = 1, toString(s.config_source), 'unknown') AS config_source,
   s.conf_executor_instances, s.conf_shuffle_partitions
 FROM base b
 LEFT JOIN f        ON f.job_id = b.job_id

@@ -257,3 +257,51 @@ def test_expected_hostname_query_error_is_sanitized(monkeypatch):
     assert "https://" not in message
     assert "super-secret" not in message
     assert "CLICKHOUSE_" not in message
+
+
+def test_live_probe_asks_analyze_run_for_the_full_diagnosis(monkeypatch):
+    """serve's `summary` default trims stages and findings to []; the gate counts both.
+
+    Found live on 2026-10-06: a 20-stage job failed the gate with
+    mcp_stage_count_mismatch:0!=20 because the probe sent no `detail`.
+    """
+    import sys
+    import types
+    from scripts import e2e_six_lanes as gate
+
+    calls: list[tuple[str, dict]] = []
+
+    class _Result:
+        content = [types.SimpleNamespace(text='{"job_id": "j", "stages": [], "findings": []}')]
+
+    class _Tool:
+        name = "analyze_run"
+        annotations = types.SimpleNamespace(readOnlyHint=True)
+
+    class _Session:
+        def __init__(self, *_: object) -> None: ...
+        async def __aenter__(self): return self
+        async def __aexit__(self, *_: object) -> None: ...
+        async def initialize(self) -> None: ...
+        async def list_tools(self): return types.SimpleNamespace(tools=[_Tool()])
+        async def call_tool(self, name: str, arguments: dict):
+            calls.append((name, arguments))
+            return _Result()
+
+    class _Stdio:
+        def __init__(self, *_: object) -> None: ...
+        async def __aenter__(self): return (None, None)
+        async def __aexit__(self, *_: object) -> None: ...
+
+    fake_mcp = types.ModuleType("mcp")
+    fake_mcp.ClientSession = _Session
+    fake_mcp.StdioServerParameters = lambda **kw: kw
+    fake_client = types.ModuleType("mcp.client")
+    fake_stdio = types.ModuleType("mcp.client.stdio")
+    fake_stdio.stdio_client = _Stdio
+    monkeypatch.setitem(sys.modules, "mcp", fake_mcp)
+    monkeypatch.setitem(sys.modules, "mcp.client", fake_client)
+    monkeypatch.setitem(sys.modules, "mcp.client.stdio", fake_stdio)
+
+    asyncio.run(gate.live_mcp_probe("j"))
+    assert calls == [("analyze_run", {"job_id": "j", "detail": "full"})]

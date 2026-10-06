@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { Card, Label, Mono, Prose } from "@/components/atoms";
-import { KpiCard, ScreenHeader } from "@/components/molecules";
+import { KpiCard, ScreenHeader, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import { canonicaliseConfValue, distinctConfigCount, fmt, ruleThreeAttributableToTuning } from "@/contract/rules";
 import { useAsync, useRepository } from "@/data/useRepository";
@@ -42,6 +42,17 @@ export function MemoryScreen() {
   );
   const runs = runsQ.data ?? [];
 
+  // A rejected query is not an unindexed store. Before the empty branch,
+  // which swallowed it: the API's 502 memory_unavailable says there is no
+  // TABLE, and "nothing indexed yet" says there is no HISTORY.
+  if (shapesQ.error) {
+    return (
+      <Page>
+        <ScreenHeader title="Plan memory" subtitle="query failed" />
+        <QueryFailure error={shapesQ.error} source={repo.kind} what="plan shapes" />
+      </Page>
+    );
+  }
   if (shapesQ.loading) return <Page><Prose>Loading plan memory…</Prose></Page>;
   if (!shape) {
     return (
@@ -73,6 +84,7 @@ export function MemoryScreen() {
           </>
         }
       />
+      {runsQ.error && <QueryFailure error={runsQ.error} source={repo.kind} what="shape runs" />}
 
       <div className="grid grid-cols-4 gap-3">
         <KpiCard label="PLAN SHAPES KNOWN" value={shapes.length} note="literal-normalized fingerprints" accent="memory" />

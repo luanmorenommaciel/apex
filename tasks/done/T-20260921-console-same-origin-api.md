@@ -1,7 +1,7 @@
 ---
 id: T-20260921-console-same-origin-api
 title: "Reach the API same-origin, the way the console reaches ClickHouse"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: M

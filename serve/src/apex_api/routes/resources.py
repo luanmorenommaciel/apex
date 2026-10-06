@@ -15,6 +15,10 @@ Two consequences of that rule, both visible below:
 
 Absence is never rendered as emptiness. An unknown job is 404, not a
 zero-filled row; a missing v0.3 table raises rather than returning [].
+
+Every timestamp leaves in ONE format — see ``apex_api.wire``. Each handler
+returns through ``wire()``, so the shape a client reads does not depend on
+what the driver happened to hand back.
 """
 
 from __future__ import annotations
@@ -24,6 +28,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from apex_mcp.ch import ReadStore
+
+from ..wire import wire
 
 router = APIRouter(tags=["resources"])
 
@@ -70,7 +76,7 @@ async def list_runs(
     cap = max(1, min(int(limit), store.MAX_RUNS))
     rows = store.run_list(limit=cap)
     _report_truncation(response, rows, cap)
-    return rows
+    return wire(rows)
 
 
 @router.get(RESOURCE_ROUTES["run"][1])
@@ -83,7 +89,7 @@ async def run(request: Request, job_id: str) -> dict[str, Any]:
     row = _store(request).run(job_id)
     if row is None:
         raise HTTPException(status_code=404, detail=f"no run with job_id {job_id!r}")
-    return row
+    return wire(row)
 
 
 @router.get(RESOURCE_ROUTES["stages"][1])
@@ -93,13 +99,13 @@ async def stages(request: Request, job_id: str) -> list[dict[str, Any]]:
     console_stages(), not stages(): the latter answers the MCP's StageView and
     aliases the timings to p50_ms/p99_ms, which the console does not read.
     """
-    return _store(request).console_stages(job_id)
+    return wire(_store(request).console_stages(job_id))
 
 
 @router.get(RESOURCE_ROUTES["jobConf"][1])
 async def job_conf(request: Request, job_id: str) -> list[dict[str, Any]]:
     """One row per configuration key. Empty when the jar emitted none."""
-    return _store(request).job_conf(job_id)
+    return wire(_store(request).job_conf(job_id))
 
 
 @router.get(RESOURCE_ROUTES["findings"][1])
@@ -110,7 +116,7 @@ async def findings(request: Request, job_id: str) -> list[dict[str, Any]]:
     console_findings(), not findings(): the latter answers the MCP's
     FindingView, oldest first and without ts.
     """
-    return _store(request).console_findings(job_id)
+    return wire(_store(request).console_findings(job_id))
 
 
 @router.get(RESOURCE_ROUTES["transitions"][1])
@@ -121,7 +127,7 @@ async def transitions(request: Request, job_id: str) -> list[dict[str, Any]]:
     plan_transitions(): a re-planned execution's stale decisions are
     superseded here rather than listed beside the one that replaced them.
     """
-    return _store(request).console_plan_transitions(job_id)
+    return wire(_store(request).console_plan_transitions(job_id))
 
 
 @router.get(RESOURCE_ROUTES["baselineCandidates"][1])
@@ -132,7 +138,7 @@ async def baseline_candidates(
     store = _store(request)
     rows = store.baseline_candidates(job_id)
     _report_truncation(response, rows, store.MAX_BASELINE_CANDIDATES)
-    return rows
+    return wire(rows)
 
 
 @router.get(RESOURCE_ROUTES["planShapes"][1])
@@ -141,13 +147,13 @@ async def plan_shapes(request: Request, response: Response) -> list[dict[str, An
     store = _store(request)
     rows = store.plan_shapes()
     _report_truncation(response, rows, store.MAX_SHAPES)
-    return rows
+    return wire(rows)
 
 
 @router.get(RESOURCE_ROUTES["shapeRuns"][1])
 async def shape_runs(request: Request, fingerprint: str) -> list[dict[str, Any]]:
     """Every run of one shape, oldest first."""
-    return _store(request).shape_runs(fingerprint)
+    return wire(_store(request).shape_runs(fingerprint))
 
 
 @router.get(RESOURCE_ROUTES["planSample"][1])
@@ -167,4 +173,4 @@ async def fix_verification(request: Request, finding_id: str) -> dict[str, Any] 
     yet, and here is the lane that owes it" state, which is a different screen
     from a missing resource.
     """
-    return _store(request).fix_verification(finding_id)
+    return wire(_store(request).fix_verification(finding_id))

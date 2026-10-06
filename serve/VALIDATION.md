@@ -431,3 +431,193 @@ the class of thing a fake cannot catch, one paragraph before it shipped.
 - Similarity is a brute-force `cosineDistance` scan of `apex.plan_memory`. Exact
   and cheap at a few thousand shapes; an ANN index would make it approximate,
   which is a correctness-visible change and not just a speed knob.
+
+---
+
+## API — console parity, recorded 2026-09-29
+
+Branch `fix/apex-api-review-sweep`, on top of `feat/add_apex_api` (PR #129) at
+`fab6620`. `apex-api` exists so the console can stop querying ClickHouse from
+the browser; this leg proves that a row is the same row whichever door it came
+through, which the unit suite cannot.
+
+### Unit suite — `314 passed` (289 on the base)
+
+| New coverage | Asserts |
+|---|---|
+| `tests/test_api_resources.py` (+4) | **projection parity**: eight row interfaces read from the TypeScript, each field emitted by the final SELECT that serves it — and the MCP's own findings projection fails it on `ts`; the findings and transitions routes; every timestamp of every route against the pattern the console declares |
+| `tests/test_ch.py` (+6) | the join sentinel in both rollup forms; no `SETTINGS` clause; the rollup is the console's `runRollup()` statement; findings order on a legacy table too; one transition per execution; binding and the refusal of an empty job id |
+| `tests/test_api_wire.py` (new, 7) | one shape whatever the precision; an aware datetime converted, not stripped; text reaching the same instant from five forms; untrusted text fields never read as timestamps; `/v1/health` |
+| `tests/test_console_parity_gate.py` (new, 8) | the gate reads the console's statements as written; numerics coerced by declared type like the browser; a Float32 is one number; a dropped column is reported, not raised; a check the data cannot exercise is never a pass; a privileged browser user voids the read-only proof |
+
+Front: `165 passed` (130 on the base), `tsc`, `eslint` and the production build
+clean.
+
+### `tools/console_parity_gate.py` — live ClickHouse `24.8`, `CONSOLE_PARITY_GATE=PASS`
+
+```text
+store    http://127.0.0.1:18123  database apex
+browser  ClickHouse HTTP as apex_ro, the way front/src/data/clickhouse.ts sends it
+api      in-process create_app() over a real ReadStore
+mode     seeded · its rows are removed afterwards
+
+  PASS  runs · run · stages · conf · findings · transitions ·
+        baseline-candidates · plans · shape runs · plan sample · verification ·
+        run (unindexed)                         same through both doors
+  PASS  unindexed run reads as not indexed      -1 / -1 / '' / 'unknown' on both doors
+  PASS  statements run as a read-only user      apex_ro has readonly = 1
+  PASS  findings ordered by confidence_score    first is not the oldest
+  PASS  one transition per execution            4 rows stored, 2 returned for 2 executions
+  PASS  timestamps in the wire format           18 timestamps match
+
+17 passed · 0 failed · 0 not exercised
+```
+
+- `--job-id`, on a run with one finding and no transitions: `12 passed · 0
+  failed · 2 not exercised`, and the row counts in the store did not move.
+- After every seeded run each of the seven contract tables held **0 rows**.
+- The store was the image `infra/docker-compose.yml` pins, with `infra/sql/`
+  001–032 and `front/contract/01-readonly-user.sql` applied, in a disposable
+  container — **not** the long-lived infra stack.
+
+### The gate was checked against the defects it exists for
+
+A gate that passes has proven nothing until it has been seen to fail. Each
+defect was put back in a scratch copy of the tree and the gate run on it:
+
+| Defect put back | Exit | What the gate said |
+|---|---|---|
+| *(control — nothing changed)* | 0 | `CONSOLE_PARITY_GATE=PASS` |
+| findings route serves the MCP's projection | 1 | `columns differ — browser only ['ts'], api only ['app_id']` |
+| transitions route serves every `update_seq` | 1 | `browser returned 2, api returned 4` |
+| serve's rollup reads `ifNull()` | 1 | `task_time_ms: browser -1 != api 0` |
+| the console's rollup reads `ifNull()` | 1 | `task_time_ms: browser 0 != api -1` |
+| the API stops pinning its timestamps | 1 | `browser '…T19:00:20.123' != api '…T19:00:20.123000'` |
+
+### What only a live database could show
+
+1. **The known gap was real, and worse than recorded.** RUNBOOK listed
+   `task_time_ms: 0` for an unindexed run. Live, the same miss also returned
+   `shaped_stage_count 0` and `config_source ''` — not `'unknown'` — so rule 1
+   was reading a blank as a configuration source.
+2. **The API had three timestamp shapes, not one.** `…T19:00:20.123000` with
+   milliseconds, `…T18:00:20` with none, against the browser's
+   `… 19:00:20.123`. The second form is the one a width-based parser breaks on.
+3. **`if()` needs a common type and `-1` has none with `UInt64`.**
+   `sum(stage_count)` is unsigned; the sentinel reads `toInt64()` of it. A fake
+   would have accepted the statement without it.
+4. **Every statement runs under `readonly = 1`.** Proven rather than assumed,
+   because the obvious fix for the join — `SETTINGS join_use_nulls = 1` — is
+   exactly what that user may not do.
+
+### Reconciled with the base
+
+`fab6620` landed on `feat/add_apex_api` while this leg was in progress and did
+three of the same things independently. Where they overlapped the base
+prevailed: its `console_findings` and `console_plan_transitions` serve the two
+routes, its `auto` probe stands (a 401 selects the API), and the
+`T-20260923-console-auto-prefers-api` leaf is parked as superseded. The
+sentinel was re-applied on the base's unqualified statements and satisfies
+`test_no_statement_names_a_database`.
+
+### Known limits
+
+- Not recorded against the long-lived infra stack, nor with `--api-url` against
+  a deployed API. RUNBOOK §3.1 lists what that run needs; it is what this leg
+  still owes.
+- The wire format covers the resource tier and `/v1/health`. The diagnostics
+  tier returns the MCP tools' own models, with their own timestamp fields.
+- On a cluster whose `apex.findings` predates the v0.2 additive columns, the
+  console's findings come back with `confidence_score 0` for every row, so
+  their order is `finding_id`'s. That is the base's choice — serve the legacy
+  table rather than fail — and the parity gate has not been run on such a store.
+- The seven leaves are implemented and their evals pass under `taskspec run`;
+  none is gated or accepted. That is the owner's signature, not the worker's.
+
+---
+
+## End to end — one job to every screen, recorded 2026-10-06
+
+Branch `fix/apex-api-review-sweep`. For the first time one job went **Spark →
+`ApexPlugin` → OTLP → infra's collector → ClickHouse → engine → memory →
+apex-api → the real App**, and what each screen showed was read against what
+the API returned. `tests/e2e/console_reflection.sh` is the entry point;
+`docs/e2e/README.md` places it beside the other three.
+
+### The runs
+
+| Job | Generated by | Stages | AQE | `job_conf` | Findings | Chain |
+|---|---|---|---|---|---|---|
+| `app-20260728210428-0004` | July's canonical run (in the store) | 17 | 2 rows → 1 execution | 0 | 3 | green |
+| `app-20261006193136-0000` | `skew_join`, forced skew split, dev image of 2026-07-28 | 20 | 1 `skew_split` HIGH | **0** | 3 | green |
+| `app-20261006195655-0002` | same job, image rebuilt from `jar/src` HEAD | 19 | 1 `skew_split` HIGH | **8 keys** | 3 | green |
+
+On every job: engine `mode: deterministic`, `llm_calls: 0`; memory indexed the
+run; `apex-api` up over the same store; parity gate `CONSOLE_PARITY_GATE=PASS`
+(13–15 passed, the rest `NOT EXERCISED` by that job's data); the live console
+test 8/8; the canonical six-lane gate `passed` — once it was fixed (below).
+The job ran in 25 s on 8 Docker CPUs, not the 385 s the July record shows.
+
+### What the console showed, and what it proved
+
+| Screen | With `job_conf` absent (old image) | With `job_conf` (current jar) |
+|---|---|---|
+| `/runs/:job` header | `19 stages · — · 3 findings · 5 of the 5 loudest refused · llm_calls — · config unknown` | `… · config observed` |
+| finding, no-op gate | `captured job_conf (0 keys): spark.executor.instances = absent` | `captured job_conf (8 keys): … adaptive.skewJoin.enabled = true ← already on` |
+| engine's fix text (stage 28/29) | "Whether skewJoin.enabled was already in force …" | **"NO-OP CHECK: spark.sql.adaptive.skewJoin.enabled is ALREADY true on this run — do not recommend enabling it."** |
+| `/memory` | `RUNS WITH CONFIG 0/5 · no job_conf captured on this shape` | `RUNS WITH CONFIG 1/6 · jar emitted job_conf` · `spark.sql.shuffle.partitions 1/6 runs reported it · Values seen: 100` |
+| `/compare` | baseline auto-selected by shared plan shape (`2 shared plan shapes`), `WALL CLOCK — → —`, shuffle +943.5% attributed to input growth | same |
+| `/verify` | `No verification for this finding` — the verify lane never ran; the guardrails list `cluster width rule 1 — spark.executor.instances absent — no width is assumed` | same |
+
+Every consequence of a missing `job_conf` surfaced on screen as an absence,
+never as a number. "5 of the 5 loudest refused" is the console's own rule 1
+refusing with `cluster_width_unknown` — standalone Spark sets no
+`spark.executor.instances` — while engine reports stage 28 through AQE
+corroboration. That is the contract's honest-unknown path, documented in
+`docs/e2e/CANONICAL_GATE.md`; in a demo it reads as a disagreement and should
+be introduced as what it is.
+
+### Three defects the run found
+
+1. **A dev image 74 minutes older than `job_conf`.** `apex-spark:4.1.2-local`
+   was built 2026-07-28 20:33 UTC; `ApexConfListener` landed at 21:47 UTC the
+   same day, and the jar changed four more times after. The plugin emitted
+   20 `apex.stage` + 1 `apex.plan_transition` spans and **no `apex.job_conf`**,
+   so `config_source` read `unknown` on every row, every `conf_*` column was
+   null and the no-op gate was blind. Not a repo defect — an environment one —
+   but silent: nothing in the pipeline says "the image predates the jar". The
+   orchestrator now prints a `WARN` naming the consequence and the likely
+   cause when a job carries no `job_conf` row.
+2. **The canonical six-lane gate failed every job** with
+   `mcp_stage_count_mismatch:0!=20`. Its MCP probe called `analyze_run` with
+   no `detail`; since serve's L3 leg (2026-08-20) the `summary` default trims
+   `stages` and `findings` to `[]`, and the gate — last touched 2026-08-19 —
+   read a trimmed list as the whole. One argument fixes it, a unit test pins
+   the arguments the probe sends, and the gate now passes on both generated
+   jobs (`T-20261006-six-lane-gate-full-detail`).
+3. **Executors refused on the C3 overlay.** The rebuilt cluster spun on
+   "Initial job has not accepted any resources", launching and losing an
+   executor per second — 664 of them. Executor stderr: `Connection refused:
+   67f5ed89e823/172.19.0.2:32771`. The master has two networks on the
+   overlay; Spark advertises the driver by the container's hostname, which
+   Docker DNS resolves to the `apex-collect-net` address, while the RPC was
+   bound on the other interface. Interface order decides which run hits it:
+   the first run of the session passed, the second did not, and the same job
+   **without the plugin** failed identically — so the jar was not the cause.
+   `dev/scripts/e2e_canonical.sh` already passes `spark.driver.host` and
+   `spark.driver.bindAddress`; the Makefile's `c3-*`/`c4-*` targets and
+   `tests/e2e/run.sh` did not. They do now
+   (`T-20261006-dev-c3-driver-host`); the job then ran in 25 s.
+
+### Known limits
+
+- The verify lane was not run, so every `/verify` screen shows the honest
+  absence, and `fix_verifications` parity is proven on "no row" only.
+- `cluster width` is unknown on standalone Spark; the console refuses rule 1
+  on every stage while engine reports stage 28 through AQE. Expected, and the
+  one thing on these screens a first-time viewer will read as a bug.
+- HyperDX was not started; `tests/e2e/run.sh`'s best-effort HyperDX step was
+  not exercised.
+- The live console test reads text, not pixels: it proves what a screen says,
+  not how it looks.
+

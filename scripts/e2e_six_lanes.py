@@ -167,6 +167,15 @@ async def run_gate(
     }
 
 
+# The gate counts the diagnosis's stages and compares its findings with engine's,
+# so it must ask for the WIDEST payload. serve's L3 leg gave analyze_run a
+# `detail` level whose default, "summary", trims stages and findings to [] —
+# and [] at summary is a trimmed list, not an empty run. The gate was written
+# before that level existed and read the default as the whole: every job then
+# failed with mcp_stage_count_mismatch:0!=N.
+ANALYZE_RUN_ARGUMENTS: dict[str, Any] = {"detail": "full"}
+
+
 async def live_mcp_probe(job_id: str) -> dict[str, Any]:
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
@@ -180,7 +189,7 @@ async def live_mcp_probe(job_id: str) -> dict[str, Any]:
         async with ClientSession(reader, writer) as session:
             await session.initialize()
             listed = await session.list_tools()
-            called = await session.call_tool("analyze_run", {"job_id": job_id})
+            called = await session.call_tool("analyze_run", {"job_id": job_id, **ANALYZE_RUN_ARGUMENTS})
     diagnosis = json.loads(called.content[0].text)
     return {
         "tools": [{"name": tool.name, "read_only": bool(tool.annotations and tool.annotations.readOnlyHint)} for tool in listed.tools],

@@ -4,28 +4,32 @@ from __future__ import annotations
 
 import pathlib
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi.testclient import TestClient
 
 from apex_api.app import create_app
 from apex_api.config import Settings
+from apex_api.wire import TIMESTAMP_FIELDS
 from apex_api.routes.resources import (
     LIMIT_HEADER,
     RESOURCE_ROUTES,
     TRUNCATED_HEADER,
 )
+from apex_mcp import ch
 from apex_mcp.ch import ReadStore
-from tests.conftest import FakeClient, finding_row, stage_row, transition_row
+from tests.conftest import FakeClient, finding_row, reads, stage_row, transition_row
 from tests.test_ch import _ConsoleClient
 
 TOKEN = "test-token-6c1f9a"
 SETTINGS = Settings(tokens=frozenset({TOKEN}))
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
 
-REPOSITORY_TS = (
-    pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "data" / "repository.ts"
-)
+FRONT_SRC = pathlib.Path(__file__).resolve().parents[2] / "front" / "src"
+REPOSITORY_TS = FRONT_SRC / "data" / "repository.ts"
+CONTRACT_TS = FRONT_SRC / "contract" / "types.ts"
+TIMESTAMP_TS = FRONT_SRC / "data" / "timestamp.ts"
 
 RUN_ROW = {
     "job_id": "j", "app_name": "nightly-rollup", "stage_count": 34,
@@ -167,3 +171,177 @@ def test_stages_route_returns_the_console_projection():
         assert field in got[0], f"the console reads {field} and the route omits it"
     # And the MCP's aliases must not leak through in their place.
     assert "p50_ms" not in got[0] and "p99_ms" not in got[0]
+
+
+def test_findings_route_returns_the_console_projection():
+    """VerifyScreen takes the first row as the highest-confidence finding."""
+    rows = [
+        {"finding_id": "f-hi", "confidence_score": 0.9, "ts": "2026-09-20 10:05:00"},
+        {"finding_id": "f-lo", "confidence_score": 0.2, "ts": "2026-09-20 10:00:00"},
+    ]
+    client = _ConsoleClient(finding_rows=rows)
+    got = build(client).get("/v1/runs/j/findings", headers=AUTH).json()
+    assert [r["finding_id"] for r in got] == ["f-hi", "f-lo"]
+    assert "ts" in got[0], "the console's FindingRow declares ts"
+    sql = next(q for q, _ in client.calls if reads(q, "findings") and "shaped_stage_count" not in q)
+    assert "ORDER BY confidence_score DESC" in sql and "ORDER BY ts" not in sql
+
+
+def test_transitions_route_returns_the_console_projection():
+    """One row per execution, at max(update_seq), with the run's fingerprint and ts."""
+    # ts is a datetime, because that is what the driver hands back; it leaves
+    # in the wire format like every other timestamp.
+    rows = [{
+        "job_id": "j", "execution_id": 1, "update_seq": 2, "transition_type": "skew_split",
+        "detail": "AQEShuffleRead skewed x4", "before": "1 skewed", "after": "4 skewed",
+        "confidence": "HIGH", "plan_fingerprint": "a" * 64,
+        "ts": datetime(2026, 9, 20, 10, 0, 0, 123000),
+    }]
+    client = _ConsoleClient(transition_rows=rows)
+    got = build(client).get("/v1/runs/j/transitions", headers=AUTH).json()
+    assert got == [dict(rows[0], ts="2026-09-20T10:00:00.123")]
+    sql = next(q for q, _ in client.calls if reads(q, "plan_transitions"))
+    assert "GROUP BY t.job_id, t.execution_id" in sql
+    for field in ("job_id", "plan_fingerprint", "ts"):
+        assert f"AS {field}" in sql, f"the console reads {field} and the route omits it"
+
+
+# -- projection parity -----------------------------------------------------
+#
+# Five times a console method was mapped onto a ReadStore method by name and
+# served a projection the console does not read: runs, verifications, stages,
+# findings, transitions. Each was fixed where it was found. This is the control
+# for the CLASS: the field lists are read from the TypeScript, not restated
+# here, and every one must be emitted by the final SELECT of the statement that
+# serves it.
+
+# Fields the console's own mapper supplies rather than the SQL, with the reason.
+MAPPER_SUPPLIED = {
+    # toFixVerification in repository.ts: no column stores the individual replay
+    # durations, and the two literals are the console's own guarantee.
+    "FixVerificationRow": {"replay_durations_ms", "requires_human_approval", "applied"},
+}
+
+CONSOLE_PROJECTIONS: dict[tuple[pathlib.Path, str], str] = {
+    (CONTRACT_TS, "FindingRow"): ch._console_findings_sql(set(ch._FINDINGS_ADDITIVE)),
+    (CONTRACT_TS, "PlanTransitionRow"): ch.CONSOLE_PLAN_TRANSITIONS_SQL,
+    (CONTRACT_TS, "JobConfRow"): ch.JOB_CONF_SQL,
+    (CONTRACT_TS, "FixVerificationRow"): ch.FIX_VERIFICATION_SQL,
+    (REPOSITORY_TS, "RunRollupRow"): ch.RUN_ONE_SQL,
+    (REPOSITORY_TS, "PlanShape"): ch.PLAN_SHAPES_SQL,
+    (REPOSITORY_TS, "ShapeRun"): ch.SHAPE_RUNS_SQL,
+    (REPOSITORY_TS, "BaselineCandidate"): ch.BASELINE_CANDIDATES_SQL,
+}
+
+
+def interface_fields(source_path: pathlib.Path, name: str) -> set[str]:
+    """Field names of one `interface NAME { ... }`, comments stripped first."""
+    source = source_path.read_text()
+    body = source.split(f"interface {name} {{", 1)[1].split("\n}", 1)[0]
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
+    body = re.sub(r"//[^\n]*", "", body)
+    return set(re.findall(r"\b(\w+)\??\s*:", body))
+
+
+def projected_columns(sql: str) -> set[str]:
+    """Column names the statement's FINAL SELECT emits.
+
+    `expr AS name` aliases, plus bare (optionally qualified) columns. CTE
+    SELECTs are indented in every statement here, so the last column-0 SELECT
+    is the projection the client sees.
+    """
+    head = sql.rindex("\nSELECT")
+    projection = sql[head + len("\nSELECT"): sql.index("\nFROM", head)]
+    projection = re.sub(r"--[^\n]*", "", projection)
+    names = set(re.findall(r"\bAS\s+(\w+)", projection))
+    for piece in re.split(r"[,\n]", projection):
+        bare = re.fullmatch(r"\s*(?:\w+\.)?(\w+)\s*", piece)
+        if bare:
+            names.add(bare.group(1))
+    return names
+
+
+def test_every_console_field_is_projected():
+    for (source, name), sql in CONSOLE_PROJECTIONS.items():
+        declared = interface_fields(source, name) - MAPPER_SUPPLIED.get(name, set())
+        assert declared, f"could not read {name} from {source.name}"
+        missing = declared - projected_columns(sql)
+        assert missing == set(), f"{name}: the console reads {sorted(missing)} and the SQL does not project them"
+
+    # The check discriminates: drop one column and it must notice.
+    findings_sql = ch._console_findings_sql(set(ch._FINDINGS_ADDITIVE))
+    assert "hot_key, ts\n" in findings_sql
+    assert "ts" not in projected_columns(findings_sql.replace("hot_key, ts\n", "hot_key\n"))
+    without_alias = ch.CONSOLE_PLAN_TRANSITIONS_SQL.replace("AS plan_fingerprint", "AS fp_out")
+    assert "plan_fingerprint" not in projected_columns(without_alias)
+    # And it is the MCP's own projection that fails it — the defect it is for.
+    mcp_findings = projected_columns(ch._findings_sql(set(ch._FINDINGS_ADDITIVE)))
+    assert "ts" in interface_fields(CONTRACT_TS, "FindingRow") - mcp_findings
+
+
+# -- the wire format -------------------------------------------------------
+
+
+def wire_pattern() -> re.Pattern[str]:
+    """WIRE_TIMESTAMP, read from the console's own source.
+
+    Not restated here: a pattern kept on both sides by hand is two patterns.
+    """
+    source = TIMESTAMP_TS.read_text()
+    literal = re.search(r"export const WIRE_TIMESTAMP = /(.+)/;", source)
+    assert literal, "could not read WIRE_TIMESTAMP from timestamp.ts"
+    return re.compile(literal.group(1))
+
+
+def declared_timestamps(source_path: pathlib.Path, name: str) -> set[str]:
+    """The fields one interface declares as WireTimestamp."""
+    source = source_path.read_text()
+    body = source.split(f"interface {name} {{", 1)[1].split("\n}", 1)[0]
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
+    body = re.sub(r"//[^\n]*", "", body)
+    return set(re.findall(r"\b(\w+)\??\s*:\s*WireTimestamp\b", body))
+
+
+def test_every_timestamp_leaves_in_the_wire_format():
+    pattern = wire_pattern()
+
+    # The allow-list covers every field the console declares as a timestamp.
+    declared: set[str] = set()
+    for source, name in [*CONSOLE_PROJECTIONS, (CONTRACT_TS, "RunSummary")]:
+        declared |= declared_timestamps(source, name)
+    assert {"ts", "started_at", "observed_at", "first_run", "last_run"} <= declared, (
+        f"the console's interfaces no longer declare their timestamps: {sorted(declared)}"
+    )
+    assert declared <= TIMESTAMP_FIELDS, (
+        f"declared by the console, unknown to the API: {sorted(declared - TIMESTAMP_FIELDS)}"
+    )
+
+    paths = (
+        "/v1/runs", "/v1/runs/j", "/v1/runs/j/stages", "/v1/runs/j/conf",
+        "/v1/runs/j/findings", "/v1/runs/j/transitions",
+        "/v1/runs/j/baseline-candidates", "/v1/plans", "/v1/plans/" + "a" * 64 + "/runs",
+    )
+    moment = datetime(2026, 9, 20, 10, 0, 0, 123000)
+    arrivals = (
+        moment,                                   # what the driver hands back
+        moment.replace(microsecond=0),            # isoformat() wrote NO fraction here
+        datetime(2026, 9, 20, 12, 0, 0, 123000, tzinfo=timezone(timedelta(hours=2))),
+        "2026-09-20 10:00:00.123",                # text, the way ClickHouse's JSON writes it
+    )
+    for value in arrivals:
+        row = {
+            "job_id": "j", "started_at": value, "ts": value, "observed_at": value,
+            "first_run": value, "last_run": value,
+        }
+        app = build(_ConsoleClient(
+            run_rows=[row], conf_rows=[row], shape_rows=[row], candidate_rows=[row],
+            finding_rows=[row], transition_rows=[row],
+        ))
+        for path in paths:
+            body = app.get(path, headers=AUTH).json()
+            seen = 0
+            for got in body if isinstance(body, list) else [body]:
+                for field in TIMESTAMP_FIELDS & set(got):
+                    assert pattern.fullmatch(got[field]), f"{path} {field}={got[field]!r} from {value!r}"
+                    seen += 1
+            assert seen, f"{path} returned no timestamp to check"

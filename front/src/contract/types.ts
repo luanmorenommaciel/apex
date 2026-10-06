@@ -8,6 +8,18 @@
 export const CONTRACT_VERSION = "0.5" as const;
 
 /**
+ * A point in time, as every Repository returns it: ISO 8601 with a `T`, UTC,
+ * millisecond precision, no offset — `2026-09-20T10:00:00.123`. It is the Apex
+ * API's format; the ClickHouse and fixture paths are normalised to it in
+ * src/data/repository.ts, so a screen cannot tell which source a timestamp
+ * came from. See src/data/timestamp.ts.
+ *
+ * An alias, not a brand. It documents the contract, and it is how serve's
+ * tests find every timestamp field: by its declared type, not by a list.
+ */
+export type WireTimestamp = string;
+
+/**
  * TWO confidence vocabularies, deliberately not one type.
  *
  * `apex.findings.confidence` is Enum8('LOW','MEDIUM','HIGH') — the engine's
@@ -76,7 +88,7 @@ export interface SparkEventContractV05 {
   app_name: string;
   stage_id: number;
   stage_attempt: number;
-  ts: string;
+  ts: WireTimestamp;
   shuffle_read_bytes: number;
   shuffle_write_bytes: number;
   spill_disk_bytes: number;
@@ -181,7 +193,7 @@ export interface PlanTransitionRow {
    * fingerprint actually lives. Empty when the job has no fingerprinted stage.
    */
   plan_fingerprint: string;
-  ts: string;
+  ts: WireTimestamp;
 }
 
 /** The resolved configuration the job actually ran with — not the repository's. */
@@ -190,7 +202,7 @@ export interface JobConfRow {
   key: string;
   /** Absent keys are ABSENT. Never defaulted, never synthesised. */
   value: string | null;
-  ts: string;
+  ts: WireTimestamp;
 }
 
 export interface FindingRow {
@@ -210,7 +222,7 @@ export interface FindingRow {
   impact: string;
   fix: string;
   hot_key: string;
-  ts: string;
+  ts: WireTimestamp;
 }
 
 export interface PlanMemoryRow {
@@ -318,5 +330,5 @@ export interface RunSummary {
   conf_executor_instances: number | null;
   /** Rule 7's configured partitions. Null is ABSENT, never a default. */
   conf_shuffle_partitions: number | null;
-  started_at: string;
+  started_at: WireTimestamp;
 }
