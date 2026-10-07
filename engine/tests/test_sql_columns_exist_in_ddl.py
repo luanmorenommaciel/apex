@@ -24,7 +24,11 @@ from pathlib import Path
 
 import pytest
 
-from apex_engine.clickhouse import STAGE_AGGREGATES_SQL, STAGE_EVENTS_SQL
+from apex_engine.clickhouse import (
+    REQUIRED_SPARK_EVENTS_COLUMNS,
+    STAGE_AGGREGATES_SQL,
+    STAGE_EVENTS_SQL,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -138,3 +142,25 @@ def test_removing_a_real_input_column_from_all_ddls_is_detected(column):
     undeclared = _columns_read_by(production_sql) - declared_without_column
 
     assert column in undeclared
+
+
+def test_preflight_requires_exactly_the_columns_the_stage_queries_read():
+    """The schema preflight (EngineStore.connect) checks a fixed set of
+    spark_events columns so a store that is behind fails at connect time rather
+    than mid-analyze(). That only holds while the set matches what the queries
+    read: a column read but not preflighted slips past connect and fails later
+    as a raw Code 47; a column preflighted but no longer read refuses a store the
+    engine could serve. Both sides come from the code itself — the constant and
+    this module's extraction of the queries — so neither is restated here.
+    """
+    read = _columns_read_by(STAGE_EVENTS_SQL + "\n" + STAGE_AGGREGATES_SQL)
+
+    read_but_not_preflighted = sorted(read - REQUIRED_SPARK_EVENTS_COLUMNS)
+    preflighted_but_not_read = sorted(REQUIRED_SPARK_EVENTS_COLUMNS - read)
+
+    assert not read_but_not_preflighted and not preflighted_but_not_read, (
+        "REQUIRED_SPARK_EVENTS_COLUMNS no longer matches the columns "
+        "STAGE_EVENTS_SQL/STAGE_AGGREGATES_SQL read. "
+        f"Read but not preflighted: {read_but_not_preflighted}. "
+        f"Preflighted but not read: {preflighted_but_not_read}."
+    )
