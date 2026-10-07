@@ -162,15 +162,15 @@ uv run python tools/console_parity_gate.py
 
 | Mode | What it does |
 |---|---|
-| *(default)* | Seeds its own rows under job ids carrying a random suffix, runs every check, and removes exactly those rows — the arrangement `tools/read_only_gate.py` already uses. Exercises everything. |
+| *(default)* | Seeds the required rows under job ids carrying a random suffix, runs every check, and removes exactly those rows — the arrangement `tools/read_only_gate.py` already uses. A seeded check that lacks its required findings tie is a failure. |
 | `--job-id <id>` | Writes **nothing**. Compares the two doors on a run the store already holds. A behaviour that run's data cannot exercise prints `NOT EXERCISED`, which is not a pass. |
 | `--api-url http://127.0.0.1:8099 --api-token $TOK` | The API door is the **running service** from step 2 instead of an in-process app. This is the one that signs off a deployment; combine it with either mode above. |
 
 On infra's own seed (`infra/scripts/seed.sh`) use
 `--job-id ax151sasadds114`: the seed writes stages and one finding per skewed
 job, no transitions and no `run_outcomes`, so parity, the sentinel, the
-read-only proof and the wire format are exercised, and the two ordering checks
-print `NOT EXERCISED`. The default mode is what exercises all of them.
+read-only proof and the wire format are exercised, and the findings and
+transitions ordering checks print `NOT EXERCISED`. The default mode is what exercises all of them.
 
 **What each line proves**
 
@@ -180,8 +180,42 @@ print `NOT EXERCISED`. The default mode is what exercises all of them.
 | `unindexed run reads as not indexed` | a run with no `run_outcomes` row reports `task_time_ms -1`, `shaped_stage_count -1`, `plan_fingerprint ''`, `config_source 'unknown'` | ClickHouse fills a missed `LEFT JOIN` with column DEFAULTS, not NULLs — the fill is the database's |
 | `statements run as a read-only user` | every statement executes under `readonly = 1`: none needs a setting, and `if()` found a common type for every branch | the type check and the settings refusal are the server's |
 | `findings ordered by confidence_score` | the first finding is the most confident one even when it is not the oldest — what `/verify` opens on | the order is `ORDER BY`'s |
+| `findings tie-break by finding_id` (browser and API separately) | each door returns `confidence_score DESC, finding_id ASC` when scores tie | two doors with the same wrong order can pass parity; each must also match the canonical order |
 | `one transition per execution` | an execution re-planned three times is one row, carrying its last `update_seq` | the collapse is `GROUP BY` and `argMax` |
 | `timestamps in the wire format` | every timestamp leaves as `YYYY-MM-DDTHH:MM:SS.mmm`, UTC, no offset — the pattern `front/src/data/timestamp.ts` declares | the driver decides what a `DateTime64(3)` becomes |
+
+**Findings fixture and required coverage.** The default fixture writes four
+findings: one high score, one low score, and two scores of `0.5`. The tied pair
+shares a timestamp and is inserted in reverse finding-id order. The indexed
+run's `finding_count` is derived from those four rows; the unindexed run's is
+zero. The gate checks the tied pair independently through the browser and API
+doors. If a seeded door cannot exercise the tie, it reports `FAIL`, not
+`NOT EXERCISED`. With `--job-id`, insufficient existing data still reports
+`NOT EXERCISED`; that result does not certify the tie-break. An unreadable
+confidence score is a diagnostic failure rather than an assumed numeric value.
+
+Current evidence for the extension tracked in
+[issue #156](https://github.com/luanmorenommaciel/apex/issues/156) is recorded in
+`VALIDATION.md`, section "Console gate follow-up — local evidence, 2026-10-07".
+It separates the original six live ordering controls, the corrected cleanup
+proof, the existing-job HTTP proof and the final offline combination. The
+historical results below precede this extension and remain historical.
+
+**Cleanup boundary.** Default mode removes only its fixture's exact job IDs
+from the six job-keyed contract tables and its exact fingerprint from
+`plan_memory`. When `spark_jobs_1m` exists in the configured session database,
+it also deletes those job IDs from that rollup, waiting for the mutations.
+Deleting `spark_events` alone does not retract an incremental materialized
+view's target. An explicitly absent rollup supports older schemas; a failed
+existence query is an error, not absence. The writer needs deletion permission
+on the rollup too when present. Store or permission failure during cleanup
+propagates; do not assume the fixture was removed after an error.
+
+**Invalid timestamps.** The primary findings check names a timestamp that is
+null, of the wrong type or outside the console's wire pattern before sorting.
+It reports `FAIL` without converting or guessing the value; a single invalid
+row is still a defect. This is a format check, not calendar validation. Existing
+runs without tied findings retain `NOT EXERCISED` on both tie-break checks.
 
 **Recorded result**, 2026-09-29, `clickhouse/clickhouse-server:24.8` — the
 image `infra/docker-compose.yml` pins — with `infra/sql/` 001–032 and

@@ -13,7 +13,9 @@ the type check and the ordering are ClickHouse's and no fake has them:
    missed LEFT JOIN is filled with;
 2. every statement executes as a ``readonly = 1`` user — no setting is needed,
    and ``if()`` found a common type for every branch;
-3. findings come back ``confidence_score DESC`` when that differs from ts ASC;
+3. findings come back ``confidence_score DESC`` when that differs from ts ASC,
+   and ``finding_id ASC`` where two of them tie on confidence_score — on EACH
+   door, because two doors wrong in the same way still agree with each other;
 4. an execution re-planned three times is ONE transition, carrying the last;
 5. every timestamp leaves the API in the wire format the console declares.
 
@@ -321,6 +323,8 @@ class Fixture:
     other_fingerprint: str
     finding_high: str
     finding_low: str
+    finding_tie_first: str
+    finding_tie_second: str
     job_ids: list[str] = field(default_factory=list)
 
 
@@ -336,6 +340,9 @@ def new_fixture() -> Fixture:
         other_fingerprint=digest(f"parity-gate-other-{run}"),
         finding_high=f"parity-gate-hi-{run}",
         finding_low=f"parity-gate-lo-{run}",
+        # Same run suffix, so -a- sorts before -b- whatever the suffix is.
+        finding_tie_first=f"parity-gate-tie-a-{run}",
+        finding_tie_second=f"parity-gate-tie-b-{run}",
     )
     fixture.job_ids = [fixture.indexed, fixture.baseline, fixture.unindexed]
     return fixture
@@ -376,15 +383,27 @@ def seed(client: Any, fx: Fixture) -> None:
     )
     # The LOW-confidence finding is the OLDER one, so confidence_score DESC and
     # ts ASC disagree about which comes first.
+    #
+    # The two TIE findings share confidence_score AND ts AND severity, so
+    # neither the score nor the table's ORDER BY (job_id, severity, ts) can
+    # order them: only finding_id ASC can. They are inserted in the OPPOSITE
+    # order, -b- before -a-, so insertion order is not what puts them right
+    # when a statement has lost its tie-break. 0.5 is exact in Float32.
+    tied = base + timedelta(minutes=3)
+    findings = [
+        [fx.finding_low, fx.indexed, f"app-{fx.indexed}", 1, "SPILL", "warning",
+         "spill on stage 1", "", "slower", "raise memory", "LOW", 0.2, "memory_watcher", base],
+        [fx.finding_high, fx.indexed, f"app-{fx.indexed}", 2, "SKEW_ON_JOIN", "critical",
+         "p99/p50 = 9x", "customer_id=7", "slow", "enable AQE skew join", "HIGH", 0.9,
+         "skew_watcher", base + timedelta(minutes=5)],
+        [fx.finding_tie_second, fx.indexed, f"app-{fx.indexed}", 1, "BAD_SHUFFLE", "warning",
+         "tied b", "", "slower", "coalesce partitions", "MEDIUM", 0.5, "correlation", tied],
+        [fx.finding_tie_first, fx.indexed, f"app-{fx.indexed}", 1, "BAD_SHUFFLE", "warning",
+         "tied a", "", "slower", "coalesce partitions", "MEDIUM", 0.5, "correlation", tied],
+    ]
     client.insert(
         "findings",
-        [
-            [fx.finding_low, fx.indexed, f"app-{fx.indexed}", 1, "SPILL", "warning",
-             "spill on stage 1", "", "slower", "raise memory", "LOW", 0.2, "memory_watcher", base],
-            [fx.finding_high, fx.indexed, f"app-{fx.indexed}", 2, "SKEW_ON_JOIN", "critical",
-             "p99/p50 = 9x", "customer_id=7", "slow", "enable AQE skew join", "HIGH", 0.9,
-             "skew_watcher", base + timedelta(minutes=5)],
-        ],
+        findings,
         column_names=[
             "finding_id", "job_id", "app_id", "stage_id", "type", "severity", "evidence",
             "hot_key", "impact", "fix", "confidence", "confidence_score", "detected_by", "ts",
@@ -421,7 +440,8 @@ def seed(client: Any, fx: Fixture) -> None:
         "run_outcomes",
         [
             [fx.indexed, f"app-{fx.indexed}", "parity-gate", fx.fingerprint, 200, 8, 4, 8192,
-             "observed", 2, 100, 90_000, 91_000, 2, "critical", "apex",
+             "observed", 2, 100, 90_000, 91_000,
+             sum(1 for row in findings if row[1] == fx.indexed), "critical", "apex",
              base + timedelta(seconds=90), base + timedelta(minutes=20)],
             [fx.baseline, f"app-{fx.baseline}", "parity-gate", fx.fingerprint, 800, 8, 4, 8192,
              "observed", 1, 50, 0, 40_000, 0, "", "apex",
@@ -465,8 +485,13 @@ def remove(client: Any, fx: Fixture) -> None:
     """
     jobs = ", ".join(f"'{job}'" for job in fx.job_ids)
     wait = {"mutations_sync": 1}
-    for table in ("spark_events", "findings", "plan_transitions", "job_conf",
-                  "run_outcomes", "fix_verifications"):
+    tables = ["spark_events", "findings", "plan_transitions", "job_conf",
+              "run_outcomes", "fix_verifications"]
+    # Deleting the source rows does not retract an incremental MV's target.
+    # The rollup is optional on older stores; a query error is not absence.
+    if client.query("EXISTS TABLE spark_jobs_1m").result_rows[0][0]:
+        tables.append("spark_jobs_1m")
+    for table in tables:
         client.command(f"ALTER TABLE {table} DELETE WHERE job_id IN ({jobs})", settings=wait)
     client.command(
         "ALTER TABLE plan_memory DELETE WHERE plan_fingerprint = "
@@ -498,11 +523,14 @@ def compare_doors(
     report: Report, store: Store, api: Api, statements: dict[str, str],
     job: str, fingerprint: str, finding: str,
     *, only: set[str] | None = None, suffix: str = "",
+    browser_seen: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Each console statement through both doors. Returns the API's payloads.
 
     ``only`` narrows the run to the named checks; ``suffix`` tells two runs of
-    the same check apart in the report.
+    the same check apart in the report. ``browser_seen``, when given, receives
+    the browser door's rows in the order that door returned them: parity alone
+    cannot see two doors that are wrong the same way.
     """
     from apex_api.wire import wire
 
@@ -561,6 +589,8 @@ def compare_doors(
         # The browser's rows as a screen receives them: numerics coerced by
         # clickhouse.ts, timestamps brought to the wire format by the repository.
         browser = wire(browser)
+        if browser_seen is not None:
+            browser_seen[name] = browser
         if name == "run":
             expected: Any = browser[0] if browser else None
         elif name == "plan sample":
@@ -579,11 +609,76 @@ def compare_doors(
     return seen
 
 
+TIE_BREAK = "findings tie-break by finding_id"
+
+
+def _is_score(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and not math.isnan(value)
+
+
+def tie_break(rows: Any) -> tuple[str, str]:
+    """Findings where confidence_score cannot decide: ``finding_id ASC``.
+
+    Separate from the primary order check, which is exercised by scores that
+    DIFFER and cannot see a tie. Exercised only when two findings share a
+    confidence_score — a score of 0, the column's default, ties like any other
+    — and then the whole list must be ``confidence_score DESC, finding_id
+    ASC``. A row this cannot read is a FAIL that names it, never an exception
+    and never a guess: a missing score is not taken to be 0, and a value of a
+    type the console does not declare is not compared. Python orders str by
+    code point, which for UTF-8 is ClickHouse's byte order on a String.
+    """
+    if rows is None:
+        rows = []
+    if not isinstance(rows, list):
+        return FAIL, f"findings came back as {type(rows).__name__}, not a list of rows"
+    if len(rows) < 2:
+        return SKIP, f"{len(rows)} finding(s); needs two findings tied on confidence_score"
+    unreadable = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            unreadable.append(f"[{index}] is {type(row).__name__}, not a row")
+            continue
+        if "finding_id" not in row:
+            unreadable.append(f"[{index}] carries no finding_id")
+        elif not isinstance(row["finding_id"], str):
+            unreadable.append(f"[{index}].finding_id is {type(row['finding_id']).__name__} "
+                              f"{row['finding_id']!r}, not a String")
+        if "confidence_score" not in row:
+            unreadable.append(f"[{index}] carries no confidence_score")
+        elif not _is_score(row["confidence_score"]):
+            unreadable.append(f"[{index}].confidence_score is {type(row['confidence_score']).__name__} "
+                              f"{row['confidence_score']!r}, not a number this can order")
+    if unreadable:
+        return FAIL, "no tie-break can be established: " + "; ".join(unreadable[:4])
+    scores = [row["confidence_score"] for row in rows]
+    tied = sorted({score for score in scores if scores.count(score) > 1}, reverse=True)
+    if not tied:
+        return SKIP, (f"{len(rows)} findings, no two share a confidence_score; "
+                      "needs two findings tied on confidence_score")
+    returned = [row["finding_id"] for row in rows]
+    canonical = [row["finding_id"] for row in
+                 sorted(rows, key=lambda row: (-row["confidence_score"], row["finding_id"]))]
+    groups = "; ".join(f"{score}: {[r['finding_id'] for r in rows if r['confidence_score'] == score]}"
+                       for score in tied)
+    if returned == canonical:
+        return PASS, f"tied on confidence_score — {groups} — each tie in finding_id ASC"
+    at = next(i for i, (got, want) in enumerate(zip(returned, canonical)) if got != want)
+    return FAIL, (f"[{at}] is {returned[at]!r} where confidence_score DESC, finding_id ASC "
+                  f"puts {canonical[at]!r}; returned {returned}")
+
+
 def live_only(
     report: Report, store: Store, api: Api, statements: dict[str, str],
     pattern: re.Pattern[str], seen: dict[str, Any], *, job: str, unindexed_job: str | None,
+    browser_seen: dict[str, Any] | None = None, seeded_tie: bool = False,
 ) -> None:
-    """What only a live store can show. Each check says what it proves."""
+    """What only a live store can show. Each check says what it proves.
+
+    ``browser_seen`` adds the browser door's rows to the checks that judge an
+    order. ``seeded_tie`` says the fixture wrote tied findings, so a tie-break
+    check with no tie to see is a missing row, not a run without one.
+    """
     from apex_api.wire import TIMESTAMP_FIELDS
 
     def count(sql: str, **params: Any) -> int:
@@ -624,21 +719,47 @@ def live_only(
     incomplete = [row.get("finding_id") for row in findings
                   if "ts" not in row or "confidence_score" not in row]
     scores = [row.get("confidence_score") for row in findings]
-    by_time = [] if incomplete else sorted(findings, key=lambda row: row["ts"])
+    unorderable = [f"{row.get('finding_id')}: {type(row['confidence_score']).__name__} "
+                   f"{row['confidence_score']!r}" for row in findings
+                   if "confidence_score" in row and not _is_score(row["confidence_score"])]
+    invalid_times = [f"{row.get('finding_id')}: {type(row['ts']).__name__} {row['ts']!r}"
+                     for row in findings if "ts" in row
+                     and not (isinstance(row["ts"], str) and pattern.fullmatch(row["ts"]))]
+    by_time = [] if incomplete or invalid_times else sorted(findings, key=lambda row: row["ts"])
     if incomplete:
         # Reported, never raised: a route that dropped the column is the very
         # defect this gate exists to name, and a traceback names nothing.
         report.add(FAIL, "findings ordered by confidence_score",
                    f"no order can be established: {incomplete} carry no ts or no confidence_score")
-    elif len(findings) < 2 or [r["finding_id"] for r in by_time] == [r["finding_id"] for r in findings]:
+    elif invalid_times:
+        # A malformed projection must be named before sorting mixed types;
+        # no guessed or converted timestamp can establish the ts order.
+        report.add(FAIL, "findings ordered by confidence_score",
+                   f"no order can be established: {invalid_times} not in the timestamp wire format")
+    elif len(findings) < 2 or by_time == findings:
         report.add(SKIP, "findings ordered by confidence_score",
                    f"{len(findings)} finding(s) whose confidence order equals their ts order; "
                    "needs two findings where the older one is the less confident")
+    elif unorderable:
+        # Named, never converted: '0.5' beside 0.5 is a projection defect, and
+        # sorted() over the two raised before any check could report it.
+        report.add(FAIL, "findings ordered by confidence_score",
+                   f"no order can be established: {unorderable} not a number this can order")
     else:
         ordered = scores == sorted(scores, reverse=True)
         report.add(PASS if ordered else FAIL, "findings ordered by confidence_score",
-                   f"scores {scores} — first is {findings[0]['finding_id']}, which is not the oldest"
+                   f"scores {scores} — first is {findings[0].get('finding_id')}, which is not the oldest"
                    if ordered else f"scores {scores} are not descending")
+
+    # 3b · findings tie-break, on each door ---------------------------------
+    doors = [("api", seen.get("findings"))]
+    if browser_seen is not None:
+        doors.append(("browser", browser_seen.get("findings")))
+    for door, rows in doors:
+        verdict, detail = tie_break(rows)
+        if verdict == SKIP and seeded_tie:
+            verdict, detail = FAIL, f"the fixture seeded two tied findings; this door returned none — {detail}"
+        report.add(verdict, f"{TIE_BREAK} · {door}", detail)
 
     # 4 · transitions collapse ----------------------------------------------
     raw = count("SELECT count() FROM plan_transitions WHERE job_id = {job:String}", job=job)
@@ -732,13 +853,16 @@ def main(argv: list[str] | None = None) -> int:
             job, unindexed = fixture.indexed, fixture.unindexed
             fingerprint, finding = fixture.fingerprint, fixture.finding_high
 
-        seen = compare_doors(report, store, api, statements, job, fingerprint, finding)
+        browser_seen: dict[str, Any] = {}
+        seen = compare_doors(report, store, api, statements, job, fingerprint, finding,
+                             browser_seen=browser_seen)
         if unindexed:
             # The unindexed run through both doors too: parity on the miss itself.
             compare_doors(report, store, api, statements, unindexed, "", "",
                           only={"run"}, suffix=" (unindexed)")
         print()
-        live_only(report, store, api, statements, pattern, seen, job=job, unindexed_job=unindexed)
+        live_only(report, store, api, statements, pattern, seen, job=job, unindexed_job=unindexed,
+                  browser_seen=browser_seen, seeded_tie=fixture is not None)
     finally:
         if fixture is not None and admin is not None:
             remove(admin, fixture)
