@@ -616,6 +616,14 @@ def _is_score(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and not math.isnan(value)
 
 
+def findings_shape_errors(rows: Any, door: str) -> list[str]:
+    """Name malformed findings without treating their contents as rows."""
+    if not isinstance(rows, list):
+        return [f"{door} findings came back as {type(rows).__name__}, not a list of rows"]
+    return [f"{door}[{index}] is {type(row).__name__}, not a row"
+            for index, row in enumerate(rows) if not isinstance(row, dict)]
+
+
 def tie_break(rows: Any) -> tuple[str, str]:
     """Findings where confidence_score cannot decide: ``finding_id ASC``.
 
@@ -715,48 +723,67 @@ def live_only(
                + ("" if level >= 1 else " — every browser-door result above was NOT proven under readonly"))
 
     # 3 · findings order ----------------------------------------------------
-    findings = seen.get("findings") or []
-    incomplete = [row.get("finding_id") for row in findings
-                  if "ts" not in row or "confidence_score" not in row]
-    scores = [row.get("confidence_score") for row in findings]
-    unorderable = [f"{row.get('finding_id')}: {type(row['confidence_score']).__name__} "
-                   f"{row['confidence_score']!r}" for row in findings
-                   if "confidence_score" in row and not _is_score(row["confidence_score"])]
-    invalid_times = [f"{row.get('finding_id')}: {type(row['ts']).__name__} {row['ts']!r}"
-                     for row in findings if "ts" in row
-                     and not (isinstance(row["ts"], str) and pattern.fullmatch(row["ts"]))]
-    by_time = [] if incomplete or invalid_times else sorted(findings, key=lambda row: row["ts"])
-    if incomplete:
-        # Reported, never raised: a route that dropped the column is the very
-        # defect this gate exists to name, and a traceback names nothing.
+    doors = [("api", seen)]
+    if browser_seen is not None:
+        doors.append(("browser", browser_seen))
+    invalid_rows = {}
+    for door, payloads in doors:
+        rows = payloads.get("findings")
+        if isinstance(rows, list):
+            invalid_rows[door] = findings_shape_errors(rows, door)
+    findings = seen.get("findings", [])
+    if not isinstance(findings, list):
         report.add(FAIL, "findings ordered by confidence_score",
-                   f"no order can be established: {incomplete} carry no ts or no confidence_score")
-    elif invalid_times:
-        # A malformed projection must be named before sorting mixed types;
-        # no guessed or converted timestamp can establish the ts order.
+                   f"findings came back as {type(findings).__name__}, not a list of rows")
+    elif any(invalid_rows.values()):
+        problems = [problem for rows in invalid_rows.values() for problem in rows]
         report.add(FAIL, "findings ordered by confidence_score",
-                   f"no order can be established: {invalid_times} not in the timestamp wire format")
-    elif len(findings) < 2 or by_time == findings:
-        report.add(SKIP, "findings ordered by confidence_score",
-                   f"{len(findings)} finding(s) whose confidence order equals their ts order; "
-                   "needs two findings where the older one is the less confident")
-    elif unorderable:
-        # Named, never converted: '0.5' beside 0.5 is a projection defect, and
-        # sorted() over the two raised before any check could report it.
-        report.add(FAIL, "findings ordered by confidence_score",
-                   f"no order can be established: {unorderable} not a number this can order")
+                   "no order can be established: " + "; ".join(problems[:4]))
     else:
-        ordered = scores == sorted(scores, reverse=True)
-        report.add(PASS if ordered else FAIL, "findings ordered by confidence_score",
-                   f"scores {scores} — first is {findings[0].get('finding_id')}, which is not the oldest"
-                   if ordered else f"scores {scores} are not descending")
+        incomplete = [row.get("finding_id") for row in findings
+                      if "ts" not in row or "confidence_score" not in row]
+        scores = [row.get("confidence_score") for row in findings]
+        unorderable = [f"{row.get('finding_id')}: {type(row['confidence_score']).__name__} "
+                       f"{row['confidence_score']!r}" for row in findings
+                       if "confidence_score" in row and not _is_score(row["confidence_score"])]
+        invalid_times = [f"{row.get('finding_id')}: {type(row['ts']).__name__} {row['ts']!r}"
+                         for row in findings if "ts" in row
+                         and not (isinstance(row["ts"], str) and pattern.fullmatch(row["ts"]))]
+        by_time = [] if incomplete or invalid_times else sorted(findings, key=lambda row: row["ts"])
+        if incomplete:
+            # Reported, never raised: a route that dropped the column is the very
+            # defect this gate exists to name, and a traceback names nothing.
+            report.add(FAIL, "findings ordered by confidence_score",
+                       f"no order can be established: {incomplete} carry no ts or no confidence_score")
+        elif invalid_times:
+            # A malformed projection must be named before sorting mixed types;
+            # no guessed or converted timestamp can establish the ts order.
+            report.add(FAIL, "findings ordered by confidence_score",
+                       f"no order can be established: {invalid_times} not in the timestamp wire format")
+        elif len(findings) < 2 or by_time == findings:
+            report.add(SKIP, "findings ordered by confidence_score",
+                       f"{len(findings)} finding(s) whose confidence order equals their ts order; "
+                       "needs two findings where the older one is the less confident")
+        elif unorderable:
+            # Named, never converted: '0.5' beside 0.5 is a projection defect, and
+            # sorted() over the two raised before any check could report it.
+            report.add(FAIL, "findings ordered by confidence_score",
+                       f"no order can be established: {unorderable} not a number this can order")
+        else:
+            ordered = scores == sorted(scores, reverse=True)
+            report.add(PASS if ordered else FAIL, "findings ordered by confidence_score",
+                       f"scores {scores} — first is {findings[0].get('finding_id')}, which is not the oldest"
+                       if ordered else f"scores {scores} are not descending")
 
     # 3b · findings tie-break, on each door ---------------------------------
-    doors = [("api", seen.get("findings"))]
-    if browser_seen is not None:
-        doors.append(("browser", browser_seen.get("findings")))
-    for door, rows in doors:
-        verdict, detail = tie_break(rows)
+    for door, payloads in doors:
+        rows = payloads.get("findings")
+        if "findings" in payloads and not isinstance(rows, list):
+            verdict, detail = FAIL, f"findings came back as {type(rows).__name__}, not a list of rows"
+        elif invalid_rows.get(door):
+            verdict, detail = FAIL, "no tie-break can be established: " + "; ".join(invalid_rows[door][:4])
+        else:
+            verdict, detail = tie_break(rows)
         if verdict == SKIP and seeded_tie:
             verdict, detail = FAIL, f"the fixture seeded two tied findings; this door returned none — {detail}"
         report.add(verdict, f"{TIE_BREAK} · {door}", detail)
@@ -839,7 +866,12 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             fingerprint = run.get("plan_fingerprint") or ""
             _, found = api.get(f"/v1/runs/{urllib.parse.quote(job)}/findings")
-            finding = found[0]["finding_id"] if isinstance(found, list) and found else ""
+            problems = findings_shape_errors(found, "api")
+            if problems:
+                report.add(FAIL, "findings for verification selection", "; ".join(problems[:4]))
+                finding = ""
+            else:
+                finding = found[0].get("finding_id", "") if found else ""
         else:
             import clickhouse_connect
 

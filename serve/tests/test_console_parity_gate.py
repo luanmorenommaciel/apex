@@ -492,3 +492,144 @@ def test_a_seeded_tie_the_doors_did_not_return_fails(monkeypatch):
     report = _two_doors(monkeypatch, untied, untied, seeded_tie=True)
     verdict, detail = _verdicts(report)[f"{gate.TIE_BREAK} · api"]
     assert verdict == gate.FAIL and "seeded two tied findings" in detail
+
+
+def _http_findings_gate(monkeypatch, payload, *, browser_rows=None, valid_preflight=False,
+                        invalid_preflight_only=False):
+    """Exercise main's RC through actual comparison/diagnosis, with HTTP 200
+    responses supplied by a controlled API door and no store or network."""
+    report = gate.Report()
+    monkeypatch.setattr(gate, "Report", lambda: report)
+    finding_reads = 0
+
+    def get(path):
+        nonlocal finding_reads
+        if path.endswith("/findings"):
+            finding_reads += 1
+            if valid_preflight and finding_reads == 1:
+                return 200, CANONICAL
+            if invalid_preflight_only and finding_reads > 1:
+                return 200, CANONICAL
+            return 200, payload
+        return 200, {"job_id": "j"}
+
+    api = gate.Api(get=get, label="controlled HTTP 200")
+    monkeypatch.setattr(gate, "remote_api", lambda _url, _token: api)
+
+    def browser(store, sql, params):
+        if "FROM findings" in sql:
+            return CANONICAL if browser_rows is None else browser_rows
+        return _quiet_store(store, sql, params)
+
+    monkeypatch.setattr(gate, "browser_query", browser)
+    compare = gate.compare_doors
+
+    def findings_only(*args, **kwargs):
+        seen = compare(*args, **kwargs, only={"findings"})
+        # A separate valid payload lets subsequent checks prove they ran.
+        seen["transitions"] = [{"execution_id": 1, "update_seq": 0, "ts": TS}]
+        return seen
+
+    monkeypatch.setattr(gate, "compare_doors", findings_only)
+    rc = gate.main(["--job-id", "j", "--api-url", "http://controlled.invalid", "--api-token", "test"])
+    return rc, _verdicts(report)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [{"finding_id": "object", "confidence_score": 0.5, "ts": TS}, {}, None, "not a list", ""],
+    ids=["dict", "empty-dict", "null", "string", "empty-string"],
+)
+def test_http_200_findings_with_a_non_list_payload_fail_without_coercion(monkeypatch, payload):
+    before = json.dumps(payload)
+    rc, verdicts = _http_findings_gate(monkeypatch, payload)
+    assert rc == 1
+    assert verdicts["findings  [FINDINGS]"][0] == gate.FAIL
+    for name in ("findings ordered by confidence_score", f"{gate.TIE_BREAK} · api"):
+        verdict, detail = verdicts[name]
+        assert verdict == gate.FAIL
+        assert type(payload).__name__ in detail and "not a list" in detail
+    assert verdicts["one transition per execution"][0] == gate.SKIP
+    assert verdicts["timestamps in the wire format"][0] == gate.PASS
+    assert json.dumps(payload) == before, "diagnosis must not coerce the HTTP payload"
+
+
+def test_http_200_findings_with_a_valid_list_keep_the_gate_success(monkeypatch):
+    before = json.dumps(CANONICAL)
+    rc, verdicts = _http_findings_gate(monkeypatch, CANONICAL)
+    assert rc == 0
+    assert verdicts["findings  [FINDINGS]"][0] == gate.PASS
+    assert verdicts["findings ordered by confidence_score"][0] == gate.PASS
+    assert verdicts[f"{gate.TIE_BREAK} · api"][0] == gate.PASS
+    assert verdicts[f"{gate.TIE_BREAK} · browser"][0] == gate.PASS
+    assert verdicts["timestamps in the wire format"][0] == gate.PASS
+    assert json.dumps(CANONICAL) == before
+
+
+@pytest.mark.parametrize("door", ["api", "browser", "both"])
+@pytest.mark.parametrize("phase", ["first", "later"])
+@pytest.mark.parametrize(
+    "rows,bad_index,bad_type",
+    [([1, 2], 0, "int"), (["ts", "finding_id"], 0, "str"),
+     ([CANONICAL[0], None], 1, "NoneType"), ([[]], 0, "list"), ([7], 0, "int")],
+    ids=["ints", "strings", "mixed-null", "nested-list", "single-int"],
+)
+def test_findings_non_row_items_fail_by_door_index_and_type(monkeypatch, capsys, door, phase,
+                                                           rows, bad_index, bad_type):
+    api_rows = rows if door in ("api", "both") else CANONICAL
+    browser_rows = rows if door in ("browser", "both") else CANONICAL
+    before = json.dumps([api_rows, browser_rows])
+    rc, verdicts = _http_findings_gate(monkeypatch, api_rows, browser_rows=browser_rows,
+                                      valid_preflight=phase == "later")
+    assert rc == 1
+    primary_verdict, primary_detail = verdicts["findings ordered by confidence_score"]
+    assert primary_verdict == gate.FAIL
+    for affected in ("api", "browser") if door == "both" else (door,):
+        assert f"{affected}[{bad_index}] is {bad_type}" in primary_detail
+        verdict, detail = verdicts[f"{gate.TIE_BREAK} · {affected}"]
+        assert verdict == gate.FAIL
+        assert f"{affected}[{bad_index}] is {bad_type}" in detail
+    assert verdicts["one transition per execution"][0] == gate.SKIP
+    assert verdicts["timestamps in the wire format"][0] == gate.PASS
+    assert json.dumps([api_rows, browser_rows]) == before
+    output = capsys.readouterr()
+    assert "CONSOLE_PARITY_GATE=FAIL" in output.out
+    assert "Traceback" not in output.out + output.err
+
+
+@pytest.mark.parametrize("rows", [[1, 2], ["ts", "finding_id"], [CANONICAL[0], None], [[]], [7]],
+                         ids=["ints", "strings", "mixed-null", "nested-list", "single-int"])
+def test_an_invalid_first_findings_response_is_not_hidden_by_a_valid_second_one(monkeypatch, capsys, rows):
+    before = json.dumps(rows)
+    rc, verdicts = _http_findings_gate(monkeypatch, rows, invalid_preflight_only=True)
+    assert rc == 1
+    verdict, detail = verdicts["findings for verification selection"]
+    assert verdict == gate.FAIL and "api[" in detail and "not a row" in detail
+    assert verdicts["findings ordered by confidence_score"][0] == gate.PASS
+    assert verdicts["timestamps in the wire format"][0] == gate.PASS
+    assert json.dumps(rows) == before
+    output = capsys.readouterr()
+    assert "CONSOLE_PARITY_GATE=FAIL" in output.out
+    assert "Traceback" not in output.out + output.err
+
+
+def test_empty_findings_lists_keep_the_checks_not_exercised(monkeypatch):
+    rc, verdicts = _http_findings_gate(monkeypatch, [], browser_rows=[])
+    assert rc == 0
+    for name in ("findings ordered by confidence_score", f"{gate.TIE_BREAK} · api",
+                 f"{gate.TIE_BREAK} · browser"):
+        assert verdicts[name][0] == gate.SKIP
+
+
+def test_incomplete_findings_rows_keep_the_missing_column_diagnosis(monkeypatch):
+    rows = [{"finding_id": "a", "confidence_score": 0.9},
+            {"finding_id": "b", "confidence_score": 0.2}]
+    before = json.dumps(rows)
+    rc, verdicts = _http_findings_gate(monkeypatch, rows, browser_rows=rows)
+    assert rc == 1
+    verdict, detail = verdicts["findings ordered by confidence_score"]
+    assert verdict == gate.FAIL and "no ts" in detail
+    assert "not a row" not in detail
+    assert verdicts["one transition per execution"][0] == gate.SKIP
+    assert verdicts["timestamps in the wire format"][0] == gate.PASS
+    assert json.dumps(rows) == before
