@@ -495,7 +495,7 @@ def test_a_seeded_tie_the_doors_did_not_return_fails(monkeypatch):
 
 
 def _http_findings_gate(monkeypatch, payload, *, browser_rows=None, valid_preflight=False,
-                        invalid_preflight_only=False):
+                        invalid_preflight_only=False, first_findings=None, selected_findings=None):
     """Exercise main's RC through actual comparison/diagnosis, with HTTP 200
     responses supplied by a controlled API door and no store or network."""
     report = gate.Report()
@@ -506,6 +506,8 @@ def _http_findings_gate(monkeypatch, payload, *, browser_rows=None, valid_prefli
         nonlocal finding_reads
         if path.endswith("/findings"):
             finding_reads += 1
+            if first_findings is not None and finding_reads == 1:
+                return 200, first_findings
             if valid_preflight and finding_reads == 1:
                 return 200, CANONICAL
             if invalid_preflight_only and finding_reads > 1:
@@ -525,6 +527,8 @@ def _http_findings_gate(monkeypatch, payload, *, browser_rows=None, valid_prefli
     compare = gate.compare_doors
 
     def findings_only(*args, **kwargs):
+        if selected_findings is not None:
+            selected_findings.append(args[6])
         seen = compare(*args, **kwargs, only={"findings"})
         # A separate valid payload lets subsequent checks prove they ran.
         seen["transitions"] = [{"execution_id": 1, "update_seq": 0, "ts": TS}]
@@ -633,3 +637,49 @@ def test_incomplete_findings_rows_keep_the_missing_column_diagnosis(monkeypatch)
     assert verdicts["one transition per execution"][0] == gate.SKIP
     assert verdicts["timestamps in the wire format"][0] == gate.PASS
     assert json.dumps(rows) == before
+
+
+@pytest.mark.parametrize(
+    "finding_id",
+    [None, 7, 0.5, True, ["private-finding-id"], {"private-finding-id": "secret"}],
+    ids=["null", "int", "float", "bool", "list", "dict"],
+)
+def test_first_finding_id_with_wrong_type_fails_without_value_disclosure(monkeypatch, capsys, finding_id):
+    first = [{"finding_id": finding_id}]
+    before = json.dumps(first)
+    selected = []
+    rc, verdicts = _http_findings_gate(monkeypatch, CANONICAL, first_findings=first,
+                                      selected_findings=selected)
+    assert rc == 1
+    verdict, detail = verdicts["findings for verification selection"]
+    assert verdict == gate.FAIL
+    assert detail == f"api[0].finding_id is {type(finding_id).__name__}, not a String"
+    assert selected == [""], "an invalid ID cannot select a verification"
+    assert verdicts["findings ordered by confidence_score"][0] == gate.PASS
+    assert verdicts["one transition per execution"][0] == gate.SKIP
+    assert verdicts["timestamps in the wire format"][0] == gate.PASS
+    assert json.dumps(first) == before
+    output = capsys.readouterr()
+    assert "CONSOLE_PARITY_GATE=FAIL" in output.out
+    assert "Traceback" not in output.out + output.err
+    assert "private-finding-id" not in output.out + output.err
+    assert "secret" not in output.out + output.err
+
+
+@pytest.mark.parametrize(
+    "first,selected_id",
+    [([{"finding_id": "regular-id"}], "regular-id"), ([{"finding_id": ""}], ""),
+     ([], ""), ([{}], "")],
+    ids=["string", "empty-string", "empty-list", "missing-field"],
+)
+def test_first_finding_id_compatible_cases_keep_selection(monkeypatch, first, selected_id):
+    before = json.dumps(first)
+    selected = []
+    rc, verdicts = _http_findings_gate(monkeypatch, CANONICAL, first_findings=first,
+                                      selected_findings=selected)
+    assert rc == 0
+    assert "findings for verification selection" not in verdicts
+    assert selected == [selected_id]
+    assert verdicts["findings ordered by confidence_score"][0] == gate.PASS
+    assert verdicts["timestamps in the wire format"][0] == gate.PASS
+    assert json.dumps(first) == before

@@ -871,7 +871,13 @@ def main(argv: list[str] | None = None) -> int:
                 report.add(FAIL, "findings for verification selection", "; ".join(problems[:4]))
                 finding = ""
             else:
-                finding = found[0].get("finding_id", "") if found else ""
+                first = found[0].get("finding_id", "") if found else ""
+                if isinstance(first, str):
+                    finding = first
+                else:
+                    report.add(FAIL, "findings for verification selection",
+                               f"api[0].finding_id is {type(first).__name__}, not a String")
+                    finding = ""
         else:
             import clickhouse_connect
 
