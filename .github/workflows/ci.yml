@@ -1,19 +1,28 @@
 name: CI
 
-# Every lane is a separate project with its own dependency set, so each gets its
-# own job. Tests that need live ClickHouse skip themselves, which keeps this
-# workflow fast and service-free; live end-to-end paths are not covered here.
+# Lean default CI. Every lane is a separate project with its own dependency set.
+# Tests that need live ClickHouse skip themselves, which keeps this workflow
+# fast and service-free; live end-to-end paths are not covered here.
 #
-# The jar job matrixes over JDK 17 and 21 because build.sbt publishes four
-# (Spark, Scala) cells and the two Spark 4.x cells cannot run on JDK 11. A
-# developer laptop on JDK 11 can only verify half the matrix; this is the only
-# place all four are actually covered.
+#   pull_request -> main, push -> main : front + python lanes + repo checks
+#   (ubuntu only). Feature-branch pushes no longer run CI on their own; the PR
+#   run covers them, so each change is checked once, not twice.
+#   The Scala jar lives in jar.yml (path-scoped; full JDK matrix weekly/manual).
+#   Docs/markdown-only changes skip CI.
 
 on:
   push:
-    branches: [main, "feat/**", "fix/**"]
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "jar/**"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "jar/**"
   workflow_dispatch:
 
 concurrency:
@@ -27,6 +36,7 @@ jobs:
   front:
     name: front (Node 22)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,63 +61,49 @@ jobs:
         run: npm run build
 
   python:
-    name: ${{ matrix.lane }} (py)
+    # One job for all Python lanes (was 6 jobs): same tests, one runner
+    # start-up instead of six. Every lane runs even if an earlier one fails.
+    name: python lanes + root gate
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        lane: [engine, serve, memory, verify, dev]
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: pytest
-        working-directory: ${{ matrix.lane }}
-        run: uv run --extra dev pytest -q -p no:warnings
-
-  root-gate:
-    name: root six-lane gate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
+      - name: pytest per lane (engine, serve, memory, verify, dev)
+        run: |
+          fail=0
+          for lane in engine serve memory verify dev; do
+            echo "::group::${lane} (py)"
+            if (cd "$lane" && uv run --extra dev pytest -q -p no:warnings); then
+              echo "${lane}: PASS"
+            else
+              echo "::error::${lane} (py) failed"; fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$fail"
       - name: Verify PowerShell 7
         run: |
           # shellcheck disable=SC2016
           pwsh -NoProfile -Command '$version = $PSVersionTable.PSVersion; if ($version.Major -lt 7) { throw "PowerShell 7 or newer is required; found $version" }; Write-Output "POWERSHELL_VERSION=$version"'
       # Driven from engine's environment: the gate imports apex_engine and
       # apex_mcp, and engine's project pins both.
-      - name: pytest tests/
+      - name: root six-lane gate (pytest tests/)
         working-directory: engine
         run: uv run --extra dev pytest ../tests -q -p no:warnings
 
-  jar:
-    name: jar (JDK ${{ matrix.jdk }})
+  repo-checks:
+    name: repo checks (license + collector config)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: ["17", "21"]
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: ${{ matrix.jdk }}
-          cache: sbt
-      - uses: sbt/setup-sbt@v1
-      - name: sbt test (all 4 cross-build cells)
-        working-directory: jar
-        run: sbt -batch test
-
-  collector-config:
-    name: collect config validates
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      # The README calls Apex open. Without a LICENSE that is legally false, so
+      # assert the file exists rather than trusting it stays there.
+      - name: license present
+        run: test -f LICENSE && grep -q "Apache License" LICENSE
       # A malformed collector pipeline is invisible until telemetry silently
       # stops arriving, which already cost this project 50-70% of its events
       # once. Validate the config without starting anything.
@@ -125,12 +121,3 @@ jobs:
             -e CLICKHOUSE_PASSWORD=ci_placeholder \
             -v "$PWD/config.yaml:/c.yaml:ro" \
             otel/opentelemetry-collector-contrib:0.156.0 validate --config /c.yaml
-
-  license:
-    name: license present
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # The README calls Apex open. Without a LICENSE that is legally false, so
-      # assert the file exists rather than trusting it stays there.
-      - run: test -f LICENSE && grep -q "Apache License" LICENSE
