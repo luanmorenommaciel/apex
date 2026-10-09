@@ -168,6 +168,24 @@ def test_console_findings_rank_on_the_raw_score_descending(present: set[str]):
         assert "toFloat64(0) AS confidence_score" in sql
 
 
+@pytest.mark.parametrize(
+    "door,present",
+    [("front", None), ("serve", set(ch._FINDINGS_ADDITIVE)), ("serve", set())],
+    ids=["front", "serve-additive", "serve-legacy"],
+)
+def test_console_findings_break_score_ties_by_finding_id(door, present):
+    """Pin both doors to the canonical order, even if they drift together.
+
+    This checks the SQL, not database sorting: FakeClient returns its input
+    rows untouched. A legacy table assigns every row the same zero score,
+    so the finding_id tie-break is also required on that path.
+    """
+    sql = front_query("FINDINGS") if door == "front" else ch._console_findings_sql(present)
+    order = re.search(r"\bORDER BY (.+)$", normalise(sql))
+    assert order, f"{door} findings query must declare its ordering"
+    assert order.group(1) == "confidence_score DESC, finding_id ASC", door
+
+
 def test_findings_route_carries_ts_and_the_ranked_statement():
     rows = [
         dict(finding_row(job_id="j", finding_id="hi", confidence_score=0.9), ts="2026-09-20 10:00:00"),
