@@ -29,31 +29,24 @@ metadata:
       decided_by: the user, in the 2026-10-19 intake
       decision: the console's default DATA_SOURCE is http, not clickhouse. Makefile (DATA_SOURCE ?= clickhouse) and docker-compose.yml (VITE_DATA_SOURCE default clickhouse) change; the image entrypoint default stays auto, which already prefers the API, until D-auto-fallback-policy is taken.
       applies_to: T-20261019-default-data-source-http
-  open_decisions:
     - id: D-tls-termination
-      found_by: intake item 2 on 2026-10-19
-      question: Where does TLS terminate for apex-console? The image listens on 80 only (front/nginx.conf) and no infra or serve document names a terminator. Option A - an optional 443 listener in the image, enabled by the entrypoint when a cert and key are mounted, HSTS only on that listener. Option B - TLS stays with an external terminator and the image documents the X-Forwarded-Proto contract and never sends HSTS itself. The two need different leaves and different proof.
-      blocks: T-20261019-nginx-tls-listener in front-lane-decisions.yaml
-      not_a_blocker_for: T-20261019-nginx-hardening, which adds the headers, timeouts and gzip that both options share
-      owner: platform (unassigned)
+      decided_by: the user, 2026-10-19, option B
+      decision: TLS stays with an external terminator. The image listens on 80 only, never sends Strict-Transport-Security, documents the terminator contract (X-Forwarded-Proto, HSTS set there) and never emits an absolute http redirect that a browser behind TLS would refuse.
+      applies_to: T-20261019-tls-external-terminator in front-lane-decisions.yaml
     - id: D-auto-fallback-policy
-      found_by: intake item 3 on 2026-10-19
-      question: What should DATA_SOURCE=auto do when neither the API nor ClickHouse answers? Today resolveRepository() returns FixtureRepository and the only signal is the small header badge. Option A - auto never resolves to fixtures; the console renders a named failure screen listing what was probed, and fixtures are served only by DATA_SOURCE=fixtures. Option B - keep the fallback but make it loud (a persistent banner on every screen plus a console warning). A is the recommendation - a recording shown as production data is the defect, not its volume - but it changes what a misconfigured deployment shows, so it is a product call.
-      blocks: T-20261019-auto-never-fixtures in front-lane-decisions.yaml
-      not_a_blocker_for: every leaf in this manifest
-      owner: product (unassigned)
+      decided_by: the user, 2026-10-19, option A
+      decision: DATA_SOURCE=auto never resolves to fixtures. When neither the API nor ClickHouse answers, the console renders a named failure screen listing what was probed; the recording is served only by DATA_SOURCE=fixtures.
+      applies_to: T-20261019-auto-never-fixtures in front-lane-decisions.yaml
     - id: D-refused-count-home
-      found_by: intake item 11 on 2026-10-19
-      question: refused_count is derived in the browser by rules.ts assessStage() over stage rows plus job_conf (rules 1, 6, 7) and is -1 on the runs list because the list query has no stage rows. Serving it from the API means the rule logic exists twice - TypeScript for the detail screens and Python or SQL for /v1/runs - unless rules 1, 6 and 7 are rewritten as a SQL CTE in the run rollup that BOTH doors run, which the console parity gate would then prove equal. Option A - SQL CTE in the shared rollup (RUN_LIST and RUN_ONE), rules.ts keeps its functions for the detail screens, parity gate pins the two. Option B - Python port in serve, console reads it only on the http door, clickhouse door keeps the dash. Option C - keep the dash and document it, as front/README.md already does.
-      blocks: T-20261019-refused-count-server in front-lane-decisions.yaml
-      not_a_blocker_for: every leaf in this manifest
-      owner: engine + serve + front (unassigned)
+      decided_by: the user, 2026-10-19, option A
+      decision: refused_count is computed by a SQL CTE in the run rollup both doors run (RUN_LIST and RUN_ONE in front, the same text in serve's ch.py), encoding rules 1, 6 and 7 as assessStage() does; rules.ts keeps its functions for the detail screens and the parity gate pins the two doors.
+      applies_to: T-20261019-refused-count-server in front-lane-decisions.yaml
     - id: D-console-sql-home
-      found_by: intake item 6 on 2026-10-19
-      question: serve/src/apex_mcp/ch.py carries a copy of every console statement in front/src/data/queries.ts, pinned by serve/tests/test_console_reads.py, test_projection_parity.py and test_console_parity_gate.py, which READ queries.ts as the contract. PIPELINE.md says no lane imports another lane's code. Option A - keep the copies and the parity tests (status quo, by design). Option B - move the console statements into contract/ as .sql files that front loads at build (Vite raw import) and serve reads at runtime, which makes the contract directory the single owner and changes how serve is packaged. B is a cross-lane change that the parity tests would have to be rewritten for.
-      blocks: T-20261019-console-sql-single-source in front-lane-decisions.yaml
-      not_a_blocker_for: T-20261019-queries-dead-statement, which only removes the statement nobody runs
-      owner: serve + front (unassigned)
+      decided_by: the user, 2026-10-19, option A
+      decision: serve keeps its copies of the console statements, held to front/src/data/queries.ts by test_console_reads.py, test_projection_parity.py and test_console_parity_gate.py. No leaf; T-20261019-console-sql-single-source was dropped from front-lane-decisions.yaml.
+      applies_to: none
+  # The four decisions below were open until 2026-10-19; the questions as
+  # posed are preserved in git history of this file.
 units:
   # ---------------------------------------------------------------------------
   # One commit per leaf on the local fix branch. depends_on also serialises the
