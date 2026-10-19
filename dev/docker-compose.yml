@@ -38,8 +38,13 @@ x-spark-common: &spark-common
 services:
   # ── Object store (S3-compatible) ──────────────────────────────────────────
   minio:
-    image: ${MINIO_IMAGE:-minio/minio:latest}   # pinned by digest in .env
-    command: server /data --console-address ":9001"
+    image: ${MINIO_IMAGE:-bitnamilegacy/minio:latest}   # pinned by digest in .env (D-1 bridge)
+    # The Bitnami legacy image runs as uid 1001 behind its own entrypoint. Run the
+    # plain `minio` binary as root so the named volume /data is writable and the
+    # server command stays the upstream one.
+    user: "0"
+    entrypoint: ["minio"]
+    command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -60,7 +65,7 @@ services:
 
   # ── One-shot: create buckets, then exit 0 (buckets must exist before first write) ──
   minio-init:
-    image: ${MC_IMAGE:-minio/mc:latest}   # pinned by digest in .env
+    image: ${MC_IMAGE:-bitnamilegacy/minio-client:latest}   # pinned by digest in .env (D-1 bridge)
     depends_on:
       minio:
         condition: service_healthy   # buckets are created only after MinIO is truly ready
