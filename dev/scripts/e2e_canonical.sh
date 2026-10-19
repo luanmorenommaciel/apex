@@ -8,7 +8,14 @@ cd "$(dirname "$0")/.."
 # into host paths before docker.exe receives them. It is harmless on Linux/macOS.
 export MSYS_NO_PATHCONV=1
 
+# Knobs (mirrored 1:1 by e2e_canonical.ps1 parameters):
+#   E2E_CANONICAL_REUSE_DEV=1      reuse the running dev cluster (ps1: -ReuseDev)
+#   E2E_CANONICAL_SKIP_GENERATE=1  keep the existing dataset        (ps1: -SkipGenerate)
+#   E2E_CANONICAL_BUILD=1          rebuild the image before `up`     (ps1: -Build)
+#   APEX_CANONICAL_DRIVER_HOST     advertised driver host            (ps1: -DriverHost)
+#   E2E_CANONICAL_COMPOSE_FILES    extra compose files, space-separated (ps1: -AdditionalComposeFile)
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.c3-otlp.yml)
+for extra in ${E2E_CANONICAL_COMPOSE_FILES:-}; do COMPOSE+=(-f "$extra"); done
 MASTER="spark://spark-master:7077"
 DRIVER_HOST="${APEX_CANONICAL_DRIVER_HOST:-spark-master}"
 REQUESTED_SCENARIOS=("$@")
@@ -112,10 +119,26 @@ step "1/6 verify shared canonical platform"
 ok "collector and overlay network are available"
 
 step "2/6 start only the dev stack on the C3 overlay"
+# The image is rebuilt only on request (E2E_CANONICAL_BUILD=1). A missing image
+# fails fast with the build hint instead of a silent five-minute compose build.
+image_present() {
+  local image
+  image="$("${COMPOSE[@]}" config --format json 2>/dev/null \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["spark-master"]["image"])' 2>/dev/null)"
+  [ -n "$image" ] && docker image inspect "$image" >/dev/null 2>&1
+}
 if [ "${E2E_CANONICAL_REUSE_DEV:-0}" = "1" ]; then
   ok "reusing already healthy dev cluster"
-elif "${COMPOSE[@]}" up -d --build --wait --wait-timeout 300; then
-  ok "dev cluster healthy"
+elif [ "${E2E_CANONICAL_BUILD:-0}" = "1" ]; then
+  if "${COMPOSE[@]}" build && "${COMPOSE[@]}" up -d --wait --wait-timeout 300; then
+    ok "dev image rebuilt and cluster healthy"
+  else
+    bad "dev cluster did not become healthy after rebuild"
+  fi
+elif ! image_present; then
+  bad "dev image is missing - run 'make build' or set E2E_CANONICAL_BUILD=1"
+elif "${COMPOSE[@]}" up -d --wait --wait-timeout 300; then
+  ok "dev cluster healthy (existing image)"
 else
   bad "dev cluster did not become healthy"
 fi

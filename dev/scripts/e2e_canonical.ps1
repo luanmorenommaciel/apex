@@ -3,18 +3,34 @@ param(
     [ValidateSet('skew_join', 'tail_outlier', 'spill', 'bad_shuffle', 'driver_oom')]
     [string[]]$Scenario = @('skew_join', 'spill', 'bad_shuffle', 'driver_oom'),
     [switch]$StartDev,
-    [switch]$SkipGenerate
+    [switch]$ReuseDev,
+    [switch]$SkipGenerate,
+    [switch]$Build,
+    [string]$DriverHost = 'spark-master',
+    [string]$EnvFile = '.env',
+    [string[]]$AdditionalComposeFile = @()
 )
 
 # Native Windows entry point for the canonical Spark -> OTLP -> ClickHouse gate.
 # Credentials remain operator/CI environment variables; this script never reads,
 # writes, or prints them.
+#
+# Parity with e2e_canonical.sh (same knobs, same defaults):
+#   -StartDev / -ReuseDev   <-> compose up vs E2E_CANONICAL_REUSE_DEV=1
+#   -SkipGenerate           <-> E2E_CANONICAL_SKIP_GENERATE=1
+#   -Build                  <-> E2E_CANONICAL_BUILD=1 (image is never rebuilt implicitly)
+#   -DriverHost             <-> APEX_CANONICAL_DRIVER_HOST
+#   -AdditionalComposeFile  <-> E2E_CANONICAL_COMPOSE_FILES
+#   -EnvFile                <-> dev/.env (the r9d control arm uses the same parameter)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-if (-not (Test-Path '.env')) {
-    throw 'Missing dev/.env. Run: make env-spark41'
+if (-not (Test-Path $EnvFile)) {
+    throw "Missing dev environment file: $EnvFile. Run: make env-spark41"
+}
+if ($StartDev -and $ReuseDev) {
+    throw '-StartDev and -ReuseDev are mutually exclusive.'
 }
 if ([string]::IsNullOrWhiteSpace($env:APEX_CANONICAL_CH_PASSWORD)) {
     throw 'APEX_CANONICAL_CH_PASSWORD is required for canonical ClickHouse assertions.'
@@ -44,7 +60,11 @@ function Get-PythonApplication {
 # fast instead of after the Spark job has already run.
 $pythonExe = Get-PythonApplication
 
-$compose = @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.c3-otlp.yml', '--env-file', '.env')
+$compose = @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.c3-otlp.yml')
+foreach ($composeFile in $AdditionalComposeFile) {
+    $compose += @('-f', $composeFile)
+}
+$compose += @('--env-file', $EnvFile)
 $outDir = Join-Path $root 'out'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
@@ -71,7 +91,7 @@ function Invoke-SparkJob {
         'spark-master', '/opt/spark/bin/spark-submit', '--master', 'spark://spark-master:7077',
         '--conf', 'spark.plugins=apex.ApexPlugin',
         '--conf', 'spark.apex.otlp.endpoint=http://apex-otel-collector:4318',
-        '--conf', 'spark.driver.host=spark-master', '--conf', 'spark.driver.bindAddress=0.0.0.0'
+        '--conf', "spark.driver.host=$DriverHost", '--conf', 'spark.driver.bindAddress=0.0.0.0'
     )
     if ($DriverMemory) {
         $submit += @('--driver-memory', $DriverMemory)
@@ -108,8 +128,26 @@ if ((docker inspect -f '{{.State.Running}}' apex-otel-collector 2>$null) -ne 'tr
     throw 'apex-otel-collector is not running. Start COLLECT and INFRA first.'
 }
 
-if ($StartDev) {
-    Invoke-Compose @('up', '-d', '--build', '--wait', '--wait-timeout', '600')
+function Test-DevImagePresent {
+    $rendered = & docker @compose @('config', '--format', 'json') 2>$null | Out-String
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($rendered)) { return $false }
+    $image = (ConvertFrom-Json $rendered).services.'spark-master'.image
+    if ([string]::IsNullOrWhiteSpace($image)) { return $false }
+    & docker image inspect $image 2>$null | Out-Null
+    return ($LASTEXITCODE -eq 0)
+}
+
+if ($ReuseDev) {
+    Write-Host 'Reusing the already running dev cluster.'
+} elseif ($StartDev) {
+    # Mirror e2e_canonical.sh: the image is rebuilt only with -Build; a missing
+    # image fails fast with the build hint instead of an implicit compose build.
+    if ($Build) {
+        Invoke-Compose @('build')
+    } elseif (-not (Test-DevImagePresent)) {
+        throw "dev image is missing - run 'make build' or pass -Build."
+    }
+    Invoke-Compose @('up', '-d', '--wait', '--wait-timeout', '600')
 }
 
 if (-not $SkipGenerate) {
@@ -117,7 +155,7 @@ if (-not $SkipGenerate) {
     & docker @compose exec -T spark-master /opt/spark/bin/spark-submit --master spark://spark-master:7077 `
         --conf spark.plugins=apex.ApexPlugin `
         --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 `
-        --conf spark.driver.host=spark-master `
+        --conf "spark.driver.host=$DriverHost" `
         --conf spark.driver.bindAddress=0.0.0.0 `
         /opt/apex/jobs/generate_data.py 2>&1 | Tee-Object -FilePath $generateLog
     if ($LASTEXITCODE -ne 0 -or -not (Select-String -Quiet -Path $generateLog -Pattern 'hot_keys_~50pct=PASS')) {
