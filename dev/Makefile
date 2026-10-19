@@ -65,22 +65,22 @@ fp-test: ## T7: prove the plan_fingerprint normalizes literals (same query/diff 
 	  --master 'local[2]' --conf spark.eventLog.enabled=false /opt/apex/tests/prove_fingerprint.py
 
 # Integration proof: dev apexdev.PlanFingerprint == jar apex.ApexPlanFingerprint for
-# the same query. Mounts the jar lane's compiled Scala class (read-only) onto the
-# classpath. Requires the jar built at ../jar/target/spark40-jvm-2.13/classes.
-JAR_CLASSES ?= ../jar/target/spark40-jvm-2.13/classes
-fp-crosscheck: ## T7 integration: dev fingerprint == jar's Scala fingerprint (cross-language)
-	@test -d "$(JAR_CLASSES)" || { echo "jar classes not found at $(JAR_CLASSES) — build the jar lane first"; exit 1; }
+# the same query. The image already ships the real plugin jar at
+# /opt/apex/lib/apex-plugin.jar on the driver classpath (conf/spark-defaults.conf),
+# so no host-side sbt build is needed: APEX_FP_REQUIRE_JAR=1 turns the probe's
+# best-effort cross-check into a hard failure when the jar class is missing or
+# disagrees. APEX_IMAGE follows .env when present (the Spark 4.1.2 cell tags the
+# image apex-spark:4.1.2-local).
+APEX_IMAGE ?= $(or $(shell sed -n 's/^APEX_IMAGE=//p' .env 2>/dev/null),apex-spark:local)
+fp-crosscheck: ## T7 integration: dev fingerprint == jar's Scala fingerprint (cross-language, image jar)
 	docker run --rm --entrypoint /opt/spark/bin/spark-submit \
 	  -v "$(CURDIR)/common:/opt/apex/common:ro" \
 	  -v "$(CURDIR)/tests:/opt/apex/tests:ro" \
 	  -v "$(CURDIR)/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro" \
-	  -v "$(abspath $(JAR_CLASSES)):/opt/jarlane/classes:ro" \
-	  -e PYTHONHASHSEED=0 -e TZ=UTC \
+	  -e PYTHONHASHSEED=0 -e TZ=UTC -e APEX_FP_REQUIRE_JAR=1 \
 	  $(APEX_IMAGE) --master 'local[2]' \
-	  --driver-class-path '/opt/apex/lib/apex-devfp.jar:/opt/jarlane/classes' \
 	  --conf spark.eventLog.enabled=false /opt/apex/tests/prove_fingerprint.py
 
-APEX_IMAGE ?= apex-spark:local
 gen-data: up ## Generate deterministic ~50% hot-key Delta tables (T8)
 	$(COMPOSE) exec -T spark-master /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit \
 	  --master spark://spark-master:7077 $(C3_DRIVER_CONF) /opt/apex/jobs/generate_data.py
