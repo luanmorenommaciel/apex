@@ -1,0 +1,105 @@
+{
+  "contract": "TaskHandoff/v3",
+  "task_id": "T-20261019-contract-badge-v06",
+  "format_version": 3,
+  "spec": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-contract-badge-v06.md",
+  "spec_digest": "sha256:ded82d4a4227262af29e6c45a88f3af181dcd6235b53b09539d2fd4d67949250",
+  "task_revision_digest": "sha256:d70a7c0ffd9c994291e6c74ad353d066e91ec8beec1034d4f902656737aad2fb",
+  "signoff_tier": 1,
+  "backend": "claude",
+  "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+  "authorization": {
+    "scheme": "hmac-sha256-v3",
+    "ref": "hmac-sha256-v3:60832560:ff765b56656435ccb0348dca49e282fe2652257087e9da87d855f5db8a576737",
+    "tier": 1,
+    "signed_by": "agmarcastro",
+    "signed_at": "2026-10-19T15:48:39Z"
+  },
+  "attempt": {
+    "id": "1207e7ac-4746-498e-b897-899d901057ef",
+    "issued_at": "2026-10-19T15:48:40Z"
+  },
+  "source": {
+    "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+    "base_commit": "4be983ccfa7e3a4c6a657ca40937129b4cf0996c"
+  },
+  "dependency_closure": {
+    "contract": "DependencyClosure/v1",
+    "task_id": "T-20261019-contract-badge-v06",
+    "digest": "sha256:eb2adf38c52187c6cbc2e9dc45bdc0bd7b7c2ad244d2487e67fd9901dd5d7d4e",
+    "members": [
+      {
+        "task_id": "T-20261019-contract-badge-v06",
+        "task_revision_digest": "sha256:d70a7c0ffd9c994291e6c74ad353d066e91ec8beec1034d4f902656737aad2fb"
+      }
+    ]
+  },
+  "write_scope": {
+    "touches_paths": [
+      "front/src/contract/types.ts",
+      "front/src/components/molecules/NavBar.test.tsx",
+      "front/src/contract/rules.test.ts"
+    ],
+    "creates_paths": [
+      "front/src/contract/version.test.ts"
+    ],
+    "do_not_touch": [
+      "front/src/screens",
+      "front/src/data",
+      "CONTRACT.md"
+    ]
+  },
+  "budgets": {
+    "iterations": 15,
+    "tokens": null,
+    "effort": "XS"
+  },
+  "agent_contract": {
+    "version": 2,
+    "read": [
+      "intent",
+      "behavior",
+      "contract",
+      "guardrails"
+    ],
+    "produce": [
+      "code",
+      "tests"
+    ],
+    "required_tools": [
+      "git",
+      "bash"
+    ],
+    "timeout_minutes": 30,
+    "sandbox_type": "host",
+    "output_artifacts": [],
+    "mcp_dependencies": [],
+    "emit": [
+      "pass",
+      "fail",
+      "retry_with_reason",
+      "parked_with_context"
+    ],
+    "backend_metadata": {}
+  },
+  "eval_command": [
+    "taskspec",
+    "run",
+    "--ci",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-contract-badge-v06.md"
+  ],
+  "acceptance_command": [
+    "taskspec",
+    "accept",
+    "--stamp",
+    "--handoff",
+    "<handoff.json>",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-contract-badge-v06.md"
+  ],
+  "evaluation_policy": {},
+  "environment_contract": {},
+  "identity_policy": {},
+  "receipt_requirements": [
+    "deterministic"
+  ]
+}

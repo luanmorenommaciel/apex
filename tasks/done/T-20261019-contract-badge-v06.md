@@ -1,7 +1,7 @@
 ---
 id: T-20261019-contract-badge-v06
 title: "Report the contract version the repository actually declares"
-status: in-progress
+status: done
 format_version: 3
 profile: standard
 effort: XS
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: agmarcastro
 signed_off_at: 2026-10-19T15:48:39Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: agmarcastro
+accepted_at: 2026-10-19T15:48:49Z
 signed_off_sig: hmac-sha256-v3:60832560:ff765b56656435ccb0348dca49e282fe2652257087e9da87d855f5db8a576737
+accepted_tier: 1
+accepted_attempt_id: 1207e7ac-4746-498e-b897-899d901057ef
+accepted_authorization_ref: hmac-sha256-v3:60832560:ff765b56656435ccb0348dca49e282fe2652257087e9da87d855f5db8a576737
+acceptance_record_digest: sha256:d3c82c52af8048f75f75b894249fd3c37c821b881d56d212040af80aea51e90a
 ---
 
 # Report the contract version the repository actually declares
