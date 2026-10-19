@@ -1,7 +1,7 @@
 ---
 id: T-20261019-front-http-only-resolution
 title: "Read only through the API in the console's source"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: M
@@ -25,12 +25,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: agmarcastro
+signed_off_at: 2026-10-19T15:55:46Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v3:60832560:bd6971fc4d56007dd2066b6bc253549504f122f338b793fef287998298162fcd
 ---
 
 # Read only through the API in the console's source
