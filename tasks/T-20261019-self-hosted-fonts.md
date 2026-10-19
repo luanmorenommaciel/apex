@@ -25,12 +25,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: agmarcastro
+signed_off_at: 2026-10-19T15:51:05Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v3:60832560:f81d68cf59702f005db14e9cee5a2fd4de44ebc361b02d1b3af1ce78f68590db
 ---
 
 # Serve the three typefaces from the bundle instead of Google Fonts
