@@ -56,22 +56,24 @@ export interface BaselineCandidate {
 
 export interface Repository {
   readonly kind: "clickhouse" | "fixtures" | "http";
-  listRuns(limit?: number): Promise<(RunSummary & { age?: string })[]>;
+  // Every read takes a trailing AbortSignal: useRead() cancels a request its
+  // screen no longer waits for. FixtureRepository ignores it.
+  listRuns(limit?: number, signal?: AbortSignal): Promise<(RunSummary & { age?: string })[]>;
   /** One run's summary row. null when the job is unknown — never a synthesised zero. */
-  run(jobId: string): Promise<(RunSummary & { age?: string }) | null>;
+  run(jobId: string, signal?: AbortSignal): Promise<(RunSummary & { age?: string }) | null>;
   /** Other runs that executed at least one of this run's plan shapes, newest first. */
-  baselineCandidates(jobId: string): Promise<BaselineCandidate[]>;
+  baselineCandidates(jobId: string, signal?: AbortSignal): Promise<BaselineCandidate[]>;
   /** Plan shapes the memory lane knows, most-run first. */
-  planShapes(): Promise<PlanShape[]>;
+  planShapes(signal?: AbortSignal): Promise<PlanShape[]>;
   /** Every run of one shape, oldest first — the history rule 3 reasons over. */
-  shapeRuns(fingerprint: string): Promise<ShapeRun[]>;
+  shapeRuns(fingerprint: string, signal?: AbortSignal): Promise<ShapeRun[]>;
   /** The memory lane's redacted plan exemplar for a shape. null when unindexed. */
-  planSample(fingerprint: string): Promise<string | null>;
-  stages(jobId: string): Promise<SparkEventRow[]>;
-  jobConf(jobId: string): Promise<JobConfRow[]>;
-  findings(jobId: string): Promise<FindingRow[]>;
-  transitions(jobId: string): Promise<PlanTransitionRow[]>;
-  fixVerification(findingId: string): Promise<FixVerificationRow | null>;
+  planSample(fingerprint: string, signal?: AbortSignal): Promise<string | null>;
+  stages(jobId: string, signal?: AbortSignal): Promise<SparkEventRow[]>;
+  jobConf(jobId: string, signal?: AbortSignal): Promise<JobConfRow[]>;
+  findings(jobId: string, signal?: AbortSignal): Promise<FindingRow[]>;
+  transitions(jobId: string, signal?: AbortSignal): Promise<PlanTransitionRow[]>;
+  fixVerification(findingId: string, signal?: AbortSignal): Promise<FixVerificationRow | null>;
 }
 
 const relativeAge = (iso: string): string => {
@@ -157,48 +159,48 @@ export class ClickHouseRepository implements Repository {
       .catch(() => Q.FINDINGS));
   }
 
-  async listRuns(limit = 50) {
-    const rows = await query<RunRollupRow>(Q.RUN_LIST, { limit });
+  async listRuns(limit = 50, signal?: AbortSignal) {
+    const rows = await query<RunRollupRow>(Q.RUN_LIST, { limit }, signal);
     return rows.map(toRunSummary);
   }
 
-  async run(jobId: string) {
-    const rows = await query<RunRollupRow>(Q.RUN_ONE, { job: jobId });
+  async run(jobId: string, signal?: AbortSignal) {
+    const rows = await query<RunRollupRow>(Q.RUN_ONE, { job: jobId }, signal);
     return rows[0] ? toRunSummary(rows[0]) : null;
   }
 
-  async baselineCandidates(jobId: string) {
-    return wireRows(await query<BaselineCandidate>(Q.RUNS_SHARING_SHAPE, { job: jobId }), "observed_at");
+  async baselineCandidates(jobId: string, signal?: AbortSignal) {
+    return wireRows(await query<BaselineCandidate>(Q.RUNS_SHARING_SHAPE, { job: jobId }, signal), "observed_at");
   }
 
-  async planShapes() {
-    return wireRows(await query<PlanShape>(Q.PLAN_SHAPES), "first_run", "last_run");
+  async planShapes(signal?: AbortSignal) {
+    return wireRows(await query<PlanShape>(Q.PLAN_SHAPES, {}, signal), "first_run", "last_run");
   }
-  async shapeRuns(fingerprint: string) {
-    return wireRows(await query<ShapeRun>(Q.SHAPE_RUNS, { fingerprint }), "observed_at");
+  async shapeRuns(fingerprint: string, signal?: AbortSignal) {
+    return wireRows(await query<ShapeRun>(Q.SHAPE_RUNS, { fingerprint }, signal), "observed_at");
   }
-  async planSample(fingerprint: string) {
+  async planSample(fingerprint: string, signal?: AbortSignal) {
     if (!fingerprint) return null;
-    const rows = await query<{ sample_plan_json: string }>(Q.PLAN_SAMPLE, { fingerprint });
+    const rows = await query<{ sample_plan_json: string }>(Q.PLAN_SAMPLE, { fingerprint }, signal);
     // An empty exemplar is not an exemplar: the row exists but carries no text,
     // which is "the memory lane indexed no plan", not "the plan is blank".
     return rows[0]?.sample_plan_json || null;
   }
 
-  async stages(jobId: string) {
-    return wireRows(await query<SparkEventRow>(Q.LATEST_STAGES, { job: jobId }), "ts");
+  async stages(jobId: string, signal?: AbortSignal) {
+    return wireRows(await query<SparkEventRow>(Q.LATEST_STAGES, { job: jobId }, signal), "ts");
   }
-  async jobConf(jobId: string) {
-    return wireRows(await query<JobConfRow>(Q.JOB_CONF, { job: jobId }), "ts");
+  async jobConf(jobId: string, signal?: AbortSignal) {
+    return wireRows(await query<JobConfRow>(Q.JOB_CONF, { job: jobId }, signal), "ts");
   }
-  async findings(jobId: string) {
-    return wireRows(await query<FindingRow>(await this.findingsSql(), { job: jobId }), "ts");
+  async findings(jobId: string, signal?: AbortSignal) {
+    return wireRows(await query<FindingRow>(await this.findingsSql(), { job: jobId }, signal), "ts");
   }
-  async transitions(jobId: string) {
-    return wireRows(await query<PlanTransitionRow>(Q.PLAN_TRANSITIONS, { job: jobId }), "ts");
+  async transitions(jobId: string, signal?: AbortSignal) {
+    return wireRows(await query<PlanTransitionRow>(Q.PLAN_TRANSITIONS, { job: jobId }, signal), "ts");
   }
-  async fixVerification(findingId: string) {
-    const rows = await query<Record<string, unknown>>(Q.FIX_VERIFICATIONS, { finding: findingId });
+  async fixVerification(findingId: string, signal?: AbortSignal) {
+    const rows = await query<Record<string, unknown>>(Q.FIX_VERIFICATIONS, { finding: findingId }, signal);
     return rows[0] ? toFixVerification(rows[0]) : null;
   }
 }
@@ -332,76 +334,76 @@ export class FixtureRepository implements Repository {
 export class HttpRepository implements Repository {
   readonly kind = "http" as const;
 
-  async listRuns(limit = 50) {
-    const { data } = await apiGet<RunRollupRow[]>("/v1/runs", { limit });
+  async listRuns(limit = 50, signal?: AbortSignal) {
+    const { data } = await apiGet<RunRollupRow[]>("/v1/runs", { limit }, signal);
     return (data ?? []).map(toRunSummary);
   }
 
-  async run(jobId: string) {
+  async run(jobId: string, signal?: AbortSignal) {
     // 404 arrives as null: the API uses it for "no run with that id", which is
     // an absence this method is typed to report, not a fault.
-    const { data } = await apiGet<RunRollupRow>(`/v1/runs/${encodeURIComponent(jobId)}`);
+    const { data } = await apiGet<RunRollupRow>(`/v1/runs/${encodeURIComponent(jobId)}`, undefined, signal);
     return data ? toRunSummary(data) : null;
   }
 
-  async baselineCandidates(jobId: string) {
+  async baselineCandidates(jobId: string, signal?: AbortSignal) {
     const { data } = await apiGet<BaselineCandidate[]>(
-      `/v1/runs/${encodeURIComponent(jobId)}/baseline-candidates`,
+      `/v1/runs/${encodeURIComponent(jobId)}/baseline-candidates`, undefined, signal,
     );
     return wireRows(data ?? [], "observed_at");
   }
 
-  async planShapes() {
-    const { data } = await apiGet<PlanShape[]>("/v1/plans");
+  async planShapes(signal?: AbortSignal) {
+    const { data } = await apiGet<PlanShape[]>("/v1/plans", undefined, signal);
     return wireRows(data ?? [], "first_run", "last_run");
   }
 
-  async shapeRuns(fingerprint: string) {
+  async shapeRuns(fingerprint: string, signal?: AbortSignal) {
     const { data } = await apiGet<ShapeRun[]>(
-      `/v1/plans/${encodeURIComponent(fingerprint)}/runs`,
+      `/v1/plans/${encodeURIComponent(fingerprint)}/runs`, undefined, signal,
     );
     return wireRows(data ?? [], "observed_at");
   }
 
-  async planSample(fingerprint: string) {
+  async planSample(fingerprint: string, signal?: AbortSignal) {
     if (!fingerprint) return null;
     const { data } = await apiGet<string | null>(
-      `/v1/plans/${encodeURIComponent(fingerprint)}/sample`,
+      `/v1/plans/${encodeURIComponent(fingerprint)}/sample`, undefined, signal,
     );
     // An empty exemplar is not an exemplar: the shape was indexed with no plan
     // text, which is not the same as a blank plan.
     return data || null;
   }
 
-  async stages(jobId: string) {
+  async stages(jobId: string, signal?: AbortSignal) {
     const { data } = await apiGet<SparkEventRow[]>(
-      `/v1/runs/${encodeURIComponent(jobId)}/stages`,
+      `/v1/runs/${encodeURIComponent(jobId)}/stages`, undefined, signal,
     );
     return wireRows(data ?? [], "ts");
   }
 
-  async jobConf(jobId: string) {
-    const { data } = await apiGet<JobConfRow[]>(`/v1/runs/${encodeURIComponent(jobId)}/conf`);
+  async jobConf(jobId: string, signal?: AbortSignal) {
+    const { data } = await apiGet<JobConfRow[]>(`/v1/runs/${encodeURIComponent(jobId)}/conf`, undefined, signal);
     return wireRows(data ?? [], "ts");
   }
 
-  async findings(jobId: string) {
+  async findings(jobId: string, signal?: AbortSignal) {
     const { data } = await apiGet<FindingRow[]>(
-      `/v1/runs/${encodeURIComponent(jobId)}/findings`,
+      `/v1/runs/${encodeURIComponent(jobId)}/findings`, undefined, signal,
     );
     return wireRows(data ?? [], "ts");
   }
 
-  async transitions(jobId: string) {
+  async transitions(jobId: string, signal?: AbortSignal) {
     const { data } = await apiGet<PlanTransitionRow[]>(
-      `/v1/runs/${encodeURIComponent(jobId)}/transitions`,
+      `/v1/runs/${encodeURIComponent(jobId)}/transitions`, undefined, signal,
     );
     return wireRows(data ?? [], "ts");
   }
 
-  async fixVerification(findingId: string) {
+  async fixVerification(findingId: string, signal?: AbortSignal) {
     const { data } = await apiGet<Record<string, unknown>>(
-      `/v1/findings/${encodeURIComponent(findingId)}/verification`,
+      `/v1/findings/${encodeURIComponent(findingId)}/verification`, undefined, signal,
     );
     return data ? toFixVerification(data) : null;
   }

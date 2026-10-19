@@ -4,7 +4,7 @@ import { Mono, Pill, StatusPill } from "@/components/atoms";
 import { DataTable, KpiCard, ScreenHeader, type Column, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import { fmt } from "@/contract/rules";
-import { useAsync, useRepository } from "@/data/useRepository";
+import { useRead, useRepository } from "@/data/useRepository";
 import type { RunSummary } from "@/contract/types";
 
 type Row = RunSummary & { age?: string };
@@ -16,7 +16,7 @@ export function RunsScreen() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
-  const { data, loading, error } = useAsync(() => repo.listRuns(50), [repo]);
+  const { data, loading, error } = useRead(repo, ["listRuns", 50]);
   const runs = useMemo(() => data ?? [], [data]);
 
   const shown = useMemo(() => {

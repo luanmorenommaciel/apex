@@ -78,11 +78,14 @@ export interface ApiResult<T> {
 export async function apiGet<T>(
   path: string,
   params?: Record<string, string | number | undefined>,
+  signal?: AbortSignal,
 ): Promise<ApiResult<T | null>> {
   const target = url(path, params);
   let response: Response;
   try {
-    response = await fetch(target, { headers: headers() });
+    // The signal is the screen's: a read it stopped waiting for is cancelled
+    // at the socket, not merely ignored when it lands.
+    response = await fetch(target, { headers: headers(), signal });
   } catch (cause) {
     throw new ApiError(0, `the API could not be reached (${String(cause)})`, path);
   }
