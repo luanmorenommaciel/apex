@@ -1,7 +1,7 @@
 ---
 id: T-20261019-nginx-hardening
 title: "Give the production nginx security headers, proxy timeouts and gzip"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S
@@ -62,7 +62,7 @@ eval_1() {
 
 # eval_2: a live container sends the headers on / and on /config.js and gzips the page
 eval_2() {
-  ( cd front && docker rm -f apex-console-hardening-eval > /dev/null 2>&1; docker build -q --target prod -t apex-console:hardening-eval . > /dev/null && docker run -d --rm --name apex-console-hardening-eval -p 18080:80 -e DATA_SOURCE=fixtures apex-console:hardening-eval > /dev/null && sleep 2 && H="$(curl -sI http://127.0.0.1:18080/)" && C="$(curl -sI http://127.0.0.1:18080/config.js)" && G="$(curl -sI -H 'Accept-Encoding gzip' http://127.0.0.1:18080/)"; docker rm -f apex-console-hardening-eval > /dev/null; echo "$H" | grep -qi "^content-security-policy" && echo "$H" | grep -qi "nosniff" && echo "$H" | grep -qi "^referrer-policy" && echo "$H" | grep -qi "^x-frame-options" && echo "$C" | grep -qi "^content-security-policy" && echo "$C" | grep -qi "no-store" && echo "$G" | grep -qi "^content-encoding" )
+  ( cd front && docker rm -f apex-console-hardening-eval > /dev/null 2>&1; docker build -q --target prod -t apex-console:hardening-eval . > /dev/null && docker run -d --rm --name apex-console-hardening-eval -p 18080:80 -e DATA_SOURCE=fixtures apex-console:hardening-eval > /dev/null && sleep 2 && H="$(curl -sI http://127.0.0.1:18080/)" && C="$(curl -sI http://127.0.0.1:18080/config.js)" && G="$(curl -sI -H 'Accept-Encoding:gzip' http://127.0.0.1:18080/)"; docker rm -f apex-console-hardening-eval > /dev/null; echo "$H" | grep -qi "^content-security-policy" && echo "$H" | grep -qi "nosniff" && echo "$H" | grep -qi "^referrer-policy" && echo "$H" | grep -qi "^x-frame-options" && echo "$C" | grep -qi "^content-security-policy" && echo "$C" | grep -qi "no-store" && echo "$G" | grep -qi "^content-encoding" )
 }
 
 # eval_3: both proxies carry the three timeouts and the hashed assets are immutable

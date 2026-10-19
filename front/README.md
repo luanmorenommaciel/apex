@@ -63,6 +63,20 @@ side. One image therefore serves every deployment:
 | `APEX_API_TOKEN` | *unset* | The bearer token written into `/config.js`. A credential for the API, never for the store — scope and rotate it per consumer |
 | `APEX_API_URL` | *unset* | Only for a deliberate cross-origin call. The API sends no CORS header, so a browser blocks that; leave it unset and let nginx forward `/v1` |
 
+**What the image sends with every response.** A same-origin
+`Content-Security-Policy` (`default-src 'self'`; `style-src` also allows the
+inline style attributes React sets; fonts are bundled, both doors are proxied,
+so nothing off-origin is needed), `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin` and
+a `Permissions-Policy` denying camera, microphone and geolocation. Text and JSON
+are gzipped; `/assets/` is cached for a year as immutable (Vite hashes the
+names), `/config.js` is never cached. No `Strict-Transport-Security`: the
+image listens on plain http and terminates no TLS — put a terminator in front
+of it. Both proxies time out explicitly (`proxy_connect_timeout 5s`,
+`proxy_send_timeout 30s`, `proxy_read_timeout 60s` in `nginx.conf`); a very
+large `spark_events` can push a run list toward the read bound, which is the
+one to raise.
+
 ```bash
 docker build --target prod -t apex-console:prod .
 docker run --rm -p 8080:80 \
