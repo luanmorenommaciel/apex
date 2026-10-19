@@ -10,7 +10,6 @@ import type {
   FindingRow, FixVerificationRow, JobConfRow, PlanTransitionRow,
   RunSummary, SparkEventRow, WireTimestamp,
 } from "@/contract/types";
-import * as fx from "./fixtures";
 import * as Q from "./queries";
 import { ping, query } from "./clickhouse";
 import { apiGet, apiPing } from "./http";
@@ -228,19 +227,36 @@ const toFixVerification = (r: Record<string, unknown>): FixVerificationRow => ({
   proposed_diff: String(r.proposed_diff ?? ""),
 });
 
+/** The recording's module, loaded on first use and never from the entry chunk. */
+type Fixtures = typeof import("./fixtures");
+
 export class FixtureRepository implements Repository {
   readonly kind = "fixtures" as const;
+
+  // The 1,600-line recording is imported DYNAMICALLY so Vite emits it as its
+  // own chunk (dist/assets/fixtures-*.js) that only this repository fetches.
+  // Statically imported it sat in the entry bundle of every deployment,
+  // including the http and clickhouse ones that never read a row of it.
+  // Memoised: one fetch per instance, and constructing the instance loads
+  // nothing — the default RepoContext value is one of these.
+  private loaded: Promise<Fixtures> | null = null;
+  private load(): Promise<Fixtures> {
+    return (this.loaded ??= import("./fixtures"));
+  }
 
   // The recording keeps the form it was captured in; it becomes a row here,
   // in the wire format, like a row from any other source.
   async listRuns() {
+    const fx = await this.load();
     return wireRows(fx.runs, "started_at");
   }
   async run(jobId: string) {
+    const fx = await this.load();
     const found = fx.runs.find((r) => r.job_id === jobId);
     return found ? withWireTimestamps(found, ["started_at"]) : null;
   }
   async baselineCandidates(jobId: string) {
+    const fx = await this.load();
     // The recording holds one comparable pair, and it is the pair the README's
     // walkthrough describes. Anything else would be inventing shared history.
     const other = jobId === fx.CURRENT_JOB ? fx.BASELINE_JOB
@@ -252,29 +268,37 @@ export class FixtureRepository implements Repository {
                   observed_at: toWireTimestamp(r.started_at) }] : [];
   }
   async planShapes() {
+    const fx = await this.load();
     return wireRows(fx.planShapes, "first_run", "last_run");
   }
   async shapeRuns(fingerprint: string) {
+    const fx = await this.load();
     return fingerprint === fx.PLAN_FINGERPRINT ? wireRows(fx.shapeRuns, "observed_at") : [];
   }
   async planSample(fingerprint: string) {
+    const fx = await this.load();
     // Only the recorded shape has an exemplar. Returning it for any fingerprint
     // would show one run's plan as though it belonged to another.
     return fingerprint === fx.PLAN_FINGERPRINT ? fx.REDACTED_PLAN.join("\n") : null;
   }
   async stages(jobId: string) {
+    const fx = await this.load();
     return wireRows(fx.stagesByJob[jobId] ?? [], "ts");
   }
   async jobConf(jobId: string) {
+    const fx = await this.load();
     return wireRows(fx.jobConfByJob[jobId] ?? [], "ts");
   }
   async findings(jobId: string) {
+    const fx = await this.load();
     return wireRows(fx.findingsByJob[jobId] ?? [], "ts");
   }
   async transitions(jobId: string) {
+    const fx = await this.load();
     return wireRows(fx.transitionsByJob[jobId] ?? [], "ts");
   }
   async fixVerification(findingId: string) {
+    const fx = await this.load();
     return fx.fixVerifications.find((f) => f.finding_id === findingId) ?? null;
   }
 }

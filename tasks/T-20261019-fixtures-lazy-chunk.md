@@ -1,7 +1,7 @@
 ---
 id: T-20261019-fixtures-lazy-chunk
 title: "Keep the recorded run out of the entry bundle"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S
@@ -55,7 +55,7 @@ FixtureRepository replaces the static import with one memoised dynamic import - 
 ```bash
 # eval_1: the recording is its own chunk and the entry chunk is free of it
 eval_1() {
-  ( cd front && npm run build > /dev/null && ! grep -q "app-20260803014217-0071" dist/assets/index-*.js && grep -lq "app-20260803014217-0071" dist/assets/fixtures-*.js )
+  ( cd front && npm run build > /dev/null && ! grep -q "2de5e5760399189a81ab5500a216db0bae5c67f72cf42c08bd9f62689b404cf0" dist/assets/index-*.js && grep -lq "2de5e5760399189a81ab5500a216db0bae5c67f72cf42c08bd9f62689b404cf0" dist/assets/fixtures-*.js )
 }
 
 # eval_2: the repository tests and the whole front gate stay green

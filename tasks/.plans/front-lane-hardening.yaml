@@ -371,7 +371,7 @@ units:
     source_note: front/src/data/fixtures.ts (1633 lines), front/src/data/repository.ts line 13 (static import * as fx), baseline build dist/assets/index-*.js 342.7 kB containing app-20260803014217-0071
     why: repository.ts imports fixtures.ts statically, so the 1633-line recording is in the entry chunk of every deployment, including the http and clickhouse ones that never read it.
     goal: A production build emits the recording as its own chunk that only FixtureRepository loads, the entry chunk no longer contains it, and FixtureRepository returns the same rows as before.
-    context: FixtureRepository replaces the static import with one memoised dynamic import - a private load() returning the module promise - and each method awaits it; the methods are already async so no signature changes and the serve parity test that reads Repository method names is unaffected. Vite names the chunk after the module, so eval_1 looks for dist/assets/fixtures-*.js. The default RepoContext value in useRepository.tsx (new FixtureRepository()) stays, as constructing it loads nothing. Tests that import fixtures directly (rules.test.ts, VerifyScreen.source-state.test.tsx) keep doing so - they are tests, not the bundle.
+    context: The probe is the recorded PLAN_FINGERPRINT, which only fixtures.ts holds - the recorded job id also appears as a literal link in AskScreen.tsx, so it cannot tell the two chunks apart. FixtureRepository replaces the static import with one memoised dynamic import - a private load() returning the module promise - and each method awaits it; the methods are already async so no signature changes and the serve parity test that reads Repository method names is unaffected. Vite names the chunk after the module, so eval_1 looks for dist/assets/fixtures-*.js. The default RepoContext value in useRepository.tsx (new FixtureRepository()) stays, as constructing it loads nothing. Tests that import fixtures directly (rules.test.ts, VerifyScreen.source-state.test.tsx) keep doing so - they are tests, not the bundle.
     behaviors:
       - id: B-1
         given: a production build
@@ -384,7 +384,7 @@ units:
     evals:
       - id: eval_1
         description: the recording is its own chunk and the entry chunk is free of it
-        command: ( cd front && npm run build > /dev/null && ! grep -q "app-20260803014217-0071" dist/assets/index-*.js && grep -lq "app-20260803014217-0071" dist/assets/fixtures-*.js )
+        command: ( cd front && npm run build > /dev/null && ! grep -q "2de5e5760399189a81ab5500a216db0bae5c67f72cf42c08bd9f62689b404cf0" dist/assets/index-*.js && grep -lq "2de5e5760399189a81ab5500a216db0bae5c67f72cf42c08bd9f62689b404cf0" dist/assets/fixtures-*.js )
         verifies: [B-1]
         terminal: true
         expected_duration_sec: 60
