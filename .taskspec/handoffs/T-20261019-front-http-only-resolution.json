@@ -1,0 +1,117 @@
+{
+  "contract": "TaskHandoff/v3",
+  "task_id": "T-20261019-front-http-only-resolution",
+  "format_version": 3,
+  "spec": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-front-http-only-resolution.md",
+  "spec_digest": "sha256:bade6ad859c1be75a2a1c56894e8996f7be795cfdd4993dc26227853818b46e5",
+  "task_revision_digest": "sha256:cba7d024f448965753812e14d285863e11d40ff0f386c7cb8253847a163418e5",
+  "signoff_tier": 1,
+  "backend": "claude",
+  "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+  "authorization": {
+    "scheme": "hmac-sha256-v3",
+    "ref": "hmac-sha256-v3:60832560:ced58dba2768e05bcde8797d241d1a6b681adf221dcde485a742159cbe866794",
+    "tier": 1,
+    "signed_by": "agmarcastro",
+    "signed_at": "2026-10-19T15:56:31Z"
+  },
+  "attempt": {
+    "id": "b0b2daef-fb6d-4b56-8870-29c79a9e37bb",
+    "issued_at": "2026-10-19T15:56:32Z"
+  },
+  "source": {
+    "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+    "base_commit": "cee30722144c668d214030b6eeb615db2bf852c5"
+  },
+  "dependency_closure": {
+    "contract": "DependencyClosure/v1",
+    "task_id": "T-20261019-front-http-only-resolution",
+    "digest": "sha256:d9afb7134ac113661aef9882b8f79f9b294d8b3ff67b1576d592b5855b39f0ed",
+    "members": [
+      {
+        "task_id": "T-20261019-front-http-only-resolution",
+        "task_revision_digest": "sha256:cba7d024f448965753812e14d285863e11d40ff0f386c7cb8253847a163418e5"
+      },
+      {
+        "task_id": "T-20261019-serve-owns-console-sql",
+        "task_revision_digest": "sha256:3104e16d67c4a7dffa785b3dda94b79ec29fc927a43e0eee39b76272fc8a7391"
+      }
+    ]
+  },
+  "write_scope": {
+    "touches_paths": [
+      "front/src/data",
+      "front/src/components/molecules",
+      "front/src/screens",
+      "front/src/contract/types.ts",
+      "front/src/contract/rules.ts",
+      "front/src/contract/refusedCount.test.ts",
+      "front/src/e2e/console.live.test.tsx"
+    ],
+    "creates_paths": [],
+    "do_not_touch": [
+      "front/nginx.conf",
+      "front/Dockerfile",
+      "front/docker-entrypoint.d",
+      "front/docker-compose.yml",
+      "front/Makefile",
+      "front/.env.example",
+      "front/vite.config.ts",
+      "front/README.md",
+      "serve"
+    ]
+  },
+  "budgets": {
+    "iterations": 15,
+    "tokens": null,
+    "effort": "M"
+  },
+  "agent_contract": {
+    "version": 2,
+    "read": [
+      "intent",
+      "behavior",
+      "contract",
+      "guardrails"
+    ],
+    "produce": [
+      "code",
+      "tests"
+    ],
+    "required_tools": [
+      "git",
+      "bash"
+    ],
+    "timeout_minutes": 30,
+    "sandbox_type": "host",
+    "output_artifacts": [],
+    "mcp_dependencies": [],
+    "emit": [
+      "pass",
+      "fail",
+      "retry_with_reason",
+      "parked_with_context"
+    ],
+    "backend_metadata": {}
+  },
+  "eval_command": [
+    "taskspec",
+    "run",
+    "--ci",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-front-http-only-resolution.md"
+  ],
+  "acceptance_command": [
+    "taskspec",
+    "accept",
+    "--stamp",
+    "--handoff",
+    "<handoff.json>",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-front-http-only-resolution.md"
+  ],
+  "evaluation_policy": {},
+  "environment_contract": {},
+  "identity_policy": {},
+  "receipt_requirements": [
+    "deterministic"
+  ]
+}
