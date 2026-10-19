@@ -10,7 +10,7 @@ import {
 } from "@/contract/rules";
 import { attributionIsAvailable } from "@/contract/rules";
 import { CONTRACT_VERSION } from "@/contract/types";
-import { useAsync, useRepository } from "@/data/useRepository";
+import { useRead, useRepository } from "@/data/useRepository";
 
 /** UNTRUSTED per the contract: written by the observed job, rendered as data. */
 const UNTRUSTED = ["evidence", "impact", "fix", "hot_key", "plan_transitions[].detail"];
@@ -19,15 +19,17 @@ export function FindingScreen() {
   const { jobId = "", findingId = "" } = useParams();
   const repo = useRepository();
 
-  const findingsQ = useAsync(() => repo.findings(jobId), [repo, jobId]);
-  const stagesQ = useAsync(() => repo.stages(jobId), [repo, jobId]);
-  const confQ = useAsync(() => repo.jobConf(jobId), [repo, jobId]);
-  const transQ = useAsync(() => repo.transitions(jobId), [repo, jobId]);
+  // The same keys RunDetail used a moment ago, so arriving from it issues
+  // no request for these four.
+  const findingsQ = useRead(repo, ["findings", jobId]);
+  const stagesQ = useRead(repo, ["stages", jobId]);
+  const confQ = useRead(repo, ["jobConf", jobId]);
+  const transQ = useRead(repo, ["transitions", jobId]);
 
   // The verification row carries the only PROPOSAL the contract stores, and
   // the shape history is what plan memory actually knows about this run. Both
   // used to be prose typed into this screen.
-  const fixQ = useAsync(() => repo.fixVerification(findingId), [repo, findingId]);
+  const fixQ = useRead(repo, ["fixVerification", findingId]);
 
   const finding = (findingsQ.data ?? []).find((f) => f.finding_id === findingId);
   const stages = stagesQ.data ?? [];
@@ -35,10 +37,7 @@ export function FindingScreen() {
   const transitions = transQ.data ?? [];
 
   const fingerprint = stages.find((s) => s.plan_fingerprint)?.plan_fingerprint ?? "";
-  const shapeQ = useAsync(
-    () => (fingerprint ? repo.shapeRuns(fingerprint) : Promise.resolve([])),
-    [repo, fingerprint],
-  );
+  const shapeQ = useRead(repo, fingerprint ? ["shapeRuns", fingerprint] : null);
 
   // A rejected query is not a missing finding. Before the empty branch, which
   // swallowed it; the reads that decorate the finding are reported in place.

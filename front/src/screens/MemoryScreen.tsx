@@ -3,7 +3,7 @@ import { Card, Label, Mono, Prose } from "@/components/atoms";
 import { KpiCard, ScreenHeader, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import { canonicaliseConfValue, distinctConfigCount, fmt, ruleThreeAttributableToTuning } from "@/contract/rules";
-import { useAsync, useRepository } from "@/data/useRepository";
+import { useRead, useRepository } from "@/data/useRepository";
 import type { ShapeRun } from "@/data/repository";
 
 /**
@@ -30,16 +30,13 @@ export function MemoryScreen() {
   const repo = useRepository();
   const [params] = useSearchParams();
 
-  const shapesQ = useAsync(() => repo.planShapes(), [repo]);
+  const shapesQ = useRead(repo, ["planShapes"]);
   const shapes = shapesQ.data ?? [];
   // Default to the most-run shape: the one with history worth reading.
   const fingerprint = params.get("shape") ?? shapes[0]?.plan_fingerprint ?? "";
   const shape = shapes.find((s) => s.plan_fingerprint === fingerprint) ?? null;
 
-  const runsQ = useAsync(
-    () => (fingerprint ? repo.shapeRuns(fingerprint) : Promise.resolve([])),
-    [repo, fingerprint],
-  );
+  const runsQ = useRead(repo, fingerprint ? ["shapeRuns", fingerprint] : null);
   const runs = runsQ.data ?? [];
 
   // A rejected query is not an unindexed store. Before the empty branch,

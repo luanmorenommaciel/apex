@@ -34,25 +34,31 @@ def load_gate():
 gate = load_gate()
 
 
-def test_statements_are_read_from_the_console_as_written():
-    statements = gate.console_statements(gate.QUERIES_TS.read_text())
-    for name in (
+def test_statements_are_ch_pys_own():
+    """Every statement the gate sends is a ch.py constant with serve's bindings."""
+    from apex_mcp import ch
+
+    statements = gate.serve_statements(set(ch._FINDINGS_ADDITIVE))
+    assert set(statements) == {
         "RUN_LIST", "RUN_ONE", "LATEST_STAGES", "JOB_CONF", "FINDINGS",
         "PLAN_TRANSITIONS", "RUNS_SHARING_SHAPE", "PLAN_SHAPES", "SHAPE_RUNS",
         "PLAN_SAMPLE", "FIX_VERIFICATIONS",
-    ):
-        assert name in statements, f"the gate cannot find {name} in queries.ts"
-    # The two rollups are BUILT in the TypeScript; the gate builds them the same way.
-    assert "WHERE job_id = {job:String}" in statements["RUN_ONE"]
+    }
+    assert statements["RUN_LIST"] == ch.RUN_LIST_SQL
+    assert statements["RUN_ONE"] == ch.RUN_ONE_SQL
+    assert statements["FIX_VERIFICATIONS"] == ch.FIX_VERIFICATION_SQL
+    # The two rollups are one body: RUN_ONE narrows base AND the refusal CTE
+    # to the job, RUN_LIST ranks every run's stages and takes the limit.
+    assert statements["RUN_ONE"].count("WHERE job_id = {job_id:String}") == 2
     assert statements["RUN_ONE"].rstrip().endswith("LIMIT 1")
     assert "ORDER BY b.started_at DESC LIMIT {limit:UInt32}" in statements["RUN_LIST"]
     assert "WHERE job_id" not in statements["RUN_LIST"].split("shapes AS")[0].split("f AS")[0]
+    assert "refused_count" in statements["RUN_LIST"] and "refused_count" in statements["RUN_ONE"]
     for sql in statements.values():
-        assert "${" not in sql, "a template placeholder reached the statement"
-        # The console's parameter names, not serve's.
-        assert "{job_id:String}" not in sql
-    # An escaped backtick in a TypeScript comment is a backtick in the SQL.
-    assert "\\`" not in statements["LATEST_STAGES"]
+        # serve's binding names, never the console's old ones.
+        assert "{job:String}" not in sql and "{finding:String}" not in sql
+    # On a legacy table the findings statement projects the fallback score.
+    assert "toFloat64(0) AS confidence_score" in gate.serve_statements(set())["FINDINGS"]
 
 
 def test_the_wire_pattern_is_the_consoles():

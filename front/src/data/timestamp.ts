@@ -6,7 +6,7 @@
  * contract is DateTime64(3); fixed width, so it sorts as text.
  *
  * The same row used to carry a different timestamp depending on which door it
- * came through. ClickHouse's own JSON — the browser path — writes
+ * came through. ClickHouse's own JSON — the recording's form — writes
  * `2026-09-20 10:00:00.123`. The API wrote whatever Python's isoformat() made
  * of the driver's value: six fractional digits, or none at all when the
  * milliseconds were zero. Nothing on screen showed it only because one
