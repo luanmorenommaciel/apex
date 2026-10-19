@@ -83,6 +83,17 @@ of it. Both proxies time out explicitly (`proxy_connect_timeout 5s`,
 large `spark_events` can push a run list toward the read bound, which is the
 one to raise.
 
+**Behind a TLS terminator.** The image terminates no TLS, by decision
+(2026-10-19): it listens on port 80 only, never sends
+`Strict-Transport-Security`, and never redirects to `https`. Put a terminator
+in front of it — an ingress, a load balancer, a reverse proxy — that owns the
+certificate, answers on 443, sets HSTS, and forwards plain http to the image
+with `X-Forwarded-Proto: https`. What the image guarantees in return is that
+every redirect it issues is a path (`absolute_redirect off`,
+`port_in_redirect off` in `nginx.conf`), so a browser that arrived over https
+is never sent to an `http://` URL; the API token in `/config.js` and every
+`/v1` and `/clickhouse` request then travel only over the terminator's TLS.
+
 ```bash
 docker build --target prod -t apex-console:prod .
 docker run --rm -p 8080:80 \
