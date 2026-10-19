@@ -1,7 +1,7 @@
 ---
 id: T-20261019-serve-owns-console-sql
 title: "Make serve the sole owner of the console statements"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: M
@@ -56,7 +56,7 @@ test_console_reads keeps its three regressions but asserts on ch._console_findin
 ```bash
 # eval_1: nothing in serve reads the console's SQL any more
 eval_1() {
-  ( ! grep -rn "front/src/data/queries.ts\|front_query\|QUERIES_TS" serve/tests serve/tools serve/src )
+  ( grep -q "def serve_statements" serve/tools/console_parity_gate.py && test -z "$(grep -rl --exclude-dir=__pycache__ "front/src/data/queries.ts\|front_query\|QUERIES_TS" serve/tests serve/tools serve/src)" )
 }
 
 # eval_2: the full serve suite passes

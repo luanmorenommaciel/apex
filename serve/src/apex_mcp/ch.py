@@ -312,13 +312,15 @@ LIMIT {limit:UInt32}
 
 
 # --------------------------------------------------------------------------
-# Console reads (ported from front/src/data/queries.ts).
+# Console reads. ch.py is the ONLY home of these statements (D-api-only,
+# 2026-10-19): the console reads through the API alone and carries no SQL.
 #
 # These six answered the console's screens from the BROWSER, against a
 # read-only ClickHouse user that shipped to every visitor. They live here so
 # the API can serve them and that credential can be retired. The SQL is a
 # PORT, not a redesign: the console's rendered numbers are the acceptance
-# criterion, so the shape of every result matches what queries.ts returned.
+# criterion, so the shape of every result matches the console's row types
+# (front/src/contract/types.ts, which tests/test_api_resources.py reads).
 # --------------------------------------------------------------------------
 
 # spark_events is authoritative for WHAT RAN: every stage is here, including
@@ -335,9 +337,9 @@ def _run_rollup_sql(where: str, tail: str) -> str:
     one body is what stops the single-run and list forms from drifting into
     two different answers to "what is this run".
 
-    This body and ``runRollup`` in front/src/data/queries.ts are ONE statement
-    on two hosts; a test compares them with comments and whitespace removed.
-    Edit both or neither.
+    This is the only copy: the console reads it through the API. The live
+    parity gate (tools/console_parity_gate.py) runs it as raw SQL under a
+    readonly user and holds the API's rows to that.
     """
     return f"""
 WITH
@@ -378,7 +380,7 @@ shapes AS (
 -- doors run (decided 2026-10-19, D-refused-count-home), so the list and the
 -- detail screen count the same thing; front/src/contract/refusedCount.test.ts
 -- holds this arithmetic to assessStage() over the recording, and serve's
--- parity gate holds the two doors to each other.
+-- parity gate holds the API's rows to this statement run as raw SQL.
 refused AS (
   SELECT job_id, 1 AS counted, countIf(NOT reportable) AS refused_count
   FROM (

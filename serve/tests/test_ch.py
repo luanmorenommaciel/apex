@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pathlib
 import re
 
 import pytest
@@ -827,7 +826,7 @@ def test_memory_reads_short_circuit_on_empty_input():
 
 
 # --------------------------------------------------------------------------
-# Console reads ported out of front/src/data/queries.ts.
+# Console reads: ch.py's own statements, the API's contract with the console.
 #
 # These ran in the BROWSER against a credential that shipped to every visitor.
 # The port's acceptance criterion is that the console's rendered numbers do not
@@ -1247,20 +1246,12 @@ def test_run_rollup_carries_no_settings_clause():
         assert "SETTINGS" not in without_comments.upper()
 
 
-QUERIES_TS = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "data" / "queries.ts"
-
-
-def test_run_rollup_matches_the_console_sql():
-    """One rollup, two hosts: ch.py and queries.ts must be the same statement.
-
-    Compared with comments and whitespace removed. Both name their tables
-    unqualified, so there is nothing else to normalise.
-    """
-    source = QUERIES_TS.read_text()
-    body = source.split("const runRollup = (where: string, tail: string) => `", 1)[1]
-    body = body.split("\n`;", 1)[0].replace("${where}", "").replace("${tail}", "")
-
-    def normalise(text: str) -> str:
-        return re.sub(r"\s+", " ", re.sub(r"--[^\n]*", "", text)).strip()
-
-    assert normalise(body) == normalise(ch._run_rollup_sql("", ""))
+def test_run_rollup_is_one_body_with_two_literals():
+    """RUN_ONE and RUN_LIST are the same statement, differing only in the
+    filter and the ordering literals this module passes - so the two forms
+    cannot drift into two answers to "what is this run"."""
+    assert ch.RUN_ONE_SQL == ch._run_rollup_sql("WHERE job_id = {job_id:String}", "LIMIT 1")
+    assert ch.RUN_LIST_SQL == ch._run_rollup_sql("", "ORDER BY b.started_at DESC LIMIT {limit:UInt32}")
+    body = ch._run_rollup_sql("", "")
+    assert body.count("FROM spark_events") == 2, "base and the refusal CTE both take the filter"
+    assert "{job_id:String}" not in body and "{limit:UInt32}" not in body

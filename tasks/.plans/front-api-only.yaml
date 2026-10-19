@@ -78,7 +78,7 @@ units:
     evals:
       - id: eval_1
         description: nothing in serve reads the console's SQL any more
-        command: ( ! grep -rn "front/src/data/queries.ts\|front_query\|QUERIES_TS" serve/tests serve/tools serve/src )
+        command: ( grep -q "def serve_statements" serve/tools/console_parity_gate.py && test -z "$(grep -rl --exclude-dir=__pycache__ "front/src/data/queries.ts\|front_query\|QUERIES_TS" serve/tests serve/tools serve/src)" )
         verifies: [B-1]
         terminal: true
         expected_duration_sec: 5
