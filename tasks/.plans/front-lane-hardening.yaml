@@ -45,6 +45,12 @@ metadata:
       decided_by: the user, 2026-10-19, option A
       decision: serve keeps its copies of the console statements, held to front/src/data/queries.ts by test_console_reads.py, test_projection_parity.py and test_console_parity_gate.py. No leaf; T-20261019-console-sql-single-source was dropped from front-lane-decisions.yaml.
       applies_to: none
+      superseded_by: D-api-only on 2026-10-19 - with no SQL left in the console, serve becomes the sole owner of the console statements
+    - id: D-api-only
+      decided_by: the user, 2026-10-19 ("a intencao e deixar somente via API")
+      decision: The console reads ONLY through the Apex API. The browser-side ClickHouse door is removed - ClickHouseRepository, clickhouse.ts, queries.ts, the apex_ro user DDL, the /clickhouse proxies in nginx and Vite, every CLICKHOUSE_* deployment variable - and DATA_SOURCE narrows to http (default) and fixtures (the recording, explicit). auto goes with the door it probed. serve's ch.py becomes the single owner of the console statements and its tests stop reading front/src/data/queries.ts; the live parity gate keeps proving the API against raw SQL executed as a readonly user, with the statements taken from ch.py.
+      narrows: D-auto-fallback-policy (no auto to fall back from; the store-unreachable page stays for an API that does not answer at boot) and D-refused-count-home (the refused CTE lives in ch.py alone, proven by the gate against raw SQL)
+      applies_to: tasks/.plans/front-api-only.yaml
   # The four decisions below were open until 2026-10-19; the questions as
   # posed are preserved in git history of this file.
 units:

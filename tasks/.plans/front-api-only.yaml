@@ -1,0 +1,255 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: front-api-only
+  source: tasks/.plans/front-lane-hardening.yaml (metadata.decisions D-api-only)
+  parent_plan: front-lane-hardening
+  # The console reads only through the Apex API (D-api-only, 2026-10-19).
+  # Order matters and is a depends_on chain: serve stops reading the console's
+  # SQL FIRST, so the moment queries.ts is deleted nothing on the serve side
+  # breaks; then the console's source loses the door; then the deployment
+  # surface. Checked 2026-10-19: README.md and PIPELINE.md do not mention the
+  # console at all, so there is no root-docs leaf; the slides under
+  # docs/artifacts are a dated snapshot and stay. A fourth manifest because
+  # the earlier ones have materialised units and batch refuses a partial set.
+  #
+  # Evidence 2026-10-19 (branch performance-improvements at 72d8375):
+  #   front files naming the door - src/data/clickhouse.ts, queries.ts,
+  #   repository.ts (ClickHouseRepository, resolveRepository auto),
+  #   runtimeConfig.ts (database/user/password), env.d.ts, contract/
+  #   01-readonly-user.sql, nginx.conf (two /clickhouse locations), Dockerfile
+  #   (CLICKHOUSE_UPSTREAM), docker-entrypoint.d/30-apex-console-config.sh,
+  #   docker-compose.yml, Makefile (CH_*, ch-ping, ch-tables, ch-user, store,
+  #   up-clickhouse), .env.example, vite.config.ts (/clickhouse proxy), README.
+  #   serve readers of front/src/data/queries.ts - tests/test_console_reads.py,
+  #   tests/test_projection_parity.py, tests/test_ch.py (rollup match),
+  #   tests/test_console_parity_gate.py, tools/console_parity_gate.py.
+  #   tests/test_api_resources.py reads repository.ts, types.ts and timestamp.ts,
+  #   which STAY - the Repository interface and the row types are the API's
+  #   contract with the console.
+  proposed_choices:
+    - id: P-fixtures-in-image
+      proposal: DATA_SOURCE=fixtures stays available in the production image as an explicit, store-less mode (demos, smoke tests); it is never a default and never a fallback.
+      alternative: fixtures become dev-only (vitest and `make up-fixtures`), and the image accepts http alone.
+      applied_in: T-20261019-front-http-only-resolution and T-20261019-front-drop-clickhouse-door, pending the user's word
+    - id: P-boot-probe
+      proposal: in http mode the provider probes /v1/health once at boot; no answer at all (connection refused, 502 from an empty proxy) renders the store-unreachable page naming /v1/health, while 401 and any JSON answer mount the app and let each screen report. Keeps the page D-auto-fallback-policy introduced without keeping auto.
+      alternative: no boot probe; a dead API surfaces as QueryFailure on every screen.
+      applied_in: T-20261019-front-http-only-resolution, pending the user's word
+units:
+  - id: T-20261019-serve-owns-console-sql
+    title: Make serve the sole owner of the console statements
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - serve/src/apex_mcp/ch.py
+      - serve/tests/test_console_reads.py
+      - serve/tests/test_projection_parity.py
+      - serve/tests/test_ch.py
+      - serve/tests/test_console_parity_gate.py
+      - serve/tools/console_parity_gate.py
+      - serve/RUNBOOK.md
+    creates_paths:
+      - serve/tools/sql/01-parity-readonly-user.sql
+    source_note: D-api-only; serve/tests/test_console_reads.py front_query(), test_projection_parity.py front_fix_verifications(), test_ch.py test_run_rollup_matches_the_console_sql, test_console_parity_gate.py + tools/console_parity_gate.py console_statements() (all read front/src/data/queries.ts); serve/RUNBOOK.md lines 142-166 (the two doors, make ch-user)
+    why: Five serve tests and the live gate read front/src/data/queries.ts as the contract for the console's SQL. The next leaf deletes that file, so serve must own its statements before the console stops carrying them, or the serve suite and the gate break on a file that no longer exists.
+    goal: No serve test or tool reads front/src/data/queries.ts; ch.py's constants are asserted directly; the gate runs ch.py's own statements over ClickHouse HTTP as a readonly user whose DDL now lives in serve/tools/sql, compares those rows with the API's, and keeps every live behaviour check it has; RUNBOOK says so; the full serve suite passes.
+    context: test_console_reads keeps its three regressions but asserts on ch._console_findings_sql() and ch.CONSOLE_PLAN_TRANSITIONS_SQL instead of front_query(); test_projection_parity becomes a test that FIX_VERIFICATION_SQL still derives rule 2 the documented way (floor boundary, sign flip, NULL mechanism_confirmed) rather than a byte comparison with a file that is gone; test_ch's rollup-match test is replaced by an assertion that RUN_ONE_SQL and RUN_LIST_SQL are one body with two literals. The gate's console_statements() is replaced by a dict of ch.py constants keyed by the same names the gate already uses, with the serve binding names, and browser_query() stays as the raw-SQL door; its readonly user is created from serve/tools/sql/01-parity-readonly-user.sql (the text of front/contract/01-readonly-user.sql, which the console leaf deletes) and RUNBOOK's "make ch-user" row points at it. The ch.py docstrings that say "edit both or neither" and "serve/src/apex_mcp/ch.py carries this same body" are rewritten to say ch.py is the owner. test_api_resources is untouched: Repository method names, RunSummary and the wire timestamp stay the console's contract.
+    behaviors:
+      - id: B-1
+        given: the serve tests and tools
+        when: they are searched
+        then: none names front/src/data/queries.ts or front_query
+      - id: B-2
+        given: the full serve suite
+        when: it runs
+        then: it passes, with the three console-read regressions still pinned on ch.py's own text
+      - id: B-3
+        given: the gate's statement table
+        when: its test runs
+        then: every name the gate sends is a ch.py constant and carries serve's binding names, never the console's
+    evals:
+      - id: eval_1
+        description: nothing in serve reads the console's SQL any more
+        command: ( ! grep -rn "front/src/data/queries.ts\|front_query\|QUERIES_TS" serve/tests serve/tools serve/src )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 5
+      - id: eval_2
+        description: the full serve suite passes
+        command: ( cd serve && uv run --extra dev pytest -q -p no:warnings )
+        verifies: [B-2, B-3]
+        terminal: true
+        expected_duration_sec: 120
+      - id: eval_3
+        description: the readonly user DDL and the runbook moved with the gate
+        command: ( test -f serve/tools/sql/01-parity-readonly-user.sql && grep -q "readonly = 1" serve/tools/sql/01-parity-readonly-user.sql && grep -q "tools/sql/01-parity-readonly-user.sql" serve/RUNBOOK.md && ! grep -q "make ch-user" serve/RUNBOOK.md )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Copying queries.ts into a serve test as a string to keep a byte comparison alive.
+      - Dropping the gate's readonly or unindexed-run checks because the browser door is gone; raw SQL as a readonly user is still the reference.
+      - Touching front/ in this leaf.
+    do_not_touch:
+      - front
+      - engine
+      - serve/src/apex_api
+
+  - id: T-20261019-front-http-only-resolution
+    title: Read only through the API in the console's source
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20261019-serve-owns-console-sql]
+    touches_paths:
+      - front/src/data
+      - front/src/components/molecules
+      - front/src/screens
+      - front/src/contract/types.ts
+      - front/src/contract/rules.ts
+      - front/src/contract/refusedCount.test.ts
+      - front/src/e2e/console.live.test.tsx
+    creates_paths: []
+    source_note: D-api-only with P-fixtures-in-image and P-boot-probe; front/src/data/repository.ts (ClickHouseRepository, resolveRepository), clickhouse.ts, queries.ts, runtimeConfig.ts, env.d.ts, the tests beside them, NavBar.tsx SOURCE, QueryFailure.tsx SOURCE_NAME, StoreUnreachable.tsx, the screen tests' failing() proxies (kind clickhouse)
+    why: The console still carries a second door - SQL text, a ClickHouse HTTP client, a database user and password in its runtime config - that the user decided it must not have. While it exists, auto can open it and a deployment can be pointed at it.
+    goal: The console's source has one data door, HttpRepository, plus FixtureRepository for the recording; DataSource is http or fixtures; runtimeConfig carries dataSource, apiUrl and apiToken only; resolveRepository in http mode probes /v1/health once and renders StoreUnreachable only when nothing answers; every test passes and no file under front/src names ClickHouse as a source.
+    context: Delete src/data/clickhouse.ts, queries.ts, queries.test.ts, queries.consumed.test.ts and findingsProjection.test.ts; remove ClickHouseRepository and the FINDINGS probe from repository.ts; Repository.kind becomes http or fixtures and NavBar's SOURCE and QueryFailure's SOURCE_NAME shrink with it (exhaustive records, so the compiler lists every site). runtimeConfig drops database, user and password and env.d.ts drops VITE_CLICKHOUSE_*; the window.__APEX_CONFIG__ shape drops them too. resolveRepository - fixtures returns FixtureRepository; http calls apiPing() once - true, or a 401, mounts HttpRepository; a probe that gets no HTTP answer at all throws StoreUnreachableError naming only /v1/health (P-boot-probe). auto and clickhouse are no longer DataSource values; asDataSource maps anything unrecognised to http. httpRepository.test.ts loses its clickhouse and auto cases and gains the boot-probe ones; resolveRepository.test.ts is rewritten for the two modes; useAsync.test.tsx keeps the abort test for HttpRepository only; the screen tests' failing() proxies set kind http and assert the apex-api wording QueryFailure already has; the e2e test's mocked runtimeConfig drops the three ClickHouse fields. Comments in RunDetailScreen.tsx, types.ts and rules.ts that name queries.ts or the browser door are reworded to name the API. StoreUnreachable lists what was probed from the error, so it needs no change beyond wording.
+    behaviors:
+      - id: B-1
+        given: front/src after the change
+        when: it is searched
+        then: no clickhouse.ts, no queries.ts, no ClickHouseRepository, no VITE_CLICKHOUSE and no X-ClickHouse header
+      - id: B-2
+        given: DATA_SOURCE=http with an API that answers or answers 401
+        when: the app boots
+        then: HttpRepository is used and the app mounts
+      - id: B-3
+        given: DATA_SOURCE=http with no HTTP answer at /v1/health
+        when: the app boots
+        then: StoreUnreachable renders naming /v1/health and nothing else
+      - id: B-4
+        given: DATA_SOURCE=fixtures
+        when: the app boots
+        then: FixtureRepository is used without any probe
+    evals:
+      - id: eval_1
+        description: the door is gone from the source
+        command: ( cd front && test ! -f src/data/clickhouse.ts && test ! -f src/data/queries.ts && ! grep -rn "ClickHouseRepository\|VITE_CLICKHOUSE\|X-ClickHouse\|\"clickhouse\"" src )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 5
+      - id: eval_2
+        description: the resolution tests pass
+        command: ( cd front && npx vitest --run src/data/resolveRepository.test.ts src/data/httpRepository.test.ts src/data/useAsync.test.tsx )
+        verifies: [B-2, B-3, B-4]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_3
+        description: the whole front gate stays green
+        command: ( cd front && npm run typecheck && npm run lint && npm test -- --run && npm run build )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 90
+      - id: eval_4
+        description: serve still finds every Repository method and row type it serves
+        command: ( cd serve && uv run --extra dev pytest tests/test_api_resources.py -q -p no:warnings )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Keeping ClickHouseRepository behind a flag "in case"; the decision is the door goes.
+      - Removing FixtureRepository; tests and up-fixtures use it, and P-fixtures-in-image keeps it explicit.
+      - Treating a 401 at boot as unreachable; the API exists and refused, which the screens report.
+      - Touching the deployment files (nginx.conf, Dockerfile, entrypoint, compose, Makefile); that is the next leaf.
+    do_not_touch:
+      - front/nginx.conf
+      - front/Dockerfile
+      - front/docker-entrypoint.d
+      - front/docker-compose.yml
+      - front/Makefile
+      - front/.env.example
+      - front/vite.config.ts
+      - front/README.md
+      - serve
+
+  - id: T-20261019-front-drop-clickhouse-door
+    title: Remove the ClickHouse door from the console's deployment surface
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20261019-front-http-only-resolution]
+    touches_paths:
+      - front/nginx.conf
+      - front/Dockerfile
+      - front/docker-entrypoint.d/30-apex-console-config.sh
+      - front/docker-compose.yml
+      - front/Makefile
+      - front/.env.example
+      - front/vite.config.ts
+      - front/README.md
+      - front/src/data/entrypoint.test.ts
+      - front/contract/01-readonly-user.sql
+    creates_paths: []
+    source_note: D-api-only with P-fixtures-in-image; front/nginx.conf (location = /clickhouse and /clickhouse/), Dockerfile (ENV CLICKHOUSE_UPSTREAM, NGINX_ENVSUBST_FILTER), docker-entrypoint.d/30-apex-console-config.sh (clickhouse and auto branches, CLICKHOUSE_DB/USER/PASSWORD keys), docker-compose.yml (VITE_CLICKHOUSE_*), Makefile (CH_*, store, ch-ping, ch-tables, ch-user, up-clickhouse, prod -e CLICKHOUSE_*), .env.example, vite.config.ts (/clickhouse proxy), front/contract/01-readonly-user.sql, src/data/entrypoint.test.ts (clickhouse and auto describes)
+    why: With the door gone from the source, the image still proxies /clickhouse to a deployment-owned upstream, the entrypoint still writes a database user and password into /config.js, and the Makefile still creates apex_ro on infra's store. Every one of those is a way to put the browser back on the database.
+    goal: The image knows one upstream, APEX_API_UPSTREAM; DATA_SOURCE accepts http (default) and fixtures and the entrypoint refuses anything else by name; /config.js carries dataSource, apiUrl and apiToken only; nginx and Vite proxy /v1 only; the Makefile and compose start the console against the API or the recording and nothing else; the read-only user DDL is gone from front/contract; the entrypoint tests and README describe exactly that; the prod image builds and answers.
+    context: nginx.conf loses both /clickhouse locations and their comment; NGINX_ENVSUBST_FILTER and the ENV defaults in the Dockerfile keep APEX_API_UPSTREAM alone. The entrypoint's header, the mode case and the config.js keys shrink to http and fixtures - an unrecognised DATA_SOURCE is now refused at boot with its value named, because the bundle's "anything else is http" would otherwise hide a typo; the auto branch and its messages go. compose drops the three VITE_CLICKHOUSE_* lines and the store comment; the Makefile drops CH, CH_CONTAINER, CH_ADMIN_*, CLICKHOUSE_UPSTREAM, CH_DB/USER/PASSWORD, the store, ch-ping, ch-tables, ch-user and up-clickhouse targets, and prod stops passing -e CLICKHOUSE_*. vite.config.ts keeps the /v1 proxy only. .env.example keeps the API variables and the two data sources. README - the quick start, the deployment table, the "Querying ClickHouse from the browser" section (which becomes a short history note saying the door was removed on 2026-10-19 and why), the layout block and the ledger. entrypoint.test.ts loses the clickhouse and auto describes and gains a case for a refused unknown value. The prod image is built and curled in fixtures mode as the hardening leaf did.
+    behaviors:
+      - id: B-1
+        given: nginx.conf, Dockerfile, vite.config.ts and the entrypoint
+        when: they are searched
+        then: none names CLICKHOUSE_UPSTREAM, /clickhouse, CLICKHOUSE_DB, CLICKHOUSE_USER or CLICKHOUSE_PASSWORD
+      - id: B-2
+        given: the entrypoint with DATA_SOURCE unset, http, fixtures and an unknown value
+        when: it runs
+        then: unset and http behave alike, fixtures needs no upstream, and the unknown value is refused with the value in the message
+      - id: B-3
+        given: the prod image in fixtures mode
+        when: / is requested
+        then: it answers 200 with the hardening headers, and /config.js carries no database key
+      - id: B-4
+        given: the Makefile and compose
+        when: rendered
+        then: no CLICKHOUSE variable and no ch- target remain, and the README has no apex_ro setup step
+    evals:
+      - id: eval_1
+        description: the door is gone from every deployment file
+        command: ( cd front && ! grep -rn "CLICKHOUSE_UPSTREAM\|/clickhouse\|CLICKHOUSE_DB\|CLICKHOUSE_USER\|CLICKHOUSE_PASSWORD\|VITE_CLICKHOUSE" nginx.conf Dockerfile vite.config.ts docker-entrypoint.d docker-compose.yml Makefile .env.example && test ! -f contract/01-readonly-user.sql && ! grep -q "ch-user\|up-clickhouse\|apex_ro" Makefile && ! grep -q "make ch-user\|up-clickhouse" README.md )
+        verifies: [B-1, B-4]
+        terminal: true
+        expected_duration_sec: 5
+      - id: eval_2
+        description: the entrypoint tests pass with the two modes and the refusal
+        command: ( cd front && npx vitest --run src/data/entrypoint.test.ts && grep -q "unknown\|unrecognised" src/data/entrypoint.test.ts )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_3
+        description: the prod image builds and serves the recording with the headers and no database key
+        command: ( cd front && docker rm -f apex-console-apionly-eval > /dev/null 2>&1; docker build -q --target prod -t apex-console:apionly-eval . > /dev/null && docker run -d --rm --name apex-console-apionly-eval -p 18083:80 -e DATA_SOURCE=fixtures apex-console:apionly-eval > /dev/null && sleep 2 && H="$(curl -sI http://127.0.0.1:18083/)" && C="$(curl -s http://127.0.0.1:18083/config.js)"; docker rm -f apex-console-apionly-eval > /dev/null; echo "$H" | grep -q "200" && echo "$H" | grep -qi "^content-security-policy" && echo "$C" | grep -q "dataSource" && ! echo "$C" | grep -qi "database\|password" )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 180
+      - id: eval_4
+        description: compose and make render without the store, and the whole front gate stays green
+        command: ( cd front && docker compose config > /dev/null && ! (docker compose config | grep -q CLICKHOUSE) && make -n prod | grep -q APEX_API_UPSTREAM && ! (make -n prod | grep -q CLICKHOUSE) && npm run typecheck && npm run lint && npm test -- --run )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 120
+    anti_patterns:
+      - Leaving the /clickhouse location "for compatibility"; a proxy to a store nobody configures is the door reopened.
+      - Keeping CLICKHOUSE_PASSWORD in /config.js as an empty key; the key itself is the leak.
+      - Silently mapping an unknown DATA_SOURCE to http in the entrypoint; it is refused by name.
+    do_not_touch:
+      - front/src/data/repository.ts
+      - front/src/screens
+      - front/src/components
+      - serve
+      - infra
