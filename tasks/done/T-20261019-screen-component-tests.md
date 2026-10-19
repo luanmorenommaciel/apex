@@ -1,7 +1,7 @@
 ---
 id: T-20261019-screen-component-tests
 title: "Give Runs, RunDetail, Finding, Compare and Memory a component test each"
-status: in-progress
+status: done
 format_version: 3
 profile: standard
 effort: M
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: agmarcastro
 signed_off_at: 2026-10-19T15:44:21Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: agmarcastro
+accepted_at: 2026-10-19T15:47:43Z
 signed_off_sig: hmac-sha256-v3:60832560:fb40f204bcee2da5828445b71bb18da1452a4116c1d5b3754bbb4bc07ac12a2e
+accepted_tier: 1
+accepted_attempt_id: fcc95645-ce63-4d04-a676-8160722416f9
+accepted_authorization_ref: hmac-sha256-v3:60832560:fb40f204bcee2da5828445b71bb18da1452a4116c1d5b3754bbb4bc07ac12a2e
+acceptance_record_digest: sha256:e127c0ebe560c60af49922d3beaf2656b9e085357ec3abf7ecef6201de0b37f3
 ---
 
 # Give Runs, RunDetail, Finding, Compare and Memory a component test each
