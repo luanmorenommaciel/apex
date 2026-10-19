@@ -1,7 +1,7 @@
 ---
 id: T-20261019-auto-never-fixtures
 title: "Stop auto from serving the recording as production data"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S
@@ -25,12 +25,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: agmarcastro
+signed_off_at: 2026-10-19T15:54:00Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v3:60832560:e7b69540d1203dd69d78d28de1e966484b44baf0a62f2ab613e6634a45de5f18
 ---
 
 # Stop auto from serving the recording as production data
