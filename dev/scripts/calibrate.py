@@ -34,6 +34,7 @@ import statistics
 import subprocess
 import sys
 import time
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -57,6 +58,9 @@ SCENARIOS: dict[str, dict] = {
 DEFAULT_SCENARIOS = ["skew_join", "skew_join_aqe", "spill", "bad_shuffle", "control", "driver_oom"]
 
 APP_ID_RE = re.compile(r"APEX_SESSION job_id=(app-\d{14}-\d{4})")
+# Only a Spark application id may reach ClickHouse, and only as a BOUND query
+# parameter (`{app_id:String}` + `param_app_id=`), never interpolated into SQL.
+APP_ID_PATTERN = re.compile(r"^app-\d{14}-\d{4}$")
 
 
 def submit(scenario: str, run_idx: int) -> tuple[int, str, float]:
@@ -112,6 +116,33 @@ def task_summary(app_id: str, stage_id: int, attempt: int) -> dict:
                      f"/stages/{stage_id}/{attempt}/taskSummary?quantiles={QUANTILES}")
 
 
+TRANSITIONS_SQL = ("SELECT transition_type FROM apex.plan_transitions "
+                   "WHERE job_id = {app_id:String} ORDER BY update_seq FORMAT TSV")
+STAGE_P99_SQL = ("SELECT stage_id, task_count, task_duration_p50_ms, task_duration_p99_ms "
+                 "FROM apex.spark_events WHERE job_id = {app_id:String} "
+                 "ORDER BY shuffle_read_bytes DESC LIMIT 1 FORMAT JSONEachRow")
+
+
+def ch_request(sql: str, app_id: str, password: str,
+               user: str | None = None, url: str | None = None) -> urllib.request.Request:
+    """Build the ClickHouse HTTP request with app_id BOUND as a query parameter.
+
+    The SQL text is a constant; the only variable travels as `param_app_id` in
+    the URL, which ClickHouse substitutes server-side with String typing. A
+    value that is not a Spark application id is rejected before any request.
+    """
+    if not APP_ID_PATTERN.fullmatch(app_id):
+        raise ValueError("app_id_must_be_a_spark_application_id")
+    user = user or os.environ.get("APEX_CANONICAL_CH_USER", "apex")
+    url = (url or os.environ.get("APEX_CANONICAL_CH_URL", "http://127.0.0.1:8123")).rstrip("/")
+    query_url = f"{url}/?{urllib.parse.urlencode({'param_app_id': app_id})}"
+    auth = base64.b64encode(f"{user}:{password}".encode()).decode()
+    return urllib.request.Request(
+        query_url, data=sql.encode("utf-8"), method="POST",
+        headers={"Authorization": f"Basic {auth}",
+                 "Content-Type": "text/plain; charset=utf-8"})
+
+
 def ch_transitions(app_id: str, wait_seconds: int = 90) -> list[str] | None:
     """transition_type list from canonical ClickHouse, or None if not configured.
 
@@ -122,15 +153,9 @@ def ch_transitions(app_id: str, wait_seconds: int = 90) -> list[str] | None:
     password = os.environ.get("APEX_CANONICAL_CH_PASSWORD")
     if not password:
         return None
-    user = os.environ.get("APEX_CANONICAL_CH_USER", "apex")
-    url = os.environ.get("APEX_CANONICAL_CH_URL", "http://127.0.0.1:8123").rstrip("/")
-    sql = (f"SELECT transition_type FROM apex.plan_transitions "
-           f"WHERE job_id = '{app_id}' ORDER BY update_seq FORMAT TSV")
     deadline = time.monotonic() + wait_seconds
     while True:
-        req = urllib.request.Request(
-            url, data=sql.encode("utf-8"), method="POST",
-            headers={"Authorization": "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()})
+        req = ch_request(TRANSITIONS_SQL, app_id, password)
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 rows = [line for line in resp.read().decode("utf-8").splitlines() if line]
@@ -149,16 +174,9 @@ def ch_stage_p99(app_id: str, wait_seconds: int = 90) -> dict | None:
     password = os.environ.get("APEX_CANONICAL_CH_PASSWORD")
     if not password:
         return None
-    user = os.environ.get("APEX_CANONICAL_CH_USER", "apex")
-    url = os.environ.get("APEX_CANONICAL_CH_URL", "http://127.0.0.1:8123").rstrip("/")
-    sql = (f"SELECT stage_id, task_count, task_duration_p50_ms, task_duration_p99_ms "
-           f"FROM apex.spark_events WHERE job_id = '{app_id}' "
-           f"ORDER BY shuffle_read_bytes DESC LIMIT 1 FORMAT JSONEachRow")
     deadline = time.monotonic() + wait_seconds
     while True:
-        req = urllib.request.Request(
-            url, data=sql.encode("utf-8"), method="POST",
-            headers={"Authorization": "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()})
+        req = ch_request(STAGE_P99_SQL, app_id, password)
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 rows = [json.loads(line) for line in resp.read().decode("utf-8").splitlines() if line]
