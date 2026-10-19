@@ -1,0 +1,717 @@
+api_version: taskspec.dev/v1
+kind: TaskPlan
+approved: true
+metadata:
+  name: front-lane-hardening
+  source: user intake 2026-10-19 (twelve front-lane problems, listed in the session) checked against front/ at c3c3ea3
+  # Evidence digest, 2026-10-19, worktree performance-improvements at c3c3ea3.
+  # Baseline on this checkout before any leaf - typecheck, lint, 175 vitest
+  # tests and vite build all green; dist/assets/index-*.js (342.7 kB) contains
+  # the recorded job id app-20260803014217-0071, so the fixture module is in
+  # the entry chunk in every mode.
+  #
+  # Twelve problems, eleven leaves here and four decision-gated leaves in
+  # tasks/.plans/front-lane-decisions.yaml (approved false, not batched).
+  #   1 credentials / default data source   -> T-20261019-default-data-source-http (the user's decision, below)
+  #   2 nginx TLS, headers, timeouts, gzip, fonts -> T-20261019-self-hosted-fonts + T-20261019-nginx-hardening; TLS listener gated on D-tls-termination
+  #   3 auto falls to fixtures silently     -> gated on D-auto-fallback-policy
+  #   4 badge says v0.5                     -> T-20261019-contract-badge-v06
+  #   5 fixtures in every bundle            -> T-20261019-fixtures-lazy-chunk
+  #   6 PLAN_MEMORY dead, SQL duplicated    -> T-20261019-queries-dead-statement; single source gated on D-console-sql-home
+  #   7 accessibility                       -> T-20261019-a11y-baseline
+  #   8 useAsync cache/dedupe/abort         -> T-20261019-query-cache-dedupe-abort
+  #   9 browser door vs missing confidence_score -> T-20261019-browser-door-additive-columns
+  #  10 Node 20/22/25                       -> T-20261019-node-engines-pin
+  #  11 refused_count from the server       -> gated on D-refused-count-home
+  #  12 screen component tests              -> T-20261019-screen-component-tests
+  decisions:
+    - id: D-2026-10-19-default-http
+      decided_by: the user, in the 2026-10-19 intake
+      decision: the console's default DATA_SOURCE is http, not clickhouse. Makefile (DATA_SOURCE ?= clickhouse) and docker-compose.yml (VITE_DATA_SOURCE default clickhouse) change; the image entrypoint default stays auto, which already prefers the API, until D-auto-fallback-policy is taken.
+      applies_to: T-20261019-default-data-source-http
+  open_decisions:
+    - id: D-tls-termination
+      found_by: intake item 2 on 2026-10-19
+      question: Where does TLS terminate for apex-console? The image listens on 80 only (front/nginx.conf) and no infra or serve document names a terminator. Option A - an optional 443 listener in the image, enabled by the entrypoint when a cert and key are mounted, HSTS only on that listener. Option B - TLS stays with an external terminator and the image documents the X-Forwarded-Proto contract and never sends HSTS itself. The two need different leaves and different proof.
+      blocks: T-20261019-nginx-tls-listener in front-lane-decisions.yaml
+      not_a_blocker_for: T-20261019-nginx-hardening, which adds the headers, timeouts and gzip that both options share
+      owner: platform (unassigned)
+    - id: D-auto-fallback-policy
+      found_by: intake item 3 on 2026-10-19
+      question: What should DATA_SOURCE=auto do when neither the API nor ClickHouse answers? Today resolveRepository() returns FixtureRepository and the only signal is the small header badge. Option A - auto never resolves to fixtures; the console renders a named failure screen listing what was probed, and fixtures are served only by DATA_SOURCE=fixtures. Option B - keep the fallback but make it loud (a persistent banner on every screen plus a console warning). A is the recommendation - a recording shown as production data is the defect, not its volume - but it changes what a misconfigured deployment shows, so it is a product call.
+      blocks: T-20261019-auto-never-fixtures in front-lane-decisions.yaml
+      not_a_blocker_for: every leaf in this manifest
+      owner: product (unassigned)
+    - id: D-refused-count-home
+      found_by: intake item 11 on 2026-10-19
+      question: refused_count is derived in the browser by rules.ts assessStage() over stage rows plus job_conf (rules 1, 6, 7) and is -1 on the runs list because the list query has no stage rows. Serving it from the API means the rule logic exists twice - TypeScript for the detail screens and Python or SQL for /v1/runs - unless rules 1, 6 and 7 are rewritten as a SQL CTE in the run rollup that BOTH doors run, which the console parity gate would then prove equal. Option A - SQL CTE in the shared rollup (RUN_LIST and RUN_ONE), rules.ts keeps its functions for the detail screens, parity gate pins the two. Option B - Python port in serve, console reads it only on the http door, clickhouse door keeps the dash. Option C - keep the dash and document it, as front/README.md already does.
+      blocks: T-20261019-refused-count-server in front-lane-decisions.yaml
+      not_a_blocker_for: every leaf in this manifest
+      owner: engine + serve + front (unassigned)
+    - id: D-console-sql-home
+      found_by: intake item 6 on 2026-10-19
+      question: serve/src/apex_mcp/ch.py carries a copy of every console statement in front/src/data/queries.ts, pinned by serve/tests/test_console_reads.py, test_projection_parity.py and test_console_parity_gate.py, which READ queries.ts as the contract. PIPELINE.md says no lane imports another lane's code. Option A - keep the copies and the parity tests (status quo, by design). Option B - move the console statements into contract/ as .sql files that front loads at build (Vite raw import) and serve reads at runtime, which makes the contract directory the single owner and changes how serve is packaged. B is a cross-lane change that the parity tests would have to be rewritten for.
+      blocks: T-20261019-console-sql-single-source in front-lane-decisions.yaml
+      not_a_blocker_for: T-20261019-queries-dead-statement, which only removes the statement nobody runs
+      owner: serve + front (unassigned)
+units:
+  # ---------------------------------------------------------------------------
+  # One commit per leaf on the local fix branch. depends_on also serialises the
+  # files several leaves write (README.md, package.json, repository.ts,
+  # queries.ts) so the plan has no unordered writers.
+  # ---------------------------------------------------------------------------
+  - id: T-20261019-contract-badge-v06
+    title: Report the contract version the repository actually declares
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - front/src/contract/types.ts
+      - front/src/components/molecules/NavBar.test.tsx
+    creates_paths:
+      - front/src/contract/version.test.ts
+    source_note: CONTRACT.md line 7 (contract v0.6), front/src/contract/types.ts line 8 (CONTRACT_VERSION 0.5), front/README.md line 4 (reads the contract v0.6 tables)
+    why: The header badge renders CONTRACT_VERSION, which is the string 0.5 in front/src/contract/types.ts, while CONTRACT.md, README.md and front/README.md all say v0.6. The console tells every visitor it reads an older contract than the one it was written against, and nothing fails when the two drift.
+    goal: CONTRACT_VERSION is 0.6, the NavBar renders contract v0.6, and a test reads CONTRACT.md and fails the moment the two versions differ again.
+    context: v0.6 is additive only - an optional execution_id on the apex.stage payload that no ClickHouse schema and no console read consumes (CONTRACT.md changelog). So the change is the constant, the file header that calls the row shapes v0.5, and a drift test in front/src/contract/version.test.ts that reads ../../../CONTRACT.md with node fs and asserts the line that says contract **v0.6** carries CONTRACT_VERSION. The prose in RunDetailScreen, DualVerdictPanel, LayerTabs and rules.ts that says what v0.5 does NOT carry stays true for v0.6 and is not rewritten. The existing NavBar test gains one assertion on the badge text.
+    behaviors:
+      - id: B-1
+        given: CONTRACT.md declaring contract v0.6
+        when: the version test runs
+        then: it passes because CONTRACT_VERSION is 0.6, and it fails when either side moves alone
+      - id: B-2
+        given: the NavBar mounted with any repository kind
+        when: its text is read
+        then: it contains contract v0.6 and not v0.5
+    evals:
+      - id: eval_1
+        description: the version test and the NavBar test pass
+        command: ( cd front && npx vitest --run src/contract/version.test.ts src/components/molecules/NavBar.test.tsx )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the constant and the header say 0.6 and the test reads CONTRACT.md rather than restating it
+        command: ( cd front && grep -q 'CONTRACT_VERSION = "0.6"' src/contract/types.ts && ! grep -q "contract, v0.5" src/contract/types.ts && grep -q "CONTRACT.md" src/contract/version.test.ts )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 5
+      - id: eval_3
+        description: the whole front gate stays green
+        command: ( cd front && npm run typecheck && npm run lint && npm test -- --run )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Hardcoding 0.6 in the test instead of reading CONTRACT.md, which is the drift this leaf exists to catch.
+      - Rewriting screen prose that says what v0.5 lacks - v0.6 lacks the same things.
+      - Adding execution_id to SparkEventRow - no read path consumes it and CONTRACT.md says consumers ignore it.
+    do_not_touch:
+      - front/src/screens
+      - front/src/data
+      - CONTRACT.md
+
+  - id: T-20261019-node-engines-pin
+    title: Pin one Node major across the image, CI and the host
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - front/package.json
+      - front/Dockerfile
+      - front/README.md
+    creates_paths:
+      - front/.nvmrc
+      - front/engines.test.ts
+    source_note: front/Dockerfile lines 2 and 11 (node 20-alpine), .github/workflows/ci.yml line 44 (node 22), local node v25.6.1, npm ci EBADENGINE for jsdom 30.0.1 (requires ^22.22.2 || ^24.15.0 || >=26.0.0)
+    why: The image builds on Node 20, CI tests on 22 and the host runs 25. jsdom 30 refuses 20 and 25 outright, vite 8 and eslint 10 need 20.19 or 22.12 at least, and package.json declares no engines, so each environment finds out on its own and none of them agrees with the others.
+    goal: package.json declares an engines.node range that every devDependency accepts, .nvmrc and both Dockerfile stages name that major, CI already does, the README says which Node to use, and a test fails when any of the four drifts.
+    context: The tightest range among the installed devDependencies is jsdom's - ^22.22.2 || ^24.15.0 || >=26.0.0 - so the proposed engines.node is ^22.22.2 || ^24.15.0 and the pinned major is 22, the one CI already uses; node 22-alpine replaces node 20-alpine in both Dockerfile stages. The test in front/engines.test.ts reads package.json, .nvmrc, Dockerfile and ../.github/workflows/ci.yml, checks the three majors agree, and uses the semver package already in node_modules (6.3.1, transitive) to assert the engines range intersects every devDependency's own engines field - read from node_modules, not restated. vitest picks up a root-level test by its default include, and eslint lints src only, so the file needs no config change. engine-strict in an .npmrc would make npm ci refuse the host's Node 25 today - that is a proposed choice left open below, not applied here. The README gains one line under the install step naming the Node major and nvm use.
+    behaviors:
+      - id: B-1
+        given: package.json after the change
+        when: engines.node is read
+        then: it is a range jsdom, vite, eslint, vitest and typescript-eslint all accept, and Node 20 is outside it
+      - id: B-2
+        given: .nvmrc, both Dockerfile FROM lines and ci.yml node-version
+        when: their majors are compared
+        then: all name 22
+      - id: B-3
+        given: the README
+        when: it is read
+        then: it names the Node major and the nvmrc
+    evals:
+      - id: eval_1
+        description: the engines test passes against the real files
+        command: ( cd front && npx vitest --run engines.test.ts )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 20
+      - id: eval_2
+        description: both image stages build on 22 and the nvmrc agrees
+        command: ( cd front && test "$(grep -c 'FROM node:22-alpine' Dockerfile)" = 2 && ! grep -q 'node:20' Dockerfile && grep -qx 22 .nvmrc && grep -q '"engines"' package.json && grep -q 'nvmrc\|Node 22' README.md )
+        verifies: [B-2, B-3]
+        terminal: true
+        expected_duration_sec: 5
+      - id: eval_3
+        description: the whole front gate stays green
+        command: ( cd front && npm run typecheck && npm run lint && npm test -- --run && npm run build )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Restating each dependency's engines range in the test - read it from node_modules.
+      - Adding engine-strict to an .npmrc in this leaf; it is listed as an open choice.
+      - Touching .github/workflows/ci.yml - it is already on 22 and CI is billing-locked anyway.
+    do_not_touch:
+      - .github/workflows/ci.yml
+      - front/src
+      - front/nginx.conf
+
+  - id: T-20261019-self-hosted-fonts
+    title: Serve the three typefaces from the bundle instead of Google Fonts
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20261019-node-engines-pin]
+    touches_paths:
+      - front/index.html
+      - front/src/main.tsx
+      - front/package.json
+      - front/package-lock.json
+      - front/README.md
+    creates_paths: []
+    source_note: front/index.html lines 16-21 (preconnect and stylesheet to fonts.googleapis.com and fonts.gstatic.com), front/tailwind.config.js fontFamily (JetBrains Mono, IBM Plex Sans, Archivo Black)
+    why: index.html loads JetBrains Mono, IBM Plex Sans and Archivo Black from fonts.googleapis.com and fonts.gstatic.com. An air-gapped deployment renders in fallback fonts, every visitor's browser contacts Google, and a Content-Security-Policy that keeps the console on its own origin cannot be written while those two hosts are in the page.
+    goal: The three families ship as woff2 in dist/assets, imported from the bundle, with the exact weights the design tokens use, and nothing in index.html or the CSS names a Google host.
+    context: @fontsource/jetbrains-mono (400, 500, 600, 700), @fontsource/ibm-plex-sans (400, 500, 600) and @fontsource/archivo-black (400) are the OFL packages that mirror what the Google stylesheet served; each weight is one side-effect import in src/main.tsx ahead of index.css. Vite emits the woff2 files into dist/assets with the family in the file name, which is what eval_2 looks for. tailwind.config.js keeps its fontFamily entries because the family names do not change. The two preconnect links and the stylesheet link leave index.html. The README design-tokens section gains one sentence saying the fonts are bundled and where from.
+    behaviors:
+      - id: B-1
+        given: index.html and src/index.css after the change
+        when: they are searched for Google Fonts hosts
+        then: neither names fonts.googleapis.com or fonts.gstatic.com
+      - id: B-2
+        given: a production build
+        when: dist/assets is listed
+        then: it holds woff2 files for jetbrains-mono, ibm-plex-sans and archivo-black
+      - id: B-3
+        given: the tailwind font families
+        when: tailwind.config.js is read
+        then: mono, sans and display still name the same three families
+    evals:
+      - id: eval_1
+        description: no Google Fonts host remains in the page or the stylesheet
+        command: ( cd front && ! grep -rq "fonts.googleapis\|fonts.gstatic" index.html src/index.css src/main.tsx )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 5
+      - id: eval_2
+        description: the built assets carry the three families as woff2
+        command: ( cd front && npm run build > /dev/null && ls dist/assets | grep -qi "jetbrains-mono.*woff2" && ls dist/assets | grep -qi "ibm-plex-sans.*woff2" && ls dist/assets | grep -qi "archivo-black.*woff2" && grep -q "JetBrains Mono" tailwind.config.js && grep -q "IBM Plex Sans" tailwind.config.js && grep -q "Archivo Black" tailwind.config.js )
+        verifies: [B-2, B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_3
+        description: the whole front gate stays green
+        command: ( cd front && npm run typecheck && npm run lint && npm test -- --run )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Copying woff2 files into public/ by hand - the fontsource packages are versioned and licensed.
+      - Importing every weight of a family; the tokens use four, three and one.
+      - Changing font family names in tailwind.config.js.
+    do_not_touch:
+      - front/tailwind.config.js
+      - front/nginx.conf
+      - front/src/screens
+      - front/src/components
+
+  - id: T-20261019-nginx-hardening
+    title: Give the production nginx security headers, proxy timeouts and gzip
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20261019-self-hosted-fonts]
+    touches_paths:
+      - front/nginx.conf
+      - front/README.md
+    creates_paths: []
+    source_note: front/nginx.conf (one server block, listen 80, no add_header beyond Cache-Control on /config.js, no proxy timeouts, no gzip), front/Dockerfile (nginx 1.27-alpine, NGINX_ENVSUBST_FILTER)
+    why: The image answers every request without a Content-Security-Policy, X-Content-Type-Options, Referrer-Policy or frame-ancestors restriction, forwards to ClickHouse and the API with nginx's default 60 second timeouts and no connect bound, and sends a 343 kB bundle uncompressed.
+    goal: Every response from the image carries a same-origin CSP and the standard hardening headers, the two proxies have explicit connect, send and read timeouts, hashed assets are cached immutably, text responses are gzipped, and a live container proves all of it.
+    context: nginx add_header is NOT inherited into a location that declares its own add_header, so the headers go in one snippet that the server block and the /config.js location both include, or are repeated in that location - otherwise /config.js, the one response that must not be cached, is also the one without a CSP. The policy is default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' (Bar.tsx, DataTable.tsx, SignalStrip.tsx, FindingScreen.tsx and MemoryScreen.tsx set style attributes, which style-src governs); img-src 'self' data:; font-src 'self' (possible only after the fonts leaf); connect-src 'self' (both doors are same-origin by design); frame-ancestors 'none'; base-uri 'self'; form-action 'self'. Also X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, X-Frame-Options DENY, Permissions-Policy denying camera, microphone and geolocation. No Strict-Transport-Security - the image terminates no TLS, see D-tls-termination. Proposed timeouts, open for review - proxy_connect_timeout 5s, proxy_send_timeout 30s, proxy_read_timeout 60s on both proxies; ClickHouse queries over a large spark_events may approach the read bound and the README should say which variable to raise. location /assets/ gets Cache-Control public, max-age one year, immutable - the file names are hashed. gzip on, gzip_types for text, css, js, json and svg, gzip_min_length 1024, gzip_vary on. The envsubst template keeps ${CLICKHOUSE_UPSTREAM} and ${APEX_API_UPSTREAM} as its only variables, so eval_1 renders it through the real image with nginx -t and eval_2 starts the prod image in fixtures mode on port 18080 and reads the headers with curl. The README table under Configure a deployment gains the headers and the timeout variables.
+    behaviors:
+      - id: B-1
+        given: the template rendered by the nginx image
+        when: nginx -t runs
+        then: the configuration is accepted
+      - id: B-2
+        given: the prod image running in fixtures mode
+        when: / and /config.js are requested
+        then: both carry Content-Security-Policy, X-Content-Type-Options nosniff, Referrer-Policy and X-Frame-Options, and /config.js still carries Cache-Control no-store
+      - id: B-3
+        given: a request for / with Accept-Encoding gzip
+        when: the response headers are read
+        then: Content-Encoding is gzip
+      - id: B-4
+        given: nginx.conf
+        when: both proxy locations are read
+        then: each declares proxy_connect_timeout, proxy_send_timeout and proxy_read_timeout
+    evals:
+      - id: eval_1
+        description: the real image renders the template and accepts it
+        command: ( cd front && docker run --rm -e CLICKHOUSE_UPSTREAM=http://127.0.0.1:1 -e APEX_API_UPSTREAM=http://127.0.0.1:1 -e 'NGINX_ENVSUBST_FILTER=^(CLICKHOUSE_UPSTREAM|APEX_API_UPSTREAM)$' -v "$PWD/nginx.conf:/etc/nginx/templates/default.conf.template:ro" nginx:1.27-alpine nginx -t )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: a live container sends the headers on / and on /config.js and gzips the page
+        command: ( cd front && docker rm -f apex-console-hardening-eval > /dev/null 2>&1; docker build -q --target prod -t apex-console:hardening-eval . > /dev/null && docker run -d --rm --name apex-console-hardening-eval -p 18080:80 -e DATA_SOURCE=fixtures apex-console:hardening-eval > /dev/null && sleep 2 && H="$(curl -sI http://127.0.0.1:18080/)" && C="$(curl -sI http://127.0.0.1:18080/config.js)" && G="$(curl -sI -H 'Accept-Encoding gzip' http://127.0.0.1:18080/)"; docker rm -f apex-console-hardening-eval > /dev/null; echo "$H" | grep -qi "^content-security-policy" && echo "$H" | grep -qi "nosniff" && echo "$H" | grep -qi "^referrer-policy" && echo "$H" | grep -qi "^x-frame-options" && echo "$C" | grep -qi "^content-security-policy" && echo "$C" | grep -qi "no-store" && echo "$G" | grep -qi "^content-encoding" )
+        verifies: [B-2, B-3]
+        terminal: true
+        expected_duration_sec: 180
+      - id: eval_3
+        description: both proxies carry the three timeouts and the hashed assets are immutable
+        command: ( cd front && test "$(grep -c proxy_read_timeout nginx.conf)" -ge 2 && test "$(grep -c proxy_connect_timeout nginx.conf)" -ge 2 && test "$(grep -c proxy_send_timeout nginx.conf)" -ge 2 && grep -q "immutable" nginx.conf && grep -q "gzip on" nginx.conf && ! grep -q "Strict-Transport-Security" nginx.conf )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Proving the headers with a grep on nginx.conf instead of a running container - PR 129 shipped a config nginx rejected that way.
+      - Sending Strict-Transport-Security from a listener that is plain http.
+      - A CSP that names fonts.googleapis.com - the fonts leaf removed the need.
+      - Adding a variable to the template without extending NGINX_ENVSUBST_FILTER in the Dockerfile.
+    do_not_touch:
+      - front/docker-entrypoint.d
+      - front/src
+      - front/index.html
+
+  - id: T-20261019-default-data-source-http
+    title: Make http the console's default data source
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20261019-nginx-hardening]
+    touches_paths:
+      - front/Makefile
+      - front/docker-compose.yml
+      - front/.env.example
+      - front/README.md
+    creates_paths: []
+    source_note: the user's decision D-2026-10-19-default-http (metadata.decisions); front/Makefile line 24 (DATA_SOURCE ?= clickhouse), front/docker-compose.yml VITE_DATA_SOURCE default clickhouse, front/.env.example VITE_DATA_SOURCE=auto, front/contract/01-readonly-user.sql (apex_ro, no_password)
+    why: make prod and docker compose up both default to DATA_SOURCE=clickhouse, the mode that ships a database credential to every browser - apex_ro with no password. The http mode exists precisely so the browser holds an API token instead, and the user decided on 2026-10-19 that it is the default; today it must be asked for.
+    goal: With nothing set, make prod runs the image with DATA_SOURCE=http, docker compose up runs the dev server with VITE_DATA_SOURCE=http, .env.example says http, the README presents http as the default and clickhouse as the explicit bench mode, and an up-clickhouse target exists beside up-fixtures for the bench.
+    context: The Makefile default becomes DATA_SOURCE ?= http and the compose default VITE_DATA_SOURCE default http; the up target's help text and the compose header comment say to start the API first (serve, APEX_API_PORT 8099) with the store step as the clickhouse alternative, and a new up-clickhouse target sets VITE_DATA_SOURCE=clickhouse the way up-fixtures sets fixtures. The image entrypoint default stays auto - it already probes the API first, and what auto does on failure is D-auto-fallback-policy, not this leaf. The README Configure a deployment table row for DATA_SOURCE keeps auto as the IMAGE default and says the repo entry points default to http; the Querying ClickHouse from the browser section opens by saying that mode is opt-in and why. Like T-20260923-console-http-deployment-wiring, the compose change is proven by rendering with docker compose config and the Makefile by make -n, never by grep on the file.
+    behaviors:
+      - id: B-1
+        given: no VITE_DATA_SOURCE in the shell
+        when: docker compose config renders the console service
+        then: VITE_DATA_SOURCE is http
+      - id: B-2
+        given: make -n prod with only CLICKHOUSE_UPSTREAM given
+        when: the docker run line is printed
+        then: it carries -e DATA_SOURCE=http
+      - id: B-3
+        given: make -n up-clickhouse
+        when: the compose line is printed
+        then: it sets VITE_DATA_SOURCE=clickhouse
+      - id: B-4
+        given: .env.example and README.md
+        when: they are read
+        then: .env.example sets VITE_DATA_SOURCE=http and the README names http as the default and clickhouse as opt-in
+    evals:
+      - id: eval_1
+        description: compose renders http with nothing set
+        command: ( cd front && env -u VITE_DATA_SOURCE docker compose config | grep -q "VITE_DATA_SOURCE.*http$" )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: make prod and make up-clickhouse print the right mode
+        command: ( cd front && make -n prod CLICKHOUSE_UPSTREAM=http://ch.test.8123 | grep -q -- '-e DATA_SOURCE="http"' && make -n up-clickhouse | grep -q "VITE_DATA_SOURCE=clickhouse" )
+        verifies: [B-2, B-3]
+        terminal: true
+        expected_duration_sec: 10
+      - id: eval_3
+        description: the docs say http is the default
+        command: ( cd front && grep -q "^VITE_DATA_SOURCE=http" .env.example && grep -qi "default.*http\|http.*default" README.md && grep -q "up-clickhouse" Makefile README.md )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 5
+    anti_patterns:
+      - Changing the image entrypoint default or runtimeConfig - auto on the image is a separate decision.
+      - Removing the clickhouse mode or apex_ro - the bench still uses them, explicitly.
+      - A token literal anywhere in the Makefile, compose file or env example.
+    do_not_touch:
+      - front/docker-entrypoint.d
+      - front/src
+      - front/nginx.conf
+      - front/contract
+
+  - id: T-20261019-fixtures-lazy-chunk
+    title: Keep the recorded run out of the entry bundle
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - front/src/data/repository.ts
+      - front/src/data/repository.test.ts
+    creates_paths: []
+    source_note: front/src/data/fixtures.ts (1633 lines), front/src/data/repository.ts line 13 (static import * as fx), baseline build dist/assets/index-*.js 342.7 kB containing app-20260803014217-0071
+    why: repository.ts imports fixtures.ts statically, so the 1633-line recording is in the entry chunk of every deployment, including the http and clickhouse ones that never read it.
+    goal: A production build emits the recording as its own chunk that only FixtureRepository loads, the entry chunk no longer contains it, and FixtureRepository returns the same rows as before.
+    context: FixtureRepository replaces the static import with one memoised dynamic import - a private load() returning the module promise - and each method awaits it; the methods are already async so no signature changes and the serve parity test that reads Repository method names is unaffected. Vite names the chunk after the module, so eval_1 looks for dist/assets/fixtures-*.js. The default RepoContext value in useRepository.tsx (new FixtureRepository()) stays, as constructing it loads nothing. Tests that import fixtures directly (rules.test.ts, VerifyScreen.source-state.test.tsx) keep doing so - they are tests, not the bundle.
+    behaviors:
+      - id: B-1
+        given: a production build
+        when: the entry chunk is searched for the recorded job id
+        then: it is absent, and a fixtures chunk contains it
+      - id: B-2
+        given: FixtureRepository
+        when: listRuns, run, stages, findings, planShapes, shapeRuns and fixVerification are called
+        then: they return the same rows as before the change
+    evals:
+      - id: eval_1
+        description: the recording is its own chunk and the entry chunk is free of it
+        command: ( cd front && npm run build > /dev/null && ! grep -q "app-20260803014217-0071" dist/assets/index-*.js && grep -lq "app-20260803014217-0071" dist/assets/fixtures-*.js )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: the repository tests and the whole front gate stay green
+        command: ( cd front && npm run typecheck && npm run lint && npm test -- --run )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Splitting with a manualChunks rule in vite.config.ts - the dynamic import is the boundary, and the config would hide it.
+      - Changing Repository method signatures.
+    do_not_touch:
+      - front/src/data/fixtures.ts
+      - front/src/screens
+      - front/vite.config.ts
+
+  - id: T-20261019-queries-dead-statement
+    title: Remove PLAN_MEMORY and pin that every statement has a consumer
+    effort: XS
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths:
+      - front/src/data/queries.ts
+    creates_paths:
+      - front/src/data/queries.consumed.test.ts
+    source_note: front/src/data/queries.ts lines 260-266 (PLAN_MEMORY, no importer in front/src or serve), serve/tests/test_console_parity_gate.py line 39 (the eleven statements the gate reads, PLAN_MEMORY not among them)
+    why: queries.ts exports PLAN_MEMORY, which nothing in the console or the serve lane runs, and whose shape is wrong on its face - it joins plan_transitions to spark_events on job_id alone and groups by a column that is ambiguous between the two. A statement nobody executes is a statement nobody tests, and the serve parity gate would run it against the live store if it were ever listed.
+    goal: PLAN_MEMORY is gone, a test reads queries.ts and repository.ts and fails when an exported statement has no consumer, and serve's static parity tests still pass.
+    context: The test is text-level like serve's - it collects every export const NAME in queries.ts and asserts repository.ts references Q.NAME - so a future dead statement fails here rather than silently shipping. The serve tests read FINDINGS, PLAN_TRANSITIONS and FIX_VERIFICATIONS from queries.ts verbatim and the gate reads eleven named exports; none is touched. eval_2 runs those serve tests with uv the way CI does; if uv resolves a Python the serve lane cannot use, pin UV_PYTHON=3.12 as the memory on this repo notes.
+    behaviors:
+      - id: B-1
+        given: queries.ts after the change
+        when: it is searched
+        then: PLAN_MEMORY is absent
+      - id: B-2
+        given: every export const in queries.ts
+        when: the consumer test runs
+        then: each is referenced from repository.ts, and the test fails when one is not
+      - id: B-3
+        given: serve's static parity tests
+        when: they run
+        then: they still find FINDINGS, PLAN_TRANSITIONS, FIX_VERIFICATIONS and the gate's eleven statements
+    evals:
+      - id: eval_1
+        description: the statement is gone and every remaining one is consumed
+        command: ( cd front && ! grep -q "PLAN_MEMORY" src/data/queries.ts && npx vitest --run src/data/queries.consumed.test.ts )
+        verifies: [B-1, B-2]
+        terminal: true
+        expected_duration_sec: 20
+      - id: eval_2
+        description: serve still reads what it reads from queries.ts
+        command: ( cd serve && uv run --extra dev pytest tests/test_console_reads.py tests/test_projection_parity.py tests/test_console_parity_gate.py -q -p no:warnings )
+        verifies: [B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_3
+        description: the whole front gate stays green
+        command: ( cd front && npm run typecheck && npm run lint && npm test -- --run )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Editing any other statement in queries.ts - serve pins their text.
+      - Moving SQL between lanes; that is D-console-sql-home.
+    do_not_touch:
+      - serve
+      - front/src/data/repository.ts
+      - front/src/screens
+
+  - id: T-20261019-screen-component-tests
+    title: Give Runs, RunDetail, Finding, Compare and Memory a component test each
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: []
+    touches_paths: []
+    creates_paths:
+      - front/src/screens/RunsScreen.test.tsx
+      - front/src/screens/RunDetailScreen.test.tsx
+      - front/src/screens/FindingScreen.test.tsx
+      - front/src/screens/CompareScreen.test.tsx
+      - front/src/screens/MemoryScreen.test.tsx
+    source_note: front/src/screens (five screens with no test beside them), front/src/screens/VerifyScreen.source-state.test.tsx and QueryFailure.test.tsx (the convention - jsdom, react act, createMemoryRouter, FixtureRepository, vi.mock of useRepository)
+    why: Five of the seven screens have no component test. The accessibility, caching and bundle leaves that follow all change how these screens mount and fetch, and without a test there is nothing to say a screen still renders the recording after them.
+    goal: Each of the five screens has a test in the existing convention that mounts it against FixtureRepository through a memory router, asserts the recorded data appears, asserts a rejected query renders QueryFailure with the source name, and asserts nothing private leaks from an error, so later leaves have a regression net.
+    context: Follow VerifyScreen.source-state.test.tsx - the @vitest-environment jsdom pragma, IS_REACT_ACT_ENVIRONMENT, createRoot plus act, createMemoryRouter with the screen's route, the hoisted vi.mock of useRepository, and FixtureRepository as the data. Assert on text the user sees (job ids from fixtures CURRENT_JOB and BASELINE_JOB, the finding type, PLAN_FINGERPRINT) and never on class names, so the a11y leaf can change markup. For the failure case wrap FixtureRepository in a Proxy that rejects one method with an Error whose message is marked PRIVATE and assert the message is absent from the page while the source badge name is present, as QueryFailure.test.tsx does. CompareScreen takes job ids from the query string; mount it at /compare?current=CURRENT_JOB&baseline=BASELINE_JOB and once with no params. MemoryScreen defaults to the most-run shape; assert the fingerprint and a shape run row. RunsScreen has a search input - type into it through act and assert the list filters. Keep each file under the size of the Verify test; two or three cases per screen is the goal, not coverage of every branch.
+    behaviors:
+      - id: B-1
+        given: each of the five screens mounted against FixtureRepository
+        when: the data resolves
+        then: the recorded run, finding, comparison or shape is on the page
+      - id: B-2
+        given: a repository whose read rejects with a private message
+        when: the screen renders
+        then: QueryFailure names the source and the private message is not on the page
+      - id: B-3
+        given: RunsScreen with text typed into its search
+        when: the list re-renders
+        then: only matching runs remain
+    evals:
+      - id: eval_1
+        description: all five test files exist and pass
+        command: ( cd front && for s in RunsScreen RunDetailScreen FindingScreen CompareScreen MemoryScreen; do test -f "src/screens/$s.test.tsx" || exit 1; done && npx vitest --run src/screens )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: the whole front gate stays green, including lint on the new tests
+        command: ( cd front && npm run typecheck && npm run lint && npm test -- --run )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Adding a testing library - the convention is react-dom act and querySelector, and the repo has no @testing-library.
+      - Asserting on Tailwind class names.
+      - Changing a screen to make it testable; if one cannot be mounted, park with the reason.
+    do_not_touch:
+      - front/src/screens/RunsScreen.tsx
+      - front/src/screens/RunDetailScreen.tsx
+      - front/src/screens/FindingScreen.tsx
+      - front/src/screens/CompareScreen.tsx
+      - front/src/screens/MemoryScreen.tsx
+      - front/src/data
+      - front/src/components
+
+  # ---------------------------------------------------------------------------
+  # Leaves that need the regression net above.
+  # ---------------------------------------------------------------------------
+  - id: T-20261019-a11y-baseline
+    title: Lint for accessibility and give every control a name
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20261019-screen-component-tests, T-20261019-self-hosted-fonts]
+    touches_paths:
+      - front/package.json
+      - front/package-lock.json
+      - front/eslint.config.js
+      - front/src/screens
+      - front/src/components
+    creates_paths:
+      - front/src/screens/a11y.test.tsx
+    source_note: one aria-label in front/src (VerifyScreen.tsx line 421), no label or htmlFor anywhere, no jsx-a11y in eslint.config.js, RunsScreen.tsx lines 72 and 83 (status by colour class and StatusPill), Pill.tsx tones
+    why: The console has one aria-label, no form label, status conveyed by colour alone in the runs list, and no lint rule that would notice the next one. A screen reader hears an unlabeled textbox and a list of coloured dots.
+    goal: eslint-plugin-jsx-a11y runs at error level in the lint gate and passes, every input and select in the screens has an accessible name, every status or severity that is a colour also reads as text, the nav and header are landmarks with names, and a test asserts the first two of those against the real screens.
+    context: Add eslint-plugin-jsx-a11y and its flat recommended config to eslint.config.js for src files at error level, run the lint, and fix what it reports - the errors are the work list. Then the things lint cannot see - the search input and filter in RunsScreen get a visible label or aria-label, the nav in NavBar gets aria-label Primary, the source and contract badges get a title, and StatusPill and the severity pills must contain the word, not only the tone (Pill already renders children; check each call site passes text and not an empty glyph). The a11y test mounts RunsScreen, CompareScreen and MemoryScreen against FixtureRepository and asserts every input and select has aria-label, aria-labelledby or an associated label element, and that each run row's status cell textContent contains healthy, warning or degraded. The screen tests from the previous leaf must still pass unchanged - they assert on text, not markup.
+    behaviors:
+      - id: B-1
+        given: eslint.config.js with jsx-a11y recommended at error level
+        when: npm run lint runs
+        then: it passes with zero warnings
+      - id: B-2
+        given: RunsScreen, CompareScreen and MemoryScreen mounted
+        when: their inputs and selects are enumerated
+        then: each has an accessible name
+      - id: B-3
+        given: the runs list rows
+        when: the status cell text is read
+        then: it contains the status word, not only a colour
+      - id: B-4
+        given: the NavBar
+        when: its nav element is read
+        then: it carries aria-label
+    evals:
+      - id: eval_1
+        description: the a11y plugin is wired at error level and lint passes
+        command: ( cd front && grep -q "jsx-a11y" eslint.config.js && grep -q "eslint-plugin-jsx-a11y" package.json && npm run lint )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_2
+        description: the a11y test and the screen tests pass
+        command: ( cd front && npx vitest --run src/screens/a11y.test.tsx src/screens src/components )
+        verifies: [B-2, B-3, B-4]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_3
+        description: the whole front gate stays green
+        command: ( cd front && npm run typecheck && npm test -- --run && npm run build )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Disabling a jsx-a11y rule to make lint pass instead of fixing the markup.
+      - aria-hidden on content a sighted user reads.
+      - Replacing a colour token with text - the text goes beside the colour, the palette is the ratified identity.
+    do_not_touch:
+      - front/tailwind.config.js
+      - front/src/data
+      - front/src/contract
+
+  - id: T-20261019-query-cache-dedupe-abort
+    title: Dedupe, cache and abort the console's reads
+    effort: M
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20261019-screen-component-tests, T-20261019-browser-door-additive-columns]
+    touches_paths:
+      - front/src/data/useRepository.tsx
+      - front/src/data/repository.ts
+      - front/src/data/http.ts
+      - front/src/screens/RunDetailScreen.tsx
+      - front/src/screens/FindingScreen.tsx
+      - front/src/screens/CompareScreen.tsx
+      - front/src/screens/MemoryScreen.tsx
+      - front/src/screens/RunsScreen.tsx
+    creates_paths:
+      - front/src/data/useAsync.test.tsx
+    source_note: front/src/data/useRepository.tsx useAsync (no cache, no dedupe, no AbortSignal), RunDetailScreen.tsx 8 useAsync calls, CompareScreen.tsx 8, FindingScreen.tsx 6, clickhouse.ts query() accepts a signal nobody passes, http.ts apiGet() accepts none
+    why: useAsync starts a fetch per call site per mount and never cancels. RunDetail issues eight reads on every visit and Compare eight more; opening a finding from a run refetches the four reads the run just made; under React StrictMode every one of them runs twice; and a response that lands after navigation is only dropped by a boolean, the request itself runs to completion against ClickHouse or the API.
+    goal: Concurrent callers of the same read share one request, a read repeated within a short window is served from memory, an unmounted or superseded read is aborted at the fetch, and a test counts repository calls to prove each, including that a StrictMode mount of RunDetail issues each read once.
+    context: Replace the body of useAsync with a small keyed cache owned by the repository instance - a Map from key to entry holding the promise, the settled value, its timestamp and an AbortController - where the key is the method name plus its JSON-encoded arguments; callers pass the key explicitly or useAsync derives it from a method-and-args form so RunDetail and Finding share entries. In flight means one promise, settled within the TTL means the value, otherwise a new request. Proposed TTL, open for review - 30 seconds; the console is read-only and new runs arrive on the order of minutes. Every Repository method gains an optional trailing signal parameter, forwarded to clickhouse.ts query() and to a new signal parameter on http.ts apiGet() and fetch; FixtureRepository ignores it. On unmount or deps change the hook aborts the controller only when no other subscriber holds the entry. The serve parity test reads Repository method names with a regex that stops at the opening parenthesis, so the extra parameter does not break it. The test file wraps FixtureRepository in a counting Proxy, mounts RunDetailScreen under StrictMode through the memory router, and asserts each method was called once; mounts two components with the same key and asserts one call; and stubs a fetch that observes its signal to assert abort on unmount for ClickHouseRepository and HttpRepository.
+    behaviors:
+      - id: B-1
+        given: two components mounting the same read at the same time
+        when: both resolve
+        then: the repository method ran once
+      - id: B-2
+        given: a component unmounted before its read settles
+        when: the fetch's signal is inspected
+        then: it is aborted, and no state update follows
+      - id: B-3
+        given: RunDetailScreen mounted under StrictMode against a counting repository
+        when: it settles
+        then: run, stages, jobConf, findings and transitions were each called once
+      - id: B-4
+        given: a read settled within the TTL
+        when: another screen asks for the same key
+        then: the value is served without a repository call
+    evals:
+      - id: eval_1
+        description: the cache, dedupe and abort tests pass
+        command: ( cd front && npx vitest --run src/data/useAsync.test.tsx )
+        verifies: [B-1, B-2, B-3, B-4]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: the screen tests from the regression net still pass and the API client forwards a signal
+        command: ( cd front && npx vitest --run src/screens src/data && grep -q "signal" src/data/http.ts )
+        verifies: [B-2]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_3
+        description: the whole front gate stays green
+        command: ( cd front && npm run typecheck && npm run lint && npm test -- --run && npm run build )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 90
+      - id: eval_4
+        description: serve still finds every Repository method by name
+        command: ( cd serve && uv run --extra dev pytest tests/test_api_resources.py -q -p no:warnings -k repository_method )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 60
+    anti_patterns:
+      - Adding a data-fetching library - the hook's deps list stays honest and the dependency set stays three packages.
+      - A module-level cache that survives a repository swap - the cache belongs to the instance.
+      - Caching a rejected read; an error is retried on the next mount.
+      - Removing a Repository method or renaming one - serve pins the names.
+    do_not_touch:
+      - serve
+      - front/src/data/queries.ts
+      - front/src/data/fixtures.ts
+      - front/src/contract
+
+  - id: T-20261019-browser-door-additive-columns
+    title: Let the browser door read a findings table without confidence_score
+    effort: S
+    profile: standard
+    agent: any
+    execution_backend: any
+    depends_on: [T-20261019-queries-dead-statement, T-20261019-fixtures-lazy-chunk]
+    touches_paths:
+      - front/src/data/queries.ts
+      - front/src/data/repository.ts
+    creates_paths:
+      - front/src/data/findingsProjection.test.ts
+    source_note: front/src/data/queries.ts FINDINGS (projects and orders by confidence_score unconditionally), serve/src/apex_mcp/ch.py lines 80-96 and 552-566 (_FINDINGS_ADDITIVE, system.columns probe, toFloat64(0) fallback), front/contract/01-readonly-user.sql (SELECT and SHOW TABLES on apex.*)
+    why: confidence_score is a v0.2 additive column of apex.findings. The API probes system.columns and projects toFloat64(0) when a cluster predates it; the browser door sends FINDINGS as written and the query fails with an unknown-identifier error, so the same deployment works through one door and breaks through the other.
+    goal: ClickHouseRepository probes the findings columns once per instance and sends the full FINDINGS when confidence_score exists, or a second exported statement that projects toFloat64(0) AS confidence_score and keeps the same output columns and order when it does not; the probe falling over leaves the full statement in place so the real error still surfaces.
+    context: queries.ts gains export const FINDINGS_COLUMNS (SELECT name FROM system.columns WHERE database = currentDatabase() AND table = 'findings') and export const FINDINGS_WITHOUT_SCORE, which is FINDINGS with the column replaced by toFloat64(0) AS confidence_score and the ORDER BY kept, so the row shape the console renders is identical to the API's fallback. FINDINGS itself is not edited - serve/tests/test_console_reads.py reads its text. The two new exports must be consumed from repository.ts, or the consumer test from T-20261019-queries-dead-statement fails if that leaf has landed. apex_ro sees its own tables in system.columns because any privilege on a table implies SHOW on it. ClickHouseRepository caches the probe result in a private promise, like ReadStore.findings_columns() does in ch.py. The test stubs fetch, like httpRepository.test.ts does, answering the probe with and without the column and asserting which statement the next findings() call sends; a third case rejects the probe and asserts FINDINGS is sent and the findings error is the one reported.
+    behaviors:
+      - id: B-1
+        given: a store whose findings table has confidence_score
+        when: findings() is called
+        then: FINDINGS is sent, after one probe per repository instance
+      - id: B-2
+        given: a store whose findings table lacks it
+        when: findings() is called
+        then: FINDINGS_WITHOUT_SCORE is sent and rows carry confidence_score 0
+      - id: B-3
+        given: a probe that fails
+        when: findings() is called
+        then: FINDINGS is sent and its own error, not the probe's, is what the caller sees
+      - id: B-4
+        given: serve's static parity tests
+        when: they run
+        then: FINDINGS is unchanged and still found
+    evals:
+      - id: eval_1
+        description: the projection tests pass
+        command: ( cd front && npx vitest --run src/data/findingsProjection.test.ts )
+        verifies: [B-1, B-2, B-3]
+        terminal: true
+        expected_duration_sec: 30
+      - id: eval_2
+        description: serve still reads FINDINGS as written
+        command: ( cd serve && uv run --extra dev pytest tests/test_console_reads.py tests/test_projection_parity.py tests/test_console_parity_gate.py -q -p no:warnings )
+        verifies: [B-4]
+        terminal: true
+        expected_duration_sec: 60
+      - id: eval_3
+        description: the whole front gate stays green
+        command: ( cd front && npm run typecheck && npm run lint && npm test -- --run )
+        verifies: [B-1]
+        terminal: true
+        expected_duration_sec: 90
+    anti_patterns:
+      - Editing the text of FINDINGS - serve pins it.
+      - Catching the findings error when the probe fails; the fallback is the statement, not silence.
+      - Probing on every call.
+    do_not_touch:
+      - serve
+      - front/src/screens
+      - front/src/contract
