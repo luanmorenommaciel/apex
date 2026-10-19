@@ -1,7 +1,7 @@
 ---
 id: T-20261019-tls-external-terminator
 title: "Behave correctly behind an external TLS terminator and say so"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S
@@ -25,12 +25,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: agmarcastro
+signed_off_at: 2026-10-19T15:53:36Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v3:60832560:8b191eb1ba8241ac5601e6e24a54e25b35f273ba179d15f8b6f5c99dda72f0ea
 ---
 
 # Behave correctly behind an external TLS terminator and say so
