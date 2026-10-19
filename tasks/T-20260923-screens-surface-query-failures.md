@@ -1,7 +1,7 @@
 ---
 id: T-20260923-screens-surface-query-failures
 title: "Show a failed query on every screen, and name a rejected token"
-status: parked
+status: in-progress
 format_version: 3
 profile: standard
 effort: M
@@ -20,7 +20,7 @@ priority: P2
 severity: feature
 due_date: (none)
 precondition: (none)
-blocked_reason: work merged to main (PRs 129/153/160) without a TaskSpec acceptance; parked 2026-10-19 so its write scope no longer blocks the front-lane leaves
+blocked_reason: (none)
 security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
