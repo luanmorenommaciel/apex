@@ -1,7 +1,7 @@
 ---
 id: T-20261019-node-engines-pin
 title: "Pin one Node major across the image, CI and the host"
-status: in-progress
+status: done
 format_version: 3
 profile: standard
 effort: S
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: agmarcastro
 signed_off_at: 2026-10-19T15:49:07Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: agmarcastro
+accepted_at: 2026-10-19T15:49:20Z
 signed_off_sig: hmac-sha256-v3:60832560:1ee06e34977d305f5fd55de122b59f1f022546c4e89cf5ed14fa842e904e41ab
+accepted_tier: 1
+accepted_attempt_id: ca99e08c-b785-4a21-b50f-1ba9617ad1d3
+accepted_authorization_ref: hmac-sha256-v3:60832560:1ee06e34977d305f5fd55de122b59f1f022546c4e89cf5ed14fa842e904e41ab
+acceptance_record_digest: sha256:796a67d85c25121709f85c393c720a3e8c3e7fd9c7297178d27694a061e0e3cd
 ---
 
 # Pin one Node major across the image, CI and the host
