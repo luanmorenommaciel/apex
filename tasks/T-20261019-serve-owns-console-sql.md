@@ -1,7 +1,7 @@
 ---
 id: T-20261019-serve-owns-console-sql
 title: "Make serve the sole owner of the console statements"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: M
@@ -25,12 +25,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: agmarcastro
+signed_off_at: 2026-10-19T15:55:28Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v3:60832560:a19777fe6d7066e6b5a7c53b44fa16cf96bb9dfbf01edfa1a70b1ef090c5b1b1
 ---
 
 # Make serve the sole owner of the console statements
