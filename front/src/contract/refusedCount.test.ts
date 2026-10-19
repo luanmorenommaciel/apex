@@ -6,7 +6,7 @@ import {
 } from "./rules";
 
 /**
- * The run rollup's `refused` CTE (queries.ts, mirrored in serve) computes
+ * The run rollup's `refused` CTE (serve/src/apex_mcp/ch.py, behind the API) computes
  * refused_count in SQL. This evaluates that CTE's arithmetic - the same
  * booleans, in the same order, over the same inputs - in TypeScript, and
  * holds it to assessStage(), the rules' home, over every recorded run. A

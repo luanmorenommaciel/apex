@@ -15,7 +15,7 @@ export const CONTRACT_VERSION = "0.6" as const;
 /**
  * A point in time, as every Repository returns it: ISO 8601 with a `T`, UTC,
  * millisecond precision, no offset — `2026-09-20T10:00:00.123`. It is the Apex
- * API's format; the ClickHouse and fixture paths are normalised to it in
+ * API's format; the fixture path is normalised to it in
  * src/data/repository.ts, so a screen cannot tell which source a timestamp
  * came from. See src/data/timestamp.ts.
  *

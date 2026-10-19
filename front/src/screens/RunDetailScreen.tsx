@@ -327,7 +327,7 @@ export function RunDetailScreen() {
             <div className="bg-[#1a1d1e] border border-edge rounded-sm p-4 flex gap-5">
               <div className="flex-1 min-w-0 font-mono text-xs leading-[1.85] text-body">
                 {/* Was `REDACTED_PLAN` imported straight from the fixture module
-                    and rendered even when the repository was ClickHouse, with
+                    and rendered whatever the repository was, with
                     two lines highlighted by array index. The real source is the
                     memory lane's own exemplar column. */}
                 {planQ.loading ? (

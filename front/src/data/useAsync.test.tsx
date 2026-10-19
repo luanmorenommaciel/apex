@@ -4,9 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as fx from "./fixtures";
-import {
-  ClickHouseRepository, FixtureRepository, HttpRepository, type Repository,
-} from "./repository";
+import { FixtureRepository, HttpRepository, type Repository } from "./repository";
 import { READ_TTL_MS, useRead } from "./useRepository";
 import { RunDetailScreen } from "@/screens/RunDetailScreen";
 
@@ -128,10 +126,8 @@ describe("useRead", () => {
     router.dispose();
   });
 
-  it.each([
-    ["clickhouse", () => new ClickHouseRepository()],
-    ["http", () => new HttpRepository()],
-  ])("%s: aborts at the fetch when the only reader unmounts", async (_kind, make) => {
+  it("http: aborts at the fetch when the only reader unmounts", async () => {
+    const make = () => new HttpRepository();
     // jsdom supplies window.location.origin; stubbing window here would take
     // react-dom's own globals with it.
     const signals: AbortSignal[] = [];
@@ -143,8 +139,6 @@ describe("useRead", () => {
     const repo = make();
     await act(async () => { root.render(<Stages repo={repo} jobId="j" />); });
     expect(text()).toBe("loading");
-    // The browser door probes system.columns before its first findings read,
-    // not before stages; either way every fetch here carries a signal.
     expect(signals.length).toBeGreaterThan(0);
     await act(async () => root.unmount());
     root = createRoot(host);

@@ -81,26 +81,6 @@ describe("data source http", () => {
   });
 });
 
-describe("data source clickhouse", () => {
-  it("refuses to start without CLICKHOUSE_UPSTREAM, and names the variable", () => {
-    const r = boot({ DATA_SOURCE: "clickhouse" });
-    expect(r.status).toBe(1);
-    expect(r.stderr).toContain("CLICKHOUSE_UPSTREAM is not set");
-    expect(r.config).toBeNull();
-  });
-
-  it("refuses even when the API is configured: it will not be used", () => {
-    const r = boot({ DATA_SOURCE: "clickhouse", APEX_API_UPSTREAM: "http://apex-api:8000" });
-    expect(r.status).toBe(1);
-    expect(r.stderr).toContain("CLICKHOUSE_UPSTREAM is not set");
-  });
-
-  it("boots once the upstream is given", () => {
-    const r = boot({ DATA_SOURCE: "clickhouse", CLICKHOUSE_UPSTREAM: "http://ch:8123" });
-    expect(r.status).toBe(0);
-  });
-});
-
 describe("data source fixtures", () => {
   it("needs no upstream at all", () => {
     const r = boot({ DATA_SOURCE: "fixtures" });

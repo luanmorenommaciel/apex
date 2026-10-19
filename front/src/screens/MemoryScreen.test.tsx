@@ -18,7 +18,7 @@ function failing(method: keyof Repository): Repository {
   const error = Object.assign(new Error("PRIVATE response body"), { name: "PRIVATE name" });
   return new Proxy(new FixtureRepository(), {
     get(target, prop, receiver) {
-      if (prop === "kind") return "clickhouse";
+      if (prop === "kind") return "http";
       if (prop === method) return () => Promise.reject(error);
       return Reflect.get(target, prop, receiver);
     },
@@ -71,7 +71,7 @@ describe("MemoryScreen against the recorded shape", () => {
 
   it("reports a rejected shape runs read by source, never by message", async () => {
     await mount("/memory", failing("shapeRuns"));
-    expect(text()).toContain("ClickHouse");
+    expect(text()).toContain("apex-api");
     expect(text()).toContain("shape runs");
     expect(text()).not.toContain("PRIVATE");
   });

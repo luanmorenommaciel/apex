@@ -44,10 +44,6 @@ describe("NavBar source badge", () => {
     expect(text).not.toContain("fixtures");
   });
 
-  it("keeps the clickhouse label", async () => {
-    expect(await mount("clickhouse")).toContain("clickhouse ● apex");
-  });
-
   it("keeps the fixtures label", async () => {
     expect(await mount("fixtures")).toContain("source ◐ fixtures");
   });

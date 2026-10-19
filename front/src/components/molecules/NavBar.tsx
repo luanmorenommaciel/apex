@@ -7,12 +7,11 @@ import { CONTRACT_VERSION } from "@/contract/types";
 /**
  * Where the rows on screen came from — by the repository that was RESOLVED,
  * not by the configured data source, which may be `auto`. Exhaustive over
- * Repository["kind"], so a fourth kind is a type error here rather than a
+ * Repository["kind"], so a third kind is a type error here rather than a
  * fallthrough: this was `clickhouse ? … : fixtures`, and the http source wore
  * the recorded run's badge while every row came from apex-api.
  */
 const SOURCE: Record<Repository["kind"], ReactNode> = {
-  clickhouse: <>clickhouse <span className="text-certified">●</span> apex</>,
   http: <>apex-api <span className="text-certified">●</span> http</>,
   fixtures: <>source <span className="text-withheld">◐</span> fixtures</>,
 };

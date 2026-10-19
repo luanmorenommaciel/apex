@@ -1,12 +1,12 @@
 import { Card, Label, Mono, Prose } from "@/components/atoms";
 
 /**
- * DATA_SOURCE=auto asked every store it knows and none answered.
+ * The Apex API gave no HTTP answer at boot.
  *
  * This replaces the app, not a panel inside it: there is no repository to
- * mount the screens on, and the one that used to fill the gap - the recorded
- * gate run - is a recording, which a production visitor would read as their
- * cluster. It is served only when asked for by name.
+ * mount the screens on, and the recorded gate run is not a substitute - a
+ * production visitor would read it as their cluster. It is served only when
+ * asked for by name (DATA_SOURCE=fixtures).
  */
 export function StoreUnreachable({ probed }: { probed: { name: string; path: string }[] }) {
   return (
@@ -14,9 +14,9 @@ export function StoreUnreachable({ probed }: { probed: { name: string; path: str
       <Card accent="withheld" className="max-w-[640px] px-6 py-5 flex flex-col gap-4">
         <Label tone="withheld">NO STORE ANSWERED</Label>
         <Prose size="base">
-          <Mono className="text-body2">DATA_SOURCE=auto</Mono> probed every store this
-          console can read from, and none answered. Nothing is shown in their place: the
-          recorded gate run is served only when a deployment asks for it by name.
+          The console asked the Apex API at boot and got no answer. Nothing is shown in
+          its place: the recorded gate run is served only when a deployment asks for it by
+          name.
         </Prose>
         <ul className="flex flex-col gap-1.5 font-mono text-xs text-body2" aria-label="What was probed">
           {probed.map((p) => (
@@ -29,10 +29,10 @@ export function StoreUnreachable({ probed }: { probed: { name: string; path: str
           ))}
         </ul>
         <Prose size="sm" className="text-dim">
-          Start the API (<Mono>APEX_API_UPSTREAM</Mono>) or the store
-          (<Mono>CLICKHOUSE_UPSTREAM</Mono>) this deployment names, or pin{" "}
-          <Mono>DATA_SOURCE</Mono> to <Mono>http</Mono>, <Mono>clickhouse</Mono> or, for the
-          recording, <Mono>fixtures</Mono>. See the README, &ldquo;Configure a deployment&rdquo;.
+          Start the API this deployment names (<Mono>APEX_API_UPSTREAM</Mono>, or{" "}
+          <Mono>APEX_API_URL</Mono> for a cross-origin call), or set{" "}
+          <Mono>DATA_SOURCE=fixtures</Mono> for the recording. See the README,
+          &ldquo;Configure a deployment&rdquo;.
         </Prose>
       </Card>
     </main>

@@ -18,7 +18,7 @@ function failing(method: keyof Repository): Repository {
   const error = Object.assign(new Error("PRIVATE response body"), { name: "PRIVATE name" });
   return new Proxy(new FixtureRepository(), {
     get(target, prop, receiver) {
-      if (prop === "kind") return "clickhouse";
+      if (prop === "kind") return "http";
       if (prop === method) return () => Promise.reject(error);
       return Reflect.get(target, prop, receiver);
     },
@@ -74,7 +74,7 @@ describe("FindingScreen against the recorded run", () => {
   it("keeps the finding on screen when a decoration read fails, and names the source", async () => {
     await mount(finding.finding_id, failing("fixVerification"));
     expect(text()).toContain(finding.finding_id);
-    expect(text()).toContain("ClickHouse");
+    expect(text()).toContain("apex-api");
     expect(text()).toContain("verification");
     expect(text()).not.toContain("PRIVATE");
   });

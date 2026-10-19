@@ -18,7 +18,7 @@ function failing(method: keyof Repository): Repository {
   const error = Object.assign(new Error("PRIVATE response body"), { name: "PRIVATE name" });
   return new Proxy(new FixtureRepository(), {
     get(target, prop, receiver) {
-      if (prop === "kind") return "clickhouse";
+      if (prop === "kind") return "http";
       if (prop === method) return () => Promise.reject(error);
       return Reflect.get(target, prop, receiver);
     },
@@ -84,7 +84,7 @@ describe("RunsScreen against the recorded run", () => {
 
   it("reports a rejected listRuns by source, never by message", async () => {
     await mount(failing("listRuns"));
-    expect(text()).toContain("ClickHouse");
+    expect(text()).toContain("apex-api");
     expect(text()).toContain("query failed");
     expect(text()).not.toContain("PRIVATE");
     expect(text()).not.toContain("No rows match this filter");

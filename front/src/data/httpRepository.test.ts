@@ -8,9 +8,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const config = vi.hoisted(() => ({
-  database: "apex",
-  user: "apex_ro",
-  password: "",
   dataSource: "http" as string,
   apiUrl: "http://api.test",
   apiToken: "tok-123",
@@ -18,21 +15,11 @@ const config = vi.hoisted(() => ({
 
 vi.mock("./runtimeConfig", () => ({ runtimeConfig: config }));
 
-// Both stores' probes, so `auto` can be exercised without a network. The real
-// ClickHouse ping is replaced; the API probe (apiPing) is NOT — it is the unit
-// under test and runs against the stubbed fetch.
-const chPing = vi.hoisted(() => vi.fn<() => Promise<boolean>>());
-vi.mock("./clickhouse", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./clickhouse")>()),
-  ping: chPing,
-}));
-
 import { ApiAuthError } from "./http";
 import * as fx from "./fixtures";
 import { WIRE_TIMESTAMP } from "./timestamp";
 import type { Repository } from "./repository";
 import {
-  ClickHouseRepository,
   FixtureRepository,
   HttpRepository,
   resolveRepository,
@@ -65,103 +52,43 @@ beforeEach(() => {
   config.apiUrl = "http://api.test";
   config.apiToken = "tok-123";
   vi.unstubAllGlobals();
-  chPing.mockReset();
-  chPing.mockResolvedValue(false);
 });
 
 describe("selection", () => {
-  it("returns an HttpRepository when the data source is http", async () => {
+  const health = (body: unknown = { status: "ok", store: "ok" }) => respond(body);
+
+  it("returns an HttpRepository when the API answers its probe", async () => {
+    stubFetch(() => health());
     const repo = await resolveRepository();
     expect(repo).toBeInstanceOf(HttpRepository);
     expect(repo.kind).toBe("http");
-  });
-
-  it("leaves clickhouse and fixtures untouched", async () => {
-    config.dataSource = "fixtures";
-    expect(await resolveRepository()).toBeInstanceOf(FixtureRepository);
-    config.dataSource = "clickhouse";
-    expect(await resolveRepository()).toBeInstanceOf(ClickHouseRepository);
-  });
-
-  it("does not probe when pinned to http", async () => {
-    stubFetch(() => respond([]));
-    await resolveRepository();
-    // Pinned means pinned: no /v1/health ping, no ClickHouse ping.
-    expect(calls).toHaveLength(0);
-  });
-});
-
-describe("auto", () => {
-  beforeEach(() => {
-    config.dataSource = "auto";
-  });
-
-  const health = (body: unknown = { status: "ok", store: "ok" }) =>
-    respond(body);
-
-  it("probes the same-origin /v1/health when apiUrl is empty and selects the API", async () => {
-    // The supported same-origin deployment: VITE_APEX_API_PROXY_TARGET reaches
-    // the dev server and APEX_API_UPSTREAM reaches nginx, never the bundle, so
-    // apiUrl is deliberately empty. Skipping the probe there made `auto` fall
-    // back to ClickHouse in the one setup this data source was built for.
-    config.apiUrl = "";
-    stubFetch(() => health());
-    const repo = await resolveRepository();
-    expect(repo).toBeInstanceOf(HttpRepository);
-    expect(calls.map((c) => c.url)).toEqual(["/v1/health"]);
-    expect(chPing).not.toHaveBeenCalled();
-  });
-
-  it("probes an absolute apiUrl when one is configured", async () => {
-    stubFetch(() => health());
-    expect(await resolveRepository()).toBeInstanceOf(HttpRepository);
     expect(calls.map((c) => c.url)).toEqual(["http://api.test/v1/health"]);
   });
 
-  it("falls back to ClickHouse when no API answers", async () => {
+  it("probes the same-origin /v1/health when apiUrl is empty", async () => {
+    // The supported deployment: the dev server and nginx forward /v1, so the
+    // bundle never learns where the API lives and apiUrl is deliberately empty.
     config.apiUrl = "";
-    // A proxy whose upstream is absent answers 502.
-    stubFetch(() => respond({}, { status: 502 }));
-    chPing.mockResolvedValue(true);
-    expect(await resolveRepository()).toBeInstanceOf(ClickHouseRepository);
+    stubFetch(() => health());
+    expect(await resolveRepository()).toBeInstanceOf(HttpRepository);
+    expect(calls.map((c) => c.url)).toEqual(["/v1/health"]);
   });
 
-  it("refuses, by name, when neither store answers - never the recording", async () => {
-    config.apiUrl = "";
+  it("mounts on a 401 too: the API exists and refused, which the screens report", async () => {
+    stubFetch(() => respond({}, { status: 401 }));
+    expect(await resolveRepository()).toBeInstanceOf(HttpRepository);
+  });
+
+  it("serves the recording only when asked for by name, with no probe", async () => {
+    config.dataSource = "fixtures";
+    stubFetch(() => health());
+    expect(await resolveRepository()).toBeInstanceOf(FixtureRepository);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("refuses by name when nothing answers - never the recording", async () => {
     vi.stubGlobal("fetch", () => Promise.reject(new TypeError("refused")));
     await expect(resolveRepository()).rejects.toBeInstanceOf(StoreUnreachableError);
-  });
-
-  it("does not mistake an SPA fallback page for the API", async () => {
-    // A static host answers /v1/health with index.html and a 200. The probe
-    // must see that the body is not the API's liveness document.
-    config.apiUrl = "";
-    vi.stubGlobal("fetch", () =>
-      Promise.resolve({
-        ok: true,
-        status: 200,
-        statusText: "",
-        headers: new Headers(),
-        json: async () => {
-          throw new SyntaxError("Unexpected token '<'");
-        },
-      } as unknown as Response),
-    );
-    chPing.mockResolvedValue(true);
-    expect(await resolveRepository()).toBeInstanceOf(ClickHouseRepository);
-  });
-
-  it("never falls back on a 401: a gated API is still the API", async () => {
-    config.apiUrl = "";
-    stubFetch(() => respond({ detail: "unauthorized" }, { status: 401 }));
-    // ClickHouse is reachable, and must still not be chosen: that would quietly
-    // restore the browser-side database credential the API exists to remove.
-    chPing.mockResolvedValue(true);
-    const repo = await resolveRepository();
-    expect(repo).toBeInstanceOf(HttpRepository);
-    expect(chPing).not.toHaveBeenCalled();
-    // And the refusal then surfaces from the API's own calls.
-    await expect(repo.listRuns()).rejects.toBeInstanceOf(ApiAuthError);
   });
 });
 
@@ -344,16 +271,6 @@ describe("wire timestamp", () => {
     // Ten: one per method, and a shape has two.
     expect(times).toHaveLength(10);
     for (const value of times) expect(value).toMatch(WIRE_TIMESTAMP);
-  });
-
-  it("ClickHouseRepository returns the wire format from ClickHouse's own JSON", async () => {
-    // The browser path builds its url from window.location, which node has not.
-    vi.stubGlobal("window", { location: { origin: "http://console.test" } });
-    stubFetch(() => respond({ data: [row("2026-09-20 10:00:00.123")], meta: [], rows: 1 }));
-    const times = await everyTimestamp(new ClickHouseRepository(), "j", "a".repeat(64));
-    expect(times).toHaveLength(10);
-    for (const value of times) expect(value).toBe("2026-09-20T10:00:00.123");
-    expect(calls.every((c) => c.url.startsWith("http://console.test/clickhouse/"))).toBe(true);
   });
 
   it("FixtureRepository returns the wire format from the recording", async () => {

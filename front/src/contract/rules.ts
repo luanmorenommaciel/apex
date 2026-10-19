@@ -603,8 +603,8 @@ export const TAIL_SAMPLE = 5;
 /**
  * refused_count: among the TAIL_SAMPLE loudest p99/p50 ratios of a run, how
  * many stages assessStage() refuses a tail claim for. The run rollup's
- * `refused` CTE (queries.ts, mirrored in serve) computes this same number in
- * SQL so the runs list can show it without the stage rows; refusedCount.test.ts
+ * `refused` CTE (serve/src/apex_mcp/ch.py, behind the API) computes this same
+ * number in SQL so the runs list can show it without the stage rows; refusedCount.test.ts
  * holds the two arithmetics together over the recording. Ties on the ratio
  * are broken by stage_id, as the SQL orders them.
  */

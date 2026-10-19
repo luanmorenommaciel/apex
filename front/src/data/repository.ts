@@ -1,17 +1,16 @@
 /**
  * The seam between the console and its data.
  *
- * ClickHouseRepository queries the database from the browser (the choice for
- * this bench). FixtureRepository serves the recorded run. Swapping in an
- * HttpRepository against serve/ means implementing this one interface — no
- * screen changes, because no screen knows where a row came from.
+ * HttpRepository reads through serve/'s apex-api - the console's only door
+ * since 2026-10-19 (D-api-only); the browser holds an API token and never a
+ * database user, and carries no SQL. FixtureRepository serves the recorded
+ * run when a deployment asks for it by name. No screen knows where a row came
+ * from, which is what lets the two share every screen.
  */
 import type {
   FindingRow, FixVerificationRow, JobConfRow, PlanTransitionRow,
   RunSummary, SparkEventRow, WireTimestamp,
 } from "@/contract/types";
-import * as Q from "./queries";
-import { ping, query } from "./clickhouse";
 import { apiGet, apiPing } from "./http";
 import { runtimeConfig } from "./runtimeConfig";
 import { toWireTimestamp, withWireTimestamps } from "./timestamp";
@@ -55,7 +54,7 @@ export interface BaselineCandidate {
 }
 
 export interface Repository {
-  readonly kind: "clickhouse" | "fixtures" | "http";
+  readonly kind: "fixtures" | "http";
   // Every read takes a trailing AbortSignal: useRead() cancels a request its
   // screen no longer waits for. FixtureRepository ignores it.
   listRuns(limit?: number, signal?: AbortSignal): Promise<(RunSummary & { age?: string })[]>;
@@ -87,10 +86,9 @@ const relativeAge = (iso: string): string => {
  * Rows from any source, with the named timestamp fields in the wire format.
  *
  * Every repository returns through this, so a timestamp reads the same
- * whichever door it came through: ClickHouse's JSON writes
- * `2026-09-20 10:00:00.123`, the recording holds that same form, and the API
- * writes `2026-09-20T10:00:00.123`. The API's is the format; the other two are
- * brought to it here, the one place all three pass.
+ * whichever door it came through: the recording holds ClickHouse's own
+ * `2026-09-20 10:00:00.123`, and the API writes `2026-09-20T10:00:00.123`.
+ * The API's is the format; the recording is brought to it here.
  */
 const wireRows = <T extends object>(rows: T[], ...fields: (keyof T)[]): T[] =>
   rows.map((row) => withWireTimestamps(row, fields));
@@ -142,83 +140,17 @@ const toRunSummary = (r: RunRollupRow): RunSummary & { age?: string } => ({
   age: relativeAge(r.started_at),
 });
 
-export class ClickHouseRepository implements Repository {
-  readonly kind = "clickhouse" as const;
-
-  /**
-   * Which FINDINGS to send, decided ONCE per instance from system.columns, as
-   * ReadStore.findings_columns() does behind the API: the full statement when
-   * apex.findings carries the v0.2 additive confidence_score, the fallback
-   * projecting 0 when it does not. A probe that fails leaves the full
-   * statement in place, so the findings query's own error is the one the
-   * caller sees - the fallback is a statement, never silence.
-   */
-  private findingsStatement: Promise<string> | null = null;
-  private findingsSql(): Promise<string> {
-    return (this.findingsStatement ??= query<{ name: string }>(Q.FINDINGS_COLUMNS)
-      .then((columns) =>
-        columns.some((c) => c.name === "confidence_score") ? Q.FINDINGS : Q.FINDINGS_WITHOUT_SCORE,
-      )
-      .catch(() => Q.FINDINGS));
-  }
-
-  async listRuns(limit = 50, signal?: AbortSignal) {
-    const rows = await query<RunRollupRow>(Q.RUN_LIST, { limit }, signal);
-    return rows.map(toRunSummary);
-  }
-
-  async run(jobId: string, signal?: AbortSignal) {
-    const rows = await query<RunRollupRow>(Q.RUN_ONE, { job: jobId }, signal);
-    return rows[0] ? toRunSummary(rows[0]) : null;
-  }
-
-  async baselineCandidates(jobId: string, signal?: AbortSignal) {
-    return wireRows(await query<BaselineCandidate>(Q.RUNS_SHARING_SHAPE, { job: jobId }, signal), "observed_at");
-  }
-
-  async planShapes(signal?: AbortSignal) {
-    return wireRows(await query<PlanShape>(Q.PLAN_SHAPES, {}, signal), "first_run", "last_run");
-  }
-  async shapeRuns(fingerprint: string, signal?: AbortSignal) {
-    return wireRows(await query<ShapeRun>(Q.SHAPE_RUNS, { fingerprint }, signal), "observed_at");
-  }
-  async planSample(fingerprint: string, signal?: AbortSignal) {
-    if (!fingerprint) return null;
-    const rows = await query<{ sample_plan_json: string }>(Q.PLAN_SAMPLE, { fingerprint }, signal);
-    // An empty exemplar is not an exemplar: the row exists but carries no text,
-    // which is "the memory lane indexed no plan", not "the plan is blank".
-    return rows[0]?.sample_plan_json || null;
-  }
-
-  async stages(jobId: string, signal?: AbortSignal) {
-    return wireRows(await query<SparkEventRow>(Q.LATEST_STAGES, { job: jobId }, signal), "ts");
-  }
-  async jobConf(jobId: string, signal?: AbortSignal) {
-    return wireRows(await query<JobConfRow>(Q.JOB_CONF, { job: jobId }, signal), "ts");
-  }
-  async findings(jobId: string, signal?: AbortSignal) {
-    return wireRows(await query<FindingRow>(await this.findingsSql(), { job: jobId }, signal), "ts");
-  }
-  async transitions(jobId: string, signal?: AbortSignal) {
-    return wireRows(await query<PlanTransitionRow>(Q.PLAN_TRANSITIONS, { job: jobId }, signal), "ts");
-  }
-  async fixVerification(findingId: string, signal?: AbortSignal) {
-    const rows = await query<Record<string, unknown>>(Q.FIX_VERIFICATIONS, { finding: findingId }, signal);
-    return rows[0] ? toFixVerification(rows[0]) : null;
-  }
-}
-
 /**
  * One verification row, however it arrived.
  *
- * The projection — in SQL against ClickHouse, in ch.py behind the API — has
+ * The projection - FIX_VERIFICATION_SQL in ch.py behind the API - has
  * already renamed the columns, flipped the sign and applied rule 2. What it
  * cannot supply it returns as NULL, and that travels through as null:
  * mechanism_confirmed has no column at all, and the individual replay
  * durations were never stored, only the two arms\' medians.
  *
- * Shared by both repositories so the two paths cannot disagree about what a
- * verification means.
+ * One mapper for the API's row, so the console cannot disagree with itself
+ * about what a verification means.
  */
 const toFixVerification = (r: Record<string, unknown>): FixVerificationRow => ({
   fix_id: String(r.fix_id),
@@ -258,7 +190,7 @@ export class FixtureRepository implements Repository {
   // The 1,600-line recording is imported DYNAMICALLY so Vite emits it as its
   // own chunk (dist/assets/fixtures-*.js) that only this repository fetches.
   // Statically imported it sat in the entry bundle of every deployment,
-  // including the http and clickhouse ones that never read a row of it.
+  // including the http ones that never read a row of it.
   // Memoised: one fetch per instance, and constructing the instance loads
   // nothing — the default RepoContext value is one of these.
   private loaded: Promise<Fixtures> | null = null;
@@ -326,13 +258,11 @@ export class FixtureRepository implements Repository {
 }
 
 /**
- * The console against the Apex API.
+ * The console against the Apex API - its one door.
  *
- * Implementing this interface is the whole change — no screen knows where a
- * row came from, which is what `clickhouse.ts` meant by calling the Repository
- * the seam. The rows the API returns are the same projections `queries.ts`
- * produced, now computed server-side, so the mappers below are the ones
- * ClickHouseRepository already uses.
+ * The rows the API returns are the projections ch.py computes server-side
+ * (serve/src/apex_mcp/ch.py), so the mappers above turn them into the
+ * console's row types and nothing here holds a statement of its own.
  */
 export class HttpRepository implements Repository {
   readonly kind = "http" as const;
@@ -413,9 +343,11 @@ export class HttpRepository implements Repository {
 }
 
 /**
- * What `auto` asked and got no answer from. Thrown by resolveRepository() so
- * the provider can render it; never a Repository, because a recording shown
- * as production data is the defect, not its volume (decided 2026-10-19).
+ * The API was asked at boot and gave no HTTP answer at all.
+ *
+ * Thrown by resolveRepository() so the provider renders it in place of the
+ * app (P-boot-probe, accepted 2026-10-19). A 401 is NOT this: the API exists
+ * and refused, which every screen reports through QueryFailure.
  */
 export class StoreUnreachableError extends Error {
   constructor(readonly probed: { name: string; path: string }[]) {
@@ -425,30 +357,17 @@ export class StoreUnreachableError extends Error {
 }
 
 export async function resolveRepository(): Promise<Repository> {
-  // Runtime, so a single production image can be started against fixtures,
-  // pinned to ClickHouse, or left to probe — without a rebuild.
-  const mode = runtimeConfig.dataSource;
-  if (mode === "fixtures") return new FixtureRepository();
-  if (mode === "clickhouse") return new ClickHouseRepository();
-  // Pinned to the API. NOT probed and NOT fallen back from: falling back to
-  // ClickHouse because the API refused would quietly restore the browser-side
-  // database credential this data source exists to remove.
-  if (mode === "http") return new HttpRepository();
-  // auto: prefer the API whenever one answers, because that is the deployment
-  // that no longer needs a database user at all. Probed UNCONDITIONALLY: in the
-  // supported same-origin setup apiUrl is deliberately empty (the dev server
-  // and nginx forward /v1 and the bundle never learns the target), so an empty
-  // apiUrl is not evidence that there is no API. apiPing() asks the same origin
-  // in that case. Once chosen, a 401 from the API surfaces as an error — there
-  // is no path from HttpRepository back to ClickHouse.
+  // Runtime, so a single production image can be started against the API or
+  // the recording - without a rebuild. There is no other door (D-api-only).
+  if (runtimeConfig.dataSource === "fixtures") return new FixtureRepository();
+  // http: probed ONCE at boot. apiPing() answers true for the API's own
+  // liveness body and for a 401 (the API exists and refused); anything else -
+  // a refused connection, a 502 from a proxy whose upstream is absent - is no
+  // API, and the console says so rather than mounting screens that would each
+  // fail in their own words. In the supported same-origin setup apiUrl is
+  // empty and the probe asks this origin's /v1/health.
   if (await apiPing()) return new HttpRepository();
-  if (await ping()) return new ClickHouseRepository();
-  // Neither answered. The recording is served ONLY when asked for by name
-  // (DATA_SOURCE=fixtures): `auto` used to fall through to it here, and a
-  // misconfigured deployment showed a run that never happened on its cluster
-  // with nothing but a small header badge to say so.
   throw new StoreUnreachableError([
     { name: "the Apex API", path: `${runtimeConfig.apiUrl.replace(/\/+$/, "")}/v1/health` },
-    { name: "ClickHouse", path: "/clickhouse/ping" },
   ]);
 }
