@@ -1,7 +1,7 @@
 ---
 id: T-20261019-front-drop-clickhouse-door
 title: "Remove the ClickHouse door from the console's deployment surface"
-status: in-progress
+status: done
 format_version: 3
 profile: standard
 effort: M
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: agmarcastro
 signed_off_at: 2026-10-19T15:57:09Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: agmarcastro
+accepted_at: 2026-10-19T15:57:25Z
 signed_off_sig: hmac-sha256-v3:60832560:dcec888495c067723ad95c39fc9d3ebd87296f773f60665bec3cba89361b9660
+accepted_tier: 1
+accepted_attempt_id: 4c810051-4083-4144-afdf-ebd00314e367
+accepted_authorization_ref: hmac-sha256-v3:60832560:dcec888495c067723ad95c39fc9d3ebd87296f773f60665bec3cba89361b9660
+acceptance_record_digest: sha256:9f3b3c8abc5ab555380b6dd5c55df3ee2c3e12a51d3b43462400fbd5ea5f37a1
 ---
 
 # Remove the ClickHouse door from the console's deployment surface

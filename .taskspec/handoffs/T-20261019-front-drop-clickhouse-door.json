@@ -1,0 +1,119 @@
+{
+  "contract": "TaskHandoff/v3",
+  "task_id": "T-20261019-front-drop-clickhouse-door",
+  "format_version": 3,
+  "spec": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-front-drop-clickhouse-door.md",
+  "spec_digest": "sha256:585489227c7af09ea54f99dc2dceeb572d2079e3f081ad550d79f7d962774fbd",
+  "task_revision_digest": "sha256:9e2fe21fdf5fe3e3060f24eba260d3c61ac46b2d8e7f3a2afdbe49cd69ce4d24",
+  "signoff_tier": 1,
+  "backend": "claude",
+  "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+  "authorization": {
+    "scheme": "hmac-sha256-v3",
+    "ref": "hmac-sha256-v3:60832560:dcec888495c067723ad95c39fc9d3ebd87296f773f60665bec3cba89361b9660",
+    "tier": 1,
+    "signed_by": "agmarcastro",
+    "signed_at": "2026-10-19T15:57:09Z"
+  },
+  "attempt": {
+    "id": "4c810051-4083-4144-afdf-ebd00314e367",
+    "issued_at": "2026-10-19T15:57:10Z"
+  },
+  "source": {
+    "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+    "base_commit": "afaa687a4f8dbad69da5fe5047ce67aeba72b95a"
+  },
+  "dependency_closure": {
+    "contract": "DependencyClosure/v1",
+    "task_id": "T-20261019-front-drop-clickhouse-door",
+    "digest": "sha256:fd924d0431397cd86c6f248f5a3d1568bad7c865a44a6e7c3d93565c7a625cd0",
+    "members": [
+      {
+        "task_id": "T-20261019-front-drop-clickhouse-door",
+        "task_revision_digest": "sha256:9e2fe21fdf5fe3e3060f24eba260d3c61ac46b2d8e7f3a2afdbe49cd69ce4d24"
+      },
+      {
+        "task_id": "T-20261019-front-http-only-resolution",
+        "task_revision_digest": "sha256:cba7d024f448965753812e14d285863e11d40ff0f386c7cb8253847a163418e5"
+      },
+      {
+        "task_id": "T-20261019-serve-owns-console-sql",
+        "task_revision_digest": "sha256:3104e16d67c4a7dffa785b3dda94b79ec29fc927a43e0eee39b76272fc8a7391"
+      }
+    ]
+  },
+  "write_scope": {
+    "touches_paths": [
+      "front/nginx.conf",
+      "front/Dockerfile",
+      "front/docker-entrypoint.d/30-apex-console-config.sh",
+      "front/docker-compose.yml",
+      "front/Makefile",
+      "front/.env.example",
+      "front/vite.config.ts",
+      "front/README.md",
+      "front/src/data/entrypoint.test.ts"
+    ],
+    "creates_paths": [],
+    "do_not_touch": [
+      "front/src/data/repository.ts",
+      "front/src/screens",
+      "front/src/components",
+      "serve",
+      "infra"
+    ]
+  },
+  "budgets": {
+    "iterations": 15,
+    "tokens": null,
+    "effort": "M"
+  },
+  "agent_contract": {
+    "version": 2,
+    "read": [
+      "intent",
+      "behavior",
+      "contract",
+      "guardrails"
+    ],
+    "produce": [
+      "code",
+      "tests"
+    ],
+    "required_tools": [
+      "git",
+      "bash"
+    ],
+    "timeout_minutes": 30,
+    "sandbox_type": "host",
+    "output_artifacts": [],
+    "mcp_dependencies": [],
+    "emit": [
+      "pass",
+      "fail",
+      "retry_with_reason",
+      "parked_with_context"
+    ],
+    "backend_metadata": {}
+  },
+  "eval_command": [
+    "taskspec",
+    "run",
+    "--ci",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-front-drop-clickhouse-door.md"
+  ],
+  "acceptance_command": [
+    "taskspec",
+    "accept",
+    "--stamp",
+    "--handoff",
+    "<handoff.json>",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-front-drop-clickhouse-door.md"
+  ],
+  "evaluation_policy": {},
+  "environment_contract": {},
+  "identity_policy": {},
+  "receipt_requirements": [
+    "deterministic"
+  ]
+}
