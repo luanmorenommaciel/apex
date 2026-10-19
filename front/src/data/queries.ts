@@ -193,6 +193,32 @@ ORDER BY confidence_score DESC, finding_id ASC
 `;
 
 /**
+ * confidence_score is a v0.2 ADDITIVE column of apex.findings. A cluster whose
+ * table predates it answers FINDINGS with an unknown-identifier error, while
+ * the API probes system.columns and projects toFloat64(0) in its place
+ * (serve/src/apex_mcp/ch.py, _FINDINGS_ADDITIVE). ClickHouseRepository runs
+ * the same probe once and sends FINDINGS_WITHOUT_SCORE when the column is
+ * absent, so a deployment reads the same rows through both doors.
+ *
+ * FINDINGS itself is not edited: serve's tests read its text as the contract.
+ * apex_ro sees its own tables in system.columns because any privilege on a
+ * table implies SHOW on it; currentDatabase() is the one the request named.
+ */
+export const FINDINGS_COLUMNS = `
+SELECT name FROM system.columns
+WHERE database = currentDatabase() AND table = 'findings'
+`;
+
+/** FINDINGS with the additive column replaced by the API's own fallback. */
+export const FINDINGS_WITHOUT_SCORE = `
+SELECT finding_id, job_id, stage_id, type, severity, confidence,
+       toFloat64(0) AS confidence_score, detected_by, evidence, impact, fix, hot_key, ts
+FROM findings
+WHERE job_id = {job:String}
+ORDER BY confidence_score DESC, finding_id ASC
+`;
+
+/**
  * plan_fingerprint is NOT a column here — it lives on spark_events, so it is
  * joined in. `any()` over the job's fingerprinted stages is sound only because
  * the console uses it as the run's shape identity; a stage-accurate fingerprint

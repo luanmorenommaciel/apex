@@ -140,6 +140,23 @@ const toRunSummary = (r: RunRollupRow): RunSummary & { age?: string } => ({
 export class ClickHouseRepository implements Repository {
   readonly kind = "clickhouse" as const;
 
+  /**
+   * Which FINDINGS to send, decided ONCE per instance from system.columns, as
+   * ReadStore.findings_columns() does behind the API: the full statement when
+   * apex.findings carries the v0.2 additive confidence_score, the fallback
+   * projecting 0 when it does not. A probe that fails leaves the full
+   * statement in place, so the findings query's own error is the one the
+   * caller sees - the fallback is a statement, never silence.
+   */
+  private findingsStatement: Promise<string> | null = null;
+  private findingsSql(): Promise<string> {
+    return (this.findingsStatement ??= query<{ name: string }>(Q.FINDINGS_COLUMNS)
+      .then((columns) =>
+        columns.some((c) => c.name === "confidence_score") ? Q.FINDINGS : Q.FINDINGS_WITHOUT_SCORE,
+      )
+      .catch(() => Q.FINDINGS));
+  }
+
   async listRuns(limit = 50) {
     const rows = await query<RunRollupRow>(Q.RUN_LIST, { limit });
     return rows.map(toRunSummary);
@@ -175,7 +192,7 @@ export class ClickHouseRepository implements Repository {
     return wireRows(await query<JobConfRow>(Q.JOB_CONF, { job: jobId }), "ts");
   }
   async findings(jobId: string) {
-    return wireRows(await query<FindingRow>(Q.FINDINGS, { job: jobId }), "ts");
+    return wireRows(await query<FindingRow>(await this.findingsSql(), { job: jobId }), "ts");
   }
   async transitions(jobId: string) {
     return wireRows(await query<PlanTransitionRow>(Q.PLAN_TRANSITIONS, { job: jobId }), "ts");
