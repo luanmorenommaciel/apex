@@ -1,7 +1,7 @@
 ---
 id: T-20261019-nginx-hardening
 title: "Give the production nginx security headers, proxy timeouts and gzip"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S
@@ -25,12 +25,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: agmarcastro
+signed_off_at: 2026-10-19T15:51:31Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v3:60832560:6988089d4a1d60f184025eaf34778a132a3bd0c144b712f261fee144a847abcd
 ---
 
 # Give the production nginx security headers, proxy timeouts and gzip
