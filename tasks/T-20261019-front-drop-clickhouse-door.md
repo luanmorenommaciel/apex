@@ -1,7 +1,7 @@
 ---
 id: T-20261019-front-drop-clickhouse-door
 title: "Remove the ClickHouse door from the console's deployment surface"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: M
