@@ -1,7 +1,7 @@
 ---
 id: T-20261019-tls-external-terminator
 title: "Behave correctly behind an external TLS terminator and say so"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S

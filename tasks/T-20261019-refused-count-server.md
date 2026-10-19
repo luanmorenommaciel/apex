@@ -1,7 +1,7 @@
 ---
 id: T-20261019-refused-count-server
 title: "Compute refused_count in the run rollup both doors run"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: M
