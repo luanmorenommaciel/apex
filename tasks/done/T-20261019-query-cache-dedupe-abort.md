@@ -1,7 +1,7 @@
 ---
 id: T-20261019-query-cache-dedupe-abort
 title: "Dedupe, cache and abort the console's reads"
-status: in-progress
+status: done
 format_version: 3
 profile: standard
 effort: M
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: agmarcastro
 signed_off_at: 2026-10-19T15:53:06Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: agmarcastro
+accepted_at: 2026-10-19T15:53:23Z
 signed_off_sig: hmac-sha256-v3:60832560:0f1f6877f84185ddabf5301f2a55ab9b36e2d4146113b8669988f0a8e3791c97
+accepted_tier: 1
+accepted_attempt_id: bcdf1e28-56cf-414c-8770-c086db1cc4a3
+accepted_authorization_ref: hmac-sha256-v3:60832560:0f1f6877f84185ddabf5301f2a55ab9b36e2d4146113b8669988f0a8e3791c97
+acceptance_record_digest: sha256:3c2320103d09b092807b60f7c08f42332257bc8428ffedd7b632afcd7cb0c4dc
 ---
 
 # Dedupe, cache and abort the console's reads

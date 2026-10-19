@@ -1,0 +1,115 @@
+{
+  "contract": "TaskHandoff/v3",
+  "task_id": "T-20261019-query-cache-dedupe-abort",
+  "format_version": 3,
+  "spec": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-query-cache-dedupe-abort.md",
+  "spec_digest": "sha256:7d7fa9a0d5754e8d99523f9292ae2d36485041c93fa92912a1024e11a37c0901",
+  "task_revision_digest": "sha256:045cb3e72853c4da3df6bc715d0a37518b9521b9310439c2e8cc7a3dbed4600b",
+  "signoff_tier": 1,
+  "backend": "claude",
+  "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+  "authorization": {
+    "scheme": "hmac-sha256-v3",
+    "ref": "hmac-sha256-v3:60832560:0f1f6877f84185ddabf5301f2a55ab9b36e2d4146113b8669988f0a8e3791c97",
+    "tier": 1,
+    "signed_by": "agmarcastro",
+    "signed_at": "2026-10-19T15:53:06Z"
+  },
+  "attempt": {
+    "id": "bcdf1e28-56cf-414c-8770-c086db1cc4a3",
+    "issued_at": "2026-10-19T15:53:08Z"
+  },
+  "source": {
+    "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+    "base_commit": "e9a57bb010550eb3fabb0ff69af72687001204ed"
+  },
+  "dependency_closure": {
+    "contract": "DependencyClosure/v1",
+    "task_id": "T-20261019-query-cache-dedupe-abort",
+    "digest": "sha256:35ebf9c9f418ddc7a939aeebdbe4f51d35eeffcc0894cbe6630708cefd1e97f6",
+    "members": [
+      {
+        "task_id": "T-20261019-query-cache-dedupe-abort",
+        "task_revision_digest": "sha256:045cb3e72853c4da3df6bc715d0a37518b9521b9310439c2e8cc7a3dbed4600b"
+      },
+      {
+        "task_id": "T-20261019-screen-component-tests",
+        "task_revision_digest": "sha256:75161111eb862f29c163a280b7017300595f962548fc96aa586e21dbf04eeb0a"
+      }
+    ]
+  },
+  "write_scope": {
+    "touches_paths": [
+      "front/src/data/useRepository.tsx",
+      "front/src/data/repository.ts",
+      "front/src/data/http.ts",
+      "front/src/screens/RunDetailScreen.tsx",
+      "front/src/screens/FindingScreen.tsx",
+      "front/src/screens/CompareScreen.tsx",
+      "front/src/screens/MemoryScreen.tsx",
+      "front/src/screens/RunsScreen.tsx"
+    ],
+    "creates_paths": [
+      "front/src/data/useAsync.test.tsx"
+    ],
+    "do_not_touch": [
+      "serve",
+      "front/src/data/queries.ts",
+      "front/src/data/fixtures.ts",
+      "front/src/contract"
+    ]
+  },
+  "budgets": {
+    "iterations": 15,
+    "tokens": null,
+    "effort": "M"
+  },
+  "agent_contract": {
+    "version": 2,
+    "read": [
+      "intent",
+      "behavior",
+      "contract",
+      "guardrails"
+    ],
+    "produce": [
+      "code",
+      "tests"
+    ],
+    "required_tools": [
+      "git",
+      "bash"
+    ],
+    "timeout_minutes": 30,
+    "sandbox_type": "host",
+    "output_artifacts": [],
+    "mcp_dependencies": [],
+    "emit": [
+      "pass",
+      "fail",
+      "retry_with_reason",
+      "parked_with_context"
+    ],
+    "backend_metadata": {}
+  },
+  "eval_command": [
+    "taskspec",
+    "run",
+    "--ci",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-query-cache-dedupe-abort.md"
+  ],
+  "acceptance_command": [
+    "taskspec",
+    "accept",
+    "--stamp",
+    "--handoff",
+    "<handoff.json>",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-query-cache-dedupe-abort.md"
+  ],
+  "evaluation_policy": {},
+  "environment_contract": {},
+  "identity_policy": {},
+  "receipt_requirements": [
+    "deterministic"
+  ]
+}
