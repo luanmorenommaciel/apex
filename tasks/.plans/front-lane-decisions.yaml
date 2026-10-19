@@ -80,6 +80,7 @@ units:
       - front/src/data/repository.ts
       - front/src/data/useRepository.tsx
       - front/src/data/httpRepository.test.ts
+      - front/src/data/entrypoint.test.ts
       - front/src/components/molecules/index.ts
       - front/docker-entrypoint.d/30-apex-console-config.sh
       - front/README.md

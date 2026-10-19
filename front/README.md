@@ -34,11 +34,13 @@ Without Docker: `nvm use && npm ci && make dev` — Node 22 (`.nvmrc`; the
 `engines` range in `package.json` is what every devDependency accepts, and
 `engines.test.ts` keeps it in step with the image and CI). `.env.example`
 defaults to `VITE_DATA_SOURCE=http`; `auto` probes the API, then ClickHouse,
-then falls back to the recorded gate run.
+and when neither answers shows a "no store answered" page naming both — the
+recorded gate run is served only by `fixtures`, never as a fallback.
 
 `VITE_APEX_API_PROXY_TARGET` moves the dev proxy's target; the browser keeps
 calling `/v1` relative and stays same-origin either way. `auto` probes the API
-first, then ClickHouse, then falls back to fixtures. An API that answers the
+first, then ClickHouse, and refuses by name when neither answers (decided
+2026-10-19: a recording shown as production data is the defect). An API that answers the
 probe with 401 is still selected: the refusal is shown on screen, never
 bypassed by falling back to the database credential the API exists to remove.
 
@@ -64,7 +66,7 @@ side. One image therefore serves every deployment:
 | `CLICKHOUSE_DB` | `apex` | Database the queries name |
 | `CLICKHOUSE_USER` | `apex_ro` | Must stay the read-only user — it ships to the browser |
 | `CLICKHOUSE_PASSWORD` | *empty* | Set to `""` deliberately for `no_password`; unset means "keep the bundle's default" |
-| `DATA_SOURCE` | `auto` on the image; `http` from `make prod`, compose and `.env.example` | `http` (the default everywhere the repo starts the console — the browser holds an API token, never a database user), `clickhouse` (the opt-in bench mode), `fixtures`, or `auto` (probe the API, then ClickHouse, then fall back) |
+| `DATA_SOURCE` | `auto` on the image; `http` from `make prod`, compose and `.env.example` | `http` (the default everywhere the repo starts the console — the browser holds an API token, never a database user), `clickhouse` (the opt-in bench mode), `fixtures`, or `auto` (probe the API, then ClickHouse; when neither answers the console renders a store-unreachable page and never the recording) |
 | `APEX_API_UPSTREAM` | `http://127.0.0.1:1` | Where nginx proxies `/v1` for `DATA_SOURCE=http`. Defaults to an unroutable address so a ClickHouse-mode image still boots |
 | `APEX_API_TOKEN` | *unset* | The bearer token written into `/config.js`. A credential for the API, never for the store — scope and rotate it per consumer |
 | `APEX_API_URL` | *unset* | Only for a deliberate cross-origin call. The API sends no CORS header, so a browser blocks that; leave it unset and let nginx forward `/v1` |

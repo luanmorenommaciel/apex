@@ -36,6 +36,7 @@ import {
   FixtureRepository,
   HttpRepository,
   resolveRepository,
+  StoreUnreachableError,
 } from "./repository";
 
 type Call = { url: string; init?: RequestInit };
@@ -125,10 +126,10 @@ describe("auto", () => {
     expect(await resolveRepository()).toBeInstanceOf(ClickHouseRepository);
   });
 
-  it("falls back to fixtures when neither store answers", async () => {
+  it("refuses, by name, when neither store answers - never the recording", async () => {
     config.apiUrl = "";
     vi.stubGlobal("fetch", () => Promise.reject(new TypeError("refused")));
-    expect(await resolveRepository()).toBeInstanceOf(FixtureRepository);
+    await expect(resolveRepository()).rejects.toBeInstanceOf(StoreUnreachableError);
   });
 
   it("does not mistake an SPA fallback page for the API", async () => {

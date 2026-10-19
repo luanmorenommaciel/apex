@@ -1,19 +1,35 @@
 import {
   createContext, useContext, useEffect, useState, type ReactNode,
 } from "react";
-import { FixtureRepository, resolveRepository, type Repository } from "./repository";
+import {
+  FixtureRepository, resolveRepository, StoreUnreachableError, type Repository,
+} from "./repository";
+import { StoreUnreachable } from "@/components/molecules/StoreUnreachable";
 
 const RepoContext = createContext<Repository>(new FixtureRepository());
 
 export function RepositoryProvider({ children }: { children: ReactNode }) {
   const [repo, setRepo] = useState<Repository | null>(null);
+  const [unreachable, setUnreachable] = useState<StoreUnreachableError | null>(null);
   useEffect(() => {
     let live = true;
-    resolveRepository().then((r) => live && setRepo(r));
+    resolveRepository().then(
+      (r) => live && setRepo(r),
+      (error: unknown) => {
+        if (!live) return;
+        // Only the named failure is rendered; anything else is a bug and
+        // stays an unhandled rejection rather than a screen that guesses.
+        if (error instanceof StoreUnreachableError) setUnreachable(error);
+        else throw error;
+      },
+    );
     return () => {
       live = false;
     };
   }, []);
+  // No store answered: the app does not mount over a recording. The failure
+  // takes the page and names what was asked.
+  if (unreachable) return <StoreUnreachable probed={unreachable.probed} />;
   if (!repo) return null;
   return <RepoContext.Provider value={repo}>{children}</RepoContext.Provider>;
 }

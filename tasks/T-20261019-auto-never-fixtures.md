@@ -1,7 +1,7 @@
 ---
 id: T-20261019-auto-never-fixtures
 title: "Stop auto from serving the recording as production data"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S
@@ -10,7 +10,7 @@ agent: any
 parent: (none)
 depends_on: [T-20261019-tls-external-terminator]
 supersedes: (none)
-touches_paths: [front/src/data/repository.ts, front/src/data/useRepository.tsx, front/src/data/httpRepository.test.ts, front/src/components/molecules/index.ts, front/docker-entrypoint.d/30-apex-console-config.sh, front/README.md, front/.env.example]
+touches_paths: [front/src/data/repository.ts, front/src/data/useRepository.tsx, front/src/data/httpRepository.test.ts, front/src/data/entrypoint.test.ts, front/src/components/molecules/index.ts, front/docker-entrypoint.d/30-apex-console-config.sh, front/README.md, front/.env.example]
 creates_paths: [front/src/components/molecules/StoreUnreachable.tsx, front/src/data/resolveRepository.test.ts]
 source_note: "D-auto-fallback-policy, option A; front/src/data/repository.ts resolveRepository() (auto falls through to FixtureRepository), front/docker-entrypoint.d/30-apex-console-config.sh (auto with no store is refused at boot, auto with an unreachable store is not), front/src/data/httpRepository.test.ts (the selection tests)"
 created: "2026-10-19T00:00:00Z"

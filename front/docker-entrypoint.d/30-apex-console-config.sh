@@ -15,13 +15,15 @@
 #                                                          no CLICKHOUSE_UPSTREAM needed
 #        fixtures    the recording is the only path     -> neither needed
 #        auto        probes the API first, then         -> at least ONE of an API
-#        (default)   ClickHouse, then fixtures             or CLICKHOUSE_UPSTREAM
+#        (default)   ClickHouse; NEVER fixtures            or CLICKHOUSE_UPSTREAM
 #
 #      In `auto` ClickHouse is a FALLBACK, so a deployment that configures the
 #      API alone must boot — otherwise the documented same-origin setup could
 #      not start without an upstream it will never call. `auto` with neither
-#      configured has nothing to probe and is refused rather than silently
-#      serving the recording.
+#      configured has nothing to probe and is refused here. `auto` with a
+#      store that does not answer is refused IN THE BROWSER: the console
+#      renders a failure naming what it probed (src/data/repository.ts), and
+#      never the recording, which only DATA_SOURCE=fixtures serves.
 #   2. Render /config.js from this container's environment, so the bundle is not
 #      pinned to the database, user, credential and mode it was BUILT with.
 #      Vite inlines every VITE_* reference, so this is the only way one image can
@@ -78,7 +80,7 @@ case "$mode" in
     fi
     if [ "$have_clickhouse" = 0 ]; then
       echo "apex-console: DATA_SOURCE=auto with no CLICKHOUSE_UPSTREAM — the API is the only store." >&2
-      echo "  If it does not answer, the console shows the recorded run, not the database." >&2
+      echo "  If it does not answer, the console renders 'no store answered' and nothing else." >&2
     fi
     ;;
   http)

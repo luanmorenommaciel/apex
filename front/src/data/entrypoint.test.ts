@@ -115,7 +115,7 @@ describe("data source auto (the default)", () => {
     expect(r.status).toBe(0);
     expect(r.stderr).not.toContain("CLICKHOUSE_UPSTREAM is not set");
     // It says what it will do when the API is down, rather than staying quiet.
-    expect(r.stderr).toContain("recorded run");
+    expect(r.stderr).toContain("no store answered");
   });
 
   it("is what an unset DATA_SOURCE means", () => {

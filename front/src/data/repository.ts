@@ -409,6 +409,18 @@ export class HttpRepository implements Repository {
   }
 }
 
+/**
+ * What `auto` asked and got no answer from. Thrown by resolveRepository() so
+ * the provider can render it; never a Repository, because a recording shown
+ * as production data is the defect, not its volume (decided 2026-10-19).
+ */
+export class StoreUnreachableError extends Error {
+  constructor(readonly probed: { name: string; path: string }[]) {
+    super(`no store answered: ${probed.map((p) => p.path).join(", ")}`);
+    this.name = "StoreUnreachableError";
+  }
+}
+
 export async function resolveRepository(): Promise<Repository> {
   // Runtime, so a single production image can be started against fixtures,
   // pinned to ClickHouse, or left to probe — without a rebuild.
@@ -427,5 +439,13 @@ export async function resolveRepository(): Promise<Repository> {
   // in that case. Once chosen, a 401 from the API surfaces as an error — there
   // is no path from HttpRepository back to ClickHouse.
   if (await apiPing()) return new HttpRepository();
-  return (await ping()) ? new ClickHouseRepository() : new FixtureRepository();
+  if (await ping()) return new ClickHouseRepository();
+  // Neither answered. The recording is served ONLY when asked for by name
+  // (DATA_SOURCE=fixtures): `auto` used to fall through to it here, and a
+  // misconfigured deployment showed a run that never happened on its cluster
+  // with nothing but a small header badge to say so.
+  throw new StoreUnreachableError([
+    { name: "the Apex API", path: `${runtimeConfig.apiUrl.replace(/\/+$/, "")}/v1/health` },
+    { name: "ClickHouse", path: "/clickhouse/ping" },
+  ]);
 }
