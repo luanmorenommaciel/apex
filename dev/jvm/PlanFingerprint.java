@@ -35,19 +35,45 @@ public final class PlanFingerprint {
         }
     }
 
-    private static LogicalPlan normalize(LogicalPlan plan) {
-        LogicalPlan nulled = (LogicalPlan) plan.transformAllExpressions(new LiteralNuller());
-        return (LogicalPlan) nulled.canonicalized();
+    private static LogicalPlan nullLiterals(LogicalPlan plan) {
+        return (LogicalPlan) plan.transformAllExpressions(new LiteralNuller());
+    }
+
+    /**
+     * Mirrors the jar's canonicalization fallback (Spark 4.1): when
+     * {@code canonicalized} throws (UnresolvedException on object-typed plans
+     * such as Delta's state reconstruction), hash the literal-normalized text
+     * with ExprIds and JVM lambda identities scrubbed instead of failing.
+     */
+    private static String normalizedText(LogicalPlan plan, boolean tree) {
+        LogicalPlan nulled = nullLiterals(plan);
+        try {
+            LogicalPlan canon = (LogicalPlan) nulled.canonicalized();
+            return scrubIdentities(tree ? canon.treeString() : canon.toString());
+        } catch (RuntimeException e) {
+            return scrub(tree ? nulled.treeString() : nulled.toString());
+        }
+    }
+
+    /** Both paths: JVM lambda/object identities differ per execution and per JVM. */
+    static String scrubIdentities(String s) {
+        String noLambda = s.replaceAll("\\$\\$Lambda\\$\\d+/0x[0-9a-fA-F]+@[0-9a-fA-F]+", "\\$\\$Lambda");
+        return noLambda.replaceAll("@[0-9a-fA-F]{6,}", "@");
     }
 
     /** 64 lowercase hex chars. */
     public static String fingerprint(LogicalPlan plan) {
-        return sha256(normalize(plan).toString());
+        return sha256(normalizedText(plan, false));
     }
 
     /** Redacted, literal-free plan text for plan_json (never the raw plan). */
     public static String redactedPlan(LogicalPlan plan) {
-        return redact(normalize(plan).treeString());
+        return redact(normalizedText(plan, true));
+    }
+
+    /** Fallback-only: additionally drop the ExprIds canonicalized would have normalized. */
+    static String scrub(String s) {
+        return scrubIdentities(s.replaceAll("#\\d+L?", "#"));
     }
 
     private static String redact(String s) {
