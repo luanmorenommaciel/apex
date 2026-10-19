@@ -1,7 +1,7 @@
 ---
 id: T-20261019-fixtures-lazy-chunk
 title: "Keep the recorded run out of the entry bundle"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S
@@ -25,12 +25,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: agmarcastro
+signed_off_at: 2026-10-19T15:52:02Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v3:60832560:4197a1479be11fdbdf77f380d98e870d9cec8564bb9e1f1c4e4de5c7ccc59d23
 ---
 
 # Keep the recorded run out of the entry bundle
