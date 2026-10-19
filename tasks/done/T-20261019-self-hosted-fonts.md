@@ -1,7 +1,7 @@
 ---
 id: T-20261019-self-hosted-fonts
 title: "Serve the three typefaces from the bundle instead of Google Fonts"
-status: in-progress
+status: done
 format_version: 3
 profile: standard
 effort: S
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: agmarcastro
 signed_off_at: 2026-10-19T15:51:05Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: agmarcastro
+accepted_at: 2026-10-19T15:51:17Z
 signed_off_sig: hmac-sha256-v3:60832560:f81d68cf59702f005db14e9cee5a2fd4de44ebc361b02d1b3af1ce78f68590db
+accepted_tier: 1
+accepted_attempt_id: d11cbef3-beb3-4638-830e-3d00427eaf00
+accepted_authorization_ref: hmac-sha256-v3:60832560:f81d68cf59702f005db14e9cee5a2fd4de44ebc361b02d1b3af1ce78f68590db
+acceptance_record_digest: sha256:8fde34551a736a7b7faad2fa100f99bb5c7f50399ee3b8a94027a826d19d5390
 ---
 
 # Serve the three typefaces from the bundle instead of Google Fonts
