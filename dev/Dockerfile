@@ -6,9 +6,15 @@
 # Build the self-contained Spark 4.0/Scala 2.13 plugin first. The Docker build
 # context is the repository root (see docker-compose.yml), so this remains a
 # fresh-clone operation without relying on a host-local Ivy or Maven cache.
-ARG SBT_IMAGE=sbtscala/scala-sbt:eclipse-temurin-jammy-17.0.10_7_1.10.4_3.5.2
+# The launcher image carries the SAME sbt version jar/project/build.properties
+# declares (1.10.7), so the build does not download a second launcher.
+ARG SBT_IMAGE=sbtscala/scala-sbt:eclipse-temurin-17.0.14_7_1.10.7_3.6.3
 ARG SPARK_IMAGE=apache/spark:4.0.1-scala2.13-java17-python3-ubuntu
 ARG APEX_JAR_TARGET=apex_40
+# The cell's test suite runs before assembly (decision D-2): an untested plugin is
+# never baked into the lab image. APEX_JAR_SKIP_TESTS=1 skips it for inner-loop
+# rebuilds only.
+ARG APEX_JAR_SKIP_TESTS=0
 FROM ${SBT_IMAGE} AS apex-plugin-build
 WORKDIR /workspace
 ENV COURSIER_REPOSITORIES=https://repo.maven.apache.org/maven2
@@ -16,8 +22,13 @@ COPY jar/build.sbt ./
 COPY jar/project ./project
 COPY jar/src ./src
 ARG APEX_JAR_TARGET
+ARG APEX_JAR_SKIP_TESTS
 RUN set -eux; \
-    sbt -batch "${APEX_JAR_TARGET}/assembly"; \
+    if [ "${APEX_JAR_SKIP_TESTS}" = "1" ]; then \
+      sbt -batch "${APEX_JAR_TARGET}/assembly"; \
+    else \
+      sbt -batch "${APEX_JAR_TARGET}/test" "${APEX_JAR_TARGET}/assembly"; \
+    fi; \
     artifact="$(find target -type f -name 'apex_*-*-assembly.jar' | head -n 1)"; \
     test -n "$artifact"; \
     install -D "$artifact" /out/apex-plugin.jar; \
