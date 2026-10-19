@@ -46,8 +46,10 @@ export APEX_OTLP_ENDPOINT="http://apex-otel-collector:4318"
 
 submit_job() {
   local scenario="$1" job="$2" log="out/e2e-canonical-${scenario}.log" aqe="$3" fix="$4" safe="$5" driver_mem="$6"
+  # Every submit runs through the S3 wrapper, which exports the compose file
+  # secrets as AWS env credentials; no value ever appears on the command line.
   local -a submit_args=(
-    /opt/spark/bin/spark-submit --master "$MASTER"
+    /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit --master "$MASTER"
     --conf spark.plugins=apex.ApexPlugin
     --conf spark.apex.otlp.endpoint="$APEX_OTLP_ENDPOINT"
     --conf spark.driver.host="$DRIVER_HOST"
@@ -147,7 +149,7 @@ step "3/6 generate deterministic skewed data"
 if [ "${E2E_CANONICAL_SKIP_GENERATE:-0}" = "1" ]; then
   ok "reusing existing deterministic data"
 else
-  "${COMPOSE[@]}" exec -T spark-master /opt/spark/bin/spark-submit --master "$MASTER" \
+  "${COMPOSE[@]}" exec -T spark-master /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit --master "$MASTER" \
     --conf spark.plugins=apex.ApexPlugin --conf spark.apex.otlp.endpoint="$APEX_OTLP_ENDPOINT" \
     --conf spark.driver.host="$DRIVER_HOST" --conf spark.driver.bindAddress=0.0.0.0 \
     /opt/apex/jobs/generate_data.py >out/e2e-canonical-generate-data.log 2>&1

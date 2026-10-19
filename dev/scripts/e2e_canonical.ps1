@@ -88,7 +88,8 @@ function Invoke-SparkJob {
     $log = Join-Path $outDir "e2e-canonical-$Name.log"
     $submit = @(
         'exec', '-T', '-e', "APEX_AQE=$Aqe", '-e', 'APEX_FIX=off', '-e', 'APEX_SAFE=off',
-        'spark-master', '/opt/spark/bin/spark-submit', '--master', 'spark://spark-master:7077',
+        'spark-master', '/bin/sh', '/opt/apex/scripts/with-s3-credentials.sh',
+        '/opt/spark/bin/spark-submit', '--master', 'spark://spark-master:7077',
         '--conf', 'spark.plugins=apex.ApexPlugin',
         '--conf', 'spark.apex.otlp.endpoint=http://apex-otel-collector:4318',
         '--conf', "spark.driver.host=$DriverHost", '--conf', 'spark.driver.bindAddress=0.0.0.0'
@@ -152,7 +153,8 @@ if ($ReuseDev) {
 
 if (-not $SkipGenerate) {
     $generateLog = Join-Path $outDir 'e2e-canonical-generate-data.log'
-    & docker @compose exec -T spark-master /opt/spark/bin/spark-submit --master spark://spark-master:7077 `
+    & docker @compose exec -T spark-master /bin/sh /opt/apex/scripts/with-s3-credentials.sh `
+        /opt/spark/bin/spark-submit --master spark://spark-master:7077 `
         --conf spark.plugins=apex.ApexPlugin `
         --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 `
         --conf "spark.driver.host=$DriverHost" `

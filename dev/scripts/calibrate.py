@@ -58,6 +58,22 @@ SCENARIOS: dict[str, dict] = {
 DEFAULT_SCENARIOS = ["skew_join", "skew_join_aqe", "spill", "bad_shuffle", "control", "driver_oom"]
 
 APP_ID_RE = re.compile(r"APEX_SESSION job_id=(app-\d{14}-\d{4})")
+# Same submit shape as the Makefile: advertise the driver by service name and
+# bind everywhere (the C3 overlay gives the master two networks), and go
+# through the S3 wrapper so credentials come from the compose secrets.
+DRIVER_CONF = ["--conf", "spark.driver.host=spark-master",
+               "--conf", "spark.driver.bindAddress=0.0.0.0"]
+
+
+def compose_files() -> list[str]:
+    """Mirror the Makefile: add the C3 overlay whenever apex-collect-net exists,
+    so a calibration run never recreates the containers off the overlay."""
+    files = ["-f", "docker-compose.yml"]
+    probe = subprocess.run(["docker", "network", "inspect", "apex-collect-net"],
+                           capture_output=True, text=True)
+    if probe.returncode == 0:
+        files += ["-f", "docker-compose.c3-otlp.yml"]
+    return files
 # Only a Spark application id may reach ClickHouse, and only as a BOUND query
 # parameter (`{app_id:String}` + `param_app_id=`), never interpolated into SQL.
 APP_ID_PATTERN = re.compile(r"^app-\d{14}-\d{4}$")
@@ -69,9 +85,10 @@ def submit(scenario: str, run_idx: int) -> tuple[int, str, float]:
     env_flags = []
     for key, val in {"APEX_AQE": "off", "APEX_FIX": "off", "APEX_SAFE": "off", **spec["env"]}.items():
         env_flags += ["-e", f"{key}={val}"]
-    cmd = (["docker", "compose", "-f", "docker-compose.yml", "exec", "-T", *env_flags,
-            "spark-master", "/opt/spark/bin/spark-submit",
-            "--master", "spark://spark-master:7077", *spec["args"],
+    cmd = (["docker", "compose", *compose_files(), "exec", "-T", *env_flags,
+            "spark-master", "/bin/sh", "/opt/apex/scripts/with-s3-credentials.sh",
+            "/opt/spark/bin/spark-submit",
+            "--master", "spark://spark-master:7077", *DRIVER_CONF, *spec["args"],
             f"/opt/apex/jobs/{spec['job']}"])
     start = time.monotonic()
     proc = subprocess.run(cmd, cwd=DEV_DIR, capture_output=True, text=True, timeout=3600)

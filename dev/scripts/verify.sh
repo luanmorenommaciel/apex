@@ -68,7 +68,7 @@ $COMPOSE ps --format '  {{.Service}}\t{{.State}}\t{{.Status}}'
 
 # ── 4: smoke Delta write/read on MinIO ──────────────────────────────────────
 step "4/6  smoke Delta write/read"
-$COMPOSE exec -T spark-master /opt/spark/bin/spark-submit \
+$COMPOSE exec -T spark-master /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit \
   --master spark://spark-master:7077 --deploy-mode client \
   /opt/apex/scripts/smoke_delta.py >out/smoke.log 2>&1
 if grep -q "APEX_SMOKE ok" out/smoke.log; then
