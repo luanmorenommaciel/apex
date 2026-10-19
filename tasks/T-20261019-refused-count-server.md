@@ -1,7 +1,7 @@
 ---
 id: T-20261019-refused-count-server
 title: "Compute refused_count in the run rollup both doors run"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: M
@@ -10,7 +10,7 @@ agent: any
 parent: (none)
 depends_on: [T-20261019-auto-never-fixtures]
 supersedes: (none)
-touches_paths: [front/src/data/queries.ts, front/src/data/repository.ts, front/src/contract/rules.ts, front/src/screens/RunsScreen.tsx, front/README.md, serve/src/apex_mcp/ch.py, serve/tests/test_console_parity_gate.py, serve/tests/test_api_resources.py, serve/tests/test_ch.py]
+touches_paths: [front/src/data/repository.ts, front/src/contract/rules.ts, front/src/screens/RunsScreen.tsx, front/README.md, serve/src/apex_mcp/ch.py, serve/tests/test_console_parity_gate.py, serve/tests/test_api_resources.py, serve/tests/test_ch.py]
 creates_paths: [front/src/contract/refusedCount.test.ts]
 source_note: "D-refused-count-home, option A; front/src/data/repository.ts (refused_count -1), front/src/contract/rules.ts assessStage() (rules 1, 6, 7), front/src/data/queries.ts runRollup, serve/src/apex_mcp/ch.py _run_rollup_sql, serve/tools/console_parity_gate.py"
 created: "2026-10-19T00:00:00Z"
@@ -140,4 +140,4 @@ Revert only the declared write surface and park the task with context.
 
 ## Open Questions
 
-(none — this task is fully specified)
+(none — this task is fully specified. touches_paths narrowed before sealing on 2026-10-19: front/src/data/queries.ts, which this leaf edited, was deleted afterwards by D-api-only; the validator refuses a path that no longer exists.)

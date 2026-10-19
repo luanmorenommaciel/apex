@@ -141,7 +141,6 @@ units:
     execution_backend: any
     depends_on: [T-20261019-auto-never-fixtures]
     touches_paths:
-      - front/src/data/queries.ts
       - front/src/data/repository.ts
       - front/src/contract/rules.ts
       - front/src/screens/RunsScreen.tsx

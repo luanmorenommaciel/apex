@@ -10,7 +10,7 @@ agent: any
 parent: (none)
 depends_on: [T-20261019-front-http-only-resolution]
 supersedes: (none)
-touches_paths: [front/nginx.conf, front/Dockerfile, front/docker-entrypoint.d/30-apex-console-config.sh, front/docker-compose.yml, front/Makefile, front/.env.example, front/vite.config.ts, front/README.md, front/src/data/entrypoint.test.ts, front/contract/01-readonly-user.sql]
+touches_paths: [front/nginx.conf, front/Dockerfile, front/docker-entrypoint.d/30-apex-console-config.sh, front/docker-compose.yml, front/Makefile, front/.env.example, front/vite.config.ts, front/README.md, front/src/data/entrypoint.test.ts]
 creates_paths: []
 source_note: "D-api-only with P-fixtures-in-image; front/nginx.conf (location = /clickhouse and /clickhouse/), Dockerfile (ENV CLICKHOUSE_UPSTREAM, NGINX_ENVSUBST_FILTER), docker-entrypoint.d/30-apex-console-config.sh (clickhouse and auto branches, CLICKHOUSE_DB/USER/PASSWORD keys), docker-compose.yml (VITE_CLICKHOUSE_*), Makefile (CH_*, store, ch-ping, ch-tables, ch-user, up-clickhouse, prod -e CLICKHOUSE_*), .env.example, vite.config.ts (/clickhouse proxy), front/contract/01-readonly-user.sql, src/data/entrypoint.test.ts (clickhouse and auto describes)"
 created: "2026-10-19T00:00:00Z"
@@ -156,4 +156,4 @@ Revert only the declared write surface and park the task with context.
 
 ## Open Questions
 
-(none — this task is fully specified)
+(none — this task is fully specified. touches_paths narrowed before sealing on 2026-10-19: front/contract/01-readonly-user.sql is the file this leaf deleted, and the validator refuses a declared path that no longer exists.)
