@@ -2,35 +2,48 @@
 
 ## Escopo
 
-Este PR entrega o ambiente reproduzível de desenvolvimento: imagem Spark,
-Delta/S3A, MinIO, History Server, jobs de patologia e o gate canônico de quatro
-cenários. O adaptador JSONL legado foi removido; a telemetria oficial segue o
+Esta raia entrega o ambiente reproduzível de desenvolvimento: imagem Spark
+(construída uma vez a partir de `spark-master`, com a suíte de testes da célula
+do jar executada antes do `assembly`), Delta/S3A, MinIO (`bitnamilegacy`
+pinado por digest, decisão D-1), History Server, os jobs de patologia e o gate
+canônico. O adaptador JSONL legado foi removido; a telemetria oficial segue o
 plugin Scala da raia JAR.
 
 ## Configuração local
 
 ```bash
 cd dev
-make env-spark41
+make env-spark41                                   # mescla .env.example + .env.spark41.example (cada chave uma vez)
+printf 'minioadmin' > secrets/apex_s3_access_key   # credenciais S3 só existem aqui (secrets/README.md)
+printf 'minioadmin' > secrets/apex_s3_secret_key
 make build
 make up
 ```
 
 `make env-spark41` combina `.env.example` com `.env.spark41.example` sem
-sobrescrever um `.env` já existente.
+sobrescrever um `.env` já existente; chaves do overlay substituem as da base.
 
-## Gates executados nesta branch
+## Gates offline
 
-```powershell
-python -m pytest tests/test_canonical_e2e_assert.py -q
-docker compose --env-file .env.example --env-file .env.spark41.example config --quiet
+```bash
+uv run --extra dev pytest -q          # host, sem Docker
+docker compose --env-file .env.example config --quiet
 ```
 
-Resultado em 2026-07-23:
+Resultado em 2026-10-19: `106 passed` cobrindo as asserções canônicas dos
+cinco cenários (skew com amostra retry-safe, tail_outlier, spill, bad_shuffle,
+driver_oom), `ensure_env.py`, `calibrate.py` (SQL com parâmetro vinculado),
+`verify_s3_runtime_evidence.py` (versão e provider derivados do event log),
+`r9d_overhead_ab.py`, os runners canônicos (.sh/.ps1 em paridade), `verify.sh`,
+`soak_driver_listener.sh`, `common/paths.py` e `common/drain.py`.
 
-- `7 passed in 0.20s` para as asserções dos quatro cenários;
-- Compose Spark 4.1.2 validado sem avisos quando baseline e overlay são usados
-  juntos.
+## Gates vivos
+
+```bash
+VERIFY_FRESH=1 ./scripts/verify.sh                      # build → up → smoke Delta → event log → History Server
+APEX_CANONICAL_CH_PASSWORD=... ./scripts/e2e_canonical.sh   # Spark → OTLP → collect → ClickHouse
+make fp-crosscheck                                      # fingerprint dev == jar (jar da própria imagem)
+```
 
 ## Evidência canônica integrada
 
@@ -46,5 +59,5 @@ os `job_id`s, comandos de reprodução e limites da evidência.
 
 ## Rollback
 
-Reverter este PR remove somente o ambiente e os jobs DEV. O contrato v0.2 e as
-outras raias não são alterados.
+Reverter esta raia remove somente o ambiente e os jobs DEV. O contrato
+(`CONTRACT.md`, hoje **v0.6**) e as outras raias não são alterados.

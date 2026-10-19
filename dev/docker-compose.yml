@@ -1,6 +1,6 @@
 # Apex dev-env — local Spark pathology lab (T3)
 # 5 services on one bridge network: minio, minio-init, spark-master, spark-worker, spark-history.
-# The spark image is built once (Dockerfile) and reused for all three spark roles.
+# The spark image is built once (Dockerfile, spark-master's build:) and reused for all three spark roles.
 
 name: apex-dev
 
@@ -12,25 +12,19 @@ secrets:
 
 x-spark-common: &spark-common
   image: ${APEX_IMAGE:-apex-spark:local}
-  build:
-    # The plugin is built from ../jar in a first Docker stage, then baked into
-    # the same Spark image used by master, workers and History Server.
-    context: ..
-    dockerfile: dev/Dockerfile
-    args:
-      SPARK_IMAGE: ${SPARK_IMAGE}
-      HADOOP_AWS_VERSION: ${HADOOP_AWS_VERSION}
-      AWS_SDK_BUNDLE_VERSION: ${AWS_SDK_BUNDLE_VERSION}
-      DELTA_VERSION: ${DELTA_VERSION}
-      DELTA_ARTIFACT: ${DELTA_ARTIFACT:-delta-spark_2.13}
-      SCALA_BIN: ${SCALA_BIN}
-      APEX_JAR_TARGET: ${APEX_JAR_TARGET:-apex_40}
+  # `build:` lives on spark-master only (below). When all three Spark services
+  # declared it, `compose build` / `up --build` compiled the same tag three
+  # times in parallel and the concurrent image export raced with
+  # "already exists". Worker and history consume the tag with pull_policy
+  # never, so compose does not try to pull a local-only image either.
   entrypoint: [""]            # clear base entrypoint; run spark-class directly in foreground
   init: true                  # tini reaps children / forwards signals
   environment: &spark-env
     SPARK_NO_DAEMONIZE: "true"
     AWS_REGION: ${S3_REGION}
-    APEX_OTLP_ENDPOINT: ${APEX_OTLP_ENDPOINT}
+    # The telemetry endpoint is a Spark conf (spark.apex.otlp.endpoint in
+    # conf/spark-defaults.conf or at submit time), read by apex.ApexPlugin.
+    # No runtime reads an OTLP endpoint from the environment.
     # ── Determinism (a pathology repro lab must be byte-stable across runs/hosts) ──
     PYTHONHASHSEED: "0"        # stable Python hashing → stable dict/set ordering in UDFs
     TZ: "UTC"                  # stable timestamps regardless of host timezone
@@ -44,8 +38,13 @@ x-spark-common: &spark-common
 services:
   # ── Object store (S3-compatible) ──────────────────────────────────────────
   minio:
-    image: ${MINIO_IMAGE:-minio/minio:latest}   # pinned by digest in .env
-    command: server /data --console-address ":9001"
+    image: ${MINIO_IMAGE:-bitnamilegacy/minio:latest}   # pinned by digest in .env (D-1 bridge)
+    # The Bitnami legacy image runs as uid 1001 behind its own entrypoint. Run the
+    # plain `minio` binary as root so the named volume /data is writable and the
+    # server command stays the upstream one.
+    user: "0"
+    entrypoint: ["minio"]
+    command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -66,7 +65,7 @@ services:
 
   # ── One-shot: create buckets, then exit 0 (buckets must exist before first write) ──
   minio-init:
-    image: ${MC_IMAGE:-minio/mc:latest}   # pinned by digest in .env
+    image: ${MC_IMAGE:-bitnamilegacy/minio-client:latest}   # pinned by digest in .env (D-1 bridge)
     depends_on:
       minio:
         condition: service_healthy   # buckets are created only after MinIO is truly ready
@@ -82,9 +81,28 @@ services:
     restart: "no"
 
   # ── Spark standalone master ───────────────────────────────────────────────
+  # Master, worker and history all start through scripts/with-s3-credentials.sh
+  # (mounted under /opt/apex/scripts) so the S3A EnvironmentVariableCredentialsProvider
+  # in conf/spark-defaults.conf finds AWS_* in the daemon environment; executors are
+  # launched by the worker and inherit it. The secret FILES are the only source.
   spark-master:
     <<: *spark-common
+    build:
+      # The plugin is built from ../jar in a first Docker stage, then baked into
+      # the same Spark image used by master, workers and History Server.
+      context: ..
+      dockerfile: dev/Dockerfile
+      args:
+        SPARK_IMAGE: ${SPARK_IMAGE}
+        HADOOP_AWS_VERSION: ${HADOOP_AWS_VERSION}
+        AWS_SDK_BUNDLE_VERSION: ${AWS_SDK_BUNDLE_VERSION}
+        DELTA_VERSION: ${DELTA_VERSION}
+        DELTA_ARTIFACT: ${DELTA_ARTIFACT:-delta-spark_2.13}
+        SCALA_BIN: ${SCALA_BIN}
+        APEX_JAR_TARGET: ${APEX_JAR_TARGET:-apex_40}
     command:
+      - /bin/sh
+      - /opt/apex/scripts/with-s3-credentials.sh
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.master.Master
       - --host
@@ -113,7 +131,10 @@ services:
   # ── Spark workers (scalable: `docker compose up -d --scale spark-worker=N`) ──
   spark-worker:
     <<: *spark-common
+    pull_policy: never   # image is built by spark-master, never pulled
     command:
+      - /bin/sh
+      - /opt/apex/scripts/with-s3-credentials.sh
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.worker.Worker
       - spark://spark-master:7077
@@ -138,11 +159,17 @@ services:
   # ── Spark History Server (reads finalized event logs from s3a://spark-logs) ──
   spark-history:
     <<: *spark-common
+    pull_policy: never   # image is built by spark-master, never pulled
     # No restart:on-failure workaround needed: minio-init seeds the events/ prefix (so the
     # log dir exists) BEFORE this starts, gated via service_completed_successfully.
     command:
+      - /bin/sh
+      - /opt/apex/scripts/with-s3-credentials.sh
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.history.HistoryServer
+    secrets:
+      - apex_s3_access_key
+      - apex_s3_secret_key
     environment:
       <<: *spark-env
       SPARK_HISTORY_OPTS: >-

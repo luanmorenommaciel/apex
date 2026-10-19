@@ -1,16 +1,22 @@
 # dev/secrets/
 
 Local-only Docker Compose file-based secrets, read by `with-s3-credentials.sh`
-and mounted into containers at `/run/secrets/apex_s3_access_key` /
-`apex_s3_secret_key`.
+and mounted into every Spark container (master, worker, history) at
+`/run/secrets/apex_s3_access_key` / `apex_s3_secret_key`.
 
-Contents here are gitignored (see `dev/.gitignore`) and match the existing
-MinIO dev credentials already baked into `dev/conf/spark-defaults.conf`
-(`minioadmin`/`minioadmin`) — this is local-dev parity, not a new secret
-value, just delivered through the mechanism `with-s3-credentials.sh` already
-expects instead of only via the mounted conf file.
+They are the ONLY source of S3 credentials in the standalone lane:
+`conf/spark-defaults.conf` carries no key literals and selects the S3A
+`EnvironmentVariableCredentialsProvider`; the wrapper exports the two files as
+`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` for each daemon and each
+`spark-submit`, and executors inherit the worker's environment. Without these
+files the Spark services refuse to start (wrapper exit 78) instead of silently
+running with a default password.
 
-To regenerate:
+The values must match the MinIO root user the compose file starts
+(`MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` in `.env`, `minioadmin` by default).
+Contents here are gitignored (see `dev/.gitignore`); only this README is tracked.
+
+To (re)generate for the default local MinIO:
 ```
 printf 'minioadmin' > dev/secrets/apex_s3_access_key
 printf 'minioadmin' > dev/secrets/apex_s3_secret_key
