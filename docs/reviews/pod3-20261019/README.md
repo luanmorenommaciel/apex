@@ -23,3 +23,13 @@ Produzido em 19/10/2026, com contribuições de Claude e Kimi instalados e conso
 | [Minutas antes ausentes](minutas/README.md) | Textos integrais das sete propostas fora do anexo original |
 
 Cada objeto técnico mantém sua própria decisão/aceite. O pacote documental não declara aprovadas propostas, concluída uma reunião, integradas PRs ou publicado um release. A revisão das PRs atuais pode avançar em paralelo.
+
+<!-- audit-525-publication-20261019 -->
+## Adendo de revisão cruzada — 19/10/2026
+
+- [Integração #182 × #158/#159 e limites de prova](CONFERENCIA-INDEPENDENTE.md).
+- [Triagem #185, autoria do Agmar e relação com backlog](TRIAGEM-PR185.md).
+- [49 objetos públicos no corte anterior à publicação desta edição](REGISTRO-ATUAL-49.md), [CSV](REGISTRO-ATUAL-49.csv) e [JSON](REGISTRO-ATUAL-49.json).
+- [Decisões e provas específicas restantes](DECISOES-E-PROVAS-RESTANTES.md).
+
+O fechamento amplo dos 525 IDs tem PR documental separada, ligada pela issue #181. Estes documentos apoiam discussão; não concedem aceite funcional nem aprovação humana.
