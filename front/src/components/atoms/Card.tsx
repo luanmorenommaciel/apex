@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 
 export type CardAccent = "none" | "finding" | "withheld" | "certified" | "spark" | "memory" | "edge";
 
@@ -21,11 +21,26 @@ export function Card({
   onClick?: () => void;
 }) {
   const interactive = onClick
-    ? "cursor-pointer transition-colors hover:bg-edge/40"
+    ? "cursor-pointer transition-colors hover:bg-edge/40 focus-visible:outline focus-visible:outline-1 focus-visible:outline-spark"
     : "";
+  // A clickable card is a button: reachable by Tab, activated by Enter or
+  // Space, announced as one. A div with only onClick was mouse-only.
+  const button = onClick
+    ? {
+        role: "button",
+        tabIndex: 0,
+        onClick,
+        onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        },
+      }
+    : {};
   return (
     <div
-      onClick={onClick}
+      {...button}
       className={`bg-raised border rounded-sm ${accents[accent]} ${interactive} ${className}`}
     >
       {children}

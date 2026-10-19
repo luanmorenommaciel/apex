@@ -112,6 +112,8 @@ export function RunsScreen() {
         right={
           <div className="flex gap-2 font-mono text-xs">
             <input
+              type="search"
+              aria-label="Search runs by job_id, app_name or plan fingerprint"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="job_id, app_name, or plan fingerprint"
@@ -121,6 +123,7 @@ export function RunsScreen() {
               <button
                 key={f}
                 type="button"
+                aria-pressed={filter === f}
                 onClick={() => setFilter(f)}
                 className={`px-2.5 py-[7px] bg-raised border rounded-sm transition-colors ${
                   filter === f ? "border-edge2 text-bright" : "border-edge text-sub hover:text-body2"

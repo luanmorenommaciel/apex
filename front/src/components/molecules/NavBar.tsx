@@ -31,7 +31,7 @@ export function NavBar() {
     <header className="flex items-center justify-between h-12 px-4 bg-surface border-b border-edge shrink-0">
       <div className="flex items-center gap-6">
         <img src="/apex-lockup.png" alt="APEX" className="h-[30px] w-auto object-contain" />
-        <nav className="flex items-center gap-0.5 font-mono text-xs">
+        <nav aria-label="Primary" className="flex items-center gap-0.5 font-mono text-xs">
           {TABS.map((t) => (
             <NavLink
               key={t.to}
@@ -50,12 +50,12 @@ export function NavBar() {
         </nav>
       </div>
       <div className="flex items-center gap-2.5 font-mono text-[11px] text-sub">
-        <span>{SOURCE[repo.kind]}</span>
-        <span className="text-dim">|</span>
-        <span>
+        <span title="Where the rows on screen come from - the repository that was resolved">{SOURCE[repo.kind]}</span>
+        <span className="text-dim" aria-hidden="true">|</span>
+        <span title="The frozen contract version this console was written against">
           contract <span className="text-body2">v{CONTRACT_VERSION}</span>
         </span>
-        <span className="px-2 py-1 border border-edge rounded-sm text-body">read-only</span>
+        <span className="px-2 py-1 border border-edge rounded-sm text-body" title="Every data source is read-only; nothing on screen writes to the store">read-only</span>
       </div>
     </header>
   );

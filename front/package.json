@@ -30,6 +30,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^10.9.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^30.0.1",
     "postcss": "^8.4.47",
@@ -38,5 +39,10 @@
     "typescript-eslint": "^8.68.0",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "eslint-plugin-jsx-a11y": {
+      "eslint": "$eslint"
+    }
   }
 }
