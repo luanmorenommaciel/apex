@@ -1,19 +1,12 @@
---- # The console only. The store belongs to the infra lane.
+--- # The console only. It reads through the Apex API alone (D-api-only).
 #
-# The console reaches ClickHouse through an explicit endpoint. The default uses
-# the host-published port of infra's canonical store; VITE_CLICKHOUSE_URL may
-# instead name any reachable remote endpoint. No compose-only service hostname
-# is embedded in the application or proxy configuration.
-#
-# The default is the Apex API (VITE_DATA_SOURCE=http, decided 2026-10-19): the
-# browser carries an API token and no database user. Start the API first:
+# The default is the Apex API (VITE_DATA_SOURCE=http): the browser carries an
+# API token and no database user. Start the API first:
 #   (cd ../serve && APEX_API_TOKENS=<token> APEX_API_PORT=8099 uv run apex-api)
 #   VITE_APEX_API_TOKEN=<token> docker compose up --build
 #
-# The bench mode queries the store from the browser and must be asked for
-# (`make up-clickhouse`). Start the store first:
-#   cd ../infra && docker compose up -d clickhouse otel-collector && ./scripts/seed.sh
-#   VITE_DATA_SOURCE=clickhouse docker compose up --build
+# VITE_DATA_SOURCE=fixtures serves the recorded gate run with no store at all
+# (`make up-fixtures`).
 services:
   console:
     build:
@@ -26,20 +19,16 @@ services:
       - /app/node_modules
     extra_hosts:
       # Makes the host gateway explicit on Linux; Docker Desktop provides the
-      # same name. Override the URL when the store is remote or uses another port.
+      # same name. Override the proxy target when the API is remote or uses
+      # another port.
       - "host.docker.internal:host-gateway"
     environment:
-      VITE_CLICKHOUSE_URL: ${VITE_CLICKHOUSE_URL:-http://host.docker.internal:8123}
-      VITE_CLICKHOUSE_DB: apex
-      VITE_CLICKHOUSE_USER: apex_ro
-      VITE_CLICKHOUSE_PASSWORD: ""
       VITE_DATA_SOURCE: ${VITE_DATA_SOURCE:-http}
-      # The Apex API, for VITE_DATA_SOURCE=http. The dev server proxies /v1 to
-      # this target so the browser stays same-origin; inside the container
-      # 127.0.0.1 is the container itself, hence the host gateway alias, the
-      # same one VITE_CLICKHOUSE_URL uses. The token is passed through from the
-      # shell and never written here. VITE_APEX_API_URL is deliberately NOT
-      # passed: it makes the browser call the API cross-origin, which the API
-      # (no CORS header) refuses.
+      # Where the dev server forwards /v1 so the browser stays same-origin;
+      # inside the container 127.0.0.1 is the container itself, hence the host
+      # gateway alias. The token is passed through from the shell and never
+      # written here. VITE_APEX_API_URL is deliberately NOT passed: it makes
+      # the browser call the API cross-origin, which the API (no CORS header)
+      # refuses.
       VITE_APEX_API_PROXY_TARGET: ${VITE_APEX_API_PROXY_TARGET:-http://host.docker.internal:8099}
       VITE_APEX_API_TOKEN: ${VITE_APEX_API_TOKEN:-}

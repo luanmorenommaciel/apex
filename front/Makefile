@@ -3,37 +3,22 @@
 SHELL := /bin/bash
 COMPOSE := docker compose
 
-# The canonical store is infra/'s. Override CH if infra/.env shifts the host port
-# (the shared dev host moves it to 28123 — see infra/docker-compose.yml).
-CH ?= http://127.0.0.1:8123
-CH_CONTAINER ?= apex-infra-clickhouse
-CH_ADMIN_USER ?= apex
-CH_ADMIN_PASSWORD ?= apex_local_dev
-
 # What the PRODUCTION image is started with. Nothing here is baked into the
 # bundle — the image entrypoint renders /config.js from these at container
 # start, so one image serves every deployment (see README, "Configure a
-# deployment"). CLICKHOUSE_UPSTREAM is an endpoint only, never a credential.
+# deployment"). The console reads through the Apex API alone (D-api-only,
+# 2026-10-19): the browser carries an API token and no database user.
 #
-# It is NOT $(CH): inside the container 127.0.0.1 is the container itself, so a
-# store published on the host is reached through the gateway alias instead.
-CLICKHOUSE_UPSTREAM ?= http://host.docker.internal:8123
-CH_DB ?= apex
-CH_USER ?= apex_ro
-CH_PASSWORD ?=
-# http is the default (decided 2026-10-19): the browser carries an API token
-# and no database user. clickhouse is the bench mode and must be asked for —
-# it ships apex_ro to every visitor (see README, "Querying ClickHouse from
-# the browser").
+# APEX_API_UPSTREAM is where nginx forwards /v1. Inside the container
+# 127.0.0.1 is the container itself, so an API published on the host is
+# reached through the gateway alias instead. APEX_API_URL is deliberately not
+# passed — it would make the browser call the API cross-origin, which the API
+# refuses.
 DATA_SOURCE ?= http
-# For DATA_SOURCE=http: where nginx forwards /v1, and the token /config.js
-# carries. The same gateway alias as CLICKHOUSE_UPSTREAM, for the same reason.
-# APEX_API_URL is deliberately not passed — it would make the browser call the
-# API cross-origin, which the API refuses.
 APEX_API_UPSTREAM ?= http://host.docker.internal:8099
 APEX_API_TOKEN ?=
 
-.PHONY: help install dev up up-clickhouse up-fixtures down logs sh build preview prod typecheck clean reset ch-ping ch-tables ch-user store
+.PHONY: help install dev up up-fixtures down logs sh build preview prod typecheck clean reset
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -42,17 +27,11 @@ help: ## Show this help
 install: ## Install dependencies on the host (no Docker)
 	npm install
 
-dev: ## Run Vite on the host against 127.0.0.1:8123
+dev: ## Run Vite on the host, proxying /v1 to the API on 127.0.0.1:8099
 	npm run dev
-
-store: ## Start the canonical ClickHouse (infra lane) and seed it
-	cd ../infra && $(COMPOSE) up -d clickhouse otel-collector && ./scripts/seed.sh
 
 up: ## Start the console through the Apex API (http://localhost:5173) — start serve's apex-api on 8099 first, pass VITE_APEX_API_TOKEN
 	$(COMPOSE) up --build
-
-up-clickhouse: ## Start the console straight against infra's store (the bench mode) — run `make store` and `make ch-user` first
-	VITE_DATA_SOURCE=clickhouse $(COMPOSE) up --build console
 
 up-fixtures: ## Start the console alone, served from the recorded run
 	VITE_DATA_SOURCE=fixtures $(COMPOSE) up --build console
@@ -72,21 +51,13 @@ build: ## Type-check and build the production bundle
 preview: ## Serve the production bundle locally
 	npm run preview
 
-prod: ## Build and run the nginx production image on :8080 through the API (APEX_API_UPSTREAM/APEX_API_TOKEN); DATA_SOURCE=clickhouse with CLICKHOUSE_UPSTREAM for the bench
-	@# The build stage already runs `npm run build`; the old compose pre-step
-	@# rebuilt the same assets in the dev container and threw them away.
-	@test -n "$(CLICKHOUSE_UPSTREAM)" || { \
-		echo "CLICKHOUSE_UPSTREAM is empty. nginx substitutes it into proxy_pass"; \
-		echo "and refuses to start without it."; exit 1; }
+prod: ## Build and run the nginx production image on :8080 through the API (APEX_API_UPSTREAM/APEX_API_TOKEN); DATA_SOURCE=fixtures for the recording
+	@# The build stage already runs `npm run build`.
 	docker build --target prod -t apex-console:prod .
 	@# host.docker.internal is provided by Docker Desktop; --add-host makes the
 	@# gateway explicit on Linux, exactly as docker-compose.yml does for dev.
 	docker run --rm -p 8080:80 \
 		--add-host host.docker.internal:host-gateway \
-		-e CLICKHOUSE_UPSTREAM="$(CLICKHOUSE_UPSTREAM)" \
-		-e CLICKHOUSE_DB="$(CH_DB)" \
-		-e CLICKHOUSE_USER="$(CH_USER)" \
-		-e CLICKHOUSE_PASSWORD="$(CH_PASSWORD)" \
 		-e DATA_SOURCE="$(DATA_SOURCE)" \
 		-e APEX_API_UPSTREAM="$(APEX_API_UPSTREAM)" \
 		-e APEX_API_TOKEN="$(APEX_API_TOKEN)" \
@@ -94,19 +65,6 @@ prod: ## Build and run the nginx production image on :8080 through the API (APEX
 
 typecheck: ## tsc --noEmit
 	npm run typecheck
-
-ch-ping: ## Check the ClickHouse HTTP interface
-	@curl -sf "$(CH)/ping" && echo " clickhouse ok"
-
-ch-tables: ## List the contract tables, as the console's read-only user sees them
-	@curl -sf "$(CH)/?user=apex_ro" --data "SHOW TABLES FROM apex"
-
-ch-user: ## Create apex_ro on infra's store (the console ships this credential to the browser)
-	@# Via clickhouse-client, not the HTTP interface: HTTP rejects multi-statement
-	@# bodies. Same mechanism infra/scripts/apply_ddl.sh uses.
-	@docker exec -i $(CH_CONTAINER) clickhouse-client \
-		--user $(CH_ADMIN_USER) --password $(CH_ADMIN_PASSWORD) --multiquery \
-		< contract/01-readonly-user.sql && echo "apex_ro ready"
 
 clean: ## Remove build output and node_modules
 	rm -rf dist node_modules
