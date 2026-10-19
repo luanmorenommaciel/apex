@@ -1,0 +1,40 @@
+{
+  "acceptance_tier": 1,
+  "accepted_at": "2026-10-19T15:52:46Z",
+  "accepted_by": "agmarcastro",
+  "contract": "AcceptanceRecord/v1",
+  "gate_outcomes": {
+    "authorization": {
+      "code": "AUTHORIZATION_VALID",
+      "status": "pass"
+    },
+    "evaluation": {
+      "code": "EVAL_PASSED",
+      "status": "pass"
+    },
+    "evidence": {
+      "code": "EVIDENCE_SATISFIED",
+      "proof": [
+        "format v3 or earlier: v4 policy receipts are not required"
+      ],
+      "status": "pass"
+    },
+    "preflight": {
+      "code": "PREFLIGHT_PASSED",
+      "status": "pass",
+      "warnings": []
+    }
+  },
+  "outcome": {
+    "code": "ACCEPTED_TIER_1",
+    "status": "accepted"
+  },
+  "receipts": [],
+  "subject": {
+    "attempt_id": "67ab8a7f-69ba-47fd-84ba-bca9a0eb8f3e",
+    "authorization_ref": "hmac-sha256-v3:60832560:b31e3562b5f23f5281a39fed14f6132dc2b21bce9dbc16fee04b0b610fdc57d7",
+    "base_commit": "236cae1bbce1a396b4be212ae6aba8bbf7b79e4c",
+    "task_id": "T-20261019-a11y-baseline",
+    "task_revision_digest": "sha256:48a86373fc4811ee4adb36d22d41a091cfa0812eb3d3a67c6c0509117b327a73"
+  }
+}

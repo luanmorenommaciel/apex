@@ -1,7 +1,7 @@
 ---
 id: T-20261019-a11y-baseline
 title: "Lint for accessibility and give every control a name"
-status: in-progress
+status: done
 format_version: 3
 profile: standard
 effort: M
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: agmarcastro
 signed_off_at: 2026-10-19T15:52:32Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: agmarcastro
+accepted_at: 2026-10-19T15:52:46Z
 signed_off_sig: hmac-sha256-v3:60832560:b31e3562b5f23f5281a39fed14f6132dc2b21bce9dbc16fee04b0b610fdc57d7
+accepted_tier: 1
+accepted_attempt_id: 67ab8a7f-69ba-47fd-84ba-bca9a0eb8f3e
+accepted_authorization_ref: hmac-sha256-v3:60832560:b31e3562b5f23f5281a39fed14f6132dc2b21bce9dbc16fee04b0b610fdc57d7
+acceptance_record_digest: sha256:2b2622fec226b426c540195178765f87b4ae590750202e9ab74f9c8cba990aa4
 ---
 
 # Lint for accessibility and give every control a name
