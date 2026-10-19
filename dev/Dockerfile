@@ -57,8 +57,9 @@ RUN set -eux; \
       "${MAVEN}/io/delta/delta-storage/${DELTA_VERSION}/delta-storage-${DELTA_VERSION}.jar"; \
     ls -1 hadoop-aws-*.jar aws-sdk-bundle-*.jar delta-spark_*.jar delta-storage-*.jar
 
-# Python deps for the jobs + listener (OTLP/HTTP POST is plain JSON → requests).
-RUN python3 -m pip install --no-cache-dir requests==2.32.3
+# No extra Python packages: the jobs and common/ use only pyspark (shipped by
+# the base image) and the standard library. Telemetry is emitted by the Scala
+# plugin, not by a Python HTTP client.
 
 # Make the canonical plugin available to every Spark process.
 COPY --from=apex-plugin-build /out/apex-plugin.jar /opt/apex/lib/apex-plugin.jar

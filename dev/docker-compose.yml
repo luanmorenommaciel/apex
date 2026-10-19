@@ -22,7 +22,9 @@ x-spark-common: &spark-common
   environment: &spark-env
     SPARK_NO_DAEMONIZE: "true"
     AWS_REGION: ${S3_REGION}
-    APEX_OTLP_ENDPOINT: ${APEX_OTLP_ENDPOINT}
+    # The telemetry endpoint is a Spark conf (spark.apex.otlp.endpoint in
+    # conf/spark-defaults.conf or at submit time), read by apex.ApexPlugin.
+    # No runtime reads an OTLP endpoint from the environment.
     # ── Determinism (a pathology repro lab must be byte-stable across runs/hosts) ──
     PYTHONHASHSEED: "0"        # stable Python hashing → stable dict/set ordering in UDFs
     TZ: "UTC"                  # stable timestamps regardless of host timezone
