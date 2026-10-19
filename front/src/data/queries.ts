@@ -5,6 +5,11 @@
  *  - Stage rows are per (stage_id, attempt); the LATEST attempt is selected with
  *    argMax(col, ts). Aggregating across attempts double-counts a retry.
  *  - Absent job_conf keys stay absent. No COALESCE to a default anywhere.
+ *
+ * Every export here is sent by repository.ts; queries.consumed.test.ts fails
+ * on one that is not. A statement nobody runs is a statement nobody tests, and
+ * serve's parity gate would execute it against the live store if it were ever
+ * listed there.
  */
 
 export const LATEST_STAGES = `
@@ -255,14 +260,6 @@ WHERE o.job_id != {job:String}
 GROUP BY o.job_id
 ORDER BY observed_at DESC
 LIMIT 20
-`;
-
-export const PLAN_MEMORY = `
-SELECT plan_fingerprint, any(app_name) AS app_name, count(DISTINCT job_id) AS run_count,
-       min(ts) AS first_seen, max(ts) AS last_seen
-FROM plan_transitions t INNER JOIN spark_events e USING (job_id)
-GROUP BY plan_fingerprint
-ORDER BY last_seen DESC
 `;
 
 /**
