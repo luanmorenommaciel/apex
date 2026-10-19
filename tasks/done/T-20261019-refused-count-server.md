@@ -1,7 +1,7 @@
 ---
 id: T-20261019-refused-count-server
 title: "Compute refused_count in the run rollup both doors run"
-status: in-progress
+status: done
 format_version: 3
 profile: standard
 effort: M
@@ -28,10 +28,14 @@ execution_backend: any
 signed_off: true
 signed_off_by: agmarcastro
 signed_off_at: 2026-10-19T15:55:04Z
-accepted: false
-accepted_by: (none)
-accepted_at: (none)
+accepted: true
+accepted_by: agmarcastro
+accepted_at: 2026-10-19T15:55:18Z
 signed_off_sig: hmac-sha256-v3:60832560:fac9cf9ec17099e39e2f57ca16892682a988acb30c7ef2090ed726fe27a29c32
+accepted_tier: 1
+accepted_attempt_id: ca4f7432-8bc4-4091-bfa7-4fe02933675c
+accepted_authorization_ref: hmac-sha256-v3:60832560:fac9cf9ec17099e39e2f57ca16892682a988acb30c7ef2090ed726fe27a29c32
+acceptance_record_digest: sha256:1fab2b069a304fb2478299227b2eaf30656717e348ff07ea592e3f3534dcb24a
 ---
 
 # Compute refused_count in the run rollup both doors run
