@@ -124,15 +124,28 @@ def evaluate(scenario: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
         raise AssertionFailure("canonical_stage_telemetry_missing")
 
     if scenario == "skew_join":
-        ratios = [
-            _number(row, "task_duration_p99_ms") / _number(row, "task_duration_p50_ms")
-            for row in rows
-            if _number(row, "task_duration_p50_ms") > 0
-        ]
-        maximum = max(ratios, default=0.0)
-        if maximum <= 10:
-            raise AssertionFailure(f"skew_ratio_not_above_10:{maximum:.3f}")
-        return {"max_p99_p50_ratio": round(maximum, 3), "stage_count": len(rows)}
+        # Contract v0.5: skew_ratio uses the retry-safe successful-task sample
+        # when one exists and falls back to the legacy all-attempt fields only
+        # for rows without it (mirrors Engine and the tail_outlier branch).
+        best_ratio = 0.0
+        best_source = "legacy_all_attempts"
+        for row in rows:
+            duration = _effective_duration_population(row)
+            p50 = float(duration["p50"])
+            p99 = float(duration["p99"])
+            if p50 <= 0 or not math.isfinite(p50) or not math.isfinite(p99):
+                continue
+            ratio = p99 / p50
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_source = str(duration["source"])
+        if best_ratio <= 10:
+            raise AssertionFailure(f"skew_ratio_not_above_10:{best_ratio:.3f}")
+        return {
+            "max_p99_p50_ratio": round(best_ratio, 3),
+            "duration_sample_source": best_source,
+            "stage_count": len(rows),
+        }
 
     if scenario == "tail_outlier":
         return _tail_outlier_result(rows)
