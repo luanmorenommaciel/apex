@@ -35,11 +35,21 @@ for requested in "${REQUESTED_SCENARIOS[@]}"; do
 done
 
 # The collector is owned by collect; the persistent store is owned by infra.
+# Two valid topologies: collect's own container named apex-otel-collector, or
+# infra's collector attached to apex-collect-net under the apex-otel-collector
+# alias (tests/e2e/run.sh step 2). Both resolve to apex-otel-collector:4318
+# from inside the dev containers, which is all the plugin needs.
 docker network inspect apex-collect-net >/dev/null 2>&1 || {
   echo "apex-collect-net is missing - start collect connected to infra first"; exit 2;
 }
-[ "$(docker inspect -f '{{.State.Running}}' apex-otel-collector 2>/dev/null || true)" = "true" ] || {
-  echo "apex-otel-collector is not running - start collect/infra first"; exit 2;
+collector_available() {
+  [ "$(docker inspect -f '{{.State.Running}}' apex-otel-collector 2>/dev/null || true)" = "true" ] && return 0
+  docker network inspect apex-collect-net \
+    -f '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep 'apex-infra-otel-collector' >/dev/null \
+    && [ "$(docker inspect -f '{{.State.Running}}' apex-infra-otel-collector 2>/dev/null || true)" = "true" ]
+}
+collector_available || {
+  echo "no collector reachable as apex-otel-collector on apex-collect-net - start collect, or alias infra's collector (tests/e2e/run.sh step 2)"; exit 2;
 }
 
 export APEX_OTLP_ENDPOINT="http://apex-otel-collector:4318"

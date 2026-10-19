@@ -154,3 +154,21 @@ def test_default_scenario_list_is_unchanged_in_both_runners() -> None:
 
 def test_start_dev_and_reuse_dev_are_mutually_exclusive_in_powershell() -> None:
     assert "-StartDev and -ReuseDev are mutually exclusive." in PS1
+
+
+def test_both_runners_accept_the_aliased_infra_collector() -> None:
+    sh = (DEV / "scripts" / "e2e_canonical.sh").read_text(encoding="utf-8")
+    ps1 = (DEV / "scripts" / "e2e_canonical.ps1").read_text(encoding="utf-8")
+    for source in (sh, ps1):
+        assert "apex-infra-otel-collector" in source
+        assert "{{range .Containers}}{{.Name}} {{end}}" in source
+    assert "collector_available ||" in sh
+    assert "Test-CollectorAvailable" in ps1
+
+
+def test_bash_runner_is_executable_in_git() -> None:
+    import subprocess
+    mode = subprocess.run(
+        ["git", "ls-files", "-s", "scripts/e2e_canonical.sh"], cwd=DEV, capture_output=True, text=True
+    ).stdout.split()
+    assert mode and mode[0] == "100755", mode

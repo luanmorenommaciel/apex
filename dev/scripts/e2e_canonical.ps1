@@ -125,8 +125,18 @@ function Assert-Canonical {
 if ((docker network inspect apex-collect-net 2>$null).Count -eq 0) {
     throw 'apex-collect-net is missing. Start COLLECT and INFRA first.'
 }
-if ((docker inspect -f '{{.State.Running}}' apex-otel-collector 2>$null) -ne 'true') {
-    throw 'apex-otel-collector is not running. Start COLLECT and INFRA first.'
+function Test-CollectorAvailable {
+    # Parity with e2e_canonical.sh: collect's own apex-otel-collector container,
+    # or infra's collector aliased onto apex-collect-net (tests/e2e/run.sh step 2).
+    if ((docker inspect -f '{{.State.Running}}' apex-otel-collector 2>$null) -eq 'true') { return $true }
+    $members = docker network inspect apex-collect-net -f '{{range .Containers}}{{.Name}} {{end}}' 2>$null
+    if ("$members" -match 'apex-infra-otel-collector') {
+        return ((docker inspect -f '{{.State.Running}}' apex-infra-otel-collector 2>$null) -eq 'true')
+    }
+    return $false
+}
+if (-not (Test-CollectorAvailable)) {
+    throw 'No collector reachable as apex-otel-collector on apex-collect-net. Start COLLECT, or alias the INFRA collector (tests/e2e/run.sh step 2).'
 }
 
 function Test-DevImagePresent {
