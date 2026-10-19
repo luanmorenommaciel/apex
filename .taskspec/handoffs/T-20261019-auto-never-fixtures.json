@@ -1,0 +1,115 @@
+{
+  "contract": "TaskHandoff/v3",
+  "task_id": "T-20261019-auto-never-fixtures",
+  "format_version": 3,
+  "spec": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-auto-never-fixtures.md",
+  "spec_digest": "sha256:9fa60896db6d1e8a7ca3995cd249e4fd7cbfd1d6b63084c4574ae0ebaee4cbbb",
+  "task_revision_digest": "sha256:8c6828f2aed559461c505ce91cff79af8a2d12f6629d19910df035d5e697dc7a",
+  "signoff_tier": 1,
+  "backend": "claude",
+  "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+  "authorization": {
+    "scheme": "hmac-sha256-v3",
+    "ref": "hmac-sha256-v3:60832560:e7b69540d1203dd69d78d28de1e966484b44baf0a62f2ab613e6634a45de5f18",
+    "tier": 1,
+    "signed_by": "agmarcastro",
+    "signed_at": "2026-10-19T15:54:00Z"
+  },
+  "attempt": {
+    "id": "03c1daf4-2898-4c28-a439-ee4e046ca19d",
+    "issued_at": "2026-10-19T15:54:01Z"
+  },
+  "source": {
+    "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+    "base_commit": "dacbe8485d14a54a677e15623e70b57bcc9821d1"
+  },
+  "dependency_closure": {
+    "contract": "DependencyClosure/v1",
+    "task_id": "T-20261019-auto-never-fixtures",
+    "digest": "sha256:ff29954ac6d71a9e6407d046ba40d668f329984b4370de8b5e838991ac05905f",
+    "members": [
+      {
+        "task_id": "T-20261019-auto-never-fixtures",
+        "task_revision_digest": "sha256:8c6828f2aed559461c505ce91cff79af8a2d12f6629d19910df035d5e697dc7a"
+      },
+      {
+        "task_id": "T-20261019-tls-external-terminator",
+        "task_revision_digest": "sha256:9124dccccd55fddd2f266641bcd906041aa85dab39d49149892ccdf56d2c7d18"
+      }
+    ]
+  },
+  "write_scope": {
+    "touches_paths": [
+      "front/src/data/repository.ts",
+      "front/src/data/useRepository.tsx",
+      "front/src/data/httpRepository.test.ts",
+      "front/src/data/entrypoint.test.ts",
+      "front/src/components/molecules/index.ts",
+      "front/docker-entrypoint.d/30-apex-console-config.sh",
+      "front/README.md",
+      "front/.env.example"
+    ],
+    "creates_paths": [
+      "front/src/components/molecules/StoreUnreachable.tsx",
+      "front/src/data/resolveRepository.test.ts"
+    ],
+    "do_not_touch": [
+      "front/src/data/fixtures.ts",
+      "front/src/screens",
+      "front/nginx.conf"
+    ]
+  },
+  "budgets": {
+    "iterations": 15,
+    "tokens": null,
+    "effort": "S"
+  },
+  "agent_contract": {
+    "version": 2,
+    "read": [
+      "intent",
+      "behavior",
+      "contract",
+      "guardrails"
+    ],
+    "produce": [
+      "code",
+      "tests"
+    ],
+    "required_tools": [
+      "git",
+      "bash"
+    ],
+    "timeout_minutes": 30,
+    "sandbox_type": "host",
+    "output_artifacts": [],
+    "mcp_dependencies": [],
+    "emit": [
+      "pass",
+      "fail",
+      "retry_with_reason",
+      "parked_with_context"
+    ],
+    "backend_metadata": {}
+  },
+  "eval_command": [
+    "taskspec",
+    "run",
+    "--ci",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-auto-never-fixtures.md"
+  ],
+  "acceptance_command": [
+    "taskspec",
+    "accept",
+    "--stamp",
+    "--handoff",
+    "<handoff.json>",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-auto-never-fixtures.md"
+  ],
+  "evaluation_policy": {},
+  "environment_contract": {},
+  "identity_policy": {},
+  "receipt_requirements": [
+    "deterministic"
+  ]
+}
