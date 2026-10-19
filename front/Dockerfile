@@ -1,5 +1,7 @@
 # ---- dev: hot-reloading Vite, the target of `make up` ----
-FROM node:20-alpine AS dev
+# Node 22 in both stages, the major .nvmrc, CI and package.json engines name;
+# engines.test.ts fails when any of the four drifts.
+FROM node:22-alpine AS dev
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -8,7 +10,7 @@ EXPOSE 5173
 CMD ["npm", "run", "dev"]
 
 # ---- build: emit static assets ----
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci

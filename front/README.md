@@ -17,7 +17,9 @@ The console no longer runs a ClickHouse of its own: the store belongs to the
 `infra/` lane. Compose reaches its host-published HTTP port by default instead
 of depending on a compose-only service name or shared network alias.
 
-Without Docker: `npm ci && make dev` — with no store reachable,
+Without Docker: `nvm use && npm ci && make dev` — Node 22 (`.nvmrc`; the
+`engines` range in `package.json` is what every devDependency accepts, and
+`engines.test.ts` keeps it in step with the image and CI) — with no store reachable,
 `VITE_DATA_SOURCE=auto` falls back to the recorded gate run.
 
 Against the Apex API instead of a database user — start `serve/`'s `apex-api`
