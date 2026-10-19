@@ -1,7 +1,7 @@
 ---
 id: T-20261019-screen-component-tests
 title: "Give Runs, RunDetail, Finding, Compare and Memory a component test each"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: M

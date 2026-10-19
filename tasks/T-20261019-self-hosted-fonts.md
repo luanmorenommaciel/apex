@@ -1,7 +1,7 @@
 ---
 id: T-20261019-self-hosted-fonts
 title: "Serve the three typefaces from the bundle instead of Google Fonts"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S

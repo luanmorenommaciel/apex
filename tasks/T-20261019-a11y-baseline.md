@@ -1,7 +1,7 @@
 ---
 id: T-20261019-a11y-baseline
 title: "Lint for accessibility and give every control a name"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: M
