@@ -12,6 +12,17 @@ COMPOSE := docker compose
 endif
 C3_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.c3-otlp.yml
 
+# On the C3 overlay the master has TWO networks. Spark advertises the driver by
+# the container's hostname, which Docker DNS resolves to whichever network's
+# address it likes, while the driver's RPC binds to the first interface — so an
+# executor connecting to the advertised address can be refused, and the job
+# spins "Initial job has not accepted any resources" forever. Which run hits it
+# depends on interface order, so it looks intermittent. Advertise the service
+# name and bind everywhere, as scripts/e2e_canonical.sh already does. Every
+# cluster submit (run-pathology, gen-data, c3-*, c4-*) carries it; `fp-test`
+# runs in local[2] mode with no master to advertise, so it is exempt.
+C3_DRIVER_CONF := --conf spark.driver.host=spark-master --conf spark.driver.bindAddress=0.0.0.0
+
 .DEFAULT_GOAL := help
 .PHONY: help env env-spark41 build up down clean ps verify doctor gen-data run-pathology scale calibrate c3-up c3-plugin-skew c4-aqe-skew c4-aqe-skewsplit c4-aqe-probe e2e e2e-canonical
 
@@ -68,7 +79,7 @@ fp-crosscheck: ## T7 integration: dev fingerprint == jar's Scala fingerprint (cr
 APEX_IMAGE ?= apex-spark:local
 gen-data: up ## Generate deterministic ~50% hot-key Delta tables (T8)
 	$(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
-	  --master spark://spark-master:7077 /opt/apex/jobs/generate_data.py
+	  --master spark://spark-master:7077 $(C3_DRIVER_CONF) /opt/apex/jobs/generate_data.py
 
 JOB ?= skew_join
 AQE ?= off
@@ -78,17 +89,8 @@ DRIVER_MEM ?=
 run-pathology: up ## Run a pathology: JOB=skew_join|spill|bad_shuffle|driver_oom [AQE=on] [FIX=on] [SAFE=on]
 	@dm="$(DRIVER_MEM)"; [ "$(JOB)" = "driver_oom" ] && dm="$${dm:-512m}"; \
 	$(COMPOSE) exec -T -e APEX_AQE=$(AQE) -e APEX_FIX=$(FIX) -e APEX_SAFE=$(SAFE) spark-master \
-	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
 	  $${dm:+--driver-memory $$dm} /opt/apex/jobs/$(JOB).py
-
-# On the C3 overlay the master has TWO networks. Spark advertises the driver by
-# the container's hostname, which Docker DNS resolves to whichever network's
-# address it likes, while the driver's RPC binds to the first interface — so an
-# executor connecting to the advertised address can be refused, and the job
-# spins "Initial job has not accepted any resources" forever. Which run hits it
-# depends on interface order, so it looks intermittent. Advertise the service
-# name and bind everywhere, as scripts/e2e_canonical.sh already does.
-C3_DRIVER_CONF := --conf spark.driver.host=spark-master --conf spark.driver.bindAddress=0.0.0.0
 
 c3-up: env ## Join infra's OTLP network and wait for the Spark driver service
 	$(C3_COMPOSE) up -d --wait
