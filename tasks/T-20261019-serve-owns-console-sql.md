@@ -1,7 +1,7 @@
 ---
 id: T-20261019-serve-owns-console-sql
 title: "Make serve the sole owner of the console statements"
-status: in-progress
+status: ready
 format_version: 3
 profile: standard
 effort: M

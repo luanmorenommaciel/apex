@@ -1,7 +1,7 @@
 ---
 id: T-20261019-query-cache-dedupe-abort
 title: "Dedupe, cache and abort the console's reads"
-status: in-progress
+status: ready
 format_version: 3
 profile: standard
 effort: M

@@ -1,7 +1,7 @@
 ---
 id: T-20261019-queries-dead-statement
 title: "Remove PLAN_MEMORY and pin that every statement has a consumer"
-status: in-progress
+status: ready
 format_version: 3
 profile: standard
 effort: XS

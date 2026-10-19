@@ -1,7 +1,7 @@
 ---
 id: T-20261019-browser-door-additive-columns
 title: "Let the browser door read a findings table without confidence_score"
-status: in-progress
+status: ready
 format_version: 3
 profile: standard
 effort: S

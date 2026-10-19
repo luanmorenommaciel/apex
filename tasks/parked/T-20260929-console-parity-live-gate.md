@@ -1,7 +1,7 @@
 ---
 id: T-20260929-console-parity-live-gate
 title: "Make RUNBOOK step 3 prove the console's rows against a live store"
-status: in-progress
+status: parked
 format_version: 3
 profile: standard
 effort: M
@@ -20,7 +20,7 @@ priority: P2
 severity: feature
 due_date: (none)
 precondition: (none)
-blocked_reason: (none)
+blocked_reason: work merged to main (PRs 129/153/160) without a TaskSpec acceptance; parked 2026-10-19 so its write scope no longer blocks the front-lane leaves
 security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)

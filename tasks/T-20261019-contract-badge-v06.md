@@ -1,7 +1,7 @@
 ---
 id: T-20261019-contract-badge-v06
 title: "Report the contract version the repository actually declares"
-status: in-progress
+status: ready
 format_version: 3
 profile: standard
 effort: XS

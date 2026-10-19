@@ -1,7 +1,7 @@
 ---
 id: T-20261019-fixtures-lazy-chunk
 title: "Keep the recorded run out of the entry bundle"
-status: in-progress
+status: ready
 format_version: 3
 profile: standard
 effort: S

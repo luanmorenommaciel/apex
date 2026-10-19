@@ -1,7 +1,7 @@
 ---
 id: T-20261019-default-data-source-http
 title: "Make http the console's default data source"
-status: in-progress
+status: ready
 format_version: 3
 profile: standard
 effort: S

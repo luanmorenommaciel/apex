@@ -25,12 +25,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: agmarcastro
+signed_off_at: 2026-10-19T15:44:21Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v3:60832560:fb40f204bcee2da5828445b71bb18da1452a4116c1d5b3754bbb4bc07ac12a2e
 ---
 
 # Give Runs, RunDetail, Finding, Compare and Memory a component test each

@@ -1,7 +1,7 @@
 ---
 id: T-20261019-nginx-hardening
 title: "Give the production nginx security headers, proxy timeouts and gzip"
-status: in-progress
+status: ready
 format_version: 3
 profile: standard
 effort: S

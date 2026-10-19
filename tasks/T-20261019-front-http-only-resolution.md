@@ -1,7 +1,7 @@
 ---
 id: T-20261019-front-http-only-resolution
 title: "Read only through the API in the console's source"
-status: in-progress
+status: ready
 format_version: 3
 profile: standard
 effort: M

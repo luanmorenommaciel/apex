@@ -1,7 +1,7 @@
 ---
 id: T-20261019-node-engines-pin
 title: "Pin one Node major across the image, CI and the host"
-status: in-progress
+status: ready
 format_version: 3
 profile: standard
 effort: S

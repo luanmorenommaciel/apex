@@ -1,7 +1,7 @@
 ---
 id: T-20261006-six-lane-gate-full-detail
 title: "Ask analyze_run for the full diagnosis in the canonical gate"
-status: in-progress
+status: parked
 format_version: 3
 profile: standard
 effort: XS
@@ -20,7 +20,7 @@ priority: P2
 severity: feature
 due_date: (none)
 precondition: (none)
-blocked_reason: (none)
+blocked_reason: work merged to main (PRs 129/153/160) without a TaskSpec acceptance; parked 2026-10-19 so its write scope no longer blocks the front-lane leaves
 security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
