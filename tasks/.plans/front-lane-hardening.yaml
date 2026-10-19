@@ -70,6 +70,7 @@ units:
     touches_paths:
       - front/src/contract/types.ts
       - front/src/components/molecules/NavBar.test.tsx
+      - front/src/contract/rules.test.ts
     creates_paths:
       - front/src/contract/version.test.ts
     source_note: CONTRACT.md line 7 (contract v0.6), front/src/contract/types.ts line 8 (CONTRACT_VERSION 0.5), front/README.md line 4 (reads the contract v0.6 tables)

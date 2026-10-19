@@ -51,4 +51,10 @@ describe("NavBar source badge", () => {
   it("keeps the fixtures label", async () => {
     expect(await mount("fixtures")).toContain("source ◐ fixtures");
   });
+
+  it("names the contract version the repository declares", async () => {
+    const text = await mount("http");
+    expect(text).toContain("contract v0.6");
+    expect(text).not.toContain("v0.5");
+  });
 });

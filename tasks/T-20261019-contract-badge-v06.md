@@ -1,7 +1,7 @@
 ---
 id: T-20261019-contract-badge-v06
 title: "Report the contract version the repository actually declares"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: XS
@@ -10,7 +10,7 @@ agent: any
 parent: (none)
 depends_on: []
 supersedes: (none)
-touches_paths: [front/src/contract/types.ts, front/src/components/molecules/NavBar.test.tsx]
+touches_paths: [front/src/contract/types.ts, front/src/components/molecules/NavBar.test.tsx, front/src/contract/rules.test.ts]
 creates_paths: [front/src/contract/version.test.ts]
 source_note: "CONTRACT.md line 7 (contract v0.6), front/src/contract/types.ts line 8 (CONTRACT_VERSION 0.5), front/README.md line 4 (reads the contract v0.6 tables)"
 created: "2026-10-19T00:00:00Z"
