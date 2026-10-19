@@ -1,0 +1,102 @@
+{
+  "contract": "TaskHandoff/v3",
+  "task_id": "T-20261019-tls-external-terminator",
+  "format_version": 3,
+  "spec": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-tls-external-terminator.md",
+  "spec_digest": "sha256:213c3814d41efb1ed23117aea0b16a04e0641a0ad24c317a8021d3ee7c916f4d",
+  "task_revision_digest": "sha256:9124dccccd55fddd2f266641bcd906041aa85dab39d49149892ccdf56d2c7d18",
+  "signoff_tier": 1,
+  "backend": "claude",
+  "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+  "authorization": {
+    "scheme": "hmac-sha256-v3",
+    "ref": "hmac-sha256-v3:60832560:8b191eb1ba8241ac5601e6e24a54e25b35f273ba179d15f8b6f5c99dda72f0ea",
+    "tier": 1,
+    "signed_by": "agmarcastro",
+    "signed_at": "2026-10-19T15:53:36Z"
+  },
+  "attempt": {
+    "id": "09f64b25-0242-47b2-b911-9197f33ee8c8",
+    "issued_at": "2026-10-19T15:53:37Z"
+  },
+  "source": {
+    "workspace": "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements",
+    "base_commit": "5aa920e18b19d5426aaeddf5ab6bfa4f0079dc4b"
+  },
+  "dependency_closure": {
+    "contract": "DependencyClosure/v1",
+    "task_id": "T-20261019-tls-external-terminator",
+    "digest": "sha256:5c2cff419eaf778c029a93af6b9b099c1c5b570171d8c01202b9812d478266ad",
+    "members": [
+      {
+        "task_id": "T-20261019-tls-external-terminator",
+        "task_revision_digest": "sha256:9124dccccd55fddd2f266641bcd906041aa85dab39d49149892ccdf56d2c7d18"
+      }
+    ]
+  },
+  "write_scope": {
+    "touches_paths": [
+      "front/nginx.conf",
+      "front/README.md"
+    ],
+    "creates_paths": [],
+    "do_not_touch": [
+      "front/Dockerfile",
+      "front/docker-entrypoint.d",
+      "front/src"
+    ]
+  },
+  "budgets": {
+    "iterations": 15,
+    "tokens": null,
+    "effort": "S"
+  },
+  "agent_contract": {
+    "version": 2,
+    "read": [
+      "intent",
+      "behavior",
+      "contract",
+      "guardrails"
+    ],
+    "produce": [
+      "code",
+      "tests"
+    ],
+    "required_tools": [
+      "git",
+      "bash"
+    ],
+    "timeout_minutes": 30,
+    "sandbox_type": "host",
+    "output_artifacts": [],
+    "mcp_dependencies": [],
+    "emit": [
+      "pass",
+      "fail",
+      "retry_with_reason",
+      "parked_with_context"
+    ],
+    "backend_metadata": {}
+  },
+  "eval_command": [
+    "taskspec",
+    "run",
+    "--ci",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-tls-external-terminator.md"
+  ],
+  "acceptance_command": [
+    "taskspec",
+    "accept",
+    "--stamp",
+    "--handoff",
+    "<handoff.json>",
+    "/Users/agmarcastro/.superconductor/worktrees/apex/performance-improvements/tasks/T-20261019-tls-external-terminator.md"
+  ],
+  "evaluation_policy": {},
+  "environment_contract": {},
+  "identity_policy": {},
+  "receipt_requirements": [
+    "deterministic"
+  ]
+}
