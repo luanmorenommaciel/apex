@@ -1,7 +1,7 @@
 ---
 id: T-20261019-default-data-source-http
 title: "Make http the console's default data source"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S
@@ -25,12 +25,13 @@ security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)
 execution_backend: any
-signed_off: false
-signed_off_by: (none)
-signed_off_at: (none)
+signed_off: true
+signed_off_by: agmarcastro
+signed_off_at: 2026-10-19T15:51:45Z
 accepted: false
 accepted_by: (none)
 accepted_at: (none)
+signed_off_sig: hmac-sha256-v3:60832560:845a245f1aeadbce9340e6782708534b99e00d2f24104198ba4fa6f90a980446
 ---
 
 # Make http the console's default data source
