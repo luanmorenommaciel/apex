@@ -67,7 +67,11 @@ object ApexPlanFingerprint {
     MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
 
   private val ExprIdRe = "#\\d+L?".r
-  private val LambdaRe = "\\$\\$Lambda\\$\\d+/0x[0-9a-fA-F]+@[0-9a-fA-F]+".r
+  // JDK 17 prints `Foo$$Lambda$5638/0x00000078025a59a8@1e546002`; JDK 21 drops the
+  // counter: `Foo$$Lambda/0x00007f3a1c0b2c40@6f3a1c`. Both carry a per-JVM hidden-class
+  // address, so the whole suffix goes; the identity hash is optional here because
+  // IdentityRe below also covers it.
+  private val LambdaRe = "\\$\\$Lambda(\\$\\d+)?/0x[0-9a-fA-F]+(@[0-9a-fA-F]+)?".r
   private val IdentityRe = "@[0-9a-fA-F]{6,}".r
 
   /** Both paths: JVM lambda/object identities differ per execution and per JVM. */

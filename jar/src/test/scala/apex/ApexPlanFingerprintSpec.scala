@@ -100,6 +100,10 @@ class ApexPlanFingerprintSpec extends AnyFunSuite {
     val scrubbed = ApexPlanFingerprint.scrub(
       "MapPartitions org.apache.spark.sql.delta.Snapshot$$Lambda$5638/0x00000078025a59a8@1e546002, obj#858: X, add#780L")
     assert(scrubbed == "MapPartitions org.apache.spark.sql.delta.Snapshot$$Lambda, obj#: X, add#", scrubbed)
+    // JDK 21 drops the lambda counter and the CI matrix runs there.
+    val jdk21 = ApexPlanFingerprint.scrubIdentities(
+      "MapElements apex.ApexPlanFingerprintSpec$$Lambda/0x00007f3a1c0b2c40@6f3a1c2e, obj#12: X")
+    assert(jdk21 == "MapElements apex.ApexPlanFingerprintSpec$$Lambda, obj#12: X", jdk21)
   }
 
   test("typed Dataset plans (object operators) get a fingerprint on every cell") {

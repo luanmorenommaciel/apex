@@ -57,7 +57,8 @@ public final class PlanFingerprint {
 
     /** Both paths: JVM lambda/object identities differ per execution and per JVM. */
     static String scrubIdentities(String s) {
-        String noLambda = s.replaceAll("\\$\\$Lambda\\$\\d+/0x[0-9a-fA-F]+@[0-9a-fA-F]+", "\\$\\$Lambda");
+        // JDK 17: Foo$$Lambda$5638/0x…@hash — JDK 21: Foo$$Lambda/0x…@hash (no counter).
+        String noLambda = s.replaceAll("\\$\\$Lambda(\\$\\d+)?/0x[0-9a-fA-F]+(@[0-9a-fA-F]+)?", "\\$\\$Lambda");
         return noLambda.replaceAll("@[0-9a-fA-F]{6,}", "@");
     }
 
