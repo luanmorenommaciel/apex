@@ -81,6 +81,10 @@ services:
     restart: "no"
 
   # ── Spark standalone master ───────────────────────────────────────────────
+  # Master, worker and history all start through scripts/with-s3-credentials.sh
+  # (mounted under /opt/apex/scripts) so the S3A EnvironmentVariableCredentialsProvider
+  # in conf/spark-defaults.conf finds AWS_* in the daemon environment; executors are
+  # launched by the worker and inherit it. The secret FILES are the only source.
   spark-master:
     <<: *spark-common
     build:
@@ -97,6 +101,8 @@ services:
         SCALA_BIN: ${SCALA_BIN}
         APEX_JAR_TARGET: ${APEX_JAR_TARGET:-apex_40}
     command:
+      - /bin/sh
+      - /opt/apex/scripts/with-s3-credentials.sh
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.master.Master
       - --host
@@ -127,6 +133,8 @@ services:
     <<: *spark-common
     pull_policy: never   # image is built by spark-master, never pulled
     command:
+      - /bin/sh
+      - /opt/apex/scripts/with-s3-credentials.sh
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.worker.Worker
       - spark://spark-master:7077
@@ -155,8 +163,13 @@ services:
     # No restart:on-failure workaround needed: minio-init seeds the events/ prefix (so the
     # log dir exists) BEFORE this starts, gated via service_completed_successfully.
     command:
+      - /bin/sh
+      - /opt/apex/scripts/with-s3-credentials.sh
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.history.HistoryServer
+    secrets:
+      - apex_s3_access_key
+      - apex_s3_secret_key
     environment:
       <<: *spark-env
       SPARK_HISTORY_OPTS: >-
