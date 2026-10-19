@@ -28,15 +28,18 @@ metadata:
   #   tests/test_api_resources.py reads repository.ts, types.ts and timestamp.ts,
   #   which STAY - the Repository interface and the row types are the API's
   #   contract with the console.
-  proposed_choices:
+  # Both proposals below were accepted by the user on 2026-10-19 ("Aceito as duas").
+  decided_choices:
     - id: P-fixtures-in-image
       proposal: DATA_SOURCE=fixtures stays available in the production image as an explicit, store-less mode (demos, smoke tests); it is never a default and never a fallback.
       alternative: fixtures become dev-only (vitest and `make up-fixtures`), and the image accepts http alone.
-      applied_in: T-20261019-front-http-only-resolution and T-20261019-front-drop-clickhouse-door, pending the user's word
+      applied_in: T-20261019-front-http-only-resolution and T-20261019-front-drop-clickhouse-door
+      decided_by: the user, 2026-10-19
     - id: P-boot-probe
       proposal: in http mode the provider probes /v1/health once at boot; no answer at all (connection refused, 502 from an empty proxy) renders the store-unreachable page naming /v1/health, while 401 and any JSON answer mount the app and let each screen report. Keeps the page D-auto-fallback-policy introduced without keeping auto.
       alternative: no boot probe; a dead API surfaces as QueryFailure on every screen.
-      applied_in: T-20261019-front-http-only-resolution, pending the user's word
+      applied_in: T-20261019-front-http-only-resolution
+      decided_by: the user, 2026-10-19
 units:
   - id: T-20261019-serve-owns-console-sql
     title: Make serve the sole owner of the console statements
