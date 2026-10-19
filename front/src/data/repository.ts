@@ -105,6 +105,8 @@ interface RunRollupRow {
   plan_fingerprint: string; shape_count: number; shaped_stage_count: number;
   config_source: string;
   conf_executor_instances: number | null; conf_shuffle_partitions: number | null;
+  /** Absent from a door that predates the column; -1 renders as a dash. */
+  refused_count?: number;
 }
 
 /** ClickHouse renders Nullable(Int32) as JSON null; anything else is a real value. */
@@ -114,9 +116,10 @@ const nullableInt = (v: number | null): number | null =>
 /** -1 is the query's sentinel for "this run is not indexed", not a measurement. */
 const notIndexed = (v: number): number | null => (Number(v) < 0 ? null : Number(v));
 
-// refused_count is DERIVED, never stored: it is the count of stages the engine
-// evaluated for a tail claim and declined. Computing it needs the stage rows,
-// so the list shows it per-run only once opened.
+// refused_count is DERIVED, never stored: among the five loudest p99/p50
+// ratios of the run, the stages evaluated for a tail claim and refused. The
+// rollup's `refused` CTE computes it through both doors with the arithmetic
+// of rules.ts assessStage(); -1 means a door did not compute it.
 const toRunSummary = (r: RunRollupRow): RunSummary & { age?: string } => ({
   job_id: r.job_id,
   app_name: r.app_name,
@@ -124,7 +127,7 @@ const toRunSummary = (r: RunRollupRow): RunSummary & { age?: string } => ({
   wall_clock_ms: null, // not captured by the contract — see RunSummary
   task_time_ms: notIndexed(r.task_time_ms),
   finding_count: Number(r.finding_count),
-  refused_count: -1, // -1 renders as "—", never as zero
+  refused_count: r.refused_count === undefined || r.refused_count === null ? -1 : Number(r.refused_count),
   // Nothing in the contract counts model invocations. null renders as "—";
   // 0 asserted that Apex had answered this run for free without checking.
   llm_calls: null,

@@ -47,6 +47,10 @@ def test_statements_are_read_from_the_console_as_written():
     assert statements["RUN_ONE"].rstrip().endswith("LIMIT 1")
     assert "ORDER BY b.started_at DESC LIMIT {limit:UInt32}" in statements["RUN_LIST"]
     assert "WHERE job_id" not in statements["RUN_LIST"].split("shapes AS")[0].split("f AS")[0]
+    # The refusal CTE takes the same filter as base: RUN_ONE narrows it to the
+    # job, RUN_LIST ranks every run's stages.
+    assert statements["RUN_ONE"].count("WHERE job_id = {job:String}") == 2
+    assert "refused_count" in statements["RUN_LIST"] and "refused_count" in statements["RUN_ONE"]
     for sql in statements.values():
         assert "${" not in sql, "a template placeholder reached the statement"
         # The console's parameter names, not serve's.

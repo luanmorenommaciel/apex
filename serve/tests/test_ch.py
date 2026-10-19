@@ -995,7 +995,7 @@ def test_run_list_returns_the_console_rollup():
     assert ReadStore(client).run_list(limit=10) == [row]
 
     sql, parameters = client.calls[-1]
-    for column in ("task_time_ms", "finding_count", "shape_count", "config_source"):
+    for column in ("task_time_ms", "finding_count", "shape_count", "config_source", "refused_count"):
         assert column in sql, f"the console needs {column} and runs() has none"
     assert parameters["limit"] == 10
     # The limit is clamped, not trusted — a caller cannot ask for the table.
@@ -1221,6 +1221,23 @@ def test_run_rollup_marks_a_missed_shapes_join():
         assert "if(s.indexed = 1, toString(s.config_source), 'unknown')" in sql
         assert "if(s.indexed = 1, s.plan_fingerprint, '')" in sql
         assert "ifNull(s." not in sql, "an ifNull on the shapes side never fires on a miss"
+
+
+def test_run_rollup_counts_refusals_over_the_loudest_five():
+    """refused_count is the console's rules 1, 6 and 7 in SQL, both forms.
+
+    The CTE ranks the latest attempt of every stage by p99/p50, keeps the
+    five loudest, and counts those not reportable; an unknown cluster width
+    is a refusal, never an assumed width, and the join sentinel keeps a
+    missed join at -1 rather than a measured zero.
+    """
+    for sql in (ch.RUN_ONE_SQL, ch.RUN_LIST_SQL):
+        assert "refused AS (" in sql
+        assert "WHERE loudness <= 5" in sql
+        assert "countIf(NOT reportable) AS refused_count" in sql
+        assert "if(r.counted = 1, toInt64(r.refused_count), -1)" in sql
+        assert "c.slots IS NOT NULL AND c.slots > 1 AND st.ratio > (st.task_count - 1) / (c.slots - 1)" in sql
+        assert "st.bytes_per_task >= 1048576" in sql
 
 
 def test_run_rollup_carries_no_settings_clause():

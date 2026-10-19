@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Mono, Pill, StatusPill } from "@/components/atoms";
 import { DataTable, KpiCard, ScreenHeader, type Column, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
-import { fmt } from "@/contract/rules";
+import { fmt, TAIL_SAMPLE } from "@/contract/rules";
 import { useRead, useRepository } from "@/data/useRepository";
 import type { RunSummary } from "@/contract/types";
 
@@ -144,7 +144,7 @@ export function RunsScreen() {
           value={fmt.countOrDash(totals.refused)}
           note={
             totals.refused === null
-              ? "not derivable list-wide — open a run"
+              ? "not computed by this door — open a run"
               : `stages with a tail, no claim · ${totals.refusedRuns} of ${runs.length} runs`
           }
           accent="edge"
@@ -187,8 +187,8 @@ export function RunsScreen() {
           <div className="flex items-center gap-2.5">
             <Mono className="text-sub">REFUSED</Mono>
             <span>
-              counts stages that carried a p99/p50 tail and produced no finding. A rising number is
-              the system working, not failing.
+              counts, among the {TAIL_SAMPLE} loudest p99/p50 ratios of each run, the stages evaluated
+              for a tail claim and refused. A rising number is the system working, not failing.
             </span>
           </div>
         }

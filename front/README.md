@@ -210,10 +210,14 @@ from `src/contract/types.ts` and fails when a route stops projecting a field,
 so the two paths cannot drift apart. `/v1` is proxied the way `/clickhouse` is
 (Vite in dev, nginx in the image), so the API needs no CORS header either.
 
-**One honest gap:** `refused_count` is derived from the stage rows, not stored,
-so the runs list cannot compute it in a single query. It renders as `—`, never
-as `0` — "we did not compute it" is not "there were none". Deriving it list-wide
-needs either a materialised view or the `serve/` endpoint.
+**`refused_count` is computed, not stored.** Among the five loudest p99/p50
+ratios of a run, it counts the stages rules 1, 6 and 7 refuse a tail claim for.
+The run rollup carries a `refused` CTE (`queries.ts`, the same text in
+`serve/src/apex_mcp/ch.py`) that encodes those rules in SQL, so the list shows
+it through both doors; `src/contract/refusedCount.test.ts` holds that
+arithmetic to `assessStage()` over the recording, and serve's parity gate
+holds the two doors to each other. `-1`, rendered `—`, means a door did not
+compute it — never `0`.
 
 ---
 
@@ -305,7 +309,6 @@ and each screen says so on screen rather than faking the data. The ledger:
 | `/memory` | Renders *"nothing indexed yet"*: `apex.plan_memory` is written by the memory lane, not the console. Until that lane runs over a job there is no history to recall | `memory` |
 | `/verify` | The two independent verdicts come from `apex.fix_verifications`, written by the verify lane; with no row the screen states the emptiness and which lane owes it. The proposed fix is also still prose — turning it into a testable config overlay is that lane's job | `verify` |
 | `/compare` | Needs a second run of the same plan fingerprint to align a baseline; shows *"no baseline"* until the store holds one | `collect` / `engine` (producing runs) |
-| `/runs` | `refused_count` renders `—` list-wide — the "honest gap" above: it needs a materialised view or the `serve/` endpoint | `infra` or `serve` |
 | `/runs/:jobId` | `attributionIsAvailable()` returns `false`: v0.6 emits optional producer-side `execution_id`, but no proven execution-to-stage mapping is available to the console. A transition therefore cannot name a stage. The noise floor also cannot be recomputed live because the contract stores only the two arms' medians, so the console falls back to the stored value and says it did | read-side mapping plus runtime evidence |
 
 The pattern is the same everywhere: an empty state that names the missing

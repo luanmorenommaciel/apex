@@ -371,6 +371,59 @@ shapes AS (
          max(ro.conf_shuffle_partitions)                       AS conf_shuffle_partitions
   FROM run_outcomes AS ro FINAL
   GROUP BY ro.job_id
+),
+-- refused_count: rules 1, 6 and 7 as the console's rules.ts assessStage()
+-- applies them, over the TAIL_SAMPLE (5) loudest p99/p50 ratios of the run -
+-- how many of those were evaluated for a tail claim and refused. One CTE both
+-- doors run (decided 2026-10-19, D-refused-count-home), so the list and the
+-- detail screen count the same thing; front/src/contract/refusedCount.test.ts
+-- holds this arithmetic to assessStage() over the recording, and serve's
+-- parity gate holds the two doors to each other.
+refused AS (
+  SELECT job_id, 1 AS counted, countIf(NOT reportable) AS refused_count
+  FROM (
+    SELECT
+      st.job_id AS job_id,
+      row_number() OVER (PARTITION BY st.job_id ORDER BY st.ratio DESC, st.stage_id ASC) AS loudness,
+      -- rule 6: one task, n <= slots, or two tasks is not a distribution
+      (st.task_count <= 1 OR (c.slots IS NOT NULL AND st.task_count <= c.slots) OR st.task_count <= 2) AS not_a_distribution,
+      -- the 1 MiB/task measurability floor, bytes_touched / task_count
+      st.bytes_per_task >= 1048576 AS above_floor,
+      -- rule 1: the ratio clears the computed bar (n - 1) / (slots - 1);
+      -- an unknown cluster width is a refusal, never an assumed width
+      (c.slots IS NOT NULL AND c.slots > 1 AND st.ratio > (st.task_count - 1) / (c.slots - 1)) AS tail_bound,
+      (NOT not_a_distribution AND above_floor AND tail_bound) AS reportable
+    FROM (
+      -- the LATEST attempt per stage, as LATEST_STAGES selects it
+      SELECT se.job_id AS job_id, se.stage_id AS stage_id,
+             argMax(se.task_count, se.ts) AS task_count,
+             if(argMax(se.task_duration_p50_ms, se.ts) <= 0, 0,
+                argMax(se.task_duration_p99_ms, se.ts) / argMax(se.task_duration_p50_ms, se.ts)) AS ratio,
+             if(argMax(se.task_count, se.ts) <= 0, 0,
+                (argMax(se.shuffle_read_bytes, se.ts) + argMax(se.shuffle_write_bytes, se.ts)
+                 + argMax(se.input_bytes, se.ts)) / argMax(se.task_count, se.ts)) AS bytes_per_task
+      FROM spark_events AS se
+      {where}
+      GROUP BY se.job_id, se.stage_id
+    ) AS st
+    LEFT JOIN (
+      -- readSlots(): instances x cores, both present and numeric and > 0,
+      -- else NULL. A job with no job_conf row misses the join and reads NULL
+      -- too, because the column is Nullable and a miss fills the default.
+      SELECT job_id,
+             if(toFloat64OrNull(any(conf['spark.executor.instances'])) IS NULL
+                OR toFloat64OrNull(any(conf['spark.executor.cores'])) IS NULL
+                OR toFloat64OrNull(any(conf['spark.executor.instances']))
+                   * toFloat64OrNull(any(conf['spark.executor.cores'])) <= 0,
+                NULL,
+                toFloat64OrNull(any(conf['spark.executor.instances']))
+                * toFloat64OrNull(any(conf['spark.executor.cores']))) AS slots
+      FROM job_conf
+      GROUP BY job_id
+    ) AS c ON c.job_id = st.job_id
+  )
+  WHERE loudness <= 5
+  GROUP BY job_id
 )
 SELECT
   b.job_id      AS job_id,
@@ -387,10 +440,13 @@ SELECT
   if(s.indexed = 1, s.shape_count, 0)                     AS shape_count,
   if(s.indexed = 1, toInt64(s.shaped_stage_count), -1)    AS shaped_stage_count,
   if(s.indexed = 1, toString(s.config_source), 'unknown') AS config_source,
-  s.conf_executor_instances, s.conf_shuffle_partitions
+  s.conf_executor_instances, s.conf_shuffle_partitions,
+  -- -1 keeps "not computed" distinct from a measured zero on a missed join.
+  if(r.counted = 1, toInt64(r.refused_count), -1)         AS refused_count
 FROM base b
-LEFT JOIN f        ON f.job_id = b.job_id
-LEFT JOIN shapes s ON s.job_id = b.job_id
+LEFT JOIN f       ON f.job_id = b.job_id
+LEFT JOIN shapes  s ON s.job_id = b.job_id
+LEFT JOIN refused r ON r.job_id = b.job_id
 {tail}
 """
 

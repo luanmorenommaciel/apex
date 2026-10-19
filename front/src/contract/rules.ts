@@ -600,6 +600,21 @@ export function assessStage(
  */
 export const TAIL_SAMPLE = 5;
 
+/**
+ * refused_count: among the TAIL_SAMPLE loudest p99/p50 ratios of a run, how
+ * many stages assessStage() refuses a tail claim for. The run rollup's
+ * `refused` CTE (queries.ts, mirrored in serve) computes this same number in
+ * SQL so the runs list can show it without the stage rows; refusedCount.test.ts
+ * holds the two arithmetics together over the recording. Ties on the ratio
+ * are broken by stage_id, as the SQL orders them.
+ */
+export function refusedInSample(stages: SparkEventRow[], conf: JobConfRow[]): number {
+  return [...stages]
+    .sort((a, b) => ratioOf(b) - ratioOf(a) || a.stage_id - b.stage_id)
+    .slice(0, TAIL_SAMPLE)
+    .filter((s) => assessStage(s, conf).refusal !== null).length;
+}
+
 /** Formatting helpers used by every screen, so units never drift between them. */
 export const fmt = {
   bytes(n: number): string {
