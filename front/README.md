@@ -219,8 +219,11 @@ src/
 
 ## Design tokens
 
-Defined once in `tailwind.config.js`. The palette is **semantic, not
-decorative** — each colour is a claim:
+Defined once in `tailwind.config.js`. The three typefaces it names — JetBrains
+Mono, IBM Plex Sans, Archivo Black — ship in the bundle from the `@fontsource`
+packages imported in `src/main.tsx` (latin subset, the weights used), so no
+visitor's browser contacts Google Fonts and the console renders the same
+offline. The palette is **semantic, not decorative** — each colour is a claim:
 
 | Token | Hex | Meaning |
 |-------|-----|---------|
