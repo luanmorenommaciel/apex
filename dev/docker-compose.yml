@@ -1,6 +1,6 @@
 # Apex dev-env — local Spark pathology lab (T3)
 # 5 services on one bridge network: minio, minio-init, spark-master, spark-worker, spark-history.
-# The spark image is built once (Dockerfile) and reused for all three spark roles.
+# The spark image is built once (Dockerfile, spark-master's build:) and reused for all three spark roles.
 
 name: apex-dev
 
@@ -12,19 +12,11 @@ secrets:
 
 x-spark-common: &spark-common
   image: ${APEX_IMAGE:-apex-spark:local}
-  build:
-    # The plugin is built from ../jar in a first Docker stage, then baked into
-    # the same Spark image used by master, workers and History Server.
-    context: ..
-    dockerfile: dev/Dockerfile
-    args:
-      SPARK_IMAGE: ${SPARK_IMAGE}
-      HADOOP_AWS_VERSION: ${HADOOP_AWS_VERSION}
-      AWS_SDK_BUNDLE_VERSION: ${AWS_SDK_BUNDLE_VERSION}
-      DELTA_VERSION: ${DELTA_VERSION}
-      DELTA_ARTIFACT: ${DELTA_ARTIFACT:-delta-spark_2.13}
-      SCALA_BIN: ${SCALA_BIN}
-      APEX_JAR_TARGET: ${APEX_JAR_TARGET:-apex_40}
+  # `build:` lives on spark-master only (below). When all three Spark services
+  # declared it, `compose build` / `up --build` compiled the same tag three
+  # times in parallel and the concurrent image export raced with
+  # "already exists". Worker and history consume the tag with pull_policy
+  # never, so compose does not try to pull a local-only image either.
   entrypoint: [""]            # clear base entrypoint; run spark-class directly in foreground
   init: true                  # tini reaps children / forwards signals
   environment: &spark-env
@@ -84,6 +76,19 @@ services:
   # ── Spark standalone master ───────────────────────────────────────────────
   spark-master:
     <<: *spark-common
+    build:
+      # The plugin is built from ../jar in a first Docker stage, then baked into
+      # the same Spark image used by master, workers and History Server.
+      context: ..
+      dockerfile: dev/Dockerfile
+      args:
+        SPARK_IMAGE: ${SPARK_IMAGE}
+        HADOOP_AWS_VERSION: ${HADOOP_AWS_VERSION}
+        AWS_SDK_BUNDLE_VERSION: ${AWS_SDK_BUNDLE_VERSION}
+        DELTA_VERSION: ${DELTA_VERSION}
+        DELTA_ARTIFACT: ${DELTA_ARTIFACT:-delta-spark_2.13}
+        SCALA_BIN: ${SCALA_BIN}
+        APEX_JAR_TARGET: ${APEX_JAR_TARGET:-apex_40}
     command:
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.master.Master
@@ -113,6 +118,7 @@ services:
   # ── Spark workers (scalable: `docker compose up -d --scale spark-worker=N`) ──
   spark-worker:
     <<: *spark-common
+    pull_policy: never   # image is built by spark-master, never pulled
     command:
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.worker.Worker
@@ -138,6 +144,7 @@ services:
   # ── Spark History Server (reads finalized event logs from s3a://spark-logs) ──
   spark-history:
     <<: *spark-common
+    pull_policy: never   # image is built by spark-master, never pulled
     # No restart:on-failure workaround needed: minio-init seeds the events/ prefix (so the
     # log dir exists) BEFORE this starts, gated via service_completed_successfully.
     command:
