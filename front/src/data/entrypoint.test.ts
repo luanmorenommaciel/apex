@@ -99,7 +99,7 @@ describe("the default and the refusal", () => {
   });
 
   it("refuses an unrecognised DATA_SOURCE by name, rendering nothing", () => {
-    for (const value of ["clikhouse", "clickhouse", "auto"]) {
+    for (const value of ["clikhouse", "auto", "mysql"]) {
       const r = boot({ DATA_SOURCE: value, APEX_API_UPSTREAM: "http://apex-api:8000" });
       expect(r.status, value).toBe(1);
       expect(r.stderr).toContain(`DATA_SOURCE='${value}' is not a data source`);
