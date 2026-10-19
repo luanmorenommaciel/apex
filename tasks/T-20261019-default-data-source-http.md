@@ -62,12 +62,12 @@ eval_1() {
 
 # eval_2: make prod and make up-clickhouse print the right mode
 eval_2() {
-  ( cd front && make -n prod CLICKHOUSE_UPSTREAM=http://ch.test.8123 | grep -q -- '-e DATA_SOURCE="http"' && make -n up-clickhouse | grep -q "VITE_DATA_SOURCE=clickhouse" )
+  ( cd front && make -n prod | grep -q -- '-e DATA_SOURCE="http"' )
 }
 
 # eval_3: the docs say http is the default
 eval_3() {
-  ( cd front && grep -q "^VITE_DATA_SOURCE=http" .env.example && grep -qi "default.*http\|http.*default" README.md && grep -q "up-clickhouse" Makefile README.md )
+  ( cd front && grep -q "^VITE_DATA_SOURCE=http" .env.example && grep -qi "default.*http\|http.*default" README.md )
 }
 
 ```
@@ -143,4 +143,4 @@ Revert only the declared write surface and park the task with context.
 
 ## Open Questions
 
-(none — this task is fully specified)
+(none — this task is fully specified. Eval amended before sealing on 2026-10-19: D-api-only removed the /clickhouse proxy and the up-clickhouse target after this leaf was built, so the assertions that counted them were narrowed to what still exists; see tasks/.plans/front-lane-hardening.yaml.)

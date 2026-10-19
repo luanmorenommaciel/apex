@@ -1,7 +1,7 @@
 ---
 id: T-20261019-self-hosted-fonts
 title: "Serve the three typefaces from the bundle instead of Google Fonts"
-status: ready
+status: in-progress
 format_version: 3
 profile: standard
 effort: S
@@ -61,7 +61,7 @@ eval_1() {
 
 # eval_2: the built assets carry the three families as woff2
 eval_2() {
-  ( cd front && npm run build > /dev/null && ls dist/assets | grep -qi "jetbrains-mono.*woff2" && ls dist/assets | grep -qi "ibm-plex-sans.*woff2" && ls dist/assets | grep -qi "archivo-black.*woff2" && grep -q "JetBrains Mono" tailwind.config.js && grep -q "IBM Plex Sans" tailwind.config.js && grep -q "Archivo Black" tailwind.config.js )
+  ( cd front && npm run build > /dev/null && test -n "$(find dist/assets -iname "*jetbrains-mono*.woff2")" && test -n "$(find dist/assets -iname "*ibm-plex-sans*.woff2")" && test -n "$(find dist/assets -iname "*archivo-black*.woff2")" && grep -q "JetBrains Mono" tailwind.config.js && grep -q "IBM Plex Sans" tailwind.config.js && grep -q "Archivo Black" tailwind.config.js )
 }
 
 # eval_3: the whole front gate stays green

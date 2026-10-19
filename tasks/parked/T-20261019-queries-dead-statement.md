@@ -1,7 +1,7 @@
 ---
 id: T-20261019-queries-dead-statement
 title: "Remove PLAN_MEMORY and pin that every statement has a consumer"
-status: ready
+status: parked
 format_version: 3
 profile: standard
 effort: XS
@@ -20,7 +20,7 @@ priority: P2
 severity: feature
 due_date: (none)
 precondition: (none)
-blocked_reason: (none)
+blocked_reason: "superseded by D-api-only on 2026-10-19: queries.ts no longer exists, so a dead statement cannot exist either; its evals cannot run at HEAD and the leaf is not accepted"
 security_class: (none)
 source_action_item: (none)
 tracker_ref: (none)

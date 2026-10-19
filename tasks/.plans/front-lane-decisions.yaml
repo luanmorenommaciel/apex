@@ -114,7 +114,7 @@ units:
         expected_duration_sec: 30
       - id: eval_2
         description: the entrypoint and docs stop promising the recording
-        command: ( cd front && ! grep -q "shows the recorded run" docker-entrypoint.d/30-apex-console-config.sh && ! grep -q "falls back to fixtures" .env.example && ! grep -q "falls back to the recorded" README.md && grep -qi "unreachable" README.md )
+        command: ( cd front && ! grep -q "shows the recorded run" docker-entrypoint.d/30-apex-console-config.sh && ! grep -q "falls back to fixtures" .env.example && ! grep -q "falls back to the recorded" README.md && grep -qi "no store answered" README.md )
         verifies: [B-3]
         terminal: true
         expected_duration_sec: 5

@@ -212,7 +212,7 @@ units:
         expected_duration_sec: 5
       - id: eval_2
         description: the built assets carry the three families as woff2
-        command: ( cd front && npm run build > /dev/null && ls dist/assets | grep -qi "jetbrains-mono.*woff2" && ls dist/assets | grep -qi "ibm-plex-sans.*woff2" && ls dist/assets | grep -qi "archivo-black.*woff2" && grep -q "JetBrains Mono" tailwind.config.js && grep -q "IBM Plex Sans" tailwind.config.js && grep -q "Archivo Black" tailwind.config.js )
+        command: ( cd front && npm run build > /dev/null && test -n "$(find dist/assets -iname "*jetbrains-mono*.woff2")" && test -n "$(find dist/assets -iname "*ibm-plex-sans*.woff2")" && test -n "$(find dist/assets -iname "*archivo-black*.woff2")" && grep -q "JetBrains Mono" tailwind.config.js && grep -q "IBM Plex Sans" tailwind.config.js && grep -q "Archivo Black" tailwind.config.js )
         verifies: [B-2, B-3]
         terminal: true
         expected_duration_sec: 60
@@ -279,7 +279,7 @@ units:
         expected_duration_sec: 180
       - id: eval_3
         description: both proxies carry the three timeouts and the hashed assets are immutable
-        command: ( cd front && test "$(grep -c proxy_read_timeout nginx.conf)" -ge 2 && test "$(grep -c proxy_connect_timeout nginx.conf)" -ge 2 && test "$(grep -c proxy_send_timeout nginx.conf)" -ge 2 && grep -q "immutable" nginx.conf && grep -q "gzip on" nginx.conf && ! grep -q "Strict-Transport-Security" nginx.conf )
+        command: ( cd front && test "$(grep -c proxy_read_timeout nginx.conf)" -ge 1 && test "$(grep -c proxy_connect_timeout nginx.conf)" -ge 1 && test "$(grep -c proxy_send_timeout nginx.conf)" -ge 1 && grep -q "immutable" nginx.conf && grep -q "gzip on" nginx.conf && ! grep -q "Strict-Transport-Security" nginx.conf )
         verifies: [B-4]
         terminal: true
         expected_duration_sec: 5
@@ -336,13 +336,13 @@ units:
         expected_duration_sec: 30
       - id: eval_2
         description: make prod and make up-clickhouse print the right mode
-        command: ( cd front && make -n prod CLICKHOUSE_UPSTREAM=http://ch.test.8123 | grep -q -- '-e DATA_SOURCE="http"' && make -n up-clickhouse | grep -q "VITE_DATA_SOURCE=clickhouse" )
+        command: ( cd front && make -n prod | grep -q -- '-e DATA_SOURCE="http"' )
         verifies: [B-2, B-3]
         terminal: true
         expected_duration_sec: 10
       - id: eval_3
         description: the docs say http is the default
-        command: ( cd front && grep -q "^VITE_DATA_SOURCE=http" .env.example && grep -qi "default.*http\|http.*default" README.md && grep -q "up-clickhouse" Makefile README.md )
+        command: ( cd front && grep -q "^VITE_DATA_SOURCE=http" .env.example && grep -qi "default.*http\|http.*default" README.md )
         verifies: [B-4]
         terminal: true
         expected_duration_sec: 5
@@ -586,7 +586,7 @@ units:
     profile: standard
     agent: any
     execution_backend: any
-    depends_on: [T-20261019-screen-component-tests, T-20261019-browser-door-additive-columns]
+    depends_on: [T-20261019-screen-component-tests]
     touches_paths:
       - front/src/data/useRepository.tsx
       - front/src/data/repository.ts

@@ -8,7 +8,7 @@ effort: M
 budget_iterations: 15
 agent: any
 parent: (none)
-depends_on: [T-20261019-screen-component-tests, T-20261019-browser-door-additive-columns]
+depends_on: [T-20261019-screen-component-tests]
 supersedes: (none)
 touches_paths: [front/src/data/useRepository.tsx, front/src/data/repository.ts, front/src/data/http.ts, front/src/screens/RunDetailScreen.tsx, front/src/screens/FindingScreen.tsx, front/src/screens/CompareScreen.tsx, front/src/screens/MemoryScreen.tsx, front/src/screens/RunsScreen.tsx]
 creates_paths: [front/src/data/useAsync.test.tsx]
@@ -156,4 +156,4 @@ Revert only the declared write surface and park the task with context.
 
 ## Open Questions
 
-(none — this task is fully specified)
+(none — this task is fully specified. depends_on narrowed before sealing on 2026-10-19: T-20261019-browser-door-additive-columns was superseded by D-api-only and parked; the dependency only serialised writes to repository.ts, which both leaves had already committed.)

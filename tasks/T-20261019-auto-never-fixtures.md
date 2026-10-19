@@ -61,7 +61,7 @@ eval_1() {
 
 # eval_2: the entrypoint and docs stop promising the recording
 eval_2() {
-  ( cd front && ! grep -q "shows the recorded run" docker-entrypoint.d/30-apex-console-config.sh && ! grep -q "falls back to fixtures" .env.example && ! grep -q "falls back to the recorded" README.md && grep -qi "unreachable" README.md )
+  ( cd front && ! grep -q "shows the recorded run" docker-entrypoint.d/30-apex-console-config.sh && ! grep -q "falls back to fixtures" .env.example && ! grep -q "falls back to the recorded" README.md && grep -qi "no store answered" README.md )
 }
 
 # eval_3: the whole front gate stays green
@@ -141,4 +141,4 @@ Revert only the declared write surface and park the task with context.
 
 ## Open Questions
 
-(none — this task is fully specified)
+(none — this task is fully specified. Eval amended before sealing on 2026-10-19: the README was rewritten by D-api-only after this leaf was built and names the page by its words, "no store answered".)

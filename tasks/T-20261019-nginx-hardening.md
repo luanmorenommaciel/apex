@@ -67,7 +67,7 @@ eval_2() {
 
 # eval_3: both proxies carry the three timeouts and the hashed assets are immutable
 eval_3() {
-  ( cd front && test "$(grep -c proxy_read_timeout nginx.conf)" -ge 2 && test "$(grep -c proxy_connect_timeout nginx.conf)" -ge 2 && test "$(grep -c proxy_send_timeout nginx.conf)" -ge 2 && grep -q "immutable" nginx.conf && grep -q "gzip on" nginx.conf && ! grep -q "Strict-Transport-Security" nginx.conf )
+  ( cd front && test "$(grep -c proxy_read_timeout nginx.conf)" -ge 1 && test "$(grep -c proxy_connect_timeout nginx.conf)" -ge 1 && test "$(grep -c proxy_send_timeout nginx.conf)" -ge 1 && grep -q "immutable" nginx.conf && grep -q "gzip on" nginx.conf && ! grep -q "Strict-Transport-Security" nginx.conf )
 }
 
 ```
@@ -143,4 +143,4 @@ Revert only the declared write surface and park the task with context.
 
 ## Open Questions
 
-(none — this task is fully specified)
+(none — this task is fully specified. Eval amended before sealing on 2026-10-19: D-api-only removed the /clickhouse proxy and the up-clickhouse target after this leaf was built, so the assertions that counted them were narrowed to what still exists; see tasks/.plans/front-lane-hardening.yaml.)
