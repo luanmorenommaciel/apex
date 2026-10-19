@@ -5,12 +5,15 @@
 # instead name any reachable remote endpoint. No compose-only service hostname
 # is embedded in the application or proxy configuration.
 #
-# Start the store first:
-#   cd ../infra && docker compose up -d clickhouse otel-collector && ./scripts/seed.sh
-#
-# Or the Apex API, and no database user in the browser at all:
+# The default is the Apex API (VITE_DATA_SOURCE=http, decided 2026-10-19): the
+# browser carries an API token and no database user. Start the API first:
 #   (cd ../serve && APEX_API_TOKENS=<token> APEX_API_PORT=8099 uv run apex-api)
-#   VITE_DATA_SOURCE=http VITE_APEX_API_TOKEN=<token> docker compose up --build
+#   VITE_APEX_API_TOKEN=<token> docker compose up --build
+#
+# The bench mode queries the store from the browser and must be asked for
+# (`make up-clickhouse`). Start the store first:
+#   cd ../infra && docker compose up -d clickhouse otel-collector && ./scripts/seed.sh
+#   VITE_DATA_SOURCE=clickhouse docker compose up --build
 services:
   console:
     build:
@@ -30,7 +33,7 @@ services:
       VITE_CLICKHOUSE_DB: apex
       VITE_CLICKHOUSE_USER: apex_ro
       VITE_CLICKHOUSE_PASSWORD: ""
-      VITE_DATA_SOURCE: ${VITE_DATA_SOURCE:-clickhouse}
+      VITE_DATA_SOURCE: ${VITE_DATA_SOURCE:-http}
       # The Apex API, for VITE_DATA_SOURCE=http. The dev server proxies /v1 to
       # this target so the browser stays same-origin; inside the container
       # 127.0.0.1 is the container itself, hence the host gateway alias, the

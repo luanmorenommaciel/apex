@@ -21,7 +21,11 @@ CLICKHOUSE_UPSTREAM ?= http://host.docker.internal:8123
 CH_DB ?= apex
 CH_USER ?= apex_ro
 CH_PASSWORD ?=
-DATA_SOURCE ?= clickhouse
+# http is the default (decided 2026-10-19): the browser carries an API token
+# and no database user. clickhouse is the bench mode and must be asked for —
+# it ships apex_ro to every visitor (see README, "Querying ClickHouse from
+# the browser").
+DATA_SOURCE ?= http
 # For DATA_SOURCE=http: where nginx forwards /v1, and the token /config.js
 # carries. The same gateway alias as CLICKHOUSE_UPSTREAM, for the same reason.
 # APEX_API_URL is deliberately not passed — it would make the browser call the
@@ -29,7 +33,7 @@ DATA_SOURCE ?= clickhouse
 APEX_API_UPSTREAM ?= http://host.docker.internal:8099
 APEX_API_TOKEN ?=
 
-.PHONY: help install dev up up-fixtures down logs sh build preview prod typecheck clean reset ch-ping ch-tables ch-user store
+.PHONY: help install dev up up-clickhouse up-fixtures down logs sh build preview prod typecheck clean reset ch-ping ch-tables ch-user store
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -44,8 +48,11 @@ dev: ## Run Vite on the host against 127.0.0.1:8123
 store: ## Start the canonical ClickHouse (infra lane) and seed it
 	cd ../infra && $(COMPOSE) up -d clickhouse otel-collector && ./scripts/seed.sh
 
-up: ## Start the console against infra's store (http://localhost:5173) — run `make store` first
+up: ## Start the console through the Apex API (http://localhost:5173) — start serve's apex-api on 8099 first, pass VITE_APEX_API_TOKEN
 	$(COMPOSE) up --build
+
+up-clickhouse: ## Start the console straight against infra's store (the bench mode) — run `make store` and `make ch-user` first
+	VITE_DATA_SOURCE=clickhouse $(COMPOSE) up --build console
 
 up-fixtures: ## Start the console alone, served from the recorded run
 	VITE_DATA_SOURCE=fixtures $(COMPOSE) up --build console
@@ -65,7 +72,7 @@ build: ## Type-check and build the production bundle
 preview: ## Serve the production bundle locally
 	npm run preview
 
-prod: ## Build and run the nginx production image on :8080 (override CLICKHOUSE_UPSTREAM; DATA_SOURCE=http with APEX_API_UPSTREAM/APEX_API_TOKEN)
+prod: ## Build and run the nginx production image on :8080 through the API (APEX_API_UPSTREAM/APEX_API_TOKEN); DATA_SOURCE=clickhouse with CLICKHOUSE_UPSTREAM for the bench
 	@# The build stage already runs `npm run build`; the old compose pre-step
 	@# rebuilt the same assets in the dev container and threw them away.
 	@test -n "$(CLICKHOUSE_UPSTREAM)" || { \

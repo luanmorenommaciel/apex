@@ -5,30 +5,36 @@ screens, styled with Tailwind and reading the frozen **contract v0.6** tables �
 straight from ClickHouse, or through the Apex API in `serve/` so the browser
 holds an API token and no database user (`DATA_SOURCE=http`).
 
+**The default data source is `http`**: the console reads through `serve/`'s
+`apex-api`, the browser carries an API token and no database user. Start the
+API first ([serve/RUNBOOK.md](../serve/RUNBOOK.md), it uses port 8099), then:
+
+```bash
+VITE_APEX_API_TOKEN=<token> make up    # compose, through the host gateway  -> http://localhost:5173
+VITE_APEX_API_TOKEN=<token> make dev   # Vite on the host, proxies /v1 to 127.0.0.1:8099
+make up-fixtures                       # console alone, served from the recorded gate run
+make help                              # every target
+```
+
+Querying ClickHouse straight from the browser is the **bench mode** and is
+opt-in — it ships `apex_ro` to every visitor (see "Querying ClickHouse from
+the browser"):
+
 ```bash
 make store         # start infra/'s ClickHouse and seed it — the canonical store
 make ch-user       # create apex_ro, the read-only user the browser ships
-make up            # console against that store       -> http://localhost:5173
-make up-fixtures   # console alone, served from the recorded gate run
-make help          # every target
+make up-clickhouse # console against that store, no API in the path
 ```
 
-The console no longer runs a ClickHouse of its own: the store belongs to the
-`infra/` lane. Compose reaches its host-published HTTP port by default instead
-of depending on a compose-only service name or shared network alias.
+The console runs no ClickHouse of its own: the store belongs to the `infra/`
+lane. Compose reaches its host-published HTTP port by default instead of
+depending on a compose-only service name or shared network alias.
 
 Without Docker: `nvm use && npm ci && make dev` — Node 22 (`.nvmrc`; the
 `engines` range in `package.json` is what every devDependency accepts, and
-`engines.test.ts` keeps it in step with the image and CI) — with no store reachable,
-`VITE_DATA_SOURCE=auto` falls back to the recorded gate run.
-
-Against the Apex API instead of a database user — start `serve/`'s `apex-api`
-first ([serve/RUNBOOK.md](../serve/RUNBOOK.md), it uses port 8099), then:
-
-```bash
-VITE_DATA_SOURCE=http VITE_APEX_API_TOKEN=<token> make dev   # Vite proxies /v1 to 127.0.0.1:8099
-VITE_DATA_SOURCE=http VITE_APEX_API_TOKEN=<token> make up    # compose: the host gateway, port 8099
-```
+`engines.test.ts` keeps it in step with the image and CI). `.env.example`
+defaults to `VITE_DATA_SOURCE=http`; `auto` probes the API, then ClickHouse,
+then falls back to the recorded gate run.
 
 `VITE_APEX_API_PROXY_TARGET` moves the dev proxy's target; the browser keeps
 calling `/v1` relative and stays same-origin either way. `auto` probes the API
@@ -58,7 +64,7 @@ side. One image therefore serves every deployment:
 | `CLICKHOUSE_DB` | `apex` | Database the queries name |
 | `CLICKHOUSE_USER` | `apex_ro` | Must stay the read-only user — it ships to the browser |
 | `CLICKHOUSE_PASSWORD` | *empty* | Set to `""` deliberately for `no_password`; unset means "keep the bundle's default" |
-| `DATA_SOURCE` | `auto` | `clickhouse`, `http`, `fixtures`, or `auto` (probe the API, then ClickHouse, then fall back) |
+| `DATA_SOURCE` | `auto` on the image; `http` from `make prod`, compose and `.env.example` | `http` (the default everywhere the repo starts the console — the browser holds an API token, never a database user), `clickhouse` (the opt-in bench mode), `fixtures`, or `auto` (probe the API, then ClickHouse, then fall back) |
 | `APEX_API_UPSTREAM` | `http://127.0.0.1:1` | Where nginx proxies `/v1` for `DATA_SOURCE=http`. Defaults to an unroutable address so a ClickHouse-mode image still boots |
 | `APEX_API_TOKEN` | *unset* | The bearer token written into `/config.js`. A credential for the API, never for the store — scope and rotate it per consumer |
 | `APEX_API_URL` | *unset* | Only for a deliberate cross-origin call. The API sends no CORS header, so a browser blocks that; leave it unset and let nginx forward `/v1` |
@@ -88,11 +94,12 @@ docker run --rm -p 8080:80 \
   apex-console:prod
 ```
 
-`make prod` does the same against infra's store through the host gateway;
-override any of the eight on the command line. For the API path:
+`make prod` runs the image through the API by default, forwarding `/v1` to
+the host gateway; override any of the eight on the command line:
 
 ```bash
-make prod DATA_SOURCE=http APEX_API_UPSTREAM=http://host.docker.internal:8099 APEX_API_TOKEN=<token>
+make prod APEX_API_TOKEN=<token>                      # http, the default
+make prod DATA_SOURCE=clickhouse                      # the bench mode, against infra's store
 ```
 
 An `http` container needs no `CLICKHOUSE_UPSTREAM` at all — run directly, it
@@ -159,7 +166,10 @@ number that had been asserted rather than measured.
 
 ## Querying ClickHouse from the browser
 
-This was an explicit choice, and it has two consequences worth stating plainly:
+`DATA_SOURCE=clickhouse` is **opt-in** (`make up-clickhouse`, `make prod
+DATA_SOURCE=clickhouse`); the default is `http`, decided on 2026-10-19 for the
+first reason below. The bench mode remains an explicit choice with two
+consequences worth stating plainly:
 
 1. **The credential ships to the browser.** `contract/01-readonly-user.sql`
    creates `apex_ro` with `readonly = 1` and `GRANT SELECT` only. Anything a
