@@ -29,7 +29,7 @@ Definir os contratos de leitura das telas Compare, Memory e Verify: estados obri
 
 **Próximo passo histórico:** Nenhuma ação nesta PR. Owner das decisões abertas: donos de DEC-07/DEC-08. Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-49.md#item-487).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-49.md#item-487).
 
 ### #100 — feat(front): Apex Console — the seven screens as a runnable Vite + React app
 
@@ -39,7 +39,7 @@ Entregar a Apex Console: sete telas como app Vite + React + TypeScript alinhado 
 
 **Próximo passo histórico:** Nenhuma ação nesta PR. Owner da prova integrada: Pod 1 em #172. Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-49.md#item-490).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-49.md#item-490).
 
 ### #118 — fix(front): isolate /verify source states and async selections (I1)
 
@@ -49,7 +49,7 @@ Implementar só a parte I1 do #116: estados por fonte e seleção assíncrona se
 
 **Próximo passo histórico:** Nenhuma ação nesta PR. Owner da lição: mantenedor (DEC-N4). Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-50.md#item-494).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-50.md#item-494).
 
 ### #119 — fix(front): present /verify proposals and evidence faithfully (I2)
 
@@ -59,7 +59,7 @@ Implementar a parte I2 do #116: classificação fiel da proposta (overlay JSON e
 
 **Próximo passo histórico:** Nenhuma ação nesta PR. Owner da lição: mantenedor (DEC-N4). Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-50.md#item-495).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-50.md#item-495).
 
 ### #120 — fix(front): expose original proposal as named region
 
@@ -69,7 +69,7 @@ Corrigir acessibilidade: o bloco da proposta original usava `aria-label` num `<p
 
 **Próximo passo histórico:** Nenhuma ação obrigatória. Owner a confirmar: Pod 1, para a opção (b). Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-50.md#item-496).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-50.md#item-496).
 
 ### #129 — feat(serve): apex-api — one HTTP layer between ClickHouse and its consumers
 
@@ -79,7 +79,7 @@ Pôr uma camada FastAPI entre o ClickHouse e quem o lê (decidido no Weekly Sync
 
 **Próximo passo histórico:** Owner a confirmar: donos da #171 (DEC-08) e da #172 (Pod 1). Entrada: este registro. Saída: política de token e recibo de navegador. Encerramento: a PR segue integrada.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-51.md#item-501).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-51.md#item-501).
 
 ### #136 — fix(front): keep mechanism and runtime verdicts independent
 
@@ -89,7 +89,7 @@ Desacoplar veredito de mecanismo do veredito runtime no contrato do Front; rejei
 
 **Próximo passo histórico:** Histórico integrado; prova remota futura deve usar SHA e escopo do Front, com destino de CI/governança pertinente. #156 não deve virar tracker genérico de toda validação Front. A decisão funcional do Verify permanece #117.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-51.md#item-507).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-51.md#item-507).
 
 ### #137 — fix(front): recognize retry pressure findings
 
@@ -99,7 +99,7 @@ Adicionar RETRY_PRESSURE aos tipos de finding conhecidos do contrato do Front, p
 
 **Próximo passo histórico:** Revisar #166 no Pod 1/Engine, responsável a confirmar, e escolher controle que use TAIL_OUTLIER/tipo desconhecido no consumidor concreto. Não propor reabrir a #137 histórica.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-51.md#item-508).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-51.md#item-508).
 
 ### #138 — ci(front): reject warnings and empty suites
 
@@ -109,7 +109,7 @@ Fazer o gate de CI do Front falhar em warnings do ESLint e em suíte de testes v
 
 **Próximo passo histórico:** Conferência estática com #160 preserva lint --max-warnings 0 e ausência de passWithNoTests. Sem repetição automática de teste já relatado; política para novas regras é decisão do time, separada de defeito observado.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-51.md#item-509).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-51.md#item-509).
 
 ### #146 — test(serve): pin fix_verifications projection parity with the front
 
@@ -119,7 +119,7 @@ A fronteira de piso de runtime_certified/runtime_verdict estava escrita nas duas
 
 **Próximo passo histórico:** Na decisão N03/#117, editar as duas projeções e conservar controle contra edição unilateral. Responsável a combinar Verify/Front/Serve. Saída inclui política aprovada e prova proporcional; byte-paridade isolada não aceita semântica.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-52.md#item-517).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-52.md#item-517).
 
 ### #151 — fix(front): render API error detail only when textual
 
@@ -129,17 +129,17 @@ FastAPI devolve 422 com detail como lista; o Console tratava como string, podend
 
 **Próximo passo histórico:** Sem mudança adicional obrigatória. Se houver necessidade de UX comprovada, propor resumo de erros de campo com teste que preserve sanitização; escolher no Pod 1, sem tratar fallback atual como incidente real.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-53.md#item-522).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-53.md#item-522).
 
 ### #153 — fix(serve,front): the console reads the same rows through either door
 
 Sweep da apex-api: uma linha deve ser a mesma linha por qualquer porta (ClickHouse direto no browser vs. API). Quatro+ lugares onde não era, invisíveis para a suíte unitária porque fake devolve o que recebe.
 
-**Implementação e limite:** Feito: run não indexado renderizava zero medido (sentinela indexed no CTE; confirmado live: browser -1 != api 0); um formato de timestamp só (ISO 8601 T, ms, UTC, wire.py); QueryFailure em toda tela antes de empty state; badge de fonte http correto; gate six-lane corrigido (detail=full; encontrado ao rodar); C3/C4 overlay com spark.driver.host; console_parity_gate.py live; test_every_console_field_is_projected; entry point E2E console_reflection + console.live.test.tsx; compose/make prod/README para modo http. Faltante (Open declarado): /ask ainda mockup (decisão de produto D-2026-09-23), verify lane não rodada E2E. Não comprovado: CI remota (billing) — toda evidência local.
+**Implementação e limite:** Feito: run não indexado renderizava zero medido (sentinela indexed no CTE; confirmado live: browser -1 != api 0); um formato de timestamp só (ISO 8601 T, ms, UTC, wire.py); QueryFailure em toda tela antes de empty state; badge de fonte http correto; gate six-lane corrigido (detail=full; encontrado ao rodar); C3/C4 overlay com spark.driver.host; console_parity_gate.py live; test_every_console_field_is_projected; entry point E2E console_reflection + console.live.test.tsx; compose/make prod/README para modo http. Faltante (Open declarado): /ask ainda mockup (decisão de produto D-2026-09-23), verify lane não rodada E2E. Não comprovado: CI remota (billing) — toda evidência local. O commit eb449cb também relata imagem DEV anterior à emissão de job_conf e acrescenta aviso do orquestrador quando falta essa linha. É achado operacional histórico do E2E, não incidente novo nesta auditoria.
 
 **Próximo passo histórico:** Coordenar N15 com a matriz de prova #156 e fronteira de navegador #172; comparar #158/#159 com #182 antes de alterar a mesma superfície. Responsáveis Pod 1/Pod 3 a confirmar. #159 é review de gate com efeitos próprios; não é motivo para bloquear todos os estudos.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-53.md#item-524).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-53.md#item-524).
 
 ## Colaborações que precisam permanecer explícitas
 
