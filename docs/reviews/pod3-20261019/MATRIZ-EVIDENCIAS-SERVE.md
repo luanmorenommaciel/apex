@@ -14,7 +14,7 @@ Consolidação documental em 19/10/2026. Nenhuma prova nova de produto foi execu
 | Combinação #157/#158/#159 | 572 testes locais registrados | árvore `19e61b74e9ae4721b6c7263ed900aa6fd99709f4`, recibo completo na #156 | Não é CI da combinação nem prova da futura main |
 | G1 real CLI/API/ClickHouse | 19 PASS / 0 FAIL / 0 NOT_EXERCISED registrados | gate blob `3e0b3bbe01cd181cdac4b3295f14118a5db70921`, fonte #156 | Não representa todo gate posterior, todo cenário, navegador ou Spark/Collector |
 | Oito tools por MCP stdio/HTTP reais | Positivos/ausência/indisponibilidade no escopo descrito na #156 | recibos históricos completos na #156 | Cobertura não universal por parâmetro; não inclui positivo `plan_json` nem todo blob de gate |
-| #129 em 23/09 | Relato de 40 focados API/console, 275 Serve, 130 Front e build | relato histórico do autor; #129 foi integrada depois | Não somar suítes sobrepostas; não reapresentar como resultado desta etapa |
+| #129 em 23/09 | Relato de 40 focados API/console, 275 Serve, 130 Front e build (relato intermediário). O corpo da #129 registra para fab6620: 289 Serve/130 Front e typecheck, sem consulta live nesse passo. Não somar ou transferir contagens entre cortes. | relato histórico do autor; #129 foi integrada depois | Não somar suítes sobrepostas; não reapresentar como resultado desta etapa |
 | nginx/imagem/browser | Lacuna de validação delimitada | #172 | Provar navegação e estados data/empty/error/indisponível no perfil HTTP definido |
 | Gate stdio de lista contratada | Leitura estática: sete nomes no gate versus oito registradas | main `c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874`, proposta N16 na #181 | Reconciliar lista/critério; não afirmar execução do gate nesta preparação |
 
