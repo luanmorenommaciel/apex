@@ -93,7 +93,7 @@
     "topic": "Regra SQL de recusas",
     "existing_destination": "#182; interface Serve",
     "known_and_limit": "Corpo relata seis stages sintéticos e refused_count=3 em CH24.8; TS replica booleanos e teste Python fixa fragmentos.",
-    "proposed_next_step": "Versionar fixture/oráculo esperado se o time exigir; conservar a prova relatada e seu corte.",
+    "proposed_next_step": "Conferir primeiro os artefatos da execução live já relatada; propor fixture/oráculo adicional somente para eventual garantia que o time considere necessária.",
     "proposed_acceptance": "Execução da CTE com resultado independente é prova distinta de igualdade entre portas da mesma query.",
     "owner": "a confirmar",
     "new_issue_created": false

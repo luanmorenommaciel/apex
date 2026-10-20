@@ -10,6 +10,7 @@ Corte atual: c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874. Metadados atuais em ../fo
 - Autor do objeto: `agmarcastro`. Assignees atuais: agmarcastro.
 - Rótulos: crew-a, pod-1-front-end. Papel no pacote: objeto ou interface técnica; ver rótulos.
 - Head: `74fdb0791825aa89c419694ec71f2aa3e6ea4d74`; base `main`; draft=False. Checks: {'success': 3}; reviews: 0.
+- Revisores solicitados pelo autor: `sidymar`, `gustocezar`, `luanmorenommaciel`. Solicitação não equivale a review concluída ou prazo confirmado.
 - Próximo responsável e prazo: a confirmar. Nenhum novo aceite funcional.
 
 ## PR #158 — test(serve): pin findings score-tie order on both SQL doors

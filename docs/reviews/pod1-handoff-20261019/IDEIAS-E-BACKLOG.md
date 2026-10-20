@@ -108,7 +108,15 @@ Todos os encaminhamentos abaixo são propostas para discussão. Implementação 
 
 **Base e limite:** Corpo relata seis stages sintéticos e refused_count=3 em CH24.8; TS replica booleanos e teste Python fixa fragmentos.
 
-**Menor encaminhamento:** Versionar fixture/oráculo esperado se o time exigir; conservar a prova relatada e seu corte.
+**Menor encaminhamento:** Conferir primeiro os artefatos da execução live já relatada; propor fixture/oráculo adicional somente para eventual garantia que o time considere necessária.
 
 **Critério proposto:** Execução da CTE com resultado independente é prova distinta de igualdade entre portas da mesma query.
 
+
+## Interfaces conferidas no diff da #182
+
+- **#169:** a CTE de refused_count acrescenta um consumidor que escolhe valores com `argMax(..., se.ts)`. Incluir esse consumidor na comparação de população/tentativa; a PR não decide automaticamente a política global.
+- **#117 / N03:** `test_projection_parity.py` passa de comparar duas cópias SQL a fixar o predicado atual da regra 2. Se houver alteração posterior do piso de certificação, atualizar o controle na árvore escolhida; isso não cria um bloqueio novo para a #182.
+- **#172, pergunta de revisão:** a imagem declara CSP `connect-src 'self'`, enquanto há referência a configuração cross-origin. Conferir o perfil suportado e ajustar a orientação correspondente se necessário. O efeito no navegador não foi observado nesta auditoria.
+
+Esses pontos são interfaces ou perguntas de revisão, não falhas de execução demonstradas. A revisão não executou a combinação de branches.

@@ -22,13 +22,13 @@ Escolher a primeira revisão e confirmar papéis/prazos com o time. Estes são r
 - **Papel a combinar:** Representantes de Front/Serve e responsável pelo ambiente, a confirmar.
 - **Prazo:** a combinar, depois de confirmar o responsável.
 
-## 3. Preparar o protocolo da prova HTTP no navegador
+## 3. Reconciliar as provas existentes com os critérios HTTP no navegador
 
 - **Tipo:** Preparação sem runtime.
-- **Entrada:** Escolha proposta de árvore/imagem, perfis e relatos existentes de API, TestClient, jsdom e curl.
-- **Entrega pequena:** Protocolo com rotas, dados, passos, recibos esperados e exclusões. Sem executar navegador, stack ou serviços nesta preparação.
+- **Entrada:** Recibos do Agmar: E2E histórico #153, corpo/commits #182, imagem/curl/fixtures e relato de E2E nginx compartilhado no Discord, com cortes separados.
+- **Entrega pequena:** Mapa dos critérios já atendidos e eventual complemento específico da #172, com rotas, dados, recibos e exclusões. Primeiro conferir as provas existentes, sem repetir trabalho suficiente.
 - **Concluído quando:** Identificar commit, imagem, DATA_SOURCE=http, perfil de token, request por nginx, resposta sanitizada e estado visual esperado. Incluir vazio, erro e indisponibilidade; ausente não vira zero nem fixture silenciosa.
-- **Dependência real:** Preparar o protocolo pode avançar offline. Executar os casos depende de árvore, ambiente e autorização próprios, fora desta entrega.
+- **Dependência real:** Conferir os recibos pode avançar offline. Somente eventual execução adicional depende do residual identificado, árvore e ambiente próprios, fora desta entrega.
 - **Papel a combinar:** Revisores/executores de Front e Serve, a confirmar.
 - **Prazo:** a combinar, depois de confirmar o responsável.
 

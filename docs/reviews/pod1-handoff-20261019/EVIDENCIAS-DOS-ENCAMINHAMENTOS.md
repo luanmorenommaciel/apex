@@ -22,3 +22,11 @@ Corte preservado da Parte 10: fontes de 19/10/2026. Os links de código abaixo u
 - **Direto, metadados:** [#172](https://github.com/luanmorenommaciel/apex/issues/172); [recibo](https://api.github.com/repos/luanmorenommaciel/apex/issues/172).
 - **Proposto:** [protocolo e casos](MATRIZ-DE-EVIDENCIAS.md). API/TestClient/jsdom/curl e browser real são superfícies distintas; nenhuma nova prova é executada para escrever o protocolo.
 
+
+## Esclarecimento da revalidação de 19/10
+
+A contribuição do Agmar na #182 inclui implementação na branch, não somente ideias. O corpo relata live em ClickHouse 24.8 (seis stages, refused_count=3), gate 17/17, Front 202/8 skip e Serve 456. O histórico público da #153 em `serve/VALIDATION.md` relata três jobs reais até o App; o orquestrador chama Vitest/jsdom e acessa a API diretamente. O commit 222498cf da #182 relata imagem de produção em fixtures. O Discord acrescenta relato de E2E inclusive nginx, cuja árvore/recibo devem ser reconciliados antes de solicitar prova adicional. Nenhuma dessas execuções foi reproduzida nesta auditoria.
+
+- [VALIDATION no head da #182](https://github.com/luanmorenommaciel/apex/blob/74fdb0791825aa89c419694ec71f2aa3e6ea4d74/serve/VALIDATION.md).
+- [E2E até o App](https://github.com/luanmorenommaciel/apex/blob/74fdb0791825aa89c419694ec71f2aa3e6ea4d74/tests/e2e/console_reflection.sh).
+- [Gate e bindings da #182](https://github.com/luanmorenommaciel/apex/blob/74fdb0791825aa89c419694ec71f2aa3e6ea4d74/serve/tools/console_parity_gate.py) e [testes do gate](https://github.com/luanmorenommaciel/apex/blob/74fdb0791825aa89c419694ec71f2aa3e6ea4d74/serve/tests/test_console_parity_gate.py). R2 está nesses arquivos, além do teste de leituras citado acima.

@@ -6,7 +6,7 @@ Base main `c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874`. Metadados e heads principa
 
 Direto significa objeto/código/recibo consultado; relatado significa resultado descrito pelo autor; proposto significa controle/critério futuro. Merge não concede novo aceite, autor de PR não é owner futuro e silêncio no endpoint de review não exclui leitura fora dele. Quem assume a próxima ação e os prazos serão confirmados pelo time.
 
-Os exemplos preservam autoria, commits e limites; a Console #100/#153 é do Agmar, a API #129 é do Sidymar, com contribuição fab6620 de Augusto. A #182 relata live com seis stages/refused_count=3; a lacuna específica é prova versionada/reprodução independente, não inexistência de qualquer relato.
+Os exemplos preservam autoria, commits e limites; a Console #100/#153 é do Agmar, a API #129 é do Sidymar, com contribuição fab6620 de Augusto. A #182 relata live com seis stages/refused_count=3; esta auditoria não verificou uma fixture SQL versionada com resultado esperado independente. Conferir artefatos e alcance existentes antes de propor complemento; ausência de verificação não é prova de inexistência.
 
 As referências históricas completas estão no [estudo dos 525 IDs](https://github.com/luanmorenommaciel/apex/pull/186), em draft com base na #183. Este handoff é um recorte legível, sem reabrir o inventário ou criar novas tarefas por cada ID. Os links de fichas usam o SHA público da edição de origem. Arquivos brutos locais, caminhos pessoais e pareceres auxiliares integrais não estão incluídos; portanto este pacote não é backup integral do workspace.
 

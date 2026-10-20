@@ -39,14 +39,14 @@
     "publication_scope": "Proposta documental; não execução ou aceite."
   },
   {
-    "topic": "Preparar o protocolo da prova HTTP no navegador",
+    "topic": "Reconciliar as provas existentes com os critérios HTTP no navegador",
     "objects": [
       172
     ],
-    "input": "Escolha proposta de árvore/imagem, perfis e relatos existentes de API, TestClient, jsdom e curl.",
-    "output": "Protocolo com rotas, dados, passos, recibos esperados e exclusões. Sem executar navegador, stack ou serviços nesta preparação.",
+    "input": "Recibos do Agmar: E2E histórico #153, corpo/commits #182, imagem/curl/fixtures e relato de E2E nginx compartilhado no Discord, com cortes separados.",
+    "output": "Mapa do que já está demonstrado e eventual complemento específico de #172, com árvore, casos, recibos e exclusões; não repetir prova suficiente.",
     "criterion": "Identificar commit, imagem, DATA_SOURCE=http, perfil de token, request por nginx, resposta sanitizada e estado visual esperado. Incluir vazio, erro e indisponibilidade; ausente não vira zero nem fixture silenciosa.",
-    "dependency": "Preparar o protocolo pode avançar offline. Executar os casos depende de árvore, ambiente e autorização próprios, fora desta entrega.",
+    "dependency": "Primeiro conferir os recibos existentes offline. Somente eventual execução adicional depende do residual, árvore e ambiente próprios.",
     "role": "Revisores/executores de Front e Serve, a confirmar.",
     "class": "Preparação sem runtime",
     "evidence": [

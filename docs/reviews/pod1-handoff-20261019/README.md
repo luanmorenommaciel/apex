@@ -14,7 +14,7 @@ A Console já integra contribuições de várias pessoas. Augusto entregou corre
 
 ## O que precisamos decidir
 
-Direção e ordem da #182 com #158/#159; perfil de token na #171; árvore/casos da prova #172. **Ask #122 é uma decisão separada**, assim como a próxima fatia de contrato #117/#115 e os estudos.
+Direção e ordem da #182 com #158/#159; perfil de token na #171; reconciliação das provas existentes e eventual residual da #172. **Ask #122 é uma decisão separada**, assim como a próxima fatia de contrato #117/#115 e os estudos.
 
 [Alternativas, recomendação e consequência de adiar](PERGUNTAS-DE-DECISAO.md).
 
@@ -29,3 +29,7 @@ Escolher **uma primeira revisão**, confirmar quem assume, registrar o critério
 - **Para aprofundar:** [autoria e histórico](ENTREGAS-E-AUTORIA.md), [ideias/backlog](IDEIAS-E-BACKLOG.md) e [índice das fichas](INDICE-DE-FICHAS.md).
 
 [Fontes e limites](FONTES-E-LIMITES.md). Não houve novo teste de produto nem novo aceite funcional nesta revisão editorial.
+
+## Esclarecimento após revalidação das PRs
+
+A #182 já implementa as mudanças na branch do Agmar e apresenta provas locais; está aberta e ainda fora da main. Há também E2E histórico de jobs reais até o App, registrado pela #153. A próxima ação da #172 começa pela conferência dessas provas e do relato adicional de nginx, para identificar somente eventual complemento. A ausência de reprodução nesta auditoria não deve ser lida como ausência do trabalho do autor. Veja [evidências e seus cortes](EVIDENCIAS-DOS-ENCAMINHAMENTOS.md).

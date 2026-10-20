@@ -21,16 +21,17 @@ Nenhum teste, build, container, serviço, workflow manual ou instalação foi ex
 | #100/118/119/120 | Console e correções Verify integradas; autoria e cortes nas fichas | Não exigir reabrir PR histórica por ausência de prova visual nesta rodada |
 | #129/fab6620 | API integrada, HTTP/same-origin e ajustes de integração | Não entrega sozinho o Ask nem a política #171 |
 | #136/#137/#138/#146/#151 | Regras, CI, projeção e detalhe textual implementados | Provas unitárias/estáticas não são browser; acompanhamento por contrato consumidor |
-| #153 | Autor relata stack real, paridade e telas com jobs reais; script console.live usa jsdom/App/API | Distinguir esse relato de navegador real via nginx; #172 cobre o residual |
-| #182 | Três checks verdes no head74fdb079, zero reviews na captura; corpo relata Front202/8skip, Serve456, gate17/17 e seis stages/refused_count3 | Contagens são relatos; não foram reproduzidas. Falta oráculo SQL versionado da CTE e conferência proporcional das superfícies |
+| #153 | Autor relata stack real, paridade e telas com jobs reais; script console.live usa jsdom/App/API | Reconhecer a cadeia já relatada e comparar seus recibos com o relato adicional de nginx; somente eventual residual segue na #172 |
+| #182 | Checks `repo checks (license + collector config)`, `front (Node 22)` e `python lanes + root gate` verdes no head74fdb079, zero reviews na captura; corpo relata Front 202/8 skip, Serve 456, gate 17/17 e seis stages/refused_count=3 | Contagens são relatos; não foram reproduzidas nesta auditoria. A prova live já existe como relato do autor; esta auditoria não verificou uma fixture SQL versionada com resultado esperado independente. Conferir os artefatos existentes antes de propor complemento |
 | Integração158/159/182 | Dois usos de helpers removidos confirmados estaticamente | Portar e validar na árvore escolhida; não foi feito merge/rebase |
 | Token/config.js | O diff documenta transmissão ao browser | Não prova identidade por usuário nem ratificação do perfil171 |
 
 ## Preparação do protocolo #172 (documental)
 
+- Primeiro reconciliar os recibos já apresentados pelo Agmar, incluindo o E2E histórico da #153 e o relato de imagem nginx compartilhado no Discord. Registrar casos atendidos, limites e somente eventual residual; não partir da premissa de ausência de E2E.
 - Árvore candidata: escolher main c3c3ea3 ou head182, sem misturar imagens/recibos.
 - Identidades a preencher pelo executor: commit, imagem/tag/digest, DATA_SOURCE, endpoint, perfil de token, data, caso e rota.
 - Casos: lista/detalhe de run, findings/transições, verificação conforme fixture disponível; estado carregando, vazio, erro textual, API indisponível e ausência de dado indexado.
 - Registro mínimo por caso: requisição passando por nginx, status/resposta sanitizada e estado visual; rotas excluídas nomeadas.
 - Controles: indisponibilidade não recai silenciosamente em fixture; erro não vira vazio; ausência não vira zero medido; não arquivar token.
-- Resultado da preparação: protocolo proposto. Resultado da execução: não realizado, depende de ambiente e autorização próprios.172a/172b são subpassos locais, não issues novas.
+- Resultado desta preparação: protocolo proposto; nenhuma execução nova por esta auditoria. Isso não nega execuções anteriores relatadas pelo autor. Qualquer complemento depende do residual identificado, árvore e ambiente.172a/172b são subpassos locais, não issues novas.
