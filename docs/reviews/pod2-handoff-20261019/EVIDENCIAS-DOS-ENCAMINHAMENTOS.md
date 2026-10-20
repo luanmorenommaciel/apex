@@ -6,7 +6,7 @@ Corte preservado da Parte 10: fontes de 19/10/2026. Os links de código abaixo u
 
 - **Direto, metadados:** [#155](https://github.com/luanmorenommaciel/apex/pull/155); [recibo](https://api.github.com/repos/luanmorenommaciel/apex/pulls/155). Head `561b27e7d1914dddf4989bf04834a33da726a45f`, autor `gustocezar`.
 - **Direto, estado/texto público:** [#154](https://github.com/luanmorenommaciel/apex/issues/154); [recibo da coleção](https://api.github.com/repos/luanmorenommaciel/apex/issues?state=open&per_page=100).
-- **Direto, CI do head:** [recibo de checks155](https://api.github.com/repos/luanmorenommaciel/apex/commits/561b27e7d1914dddf4989bf04834a33da726a45f/check-runs?per_page=100): 11 failure no corte. Sem novo diagnóstico de causa atual de billing; decidir a prova da árvore escolhida.
+- **Direto, CI do head:** [recibo de checks 155](https://api.github.com/repos/luanmorenommaciel/apex/commits/561b27e7d1914dddf4989bf04834a33da726a45f/check-runs?per_page=100): 11 failure no corte. Sem novo diagnóstico de causa atual de billing; decidir a prova da árvore escolhida.
 
 ## 2. Confrontar a interface R9D com a contribuição do Pod 3
 

@@ -2,7 +2,7 @@
   {
     "topic": "Guard Engine alinhado ao preflight",
     "existing_destination": "#154/#155; E19/E20",
-    "known_and_limit": "131 preflight e139 guard estão integrados;155 propõe pequena guarda de consistência e tem11checks failure no corte.",
+    "known_and_limit": "131 preflight e #139 guard estão integrados; #155 propõe pequena guarda de consistência e tem 11 checks failure no corte.",
     "proposed_next_step": "Revisar diff e controles bidirecionais; considerar recibos históricos sem inferir causa atual de billing. Reconciliar link/board só quanto ao critério satisfeito.",
     "proposed_acceptance": "Teste discrimina coluna ausente/extra e revisão da árvore de integração; ClickHouse real não é necessário só para ler guarda estática.",
     "owner": "a confirmar",
@@ -37,7 +37,7 @@
   },
   {
     "topic": "Argumentos R9D ON/OFF",
-    "existing_destination": "#167; E16/DEC-N5, interface#185",
+    "existing_destination": "#167; E16/DEC-N5, interface #185",
     "known_and_limit": "Main tem argv/assinatura incompatíveis. #185 Pod3/Agmar é candidata externa com EnvFile/AdditionalComposeFile.",
     "proposed_next_step": "Comparar contribuição pública antes de variante local; revisar args, binding, comando completo, preflight e simetria dos braços.",
     "proposed_acceptance": "Prova discriminante de argumento removido de um braço; benchmark separado. Não declarar execução PowerShell reproduzida.",
@@ -91,7 +91,7 @@
   },
   {
     "topic": "DDL: replay e verificação",
-    "existing_destination": "#170; E22/E23, interface#147",
+    "existing_destination": "#170; E22/E23, interface #147",
     "known_and_limit": "147 endurece alvo MV multiline; não prova no-op de todas migrações. verify_ddl tem alcance delimitado.",
     "proposed_next_step": "Separar promessa de replay, janela de alteração MV, quietude e campos inspecionados; definir ensaio/rollback conforme mudança.",
     "proposed_acceptance": "Critérios por migração e consumidor; não tratar nome/tipo como equivalência completa do DDL.",
@@ -111,7 +111,7 @@
     "topic": "Credenciais e recuperação",
     "existing_destination": "#176; E13, N06/#185",
     "known_and_limit": "S3A DEV é interface Pod3; rotação ClickHouse é outro tema. Não foram lidos .env ou valores de credencial.",
-    "proposed_next_step": "Documentar fronteira S3A candidata185 separada da política de rotação/recuperação ClickHouse.",
+    "proposed_next_step": "Documentar fronteira S3A candidata 185 separada da política de rotação/recuperação ClickHouse.",
     "proposed_acceptance": "Runbook com responsáveis e recuperação a combinar; sem publicar segredo ou alterar acesso nesta etapa.",
     "owner": "a confirmar",
     "new_issue_created": false

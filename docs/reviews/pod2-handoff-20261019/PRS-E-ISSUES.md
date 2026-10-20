@@ -1,10 +1,12 @@
-> Organização dos pods conforme Augusto: Pod 3. Labels abaixo são metadados históricos; o literal `rótulo legado sem autoridade de organização` não representa um pod válido do time.
+> Organização adotada: Pods 1, 2 e 3. Rótulos do GitHub são metadados históricos; não redefinem os pods ou o ownership do time.
 
 # PRs e issues — Pod 2 / Engine e interfaces Package, Harness e Infra
 
 Corte atual: c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874. Metadados atuais em ../fontes/. Checks somente onde foram reconsultados; ausência de consulta não é zero checks. Autor não equivale a owner do próximo passo. Rótulos preservados, sem alterar GitHub.
 
 ## PR #155 — test(engine): keep schema preflight aligned with stage queries
+
+- Revalidação: base SHA `c4541a59d8e9ad4ff6cbcca67a606ad21247eb9c`; comentários 0; checks {'failure': 11}; reviews 0. Corte: 2026-10-20T02:02:05.860768+00:00.
 
 - Link: https://github.com/luanmorenommaciel/apex/pull/155
 - Autor do objeto: `gustocezar`. Assignees atuais: nenhum.
@@ -15,6 +17,8 @@ Corte atual: c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874. Metadados atuais em ../fo
 
 ## PR #161 — ci: keep root gate diagnostics after Python lane failures
 
+- Revalidação: base SHA `c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874`; comentários 0; checks {'success': 3}; reviews 0. Corte: 2026-10-20T02:01:57.660918+00:00.
+
 - Link: https://github.com/luanmorenommaciel/apex/pull/161
 - Autor do objeto: `gustocezar`. Assignees atuais: nenhum.
 - Rótulos: sem rótulos. Papel no pacote: objeto ou interface técnica; ver rótulos.
@@ -23,6 +27,8 @@ Corte atual: c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874. Metadados atuais em ../fo
 - Próximo responsável e prazo: a confirmar. Nenhum novo aceite funcional.
 
 ## PR #162 — fix(verify): align module version with package 0.1.0
+
+- Revalidação: base SHA `c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874`; comentários 0; checks {'success': 3}; reviews 0. Corte: 2026-10-20T02:01:56.463179+00:00.
 
 - Link: https://github.com/luanmorenommaciel/apex/pull/162
 - Autor do objeto: `gustocezar`. Assignees atuais: nenhum.
@@ -33,6 +39,8 @@ Corte atual: c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874. Metadados atuais em ../fo
 
 ## PR #164 — docs: align Serve and Verify docs with current contract
 
+- Revalidação: base SHA `c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874`; comentários 0; checks {}; reviews 0. Corte: 2026-10-20T02:01:53.050160+00:00.
+
 - Link: https://github.com/luanmorenommaciel/apex/pull/164
 - Autor do objeto: `gustocezar`. Assignees atuais: nenhum.
 - Rótulos: sem rótulos. Papel no pacote: objeto ou interface técnica; ver rótulos.
@@ -42,26 +50,32 @@ Corte atual: c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874. Metadados atuais em ../fo
 
 ## PR #185 — fix(dev): harden the dev lane — clean clone, secrets-only S3, runner parity, Spark 4.1.2 fingerprint
 
+- Revalidação: base SHA `c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874`; comentários 1; checks {'success': 4}; reviews 0. Corte: 2026-10-20T02:01:41.150901+00:00.
+
 - Link: https://github.com/luanmorenommaciel/apex/pull/185
 - Autor do objeto: `agmarcastro`. Assignees atuais: agmarcastro.
-- Rótulos: crew-a, rótulo legado sem autoridade de organização. Papel no pacote: interface Pod 3/DEV.
+- Rótulos no GitHub: `crew-a`, `pod-4-dev` (rótulo legado; não define a organização do time). Papel no pacote: interface Pod 3/DEV.
 - Head: `a5c2ca45bda8e0898dc20460901fe2e83ab7ae8b`; base `main`; draft=False. Checks: {'success': 4}; reviews: 0.
 - Próximo responsável e prazo: a confirmar. Nenhum novo aceite funcional.
 
 ## PR #183 — docs(pod3): reconcile Serve backlog, decisions and evidence for team discussion
 
+- Revalidação: base SHA `c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874`; comentários 0; checks {}; reviews 0. Corte: 2026-10-20T02:01:49.009284+00:00.
+
 - Link: https://github.com/luanmorenommaciel/apex/pull/183
 - Autor do objeto: `gustocezar`. Assignees atuais: nenhum.
 - Rótulos: sem rótulos. Papel no pacote: documentacao de apoio.
-- Head: `cd879dbb01a7c0ff5296de47c8ad85867d81390c`; base `main`; draft=True. Checks: nao_reconsultado_nesta_etapa; reviews: nao_reconsultado_nesta_etapa.
+- Head: `cd879dbb01a7c0ff5296de47c8ad85867d81390c`; base `main`; draft=True. Checks/reviews anteriores não reconsultados naquela etapa; ver revalidação acima.
 - Próximo responsável e prazo: a confirmar. Nenhum novo aceite funcional.
 
 ## PR #186 — docs(audit): publish the 525-ID documentary study and remaining decisions
 
+- Revalidação: base SHA `cd879dbb01a7c0ff5296de47c8ad85867d81390c`; comentários 0; checks {}; reviews 0. Corte: 2026-10-20T02:01:37.038766+00:00.
+
 - Link: https://github.com/luanmorenommaciel/apex/pull/186
 - Autor do objeto: `gustocezar`. Assignees atuais: nenhum.
 - Rótulos: sem rótulos. Papel no pacote: documentacao de apoio.
-- Head: `9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0`; base `codex/pod3-documentation-completion-20261019`; draft=True. Checks: nao_reconsultado_nesta_etapa; reviews: nao_reconsultado_nesta_etapa.
+- Head: `9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0`; base `codex/pod3-documentation-completion-20261019`; draft=True. Checks/reviews anteriores não reconsultados naquela etapa; ver revalidação acima.
 - Próximo responsável e prazo: a confirmar. Nenhum novo aceite funcional.
 
 ## issue #109 — [Study][Pod 2 / Infra] Define declared-contract versus runtime reconciliation

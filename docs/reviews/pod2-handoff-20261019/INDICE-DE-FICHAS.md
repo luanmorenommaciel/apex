@@ -1,6 +1,6 @@
 # Fichas relacionadas — Pod 2 / Engine e interfaces Package, Harness e Infra
 
-133 IDs do inventário original reaproveitados como histórico, backlog ou interface. Não são 133 tarefas novas nem contagem de entregas aceitas. Seleção documental refinada; não altera os 525 IDs nem substitui os rótulos oficiais. Novas PRs182–186 constam no catálogo atual sem serem adicionadas ao inventário original.
+133 IDs do inventário original reaproveitados como histórico, backlog ou interface. Não são 133 tarefas novas nem contagem de entregas aceitas. Seleção documental refinada; não altera os 525 IDs nem substitui os rótulos oficiais. Novas PRs 182–186 constam no catálogo atual sem serem adicionadas ao inventário original.
 
 | ID | Tema | Frente original | Ficha pública |
 |---|---|---|---|

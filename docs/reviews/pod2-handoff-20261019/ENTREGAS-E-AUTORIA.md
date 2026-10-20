@@ -8,7 +8,6 @@ O histórico a seguir distingue contribuições integradas e propostas encerrada
 |---|---|---|---|---|
 | [#46](https://github.com/luanmorenommaciel/apex/pull/46) | gustocezar | `f11f602479` | `244686d6a7` em 2026-07-24T00:43:01Z | feat(engine): adicionar diagnóstico determinístico |
 | [#52](https://github.com/luanmorenommaciel/apex/pull/52) | gustocezar | `05549bef2b` | Encerrada sem merge; contexto histórico | feat(engine): add gated CrewAI judge adapter |
-| [#54](https://github.com/luanmorenommaciel/apex/pull/54) | gustocezar | `2bd02485c0` | `7f7f87d40d` em None | docs(c9): record Engine and Serve delivery status |
 | [#70](https://github.com/luanmorenommaciel/apex/pull/70) | gustocezar | `0a7772bfb3` | `2195d40121` em 2026-08-18T20:04:50Z | engine: read the typed executor runtime column, Map as fallback |
 | [#76](https://github.com/luanmorenommaciel/apex/pull/76) | gustocezar | `f05a050fbf` | `884c274cab` em 2026-08-18T20:06:02Z | scripts: local operational package (bootstrap/doctor/smoke/e2e/status/down) |
 | [#84](https://github.com/luanmorenommaciel/apex/pull/84) | gustocezar | `2de02dd7d4` | `7c5460c874` em 2026-08-20T02:45:43Z | harness: verify optional ClickHouse endpoint identity |
@@ -235,3 +234,7 @@ apply_ddl.sh verificava alvos de materialized views linha a linha; em 010_otel_t
 - **#121 é de Luan** (metadados de commit distinguem o autor técnico registrado); é evolução da matriz e não contribuição de Augusto.
 - #142/#145 são Verify, #147 é Infra e #76/#84/#92/#128 são Package/Harness: entram como interfaces explicitadas, sem redefinir fronteiras dos pods.
 - #155 continua aberta, ainda não é contribuição integrada. Conjuntos de testes relatados são datados; não somar testes sobrepostos nem atribuir sua execução a esta rodada.
+
+### Contexto histórico adicional: #54
+
+A [PR #54](https://github.com/luanmorenommaciel/apex/pull/54), de Augusto (`gustocezar`), foi **encerrada sem merge**. Head `2bd02485c0`; `merged_at=null`. O valor `merge_commit_sha` retornado pelo GitHub não é evidência de integração nessa situação. Seu registro de status/evidência permanece histórico, sem ser contado como entrega integrada.

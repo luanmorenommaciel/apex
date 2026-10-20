@@ -19,8 +19,11 @@
     "role": "objeto ou interface técnica; ver rótulos",
     "new_functional_acceptance": false,
     "organization_note": "Estrutura desta entrega: Pods 1,2,3, conforme organização confirmada. Labels do catálogo não redefinem ownership.",
-    "metadata_rechecked_at": "2026-10-20T01:18:05.016029+00:00",
-    "checks_note": "Checks/reviews mantêm o corte Parte10 de19/10/2026; heads principais foram reconferidos antes desta publicação."
+    "metadata_rechecked_at": "2026-10-20T02:02:05.860768+00:00",
+    "checks_note": "Metadados/checks/reviews reconferidos na revalidação Parte13; pertencem ao SHA e ao instante da captura, não a combinação futura.",
+    "base_sha": "c4541a59d8e9ad4ff6cbcca67a606ad21247eb9c",
+    "comments_at_capture": 0,
+    "comments": 0
   },
   {
     "type": "PR",
@@ -42,8 +45,11 @@
     "role": "objeto ou interface técnica; ver rótulos",
     "new_functional_acceptance": false,
     "organization_note": "Estrutura desta entrega: Pods 1,2,3, conforme organização confirmada. Labels do catálogo não redefinem ownership.",
-    "metadata_rechecked_at": "2026-10-20T01:18:05.016029+00:00",
-    "checks_note": "Checks/reviews mantêm o corte Parte10 de19/10/2026; heads principais foram reconferidos antes desta publicação."
+    "metadata_rechecked_at": "2026-10-20T02:01:57.660918+00:00",
+    "checks_note": "Metadados/checks/reviews reconferidos na revalidação Parte13; pertencem ao SHA e ao instante da captura, não a combinação futura.",
+    "base_sha": "c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874",
+    "comments_at_capture": 0,
+    "comments": 0
   },
   {
     "type": "PR",
@@ -65,8 +71,11 @@
     "role": "objeto ou interface técnica; ver rótulos",
     "new_functional_acceptance": false,
     "organization_note": "Estrutura desta entrega: Pods 1,2,3, conforme organização confirmada. Labels do catálogo não redefinem ownership.",
-    "metadata_rechecked_at": "2026-10-20T01:18:05.016029+00:00",
-    "checks_note": "Checks/reviews mantêm o corte Parte10 de19/10/2026; heads principais foram reconferidos antes desta publicação."
+    "metadata_rechecked_at": "2026-10-20T02:01:56.463179+00:00",
+    "checks_note": "Metadados/checks/reviews reconferidos na revalidação Parte13; pertencem ao SHA e ao instante da captura, não a combinação futura.",
+    "base_sha": "c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874",
+    "comments_at_capture": 0,
+    "comments": 0
   },
   {
     "type": "PR",
@@ -86,8 +95,11 @@
     "role": "objeto ou interface técnica; ver rótulos",
     "new_functional_acceptance": false,
     "organization_note": "Estrutura desta entrega: Pods 1,2,3, conforme organização confirmada. Labels do catálogo não redefinem ownership.",
-    "metadata_rechecked_at": "2026-10-20T01:18:05.016029+00:00",
-    "checks_note": "Checks/reviews mantêm o corte Parte10 de19/10/2026; heads principais foram reconferidos antes desta publicação."
+    "metadata_rechecked_at": "2026-10-20T02:01:53.050160+00:00",
+    "checks_note": "Metadados/checks/reviews reconferidos na revalidação Parte13; pertencem ao SHA e ao instante da captura, não a combinação futura.",
+    "base_sha": "c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874",
+    "comments_at_capture": 0,
+    "comments": 0
   },
   {
     "type": "PR",
@@ -96,7 +108,8 @@
     "url": "https://github.com/luanmorenommaciel/apex/pull/185",
     "author": "agmarcastro",
     "labels": [
-      "crew-a"
+      "crew-a",
+      "pod-4-dev"
     ],
     "assignees": [
       "agmarcastro"
@@ -110,11 +123,14 @@
     },
     "reviews_at_capture": 0,
     "responsible_next": "a confirmar",
-    "role": "interface Pod3/DEV",
+    "role": "interface_pod3_dev",
     "new_functional_acceptance": false,
     "organization_note": "Estrutura desta entrega: Pods 1,2,3, conforme organização confirmada. Labels do catálogo não redefinem ownership.",
-    "metadata_rechecked_at": "2026-10-20T01:18:05.016029+00:00",
-    "checks_note": "Checks/reviews mantêm o corte Parte10 de19/10/2026; heads principais foram reconferidos antes desta publicação."
+    "metadata_rechecked_at": "2026-10-20T02:01:41.150901+00:00",
+    "checks_note": "Metadados/checks/reviews reconferidos na revalidação Parte13; pertencem ao SHA e ao instante da captura, não a combinação futura.",
+    "base_sha": "c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874",
+    "comments_at_capture": 1,
+    "comments": 1
   },
   {
     "type": "PR",
@@ -128,14 +144,17 @@
     "draft": true,
     "head": "cd879dbb01a7c0ff5296de47c8ad85867d81390c",
     "base_ref": "main",
-    "checks_at_capture": "nao_reconsultado_nesta_etapa",
-    "reviews_at_capture": "nao_reconsultado_nesta_etapa",
+    "checks_at_capture": {},
+    "reviews_at_capture": 0,
     "responsible_next": "a confirmar",
     "role": "documentacao de apoio",
     "new_functional_acceptance": false,
     "organization_note": "Estrutura desta entrega: Pods 1,2,3, conforme organização confirmada. Labels do catálogo não redefinem ownership.",
-    "metadata_rechecked_at": "2026-10-20T01:18:05.016029+00:00",
-    "checks_note": "Checks/reviews mantêm o corte Parte10 de19/10/2026; heads principais foram reconferidos antes desta publicação."
+    "metadata_rechecked_at": "2026-10-20T02:01:49.009284+00:00",
+    "checks_note": "Metadados/checks/reviews reconferidos na revalidação Parte13; pertencem ao SHA e ao instante da captura, não a combinação futura.",
+    "base_sha": "c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874",
+    "comments_at_capture": 0,
+    "comments": 0
   },
   {
     "type": "PR",
@@ -149,14 +168,17 @@
     "draft": true,
     "head": "9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0",
     "base_ref": "codex/pod3-documentation-completion-20261019",
-    "checks_at_capture": "nao_reconsultado_nesta_etapa",
-    "reviews_at_capture": "nao_reconsultado_nesta_etapa",
+    "checks_at_capture": {},
+    "reviews_at_capture": 0,
     "responsible_next": "a confirmar",
     "role": "documentacao de apoio",
     "new_functional_acceptance": false,
     "organization_note": "Estrutura desta entrega: Pods 1,2,3, conforme organização confirmada. Labels do catálogo não redefinem ownership.",
-    "metadata_rechecked_at": "2026-10-20T01:18:05.016029+00:00",
-    "checks_note": "Checks/reviews mantêm o corte Parte10 de19/10/2026; heads principais foram reconferidos antes desta publicação."
+    "metadata_rechecked_at": "2026-10-20T02:01:37.038766+00:00",
+    "checks_note": "Metadados/checks/reviews reconferidos na revalidação Parte13; pertencem ao SHA e ao instante da captura, não a combinação futura.",
+    "base_sha": "cd879dbb01a7c0ff5296de47c8ad85867d81390c",
+    "comments_at_capture": 0,
+    "comments": 0
   },
   {
     "type": "issue",

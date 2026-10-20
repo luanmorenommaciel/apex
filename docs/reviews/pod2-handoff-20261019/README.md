@@ -29,3 +29,7 @@ Escolher **uma primeira revisão**, confirmar quem assume, registrar o critério
 - **Para aprofundar:** [autoria e histórico](ENTREGAS-E-AUTORIA.md), [ideias/backlog](IDEIAS-E-BACKLOG.md) e [índice das fichas](INDICE-DE-FICHAS.md).
 
 [Fontes e limites](FONTES-E-LIMITES.md). Não houve novo teste de produto nem novo aceite funcional nesta revisão editorial.
+
+## Revalidação da contribuição #185
+
+A branch do Agmar já implementa melhorias de DEV/S3/runners/fingerprint, além da interface com #167. A conferência deve reaproveitar essa contribuição e suas provas relatadas antes de escolher trabalho paralelo. Os 38 patches foram reconsiderados com fontes complementares do wrapper e da versão sbt. Os 106 testes e runtime descritos pelo autor não foram reproduzidos nesta auditoria; a PR permanece aberta. Isso não é ausência das provas do autor nem fechamento automático das issues relacionadas. Organização: Pod 3 na interface indicada pelo usuário; rótulos legados não criam Pod 4.

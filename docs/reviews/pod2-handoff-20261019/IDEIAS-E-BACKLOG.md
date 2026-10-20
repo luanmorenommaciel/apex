@@ -6,7 +6,7 @@ Todos os encaminhamentos abaixo são propostas para discussão. Implementação 
 
 **Destino existente:** #154/#155; E19/E20.
 
-**Base e limite:** 131 preflight e139 guard estão integrados;155 propõe pequena guarda de consistência e tem11 checks failure no corte.
+**Base e limite:** 131 preflight e #139 guard estão integrados; #155 propõe pequena guarda de consistência e tem 11 checks failure no corte.
 
 **Menor encaminhamento:** Revisar diff e controles bidirecionais; considerar recibos históricos sem inferir causa atual de billing. Reconciliar link/board só quanto ao critério satisfeito.
 
@@ -44,7 +44,7 @@ Todos os encaminhamentos abaixo são propostas para discussão. Implementação 
 
 ## 5. Argumentos R9D ON/OFF
 
-**Destino existente:** #167; E16/DEC-N5, interface#185.
+**Destino existente:** #167; E16/DEC-N5, interface #185.
 
 **Base e limite:** Main tem argv/assinatura incompatíveis. #185 Pod 3/Agmar é candidata externa com EnvFile/AdditionalComposeFile.
 
@@ -104,7 +104,7 @@ Todos os encaminhamentos abaixo são propostas para discussão. Implementação 
 
 ## 11. DDL: replay e verificação
 
-**Destino existente:** #170; E22/E23, interface#147.
+**Destino existente:** #170; E22/E23, interface #147.
 
 **Base e limite:** 147 endurece alvo MV multiline; não prova no-op de todas migrações. verify_ddl tem alcance delimitado.
 

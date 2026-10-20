@@ -18,7 +18,7 @@ Nenhum teste, build, container, serviço, workflow manual ou instalação foi ex
 
 | Caso | Material existente | Lacuna específica / próxima prova |
 |---|---|---|
-| #126/115 | Resolver puro cobre app/job, conflito, zero/ausência e tentativas | Consumidor escolhido e prova SQL/RDD conforme critério115; não refazer o resolver |
+| #126/115 | Resolver puro cobre app/job, conflito, zero/ausência e tentativas | Consumidor escolhido e prova SQL/RDD conforme critério 115; não refazer o resolver |
 | #127/123 | Watcher/CLI/cenário integrados; runtime setembro relatado com corte e limitações | Decidir força de associação job versus stage/tentativa/snapshot; não dizer que nunca houve runtime |
 | #128/124 | pwsh explícito e plano único; DryRun retorna antes de Command | Controle troca Command mantendo Handler; stubs inofensivos antes de ações com efeitos |
 | #131/139/155 | Preflight e endurecimento integrados;#155: guarda pequena aberta,11 checks failure e0 reviews na captura | Revisão/aceite e recibo da árvore escolhida; não inferir causa atual de billing |
