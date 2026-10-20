@@ -92,7 +92,7 @@ Fontes primárias: fontes/pr157-files.json (diff integral retornado pela API), f
 
 ### Classe e limite da evidência
 
-DIRETO: vetores dos oito tools, fakes, normalização de payloads e igualdade nas duas portas; 11 checks verdes. RELATADO: 572 testes da combinação local e provas de transporte reais separadas. Os testes aqui usam chamadas MCP em processo e TestClient HTTP; não validam nginx, autenticação em implantação ou ClickHouse real.
+DIRETO: vetores dos oito tools, fakes, payloads comparados sem normalização de campos e igualdade nas duas portas; 11 checks verdes. RELATADO: 572 testes da combinação local e provas de transporte reais separadas. Os testes aqui usam chamadas MCP em processo e TestClient HTTP; não validam nginx, autenticação em implantação ou ClickHouse real.
 
 ### Fluxo
 
@@ -216,7 +216,7 @@ Fontes primárias: fontes/pr159-files.json (diff integral retornado pela API), f
 
 ### Classe e limite da evidência
 
-DIRETO: limpeza por IDs/fingerprint, mutations_sync=1, consulta de existência do rollup e propagação de falhas; testes positivos/negativos no diff. RELATADO: gate 19 PASS/0 FAIL/0 SKIP e 572 testes combinados. Testes controlados não provam concorrência nem isolamento de toda implantação.
+DIRETO: limpeza por IDs/fingerprint, mutations_sync=1, consulta de existência do rollup e propagação de falhas; testes positivos/negativos no diff. RELATADO: gate 19 PASS/0 FAIL/0 SKIP e 572 testes combinados. Testes controlados não provam concorrência nem isolamento de toda implantação. Complemento documental de 19/10: VALIDATION no head registra o checkpoint local 41ba605e/519 testes; o diagnóstico F1c e sua evidência posterior (79 focados, 572 combinados e G1-F1c 19 PASS/0 FAIL/0 NOT EXERCISED) estão no corpo da PR, com limites próprios. Não usar 519 como contagem do head atual nem exigir repetir prova já relatada. A referência de Current evidence do RUNBOOK deve ser lida com esse complemento; nenhum teste foi reproduzido nesta auditoria.
 
 ### Fluxo
 

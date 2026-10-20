@@ -80,7 +80,7 @@ Criar índice canônico e link no README; no diff final o índice já inclui ADR
 
 ### Feito, faltante e não comprovado
 
-Índice e link integrados; a linha ADR-004 já aparece no diff, apontando a proposta de #133. Não existe lacuna de inclusão a corrigir neste recorte. Manutenção futura do índice é responsabilidade de revisão documental.
+Índice e link integrados. O diff da PR acrescenta as três linhas ADR-001/002/003; não inclui ADR-004. O corpo mantém #133 separada e propõe acrescentar sua linha conforme a ordem de integração. Isso não determina por si só o conteúdo posterior do índice na main; conferir a árvore escolhida antes de propor correção atual. Não houve reescrita ou renumeração dos ADRs.
 
 ### Linhagem
 
@@ -88,7 +88,7 @@ Criar índice canônico e link no README; no diff final o índice já inclui ADR
 
 ### Fontes e corte
 
-Corpo da PR via API pública em 19/10/2026; ADR-INDEX.md atual não re-lido.
+Fontes da ficha: corpo/metadados e leitura estática dos diffs registrada nos campos técnicos. Reconciliação 19–20/10: diffs de ADR-INDEX.md e README.md. O arquivo integral na main atual não foi relido nesta rodada quando isso não está explicitamente declarado. Leitura de diff não é execução ou revisão integral de todo o produto. Os recibos de CI históricos mantêm o corte próprio.
 
 ### Classe e limite da evidência
 
@@ -336,7 +336,7 @@ Piso deve ser medido, finito e não negativo para certificação/controle. Piso 
 
 ### Fontes e corte
 
-Corpo da PR via API pública em 19/10/2026; models.py não re-lido.
+Fontes da ficha: corpo/metadados e leitura estática dos diffs registrada nos campos técnicos. Reconciliação 19–20/10: diffs de Verify/models, replay e testes. O arquivo integral na main atual não foi relido nesta rodada quando isso não está explicitamente declarado. Leitura de diff não é execução ou revisão integral de todo o produto. Os recibos de CI históricos mantêm o corte próprio.
 
 ### Classe e limite da evidência
 
@@ -382,7 +382,7 @@ Frente: historico. Encaminhamento: historico_integrado_com_followup_delimitado.
 
 ### Identidade e estado
 
-PR #146 de gustocezar, mergeada em 06/10/2026 20:11 UTC; head 2e0e102, 1 commit, +56, 1 arquivo (test_projection_parity.py); empilhada sobre #129 (fab6620). Histórico #181 seção 4. Sem reviews.
+PR #146 de gustocezar, mergeada em 06/10/2026 20:11 UTC; head 2e0e102, 1 commit, +56, 1 arquivo (test_projection_parity.py); empilhada sobre #129 (fab6620). Histórico #181 seção 4. Sem reviews. Precisão do metadado: o commit único tem nome de autor Augusto Cezar.
 
 ### Intenção e benefício
 
@@ -398,7 +398,7 @@ Feito: teste verbatim com única renomeação de binding ({finding}→{finding_i
 
 ### Fontes e corte
 
-Corpo da PR via API pública em 19/10/2026; arquivo de teste não re-lido.
+Fontes da ficha: corpo/metadados e leitura estática dos diffs registrada nos campos técnicos. Reconciliação 19–20/10: diff do teste de fronteira de erros API. O arquivo integral na main atual não foi relido nesta rodada quando isso não está explicitamente declarado. Leitura de diff não é execução ou revisão integral de todo o produto. Os recibos de CI históricos mantêm o corte próprio.
 
 ### Classe e limite da evidência
 

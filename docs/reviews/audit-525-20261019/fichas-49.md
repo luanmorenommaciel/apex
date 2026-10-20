@@ -580,7 +580,7 @@ Feito: a review de 2026-08-25 bloqueou por quatro itens (sem job de CI do front,
 
 ### Linhagem
 
-#102 (camada ausente em `c04efec`) → PR #100 → review bloqueante → correções → aprovação → merge na leva → follow-ups #116 → PRs #118/#119/#120 empilhadas sobre ela.
+#102 (camada ausente em `c04efec`) → PR #100 → review bloqueante → correções → aprovação → merge na leva → follow-ups #116 → PRs #118/#119/#120 empilhadas sobre ela. Precisão de autoria: PR de agmarcastro; os commits 6dc476e18d e 5b4fc4f1e0 têm commit-author Augusto Silva e trazem contribuições substantivas; 9e77db95 é merge de main com o mesmo nome de autor. A resposta pública sobre os quatro itens é de Agmar, não foi reatribuída.
 
 ### Fontes e corte
 

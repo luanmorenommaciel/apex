@@ -86,7 +86,7 @@ Conferir escopo/trust, `codex mcp list` e painel de ferramentas. Se usar o aplic
 ## Verificação operacional a realizar
 
 1. Registrar revisão do APEX, cliente/versão, SO, versão uv/uvx, escopo e arquivo usados, sem segredos.
-2. Conferir processo do servidor e lista exata observada. No snapshot são oito: analyze_job, compare_jobs, explain_stage, list_runs, recall_runs, search_kb, suggest_fix, verify_fix. Se houver mudança, reconciliar contrato e revisão.
+2. Conferir processo do servidor e lista exata observada. No snapshot são oito: analyze_run, compare_runs, explain_stage, list_runs, recall_similar_runs, search_kb, suggest_fix, verify_fix. Se houver mudança, reconciliar contrato e revisão.
 3. Executar somente a consulta acordada com fixture própria; `list_runs` é uma candidata. Registrar argumentos não sensíveis, resultado esperado e observado. Store vazio e indisponível são estados distintos; ausência de dados pode ser válida.
 4. Registrar logs sanitizados e marcar cliente validado somente com recibo. A lista de ferramentas prova descoberta, não todos os comportamentos.
 

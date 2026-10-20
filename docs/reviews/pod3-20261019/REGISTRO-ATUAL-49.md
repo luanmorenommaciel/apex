@@ -156,7 +156,7 @@ A classe é do próximo passo: 32 ready_offline, 17 owner_decision, zero runtime
 - Fonte: https://github.com/luanmorenommaciel/apex/pull/157
 - Próximo passo (ready_offline): Revisor e mantenedor a confirmar: revisar a3ed972; saída decisão e recibo da integração; atualizar S08/S24 e preservar #156 como guarda-chuva quando restarem critérios.
 - Dependência: Independente de #158/#159 para seu objetivo; #163 depende destes helpers. NOV-03 (proposta interna sobre fila aberta sem revisão e ordem de ondas) coordena revisão, sem impor um CI novo idêntico a toda PR por regra geral.
-- Prova/limite: DIRETO: vetores dos oito tools, fakes, normalização de payloads e igualdade nas duas portas; 11 checks verdes. RELATADO: 572 testes da combinação local e provas de transporte reais separadas. Os testes aqui usam chamadas MCP em processo e TestClient HTTP; não validam nginx, autenticação em implantação ou ClickHouse real. O payload registra base_sha c4541a59 e head próprio; main observada c3c3ea3. Os checks citados não certificam uma futura integração/rebase. A árvore efetiva de checkout de cada job não foi estabelecida a partir desse campo base_sha.
+- Prova/limite: DIRETO: vetores dos oito tools, fakes, payloads comparados sem normalização de campos e igualdade nas duas portas; 11 checks verdes. RELATADO: 572 testes da combinação local e provas de transporte reais separadas. Os testes aqui usam chamadas MCP em processo e TestClient HTTP; não validam nginx, autenticação em implantação ou ClickHouse real. O payload registra base_sha c4541a59 e head próprio; main observada c3c3ea3. Os checks citados não certificam uma futura integração/rebase. A árvore efetiva de checkout de cada job não foi estabelecida a partir desse campo base_sha.
 
 ## PR #158 — test(serve): pin findings score-tie order on both SQL doors
 
@@ -170,7 +170,7 @@ A classe é do próximo passo: 32 ready_offline, 17 owner_decision, zero runtime
 - Fonte: https://github.com/luanmorenommaciel/apex/pull/159
 - Próximo passo (ready_offline): Revisor de Serve e mantenedor: entrada 1685f8a e recibos citados; saída parecer da limpeza e decisão de integração. Se exigida nova prova operacional, defini-la antes em ambiente autorizado; esta auditoria não a executa.
 - Dependência: Revisão pode ocorrer em paralelo. Uma reprodução operacional depende de store/ambiente autorizado e ownership definido; não transforma #175 em bloqueio obrigatório de todos os testes. #157/#158 complementam, sem dependência de código para o gate. Coordenar com #182: portar _two_doors de console_statements/QUERIES_TS para serve_statements e preservar browser_seen, controles e limpeza.
-- Prova/limite: DIRETO: limpeza por IDs/fingerprint, mutations_sync=1, consulta de existência do rollup e propagação de falhas; testes positivos/negativos no diff. RELATADO: gate 19 PASS/0 FAIL/0 SKIP e 572 testes combinados. Testes controlados não provam concorrência nem isolamento de toda implantação. O payload registra base_sha c4541a59 e head próprio; main observada c3c3ea3. Os checks citados não certificam uma futura integração/rebase. A árvore efetiva de checkout de cada job não foi estabelecida a partir desse campo base_sha.
+- Prova/limite: DIRETO: limpeza por IDs/fingerprint, mutations_sync=1, consulta de existência do rollup e propagação de falhas; testes positivos/negativos no diff. RELATADO: gate 19 PASS/0 FAIL/0 SKIP e 572 testes combinados. Testes controlados não provam concorrência nem isolamento de toda implantação. Complemento documental de 19/10: VALIDATION no head registra o checkpoint local 41ba605e/519 testes; o diagnóstico F1c e sua evidência posterior (79 focados, 572 combinados e G1-F1c 19 PASS/0 FAIL/0 NOT EXERCISED) estão no corpo da PR, com limites próprios. Não usar 519 como contagem do head atual nem exigir repetir prova já relatada. A referência de Current evidence do RUNBOOK deve ser lida com esse complemento; nenhum teste foi reproduzido nesta auditoria. O payload registra base_sha c4541a59 e head próprio; main observada c3c3ea3. Os checks citados não certificam uma futura integração/rebase. A árvore efetiva de checkout de cada job não foi estabelecida a partir desse campo base_sha.
 
 ## PR #161 — ci: keep root gate diagnostics after Python lane failures
 
@@ -329,7 +329,7 @@ A classe é do próximo passo: 32 ready_offline, 17 owner_decision, zero runtime
 ## PR #183 — docs(pod3): reconcile Serve backlog, decisions and evidence for team discussion
 
 - Fonte: https://github.com/luanmorenommaciel/apex/pull/183
-- Próximo passo (ready_offline): Revisar os 28 documentos no draft; alinhar diferenças trazidas pelo adendo sem misturar implementação; decidir revisão/merge depois.
+- Próximo passo (ready_offline): Revisar os 34 documentos no draft (contagem do corte anterior à revalidação); alinhar diferenças trazidas pelo adendo sem misturar implementação; decidir revisão/merge depois.
 - Dependência: Revisão humana; novo CI não é exigência automática para Markdown filtrado.
 - Prova/limite: Aberta draft; sem checks/reviews; head idêntico ao publicado. Não promover draft ou atualizar texto sem confirmação.
 

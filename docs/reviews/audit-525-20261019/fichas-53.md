@@ -26,7 +26,7 @@ Teste de HTTP TestClient e protocolo MCP em memória sobre rotas/tools reais, co
 
 ### Fontes e corte
 
-Corpo da PR via API pública em 19/10/2026; arquivo de teste não re-lido.
+Fontes da ficha: corpo/metadados e leitura estática dos diffs registrada nos campos técnicos. Reconciliação 19–20/10: diff do teste de fronteira de erros API. O arquivo integral na main atual não foi relido nesta rodada quando isso não está explicitamente declarado. Leitura de diff não é execução ou revisão integral de todo o produto. Os recibos de CI históricos mantêm o corte próprio.
 
 ### Classe e limite da evidência
 
@@ -150,7 +150,7 @@ Diff adiciona README, índice e slides com fontes em notas. README declara gera�
 
 ### Fontes e corte
 
-Metadados, título e commit via API pública em 19/10/2026; conteúdo dos 25 arquivos do deck não lido; corpo e comentários vazios.
+Fontes da ficha: corpo/metadados e leitura estática dos diffs registrada nos campos técnicos. Reconciliação 19–20/10: metadados, lista de arquivos e README do deck; conteúdo integral dos 25 arquivos e slides não relido. O arquivo integral na main atual não foi relido nesta rodada quando isso não está explicitamente declarado. Leitura de diff não é execução ou revisão integral de todo o produto. Os recibos de CI históricos mantêm o corte próprio.
 
 ### Classe e limite da evidência
 
@@ -204,15 +204,15 @@ Sweep da apex-api: uma linha deve ser a mesma linha por qualquer porta (ClickHou
 
 ### Feito, faltante e não comprovado
 
-Feito: run não indexado renderizava zero medido (sentinela indexed no CTE; confirmado live: browser -1 != api 0); um formato de timestamp só (ISO 8601 T, ms, UTC, wire.py); QueryFailure em toda tela antes de empty state; badge de fonte http correto; gate six-lane corrigido (detail=full; encontrado ao rodar); C3/C4 overlay com spark.driver.host; console_parity_gate.py live; test_every_console_field_is_projected; entry point E2E console_reflection + console.live.test.tsx; compose/make prod/README para modo http. Faltante (Open declarado): /ask ainda mockup (decisão de produto D-2026-09-23), verify lane não rodada E2E. Não comprovado: CI remota (billing) — toda evidência local.
+Feito: run não indexado renderizava zero medido (sentinela indexed no CTE; confirmado live: browser -1 != api 0); um formato de timestamp só (ISO 8601 T, ms, UTC, wire.py); QueryFailure em toda tela antes de empty state; badge de fonte http correto; gate six-lane corrigido (detail=full; encontrado ao rodar); C3/C4 overlay com spark.driver.host; console_parity_gate.py live; test_every_console_field_is_projected; entry point E2E console_reflection + console.live.test.tsx; compose/make prod/README para modo http. Faltante (Open declarado): /ask ainda mockup (decisão de produto D-2026-09-23), verify lane não rodada E2E. Não comprovado: CI remota (billing) — toda evidência local. O commit eb449cb também relata imagem DEV anterior à emissão de job_conf e acrescenta aviso do orquestrador quando falta essa linha. É achado operacional histórico do E2E, não incidente novo nesta auditoria.
 
 ### Linhagem
 
-13 commits com Task-IDs (T-20260923-*, T-20260929-*, T-20261006-*); reconciliado com fab6620 (base prevalece em findings/transitions/auto; auto leaf parqueado como supersedido); complementa #146 e #151.
+13 commits no total; 11 têm trailers Task/Tasks com IDs (T-20260923-*, T-20260929-*, T-20261006-*); reconciliado com fab6620 (base prevalece em findings/transitions/auto; auto leaf parqueado como supersedido); complementa #146 e #151.
 
 ### Fontes e corte
 
-Corpo da PR (extenso, autoral) e 13 commits via API pública em 19/10/2026; código não re-lido; VALIDATION.md citado no corpo não lido.
+Fontes da ficha: corpo/metadados e leitura estática dos diffs registrada nos campos técnicos. Reconciliação 19–20/10: diff/estrutura de console.live e arquivos E2E/VALIDATION selecionados, além do corpo e 13 mensagens de commit. O arquivo integral na main atual não foi relido nesta rodada quando isso não está explicitamente declarado. Leitura de diff não é execução ou revisão integral de todo o produto. Os recibos de CI históricos mantêm o corte próprio.
 
 ### Classe e limite da evidência
 
@@ -274,7 +274,7 @@ ci.yml agrupa cinco lanes Python e root, mantém Front e repo-checks, restringe 
 
 ### Fontes e corte
 
-Corpo da PR via API pública em 19/10/2026; workflows atuais não re-lidos.
+Fontes da ficha: corpo/metadados e leitura estática dos diffs registrada nos campos técnicos. Reconciliação 19–20/10: diffs dos dois workflows. O arquivo integral na main atual não foi relido nesta rodada quando isso não está explicitamente declarado. Leitura de diff não é execução ou revisão integral de todo o produto. Os recibos de CI históricos mantêm o corte próprio.
 
 ### Classe e limite da evidência
 

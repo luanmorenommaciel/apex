@@ -22,7 +22,7 @@ Feito e integrado. Runs com o head `ada98d1` (`fontes/batch-claude-historico-cor
 
 ### Linhagem
 
-Branch de convergência com as PRs #44–#51 (2026-07-24) + 46 commits do autor → PR #57 → tag `v0.1.0` → CHANGELOG [0.1.0] (conferido para o #15) → fechamento em lote de issues de maio em 2026-09-17, que cita a v0.1.0.
+Branch de convergência com as PRs #44–#51 (2026-07-24): 54 commits retornados, sendo 36 de Luan Moreno, 10 de Augusto Cezar e 8 commits de merge com autor gustocezar → PR #57 → tag `v0.1.0` → CHANGELOG [0.1.0] (conferido para o #15) → fechamento em lote de issues de maio em 2026-09-17, que cita a v0.1.0.
 
 ### Fontes e corte
 
@@ -340,7 +340,7 @@ Snapshot (PR 70); dossiê; `fontes/batch-claude-historico-corrigido-sources/clau
 
 ### Classe e limite da evidência
 
-DIRETO: SQL e teste adicionado; review aprovada. RELATADO: a prova por reversão e a consulta cruzada com outro fork. Sem CI no head na listagem; não verificado se o workflow rodou. Review formal (API, observada em 2026-10-17T17:28:13Z): 1 — `luanmorenommaciel` APPROVED em 2026-08-18. `APPROVED` humano antes do merge: sim; no head final: sim. Eventos de review não provam nem excluem leitura humana fora deles. Comentários inline de review: 0. Runs do Actions com o head `0a7772b`: nenhum no universo retornado pela listagem pública em 2026-10-17: 213 runs, created_at de 2026-07-26 a 2026-10-12; não prova retenção integral da história de CI nem cobre tentativas anteriores à retornada. Isso não prova que nenhum CI tenha rodado fora desse universo.
+DIRETO: SQL e teste adicionado; review aprovada. RELATADO: a prova por reversão e a consulta cruzada com outro fork. Sem CI no head na listagem; não verificado se o workflow rodou. Review formal (API, observada em 2026-10-17T17:28:13Z): 1 — `luanmorenommaciel` APPROVED em 2026-08-18. `APPROVED` humano antes do merge: sim; no head final: sim. Eventos de review não provam nem excluem leitura humana fora deles. Comentários inline de review: 0. Runs do Actions com o head `0a7772b`: nenhum no universo retornado pela listagem pública em 2026-10-17: 213 runs, created_at de 2026-07-26 a 2026-10-12; não prova retenção integral da história de CI nem cobre tentativas anteriores à retornada. Isso não prova que nenhum CI tenha rodado fora desse universo. Complemento documental de 19/10, RELATADO no corpo: 94 testes offline e 8 de integração com ClickHouse 24.8 e migração 039; execução composta de #66/#67/#68/#70/#64, separada do diff, com migrações 034–039 idempotentes em 24.8/26.1. Não reproduzido nesta auditoria.
 
 ### Fluxo
 
@@ -394,7 +394,7 @@ Feito: quatro probes, sete scripts, scaffold de segredos e alterações Compose,
 
 ### Linhagem
 
-#73 → execução parcial e bloqueio (2026-08-10) → PR #74 com segredos no Compose → aprovação → merge. O `r9d_overhead_ab.py` é a base local do número de overhead discutido no #113. A PR #81 é citada no corpo.
+#73 → execução parcial e bloqueio (2026-08-10) → PR #74 com segredos no Compose → aprovação → merge. O `r9d_overhead_ab.py` é a base local do número de overhead discutido no #113. A ligação posterior com a PR #81 consta na camada editorial acrescentada em 10/10; não é menção do texto original do autor.
 
 ### Fontes e corte
 

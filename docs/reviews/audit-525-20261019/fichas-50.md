@@ -568,7 +568,7 @@ Frente: historico. Encaminhamento: integrada_sem_review_formal_e_sem_ci_executad
 
 ### Identidade e estado
 
-PR #128, `gustocezar/issue-124-pwsh-coverage` → `main`; autor `gustocezar` (commits de "Augusto Silva" e "Augusto Cezar"); criada em 2026-09-20 e integrada em 2026-10-06T19:56:14Z (merge `d8c1a3c`); 5 commits; 7 arquivos. Relação: #124 (aberta), "Relates". Integrada na leva de 2026-10-06 (27 merges de PR entre 19:55:46Z e 20:32:30Z, com commits de merge do mantenedor, mais dois commits diretos na main, `fa0951f` e `c4541a5`), dentro do intervalo de 2026-09-20 a 2026-10-06 (created_at UTC) em que os 68 runs `CI` retornados pela API terminaram em `failure` (56) ou `cancelled` (12), sem `success` (`fontes/reconferencia/ponto01-intervalo-ci.json`; a contagem de 61 do pacote de 17/10 usava outro intervalo).
+PR #128, `gustocezar/issue-124-pwsh-coverage` → `main`; autor `gustocezar` (commits de "Augusto Silva" e "Augusto Cezar"); criada em 2026-09-20 e integrada em 2026-10-06T19:56:14Z (merge `d8c1a3c`); 5 commits; 7 arquivos. Relação: #124 (aberta), "Relates". Integrada na leva de 2026-10-06 (27 merges de PR entre 19:55:46Z e 20:32:30Z, com commits de merge do mantenedor, mais dois commits diretos na main, `fa0951f` e `c4541a5`), dentro do intervalo de 2026-09-20 a 2026-10-06 (created_at UTC) em que os 68 runs `CI` retornados pela API terminaram em `failure` (56) ou `cancelled` (12), sem `success` (`fontes/reconferencia/ponto01-intervalo-ci.json`; a contagem de 61 do pacote de 17/10 usava outro intervalo). Precisão dos nomes de autor nos commits: 4 Augusto Silva e 1 Augusto Cezar; não altera a autoria do objeto PR.
 
 ### Intenção e benefício
 

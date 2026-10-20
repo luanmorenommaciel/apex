@@ -22,7 +22,7 @@ Feito: `serve/src/apex_api/` (app, auth, config, rotas de diagnóstico e recurso
 
 ### Linhagem
 
-Weekly Sync 15/09 → PR #129 (2026-09-21) → review do bot Codex e correções (`fab6620`, 2026-09-23) → runs de CI do head em `failure`, com 0 steps nos jobs coletados (causa de billing relatada pelo Copilot e pela #137) → merge sem review humana (2026-10-06) → empilhadas integradas em seguida → #171/#172 abertas.
+Weekly Sync 15/09 → PR #129 (2026-09-21) → review do bot Codex e correções (`fab6620`, 2026-09-23) → runs de CI do head em `failure`, com 0 steps nos jobs coletados (causa de billing relatada pelo Copilot e pela #137) → merge sem review humana (2026-10-06) → empilhadas integradas em seguida → #171/#172 abertas. Precisão de autoria da revisão: c71c2e4fe5, de Sidymar, trata os quatro defeitos da primeira revisão; fab6620, com nome de autor Augusto Silva, conclui os ajustes. Não atribuir toda a correção ou a API principal a Augusto.
 
 ### Fontes e corte
 
@@ -30,7 +30,7 @@ Snapshot (PR 129); dossiê (42 arquivos, 16 commits); `fontes/api-reviews/pr129-
 
 ### Classe e limite da evidência
 
-DIRETO: arquivos, reviews de bots, o texto de billing relatado pelo bot, obtido pela API, jobs sem steps. RELATADO: "ninguém precisa ter acesso ao nosso banco" funcionando. NÃO VERIFICADO: comportamento HTTP em runtime e no navegador. Review formal (API, observada em 2026-10-17T17:28:42Z): 2 — `chatgpt-codex-connector[bot]` COMMENTED em 2026-09-21; `copilot-pull-request-reviewer[bot]` COMMENTED em 2026-09-21. `APPROVED` humano antes do merge: não. Eventos de review não provam nem excluem leitura humana fora deles. Comentários inline de review: 4 (chatgpt-codex-connector[bot] 4). Runs do Actions com o head `fab6620` (universo retornado pela listagem pública em 2026-10-17: 213 runs, created_at de 2026-07-26 a 2026-10-12; não prova retenção integral da história de CI nem cobre tentativas anteriores à retornada; updated_at é proxy de conclusão do run): `CI` push failure, run 35898017600, tentativa 1, created_at 2026-09-23 17:47:28Z, run_started_at 2026-09-23 17:47:28Z, updated_at 2026-09-23 17:47:32Z (antes do merge pelo updated_at); jobs coletados desta tentativa: 11, steps: 0; `CI` pull_request failure, run 35898024026, tentativa 1, created_at 2026-09-23 17:47:31Z, run_started_at 2026-09-23 17:47:31Z, updated_at 2026-09-23 17:47:35Z (antes do merge pelo updated_at); jobs coletados desta tentativa: 11, steps: 0.
+DIRETO: arquivos, reviews de bots, o texto de billing relatado pelo bot, obtido pela API, jobs sem steps. RELATADO: "ninguém precisa ter acesso ao nosso banco" funcionando. NÃO VERIFICADO: comportamento HTTP em runtime e no navegador. Review formal (API, observada em 2026-10-17T17:28:42Z): 2 — `chatgpt-codex-connector[bot]` COMMENTED em 2026-09-21; `copilot-pull-request-reviewer[bot]` COMMENTED em 2026-09-21. `APPROVED` humano antes do merge: não. Eventos de review não provam nem excluem leitura humana fora deles. Comentários inline de review: 4 (chatgpt-codex-connector[bot] 4). Runs do Actions com o head `fab6620` (universo retornado pela listagem pública em 2026-10-17: 213 runs, created_at de 2026-07-26 a 2026-10-12; não prova retenção integral da história de CI nem cobre tentativas anteriores à retornada; updated_at é proxy de conclusão do run): `CI` push failure, run 35898017600, tentativa 1, created_at 2026-09-23 17:47:28Z, run_started_at 2026-09-23 17:47:28Z, updated_at 2026-09-23 17:47:32Z (antes do merge pelo updated_at); jobs coletados desta tentativa: 11, steps: 0; `CI` pull_request failure, run 35898024026, tentativa 1, created_at 2026-09-23 17:47:31Z, run_started_at 2026-09-23 17:47:31Z, updated_at 2026-09-23 17:47:35Z (antes do merge pelo updated_at); jobs coletados desta tentativa: 11, steps: 0. Complemento RELATADO no corpo para fab6620: 289 testes Serve, 130 testes Front e typecheck limpo; não foi rodada consulta live nessa passagem. O número 275 é relato intermediário preservado com corte próprio, não contagem final de fab6620.
 
 ### Fluxo
 
@@ -584,7 +584,7 @@ Diff remove apenas job_id e attributes de NOT_COLUMNS; a allowlist restante perm
 
 ### Fontes e corte
 
-Corpo da PR via API pública em 19/10/2026; guard e DDL não re-lidos.
+Fontes da ficha: corpo/metadados e leitura estática dos diffs registrada nos campos técnicos. Reconciliação 19–20/10: diff de engine/tests/test_sql_columns_exist_in_ddl.py. O arquivo integral na main atual não foi relido nesta rodada quando isso não está explicitamente declarado. Leitura de diff não é execução ou revisão integral de todo o produto. Os recibos de CI históricos mantêm o corte próprio.
 
 ### Classe e limite da evidência
 

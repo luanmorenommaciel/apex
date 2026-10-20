@@ -23,3 +23,7 @@ Para o Pod3, a entrada de discussão continua a [issue #181](https://github.com/
 - [Correções e limites históricos](D-CORRECOES-E-LIMITES.md).
 
 O registro de 49 objetos é o corte público anterior à publicação desta edição. A nova PR documental da edição é um objeto posterior e não foi acrescentada retroativamente ao inventário original.
+
+## Revalidação documental posterior dos PRs
+
+Após a publicação inicial, os PRs foram recapturados para conferir reconhecimento de contribuições, atribuição e alcance das provas. 17 fichas receberam correções, complementos ou esclarecimentos de escopo (ver relação no relatório posterior); os resultados relatados continuam distintos de reprodução independente. A contagem original de 525 IDs não mudou. Veja [escopo, correções e relação de PRs](../pr-revalidation-20261019/README.md). Os cortes anteriores permanecem identificados; esta atualização não concede aceite funcional.

@@ -34,3 +34,13 @@ Os testes de R9D adicionados exercitam funções e parse de relatórios; não s�
 3. Manter #174/#175/#178/#113 com critérios próprios. Não criar um bloqueio global para a #185 nem fechar essas issues automaticamente.
 
 A triagem original foi somente leitura; a publicação documental e os encaminhamentos posteriores têm recibos próprios. Fontes: [PR #185](https://github.com/luanmorenommaciel/apex/pull/185), [diff](https://github.com/luanmorenommaciel/apex/pull/185/files), [#167](https://github.com/luanmorenommaciel/apex/issues/167), [#174](https://github.com/luanmorenommaciel/apex/issues/174), [#178](https://github.com/luanmorenommaciel/apex/issues/178); recibos exatos em `fontes/` desta Parte08.
+
+## Complemento da revalidação de 19/10
+
+A contribuição já implementada na branch vai além dos pontos de sobreposição acima: bridge MinIO pinada, uma build para os serviços Spark, credenciais S3A via provider SDKv2 e arquivos de secrets, submissões por wrapper, provas extraídas de event log, merge de env sem duplicar chaves, paths de dataset isolado, drain condicionado ao plugin e fallback de fingerprint Scala/Java. São contribuições do Agmar, ainda em PR aberta. O corpo relata 106 testes offline, verify de seis passos e execução live de quatro cenários; quatro checks verdes e zero reviews são observações separadas.
+
+O Codex e o auxiliar reconsideraram os 38 patches finais, com leitura complementar dos testes/utilitários/documentação. Não foram lidos integralmente todos os arquivos fora dos hunks nem reproduzidas execuções. O wrapper já existe no head, embora não seja alterado pela PR, e `jar/project/build.properties` confirma sbt 1.10.7. Assim, não ficam como trabalho ausente por falta de consulta anterior.
+
+Precisões de escopo: os literais removidos são os do Spark conf; MinIO conserva default local documentado. `EnvFile` é parâmetro explícito do PowerShell; Bash usa `.env`. Conferir essas diferenças e os chamadores antes de exigir equivalência ou classificar falha. O comentário histórico de amostra v0.5 no assert não demonstra divergência com o contrato geral v0.6.
+
+Fontes: [wrapper no head](https://github.com/luanmorenommaciel/apex/blob/a5c2ca45bda8e0898dc20460901fe2e83ab7ae8b/dev/scripts/with-s3-credentials.sh), [versão sbt](https://github.com/luanmorenommaciel/apex/blob/a5c2ca45bda8e0898dc20460901fe2e83ab7ae8b/jar/project/build.properties), [runner Bash](https://github.com/luanmorenommaciel/apex/blob/a5c2ca45bda8e0898dc20460901fe2e83ab7ae8b/dev/scripts/e2e_canonical.sh).
