@@ -36,7 +36,7 @@ Criar o engine determinístico: schema do contrato v0.2, cinco watchers, `Eviden
 
 **Próximo passo histórico:** Nenhuma ação e nenhum owner. Encerramento: histórico; reabrir só se o princípio determinístico-primeiro for abandonado.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-46.md#item-452).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-46.md#item-452).
 
 ### #52 — feat(engine): add gated CrewAI judge adapter
 
@@ -46,7 +46,7 @@ Implementar o Tier 2 do engine: adaptador CrewAI preguiçoso com correlação e 
 
 **Próximo passo histórico:** Nenhuma ação e nenhum owner. Encerramento: histórico; a branch segue o plano do #105.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-46.md#item-458).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-46.md#item-458).
 
 ### #54 — docs(c9): record Engine and Serve delivery status
 
@@ -56,7 +56,7 @@ Dar ao Commander um ponto único de revisão das entregas ENGINE/C5 e SERVE/C4: 
 
 **Próximo passo histórico:** Owner a confirmar: custodiante do #105. Entrada: mapa do bundle (conferido). Saída: decisão do custodiante sobre a branch. Encerramento: a PR segue fechada.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-46.md#item-460).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-46.md#item-460).
 
 ### #70 — engine: read the typed executor runtime column, Map as fallback
 
@@ -66,7 +66,7 @@ Fazer as duas leituras de `executor_run_time_ms` no engine preferirem a coluna t
 
 **Próximo passo histórico:** Nenhuma ação obrigatória. Owner da extensão: quem tratar o #179. Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-47.md#item-466).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-47.md#item-466).
 
 ### #76 — scripts: local operational package (bootstrap/doctor/smoke/e2e/status/down)
 
@@ -76,7 +76,7 @@ Oferecer uma superfície de um comando para o pacote local de seis raias: `boots
 
 **Próximo passo histórico:** Nenhuma ação nesta PR. Owner dos defeitos: dono do pacote (DEC-10). Encerramento: histórico; o trabalho atual segue em #174/#175.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-47.md#item-469).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-47.md#item-469).
 
 ### #84 — harness: verify optional ClickHouse endpoint identity
 
@@ -86,7 +86,7 @@ Acrescentar ao gate E2E de seis raias uma checagem opcional de identidade do Cli
 
 **Próximo passo histórico:** Nenhuma ação obrigatória. Owner a confirmar: dono do harness, para a opção (b). Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-48.md#item-476).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-48.md#item-476).
 
 ### #89 — engine: retry-safe telemetry — reachability + the retry_pressure watcher
 
@@ -96,7 +96,7 @@ Fazer o engine ler os ~15 campos seguros a retry do contrato v0.5 (que o JAR já
 
 **Próximo passo histórico:** Nenhuma ação obrigatória. Owner a confirmar: quem decidir a DEC-N7. Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-49.md#item-481).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-49.md#item-481).
 
 ### #92 — dev: cover scripts/apex.ps1 with dry-run and secrets contract tests
 
@@ -106,7 +106,7 @@ Dar cobertura ao `scripts/apex.ps1` da PR #76 (que tinha zero testes): dry-run s
 
 **Próximo passo histórico:** Nenhuma ação nesta PR. Owner do critério aberto: responsável pelo #124. Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-49.md#item-483).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-49.md#item-483).
 
 ### #94 — engine: fail in CI when the SQL reads a column no DDL declares
 
@@ -116,7 +116,7 @@ Fazer o CI falhar quando uma consulta do engine lê uma coluna que nenhum DDL de
 
 **Próximo passo histórico:** Nenhuma ação nesta PR. Owner da evolução: responsável pela #155. Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-49.md#item-485).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-49.md#item-485).
 
 ### #99 — engine: make skew_ratio retry-safe
 
@@ -126,7 +126,7 @@ Tornar o `skew_ratio` público do engine seguro a retry: usar os percentis de ta
 
 **Próximo passo histórico:** Nenhuma ação e nenhum owner. Encerramento: histórico; reabrir só se a escolha de população for contestada com dado real (ver #90).
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-49.md#item-489).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-49.md#item-489).
 
 ### #111 — docs: add executable telemetry compatibility matrix
 
@@ -136,7 +136,7 @@ Registrar de forma executável onde cada campo de telemetria é produzido, trans
 
 **Próximo passo histórico:** Nenhuma ação nesta PR. Owner a confirmar: mantenedor da matriz, para a opção (b). Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-50.md#item-493).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-50.md#item-493).
 
 ### #121 — fix(tests): bump telemetry matrix to contract v0.6
 
@@ -146,7 +146,7 @@ Consertar o root gate da main, que falhava em `test_telemetry_compatibility_matr
 
 **Próximo passo histórico:** Owner a confirmar: mantenedor, ao decidir o caminho de emergência na DEC-02. Encerramento: histórico.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-50.md#item-497).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-50.md#item-497).
 
 ### #126 — feat(engine): add offline execution-stage attribution
 
@@ -156,7 +156,7 @@ Implementar o resolvedor offline do engine que atribui uma execução SQL a stag
 
 **Próximo passo histórico:** Owner a confirmar: mantenedor, na prova pós-integração (M0). Entrada: CI disponível. Saída: run verde que inclua estes testes. Encerramento: a PR segue integrada; o consumidor segue na #115.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-50.md#item-498).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-50.md#item-498).
 
 ### #127 — feat: add deterministic tail-outlier runtime gate
 
@@ -166,7 +166,7 @@ Completar o caminho determinístico `tail_outlier`: contrato do finding, watcher
 
 **Próximo passo histórico:** Owner a confirmar: Pod 2, para a DEC-N6, e mantenedor, para a prova pós-integração. Encerramento: a PR segue integrada; o aceite segue na #123.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-50.md#item-499).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-50.md#item-499).
 
 ### #128 — test(package): make PowerShell coverage command-aware
 
@@ -176,7 +176,7 @@ Tornar explícito e fechado no CI o contrato de comandos do pacote: verificar Po
 
 **Próximo passo histórico:** Owner a confirmar: responsável pela #124. Entrada: este registro. Saída: teste discriminante ou mudança de escopo registrada. Encerramento: a PR segue integrada.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-50.md#item-500).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-50.md#item-500).
 
 ### #131 — engine: fail fast on connect when spark_events schema is behind
 
@@ -186,7 +186,7 @@ Falhar rápido no connect do Engine quando o volume ClickHouse tem schema antigo
 
 **Próximo passo histórico:** Encaminhar a manutenção do guard a #154/#155, responsável a confirmar no Engine; encerrar este histórico preservando a prova e sem prometer provisionamento de bancos alternativos.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-51.md#item-502).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-51.md#item-502).
 
 ### #139 — test(engine): harden SQL to DDL column guard
 
@@ -196,7 +196,7 @@ Endurecer o guard SQL→DDL do Engine para verificar colunas referenciadas contr
 
 **Próximo passo histórico:** Sem nova ação na PR histórica. Na revisão #155, confirmar controles sobre colunas lidas, aliases e função SQL com diff/DDL da mesma base. Responsável a combinar no Engine.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-51.md#item-510).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-51.md#item-510).
 
 ### #142 — fix(verify): use successful-task duration samples for stage analysis
 
@@ -206,7 +206,7 @@ Verify ignorava os campos v0.5 successful_task_*; skew e work bounds podiam ser 
 
 **Próximo passo histórico:** Vincular o caso 8.96x→1.10x como entrada de evidência para #169.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-52.md#item-513).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-52.md#item-513).
 
 ### #145 — fix(verify): reject invalid noise floors for certification
 
@@ -216,7 +216,7 @@ Verify podia certificar delta ou passar no controle positivo com piso inválido 
 
 **Próximo passo histórico:** Registrar a perda de distinção de motivo como follow-up de auditoria (#117/#170).
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-52.md#item-516).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-52.md#item-516).
 
 ### #147 — fix(infra): check multiline materialized-view targets
 
@@ -226,7 +226,7 @@ apply_ddl.sh verificava alvos de materialized views linha a linha; em 010_otel_t
 
 **Próximo passo histórico:** Preservar histórico e relato dos cinco casos no ClickHouse descartável. Se o time escolher melhorar parser/quietude/replay de DDL, conferir aderência à #170 antes de ampliar escopo. Nova execução requer ambiente próprio e prova de pós-condição, não só parse bem-sucedido.
 
-[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0/docs/reviews/audit-525-20261019/fichas-52.md#item-518).
+[Ficha completa e corte da prova](https://github.com/luanmorenommaciel/apex/blob/efdcc53eca225464238408066b90cf204d6586fa/docs/reviews/audit-525-20261019/fichas-52.md#item-518).
 
 ## Interfaces e limites de atribuição
 
