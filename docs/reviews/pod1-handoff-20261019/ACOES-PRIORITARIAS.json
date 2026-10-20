@@ -1,0 +1,60 @@
+[
+  {
+    "topic": "Revisar a proposta API-only e preservar os testes",
+    "objects": [
+      182,
+      158,
+      159
+    ],
+    "input": "Heads da PR #182 (74fdb079), #158 (514b0e57) e #159 (1685f8ac), com os dois usos de helpers removidos já identificados.",
+    "output": "Parecer por superfície Front/Serve, ordem de integração proposta e lista das duas adaptações dos testes.",
+    "criterion": "A proposta preserva os casos Serve aditivo/legado, desempate canônico, controles de dados malformados e limpeza. Nomear os trechos lidos e o que fica fora; não afirmar conflito textual de merge sem prova.",
+    "dependency": "Coordenação técnica dos testes na superfície que a #182 remove; não depende de resolver Ask ou todos os estudos. Validar a combinação será uma etapa posterior à escolha da árvore.",
+    "role": "Autores e revisores de Front e Serve, a confirmar.",
+    "class": "Preparação e revisão sem runtime",
+    "evidence": [
+      "https://api.github.com/repos/luanmorenommaciel/apex/pulls/182/files?per_page=100",
+      "https://api.github.com/repos/luanmorenommaciel/apex/pulls/158",
+      "https://api.github.com/repos/luanmorenommaciel/apex/pulls/159"
+    ],
+    "route": "pull",
+    "publication_scope": "Proposta documental; não execução ou aceite."
+  },
+  {
+    "topic": "Escolher o perfil de exposição e custódia do token",
+    "objects": [
+      171
+    ],
+    "input": "Alternativas por perfil e o fato de que a proposta #182 entrega apiToken ao navegador por config.js.",
+    "output": "Registro de decisão por ambiente: exposição de docs/OpenAPI e lugar de custódia do token, com motivo e eventual adiamento.",
+    "criterion": "A decisão distingue perfil local, ambiente compartilhado e proteção por proxy; não chama token compartilhado de identidade individual. O responsável pela política é confirmado pelo time.",
+    "dependency": "A política precisa ser coerente com o perfil que for adotado; pode ser discutida enquanto a revisão de código avança. Não cria bloqueio universal de leitura ou estudo.",
+    "role": "Representantes de Front/Serve e responsável pelo ambiente, a confirmar.",
+    "class": "Decisão do time",
+    "evidence": [
+      "https://api.github.com/repos/luanmorenommaciel/apex/issues/171",
+      "https://api.github.com/repos/luanmorenommaciel/apex/contents/front/src/data/runtimeConfig.ts?ref=74fdb0791825aa89c419694ec71f2aa3e6ea4d74"
+    ],
+    "route": "issues",
+    "publication_scope": "Proposta documental; não execução ou aceite."
+  },
+  {
+    "topic": "Preparar o protocolo da prova HTTP no navegador",
+    "objects": [
+      172
+    ],
+    "input": "Escolha proposta de árvore/imagem, perfis e relatos existentes de API, TestClient, jsdom e curl.",
+    "output": "Protocolo com rotas, dados, passos, recibos esperados e exclusões. Sem executar navegador, stack ou serviços nesta preparação.",
+    "criterion": "Identificar commit, imagem, DATA_SOURCE=http, perfil de token, request por nginx, resposta sanitizada e estado visual esperado. Incluir vazio, erro e indisponibilidade; ausente não vira zero nem fixture silenciosa.",
+    "dependency": "Preparar o protocolo pode avançar offline. Executar os casos depende de árvore, ambiente e autorização próprios, fora desta entrega.",
+    "role": "Revisores/executores de Front e Serve, a confirmar.",
+    "class": "Preparação sem runtime",
+    "evidence": [
+      "https://api.github.com/repos/luanmorenommaciel/apex/issues/172",
+      "https://api.github.com/repos/luanmorenommaciel/apex/pulls/153",
+      "https://api.github.com/repos/luanmorenommaciel/apex/pulls/182"
+    ],
+    "route": "issues",
+    "publication_scope": "Proposta documental; não execução ou aceite."
+  }
+]
