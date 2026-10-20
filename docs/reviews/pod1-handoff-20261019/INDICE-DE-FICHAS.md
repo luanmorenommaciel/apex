@@ -1,6 +1,6 @@
 # Fichas relacionadas — Pod 1 / Front-end
 
-95 IDs do inventário original reaproveitados como histórico, backlog ou interface. Não são 95 tarefas novas nem contagem de entregas aceitas. Seleção documental refinada; não altera os 525 IDs nem substitui os rótulos oficiais. Novas PRs182–186 constam no catálogo atual sem serem adicionadas ao inventário original.
+95 IDs do inventário original reaproveitados como histórico, backlog ou interface. Não são 95 tarefas novas nem contagem de entregas aceitas. Seleção documental refinada; não altera os 525 IDs nem substitui os rótulos oficiais. Novas PRs 182–186 constam no catálogo atual sem serem adicionadas ao inventário original.
 
 | ID | Tema | Frente original | Ficha pública |
 |---|---|---|---|

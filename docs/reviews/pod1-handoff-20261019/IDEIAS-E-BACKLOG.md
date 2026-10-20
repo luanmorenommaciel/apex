@@ -10,7 +10,7 @@ Todos os encaminhamentos abaixo são propostas para discussão. Implementação 
 
 **Menor encaminhamento:** Revisão Front por camadas: data layer, configuração/token, nginx/CSP, loading/cache/abort e acessibilidade; separar intenção de falha comprovada.
 
-**Critério proposto:** Parecer por superfície e decisão dos autores/revisores; não prometer aceite dos65 arquivos por revisão focal.
+**Critério proposto:** Parecer por superfície e decisão dos autores/revisores; não prometer aceite dos 65 arquivos por revisão focal.
 
 ## 2. Preservar controles na integração
 
@@ -46,7 +46,7 @@ Todos os encaminhamentos abaixo são propostas para discussão. Implementação 
 
 **Destino existente:** #122; X01/S07.
 
-**Base e limite:** API da129 é base integrada; fluxo Ask completo e contrato não estão entregues por consequência.
+**Base e limite:** API da 129 é base integrada; fluxo Ask completo e contrato não estão entregues por consequência.
 
 **Menor encaminhamento:** Reutilizar comparação API existente/fachada/adiamento do Pod 3; time registrar proceed/defer/reject, escopo e responsáveis.
 
@@ -56,7 +56,7 @@ Todos os encaminhamentos abaixo são propostas para discussão. Implementação 
 
 **Destino existente:** #117/#115; F02/F04/F09/F10/F11/F17/X02.
 
-**Base e limite:** Resolver offline126 existe; consumer Front ainda não demonstra atribuição pública. Piso/unidade/igualdade/escritor são decisões diferentes.
+**Base e limite:** Resolver offline 126 existe; consumer Front ainda não demonstra atribuição pública. Piso/unidade/igualdade/escritor são decisões diferentes.
 
 **Menor encaminhamento:** Escolher um consumidor e uma fatia de contrato; preservar ausência/zero, direção e proveniência; alinhar produtor/storage/Serve antes de habilitar indicador no Front.
 
@@ -70,7 +70,7 @@ Todos os encaminhamentos abaixo são propostas para discussão. Implementação 
 
 **Menor encaminhamento:** Mostrar finding de cauda sem afirmar causa skew; testar consumidor concreto e distinguir explicação, recipe e veredito.
 
-**Critério proposto:** Caso TAIL_OUTLIER e tipo desconhecido com narrativa honesta; não reabrir137 nem misturar higiene do gate123.
+**Critério proposto:** Caso TAIL_OUTLIER e tipo desconhecido com narrativa honesta; não reabrir 137 nem misturar higiene do gate 123.
 
 ## 8. Predictor: trabalho medido e estimado
 
@@ -86,7 +86,7 @@ Todos os encaminhamentos abaixo são propostas para discussão. Implementação 
 
 **Destino existente:** #165/#180; NOV-05/L13.
 
-**Base e limite:** Contrato v0.6 e badge0.5 na main;182 oferece badge candidato. Matriz registra corte histórico antigo.
+**Base e limite:** Contrato v0.6 e badge 0.5 na main;182 oferece badge candidato. Matriz registra corte histórico antigo.
 
 **Menor encaminhamento:** Atualizar só superfícies atuais, mantendo histórico e teste junto; não redesenhar semântica da telemetria por divergência textual.
 
@@ -94,7 +94,7 @@ Todos os encaminhamentos abaixo são propostas para discussão. Implementação 
 
 ## 10. Topologia e proveniência visual
 
-**Destino existente:** #108, interface#106; F15.
+**Destino existente:** #108, interface #106; F15.
 
 **Base e limite:** Estudo existente; implementação de grafo MCP não é predecessor universal de estudo visual.
 
