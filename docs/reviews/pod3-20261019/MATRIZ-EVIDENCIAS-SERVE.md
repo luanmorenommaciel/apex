@@ -24,11 +24,11 @@ Os SHAs abreviados acima identificam o objeto; o recibo completo do tracker é a
 
 | Tool contratada | Transporte real histórico | Controle em processo / caso especial | Lacuna a manter visível |
 |---|---|---|---|
-| analyze_job | Registrado na #156 no escopo do recibo | Catálogo de testes em #157 | Variantes fora do recibo; navegador não se aplica diretamente a uma tool |
-| compare_jobs | Registrado na #156 | Catálogo de #157; estudo entre versões N05 separado | Não prova compatibilidade entre todas as versões do Engine |
+| analyze_run | Registrado na #156 no escopo do recibo | Catálogo de testes em #157 | Variantes fora do recibo; navegador não se aplica diretamente a uma tool |
+| compare_runs | Registrado na #156 | Catálogo de #157; estudo entre versões N05 separado | Não prova compatibilidade entre todas as versões do Engine |
 | explain_stage | Registrado na #156 | Contrato e argumentos do patch #157 | Demais variantes/limites devem apontar ao caso específico |
 | list_runs | Registrado na #156 | Controle em processo #157 | Corrigir contradição documental N10; lista não é execução universal |
-| recall_runs | Registrado na #156 | Controle em processo #157 | Omissão no gate stdio contratual deve ser reconciliada |
+| recall_similar_runs | Registrado na #156 | Controle em processo #157 | Omissão no gate stdio contratual deve ser reconciliada |
 | search_kb | Registrado na #156 dentro do escopo histórico | Positivo `plan_json` em #163, árvore dependente | Positivo `plan_json` real e CI dessa árvore não comprovados por esses testes |
 | suggest_fix | Registrado na #156 | Controle em processo #157 | Dependências de dados/memória e casos fora do recibo |
 | verify_fix | Registrado na #156 | Controle em processo #157; #117 e N03 como temas próprios | Não transforma proposta p50/noise_floor ou projeção em comportamento validado |

@@ -32,7 +32,7 @@ As correções foram aplicadas em cópias sucessoras da Parte08. Parte07 preserv
 
 ## Efeito da #185
 
-A consulta agora retorna **12 PRs + 37 issues = 49 objetos abertos**. A #185 é contribuição do Agmar e acrescenta implementação candidata em temas antes só mapeados. Veja [triagem focal](TRIAGEM-PR185.md). Não encerra automaticamente #167/#174/#175/#178/#113 ou N06. Quatro checks verdes e zero reviews são os recibos novos; não reproduzimos os 106 testes nem o runtime relatados pelo autor.
+No corte histórico desta seção, a consulta retornou **12 PRs + 37 issues = 49 objetos abertos**. A revalidação posterior inventariou 15 PRs abertas; não usar 49 como contagem atual. A #185 é contribuição do Agmar e acrescenta implementação candidata em temas antes só mapeados. Veja [triagem focal](TRIAGEM-PR185.md). Não encerra automaticamente #167/#174/#175/#178/#113 ou N06. Quatro checks verdes e zero reviews são os recibos novos; não reproduzimos os 106 testes nem o runtime relatados pelo autor.
 
 Os estados/heads dos outros 48 foram comparados; seus checks/reviews permanecem os da Parte07. A main segue `c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874`. A revisão do Kimi era intencionalmente do corte Parte07 e não fica incorreta por anteceder a #185.
 

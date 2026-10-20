@@ -329,7 +329,7 @@ A classe é do próximo passo: 32 ready_offline, 17 owner_decision, zero runtime
 ## PR #183 — docs(pod3): reconcile Serve backlog, decisions and evidence for team discussion
 
 - Fonte: https://github.com/luanmorenommaciel/apex/pull/183
-- Próximo passo (ready_offline): Revisar os 28 documentos no draft; alinhar diferenças trazidas pelo adendo sem misturar implementação; decidir revisão/merge depois.
+- Próximo passo (ready_offline): Revisar os 34 documentos no draft (contagem do corte anterior à revalidação); alinhar diferenças trazidas pelo adendo sem misturar implementação; decidir revisão/merge depois.
 - Dependência: Revisão humana; novo CI não é exigência automática para Markdown filtrado.
 - Prova/limite: Aberta draft; sem checks/reviews; head idêntico ao publicado. Não promover draft ou atualizar texto sem confirmação.
 

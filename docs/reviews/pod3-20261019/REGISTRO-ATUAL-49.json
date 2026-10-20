@@ -1116,7 +1116,7 @@
     "dependency": "Revisão humana; novo CI não é exigência automática para Markdown filtrado.",
     "proposed_delivery_and_criterion": "Comentários/decisão humana registrados; nenhum merge ou mudança do draft foi feito nesta rodada.",
     "communication": "Revisores Pod3/mantenedor, a confirmar",
-    "next_action": "Revisar os 28 documentos no draft; alinhar diferenças trazidas pelo adendo sem misturar implementação; decidir revisão/merge depois.",
+    "next_action": "Revisar os 34 documentos no draft (contagem do corte anterior à revalidação); alinhar diferenças trazidas pelo adendo sem misturar implementação; decidir revisão/merge depois.",
     "proof_scope": "Aberta draft; sem checks/reviews; head idêntico ao publicado. Não promover draft ou atualizar texto sem confirmação.",
     "new_git_authorization": false,
     "new_functional_acceptance": false,
