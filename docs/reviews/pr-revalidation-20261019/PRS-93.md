@@ -6,21 +6,21 @@ A captura é de 19/10/2026 (02:01–02:02 UTC de 20/10). Commits/arquivos e pagi
 
 | PR | Autor | Head capturado | Arquivos / commits | Reconciliação |
 |---|---|---|---|---|
-| [#155](https://github.com/luanmorenommaciel/apex/pull/155) | gustocezar | `561b27e7d1` | 1 / 1 | Guarda de duas queries versus preflight;11checks failure no corte não demonstram falha de asserção. Nenhum requisito adicional inferido. |
+| [#155](https://github.com/luanmorenommaciel/apex/pull/155) | gustocezar | `561b27e7d1` | 1 / 1 | Guarda de duas queries versus preflight; 11 checks failure no corte não demonstram falha de asserção. Nenhum requisito adicional inferido. |
 | [#157](https://github.com/luanmorenommaciel/apex/pull/157) | gustocezar | `a3ed9723af` | 2 / 1 | Oito tools; comparação de payloads sem normalização de campos; segundo arquivo só MCP. Nomes dos guias corrigidos. |
-| [#158](https://github.com/luanmorenommaciel/apex/pull/158) | gustocezar | `514b0e573b` | 1 / 1 | Guarda estática confidence_score DESC/finding_id ASC; adaptação condicional com182; conflito textual não demonstrado. |
-| [#159](https://github.com/luanmorenommaciel/apex/pull/159) | gustocezar | `1685f8ac91` | 4 / 3 | Provas F1c no corpo distinguidas do checkpoint519histórico em VALIDATION; complemento documental, sem nova execução. |
+| [#158](https://github.com/luanmorenommaciel/apex/pull/158) | gustocezar | `514b0e573b` | 1 / 1 | Guarda estática confidence_score DESC/finding_id ASC; adaptação condicional com a #182; conflito textual não demonstrado. |
+| [#159](https://github.com/luanmorenommaciel/apex/pull/159) | gustocezar | `1685f8ac91` | 4 / 3 | Provas F1c no corpo distinguidas do checkpoint histórico de 519 testes em VALIDATION; complemento documental, sem nova execução. |
 | [#161](https://github.com/luanmorenommaciel/apex/pull/161) | gustocezar | `d61eab85f2` | 1 / 1 | !cancelled() e outcomes de setup/root preservados. Sem always() geral ou execução negativa nova. |
-| [#162](https://github.com/luanmorenommaciel/apex/pull/162) | gustocezar | `3955f9de34` | 2 / 1 | __version__0.3.0→0.1.0; default de Verdict preexistente0.1.0, sem migração de linhas. |
-| [#163](https://github.com/luanmorenommaciel/apex/pull/163) | gustocezar | `9a7e4c1a77` | 1 / 1 | Plan_json com findings vazio; depende de helpers157; nenhum check no corte. Não demonstra mistura de resultados/top_k ou store real. |
+| [#162](https://github.com/luanmorenommaciel/apex/pull/162) | gustocezar | `3955f9de34` | 2 / 1 | __version__ de 0.3.0→0.1.0; default de Verdict preexistente de 0.1.0, sem migração de linhas. |
+| [#163](https://github.com/luanmorenommaciel/apex/pull/163) | gustocezar | `9a7e4c1a77` | 1 / 1 | Plan_json com findings vazio; depende de helpers da #157; nenhum check no corte. Não demonstra mistura de resultados/top_k ou store real. |
 | [#164](https://github.com/luanmorenommaciel/apex/pull/164) | gustocezar | `5d42763aaf` | 3 / 3 | README/CI/contrato/coluna runtime: reaproveitado na reconciliação L1 para evitar tarefa duplicada. |
 | [#182](https://github.com/luanmorenommaciel/apex/pull/182) | agmarcastro | `74fdb07918` | 65 / 59 | Implementação API-only/hardening/cache/a11y e provas do Agmar reconhecidas; R1/R2 da combinação mantidos; E2E histórico e relato nginx separados por alcance. |
-| [#183](https://github.com/luanmorenommaciel/apex/pull/183) | gustocezar | `cd879dbb01` | 34 / 3 | Nomes MCP corrigidos; prova live/E2E existente reconhecida; matriz L1 referencia164; contagens/cortes esclarecidos. |
+| [#183](https://github.com/luanmorenommaciel/apex/pull/183) | gustocezar | `cd879dbb01` | 34 / 3 | Nomes MCP corrigidos; prova live/E2E existente reconhecida; matriz L1 referencia a #164; contagens/cortes esclarecidos. |
 | [#184](https://github.com/luanmorenommaciel/apex/pull/184) | gustocezar | `0b1cb7b54d` | 3 / 1 | Três ajustes sintáticos YAML; recibos de checks separados de aceite/governança; sem mudança de estado Task-Spec. |
 | [#185](https://github.com/luanmorenommaciel/apex/pull/185) | agmarcastro | `a5c2ca45bd` | 38 / 25 | Implementação DEV/S3/runners/fingerprint do Agmar reconhecida; wrapper/sbt conferidos; preservar critérios específicos das issues relacionadas. |
-| [#186](https://github.com/luanmorenommaciel/apex/pull/186) | gustocezar | `9a3bb5e4bd` | 68 / 2 | Estudo525: fichas, derivados e referências corrigidos; nova relação93 PRs com limites por linha. Não é525aceites funcionais. |
-| [#187](https://github.com/luanmorenommaciel/apex/pull/187) | gustocezar | `3f36b8f58b` | 17 / 1 | Plano172 passa a conferir provas existentes; catálogo/base/comentários/checks e organização corrigidos. |
-| [#189](https://github.com/luanmorenommaciel/apex/pull/189) | gustocezar | `fa54909404` | 17 / 1 | 54reclassificada como encerrada sem merge;185reconhecida; organização/catálogos/apresentação corrigidos. |
+| [#186](https://github.com/luanmorenommaciel/apex/pull/186) | gustocezar | `9a3bb5e4bd` | 68 / 2 | Estudo dos 525 IDs: fichas, derivados e referências corrigidos; nova relação93 PRs com limites por linha. Não representa 525 aceites funcionais. |
+| [#187](https://github.com/luanmorenommaciel/apex/pull/187) | gustocezar | `3f36b8f58b` | 17 / 1 | Plano da #172 passa a conferir provas existentes; catálogo/base/comentários/checks e organização corrigidos. |
+| [#189](https://github.com/luanmorenommaciel/apex/pull/189) | gustocezar | `fa54909404` | 17 / 1 | #54 reclassificada como encerrada sem merge;#185 reconhecida; organização/catálogos/apresentação corrigidos. |
 
 ## 78 PRs encerradas
 

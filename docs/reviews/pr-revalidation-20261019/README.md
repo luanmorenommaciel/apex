@@ -1,6 +1,6 @@
 # Revalidação das contribuições, provas e publicações APEX
 
-A revisão corrigiu a síntese que podia fazer trabalho já realizado parecer pendente. A contribuição e as provas apresentadas pelo Agmar nas **#182/#185**, além do E2E histórico da **#153**, foram confrontadas com as nossas publicações. As correções se limitam aos nossos textos, catálogos e fichas; não alteram código de produto ou PRs de outros autores.
+A revisão corrigiu a síntese que podia fazer trabalho já realizado parecer pendente. A contribuição e as provas apresentadas pelo Agmar nas **#182/#185**, além do E2E histórico da **#153**, foram confrontadas com as nossas publicações. As correções se limitam aos nossos textos, catálogos e fichas; não alteram código de produto ou textos de outros autores.
 
 ## O que foi corrigido
 

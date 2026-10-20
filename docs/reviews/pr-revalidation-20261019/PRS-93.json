@@ -18,7 +18,7 @@
     "captured_at": "2026-10-20T02:02:05.860768+00:00",
     "runtime_reproduced": false,
     "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
-    "conclusion": "Guarda de duas queries versus preflight;11checks failure no corte não demonstram falha de asserção. Nenhum requisito adicional inferido.",
+    "conclusion": "Guarda de duas queries versus preflight; 11 checks failure no corte não demonstram falha de asserção. Nenhum requisito adicional inferido.",
     "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
     "source_urls": {
       "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/155",
@@ -98,7 +98,7 @@
     "captured_at": "2026-10-20T02:02:02.768077+00:00",
     "runtime_reproduced": false,
     "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
-    "conclusion": "Guarda estática confidence_score DESC/finding_id ASC; adaptação condicional com182; conflito textual não demonstrado.",
+    "conclusion": "Guarda estática confidence_score DESC/finding_id ASC; adaptação condicional com a #182; conflito textual não demonstrado.",
     "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
     "source_urls": {
       "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/158",
@@ -138,7 +138,7 @@
     "captured_at": "2026-10-20T02:02:00.977654+00:00",
     "runtime_reproduced": false,
     "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
-    "conclusion": "Provas F1c no corpo distinguidas do checkpoint519histórico em VALIDATION; complemento documental, sem nova execução.",
+    "conclusion": "Provas F1c no corpo distinguidas do checkpoint histórico de 519 testes em VALIDATION; complemento documental, sem nova execução.",
     "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
     "source_urls": {
       "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/159",
@@ -218,7 +218,7 @@
     "captured_at": "2026-10-20T02:01:56.463179+00:00",
     "runtime_reproduced": false,
     "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
-    "conclusion": "__version__0.3.0→0.1.0; default de Verdict preexistente0.1.0, sem migração de linhas.",
+    "conclusion": "__version__ de 0.3.0→0.1.0; default de Verdict preexistente de 0.1.0, sem migração de linhas.",
     "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
     "source_urls": {
       "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/162",
@@ -258,7 +258,7 @@
     "captured_at": "2026-10-20T02:01:54.818682+00:00",
     "runtime_reproduced": false,
     "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
-    "conclusion": "Plan_json com findings vazio; depende de helpers157; nenhum check no corte. Não demonstra mistura de resultados/top_k ou store real.",
+    "conclusion": "Plan_json com findings vazio; depende de helpers da #157; nenhum check no corte. Não demonstra mistura de resultados/top_k ou store real.",
     "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
     "source_urls": {
       "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/163",
@@ -374,7 +374,7 @@
     "captured_at": "2026-10-20T02:01:49.009284+00:00",
     "runtime_reproduced": false,
     "review_scope": "reconciliação documental de conteúdo, catálogos, estrutura e referências; leitura focal, não releitura integral de todo pacote",
-    "conclusion": "Nomes MCP corrigidos; prova live/E2E existente reconhecida; matriz L1 referencia164; contagens/cortes esclarecidos.",
+    "conclusion": "Nomes MCP corrigidos; prova live/E2E existente reconhecida; matriz L1 referencia a #164; contagens/cortes esclarecidos.",
     "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
     "source_urls": {
       "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/183",
@@ -492,7 +492,7 @@
     "captured_at": "2026-10-20T02:01:37.038766+00:00",
     "runtime_reproduced": false,
     "review_scope": "reconciliação documental de conteúdo, catálogos, estrutura e referências; leitura focal, não releitura integral de todo pacote",
-    "conclusion": "Estudo525: fichas, derivados e referências corrigidos; nova relação93PRs com limites por linha. Não é525aceites funcionais.",
+    "conclusion": "Estudo dos 525 IDs: fichas, derivados e referências corrigidos; nova relação de 93 PRs com limites por linha. Não representa 525 aceites funcionais.",
     "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
     "source_urls": {
       "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/186",
@@ -530,7 +530,7 @@
     "captured_at": "2026-10-20T02:01:34.206989+00:00",
     "runtime_reproduced": false,
     "review_scope": "reconciliação documental de conteúdo, catálogos, estrutura e referências; leitura focal, não releitura integral de todo pacote",
-    "conclusion": "Plano172 passa a conferir provas existentes; catálogo/base/comentários/checks e organização corrigidos.",
+    "conclusion": "Plano da #172 passa a conferir provas existentes; catálogo/base/comentários/checks e organização corrigidos.",
     "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
     "source_urls": {
       "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/187",
@@ -568,7 +568,7 @@
     "captured_at": "2026-10-20T02:01:33.673746+00:00",
     "runtime_reproduced": false,
     "review_scope": "reconciliação documental de conteúdo, catálogos, estrutura e referências; leitura focal, não releitura integral de todo pacote",
-    "conclusion": "54reclassificada como encerrada sem merge;185reconhecida; organização/catálogos/apresentação corrigidos.",
+    "conclusion": "#54 reclassificada como encerrada sem merge;#185 reconhecida; organização/catálogos/apresentação corrigidos.",
     "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
     "source_urls": {
       "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/189",
