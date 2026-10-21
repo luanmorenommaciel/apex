@@ -1,0 +1,526 @@
+id,titulo,frente,destino,ficha,novo_aceite_funcional,origem,registro_canonico
+PR#155,test(engine): keep schema preflight aligned with stage queries,fila_prs,revisao_e_prova_de_integracao,fichas-01.md#item-001,False,GitHub PR,False
+PR#157,test(serve): pin eight-tool transport parity with identical arguments,fila_prs,revisao_e_integracao,fichas-01.md#item-002,False,GitHub PR,False
+PR#158,test(serve): pin findings score-tie order on both SQL doors,fila_prs,revisao_e_integracao,fichas-01.md#item-003,False,GitHub PR,False
+PR#159,fix(serve): make parity gate diagnose drift and clean derived fixture rows,fila_prs,revisao_da_limpeza_e_integracao,fichas-01.md#item-004,False,GitHub PR,False
+PR#161,ci: keep root gate diagnostics after Python lane failures,fila_prs,revisao_e_integracao,fichas-01.md#item-005,False,GitHub PR,False
+PR#162,fix(verify): align module version with package 0.1.0,fila_prs,revisao_e_integracao,fichas-01.md#item-006,False,GitHub PR,False
+PR#163,test(serve): pin search_kb plan_json hits over both transports,fila_prs,integracao_empilhada_a_decidir,fichas-01.md#item-007,False,GitHub PR,False
+PR#164,docs: align Serve and Verify docs with current contract,fila_prs,revisao_documental_e_integracao,fichas-01.md#item-008,False,GitHub PR,False
+#1,Collector MVP: configuração e rota de ingestão,historico,historico_preservado_com_justificativa,fichas-01.md#item-009,False,GitHub issue,False
+#2,Collector PII: controles apontados no encerramento,historico,historico_preservado_com_justificativa,fichas-01.md#item-010,False,GitHub issue,False
+#3,Collector backpressure: estratégia histórica documentada,historico,historico_preservado_com_justificativa,fichas-02.md#item-011,False,GitHub issue,False
+#4,Schema Collector: proposta substituída pelo contrato,historico,historico_preservado_com_justificativa,fichas-02.md#item-012,False,GitHub issue,False
+T-20260923-console-auto-prefers-api,Preferência automática pela API — proposta substituída,taskspecs,historico_substituido_nao_reexecutar_spec_antiga,fichas-02.md#item-013,False,Task-Spec do repositório,False
+#115,Atribuição execution_id → stages: resolver existente e integração por escolher,issues_centrais,selecionar_consumidor_e_preservar_contrato,fichas-02.md#item-014,False,GitHub issue,False
+#117,"Atribuição e piso de ruído entre Verify, storage, Serve e Front",issues_centrais,ratificar_contrato_e_validar_residuos,fichas-02.md#item-015,False,GitHub issue,False
+#123,"Tail-outlier: integração presente, runtime histórico e associação limitada",issues_centrais,reconciliar_provas_e_decidir_associacao,fichas-02.md#item-016,False,GitHub issue,False
+#124,PowerShell: dependência explícita e lacuna na prova do dispatch,issues_centrais,manter_criterio_dispatch_pendente,fichas-02.md#item-017,False,GitHub issue,False
+#165,[Docs][Cross-pod] Reconciliar a linhagem do contrato e os cabeçalhos SQL,contratos_e_documentacao,decisao_do_mantenedor_e_documentacao,fichas-02.md#item-018,False,GitHub issue,False
+#166,[Feature][Pods 1 e 3] Explicar TAIL_OUTLIER nos consumidores sem confundir cauda com skew,front_verify_serve,decisao_de_apresentacao_e_implementacao_delimitada,fichas-02.md#item-019,False,GitHub issue,False
+#167,[Bug][Pod 2] Alinhar argumentos do braço ON do harness R9D com o runner canônico,harness_e_pacote,revisao_de_candidato_e_provas_delimitadas,fichas-02.md#item-020,False,GitHub issue,False
+#168,[Study][Pod 2] Avaliar caudas de duração muito pequenas antes de propor piso absoluto,engine_evidencia,estudo_adiar_limiar_ate_evidencia,fichas-03.md#item-021,False,GitHub issue,False
+#169,[Decision][Cross-pod] Definir seleção de tentativa e população de métricas entre consumidores,consumidores_telemetria,decisao_de_contrato_e_plano_de_migracao,fichas-03.md#item-022,False,GitHub issue,False
+#170,[Decision][Pod 2 / Infra] Definir reaplicação de DDL e o alcance de verify-ddl,infra_migracoes,decisao_operacional_e_limites_do_verificador,fichas-03.md#item-023,False,GitHub issue,False
+#171,[Decision][Pods 1 e 3] Definir exposição do OpenAPI e quem guarda o token da API v1,api_seguranca_implantacao,decisao_de_politica_por_perfil,fichas-03.md#item-024,False,GitHub issue,False
+#172,[Test][Pods 1 e 3] Validar o perfil HTTP da Console no nginx e no navegador,front_operacao,prova_de_integracao_http_e_browser,fichas-03.md#item-025,False,GitHub issue,False
+#173,[Study][Pods 2 e 3] Auditar a seleção de database ClickHouse por consumidor,store_e_consumidores,estudo_de_contrato_por_consumidor,fichas-03.md#item-026,False,GitHub issue,False
+#174,[Bug][Pod 2 / Package] Preservar dev/.env ao preparar o runner canônico,harness_e_pacote,revisao_de_candidato_e_prova_de_preservacao,fichas-03.md#item-027,False,GitHub issue,False
+#175,[Decision][Pod 2 / Package] Definir identidade e ownership de stacks entre checkouts,infra_operacao,decisao_de_identidade_e_ownership,fichas-03.md#item-028,False,GitHub issue,False
+#176,[Study][Pod 2 / Infra] Documentar rotação de credencial local ClickHouse e recuperação,infra_operacao,estudo_de_procedimento_operacional,fichas-03.md#item-029,False,GitHub issue,False
+#177,[Study][Pod 3] Definir narração AQE usando configuração capturada em job_conf,serve_explicabilidade,estudo_de_produto_e_narrativa,fichas-03.md#item-030,False,GitHub issue,False
+#178,[Feature][Pod 2 / Harness] Respeitar o endpoint OTLP escolhido nos alvos de patologia,harness_configuracao,implementacao_delimitada_e_prova_offline,fichas-04.md#item-031,False,GitHub issue,False
+#179,[Study][Pod 1 / Verify] Avaliar trabalho medido e fallback estimado no predictor,verify_modelagem,correcao_documental_e_estudo_de_modelo,fichas-04.md#item-032,False,GitHub issue,False
+#180,"[Docs][Cross-pod] Atualizar cobertura da matriz para Front, API e proveniência",arquitetura_e_proveniencia,atualizacao_documental_com_guarda_estatica,fichas-04.md#item-033,False,GitHub issue,False
+G01,Restaurar GitHub Actions da conta luanmorenommaciel,Governança/CI,DECIDIR_OPERACAO_E_PROVA_ATUAL,fichas-04.md#item-034,False,registro canônico (158),True
+G02,"Proteger main com PR obrigatório, checks e política de bypass",Governança/CI,DECIDIR_POLITICA_DE_PROTECAO,fichas-04.md#item-035,False,registro canônico (158),True
+G03,Revisar e reduzir a fila #126–#134,Governança/Fila,ENCERRAR_FILA_HISTORICA_COM_FOLLOWUP_SEPARADO,fichas-04.md#item-036,False,registro canônico (158),True
+G04,Encerrar issues cobertas somente após merge (mapa corrigido),Governança/Fila,RECONCILIAR_FECHAMENTO_POR_CRITERIO,fichas-04.md#item-037,False,registro canônico (158),True
+G05,Incorporar reconciliação do roadmap/backlog do workspace,Workspace,AGRUPAR_EM_P09_COM_ACESSO_NAO_VERIFICADO,fichas-04.md#item-038,False,registro canônico (158),True
+G06,Monitor ampliado e baseline completo,Governança/Tooling local,REVALIDAR_OPERACAO_LOCAL_SE_FOR_RETOMADA,fichas-04.md#item-039,False,registro canônico (158),True
+G07,Corrigir referência a e2e.yml inexistente no CI,Governança/CI,ENCERRAR_CORRECAO_DOCUMENTAL_INTEGRADA,fichas-04.md#item-040,False,registro canônico (158),True
+G08,Validar semanticamente a combinação #127×#128,Pod 2/Package,ENCERRAR_COMPOSICAO_HISTORICA_E_SEPARAR_PROVA_ATUAL,fichas-05.md#item-041,False,registro canônico (158),True
+G09,Citar o segredo gerado no gate de configuração do Collector,Governança/CI,ENCERRAR_QUOTING_INTEGRADO,fichas-05.md#item-042,False,registro canônico (158),True
+G10,Revisar SC2016 na combinação dos PRs de CI,Governança/CI,ENCERRAR_ANALISE_DE_COMPOSICAO_DO_CI,fichas-05.md#item-043,False,registro canônico (158),True
+issue115-attribution-audit-hardening.yaml,issue115-attribution-audit-hardening.yaml,Engine / atribuição de execução,Catalogar plano histórico; remeter integração pública à #115,fichas-05.md#item-044,False,Task-Spec do repositório,False
+issue115-attribution-conflict-collision.yaml,issue115-attribution-conflict-collision.yaml,Engine / colisão no conjunto de conflitos,Catalogar plano histórico de teste; preservar vínculo com #115,fichas-05.md#item-045,False,Task-Spec do repositório,False
+issue115-attribution-scope-collision.yaml,issue115-attribution-scope-collision.yaml,Engine / isolamento app-job,Catalogar plano histórico de teste; preservar vínculo com #115,fichas-05.md#item-046,False,Task-Spec do repositório,False
+issue115-execution-attribution-offline.yaml,issue115-execution-attribution-offline.yaml,Engine / resolvedor puro,Catalogar contrato offline; integração pública segue na #115,fichas-05.md#item-047,False,Task-Spec do repositório,False
+issue123-audit-remediation.yaml,issue123-audit-remediation.yaml,Engine / auditoria tail-outlier,Catalogar três folhas históricas; prova integrada segue na #123,fichas-05.md#item-048,False,Task-Spec do repositório,False
+issue123-tail-outlier-engine.yaml,issue123-tail-outlier-engine.yaml,Engine / contrato e watcher de cauda,Catalogar contrato histórico; execução pública permanece #123,fichas-05.md#item-049,False,Task-Spec do repositório,False
+issue123-tail-outlier-package-wiring.yaml,issue123-tail-outlier-package-wiring.yaml,Package / roteamento tail-outlier,Catalogar wiring histórico; não converter prova estática em runtime,fichas-05.md#item-050,False,Task-Spec do repositório,False
+issue123-tail-outlier-runtime-gate.yaml,issue123-tail-outlier-runtime-gate.yaml,DEV / prova tail-outlier,Preservar plano de prova; manter execução integrada como pendência delimitada,fichas-06.md#item-051,False,Task-Spec do repositório,False
+issue124-audit-remediation.yaml,issue124-audit-remediation.yaml,Package / hardening dos testes PowerShell,Catalogar plano histórico de teste,fichas-06.md#item-052,False,Task-Spec do repositório,False
+issue124-pwsh-command-aware.yaml,issue124-pwsh-command-aware.yaml,Package / interface e CI PowerShell,Catalogar contrato histórico; reconfirmar workflow apenas se houver reuso,fichas-06.md#item-053,False,Task-Spec do repositório,False
+l1-connect.yaml,l1-connect.yaml,"Serve / conexão, distribuição e cliente",Catalogar plano histórico amplo; reconciliar antes de qualquer reuso,fichas-06.md#item-054,False,Task-Spec do repositório,False
+l2-discover.yaml,l2-discover.yaml,Serve / descoberta de runs,Catalogar plano histórico inválido como YAML; reuso condicionado,fichas-06.md#item-055,False,Task-Spec do repositório,False
+l3-understand.yaml,l3-understand.yaml,Serve / compreensão e cobertura,Catalogar plano histórico; aceite formal das folhas permanece separado,fichas-06.md#item-056,False,Task-Spec do repositório,False
+l5-fix.yaml,l5-fix.yaml,Serve / superfície de verificação,Catalogar plano histórico; corrigir interpretação da prova declarada,fichas-06.md#item-057,False,Task-Spec do repositório,False
+l6-learn.yaml,l6-learn.yaml,Serve / memória entre runs,Catalogar plano histórico; limitar prova dos evals,fichas-06.md#item-058,False,Task-Spec do repositório,False
+serve-api-e2e.yaml,serve-api-e2e.yaml,Console / prova integrada e DEV,Catalogar plano histórico com sintaxe inválida e alegações de prova limitadas,fichas-06.md#item-059,False,Task-Spec do repositório,False
+serve-api-sweep.yaml,serve-api-sweep.yaml,Serve / paridade da Console,Catalogar sweep histórico; não reexecutar unidade substituída,fichas-06.md#item-060,False,Task-Spec do repositório,False
+serve-api-wire.yaml,serve-api-wire.yaml,Serve / contrato de tempo e paridade live,Catalogar plano histórico; preservar NOT EXERCISED,fichas-07.md#item-061,False,Task-Spec do repositório,False
+serve-api.yaml,serve-api.yaml,Serve / API HTTP e adaptação da Console,Catalogar plano histórico inválido como YAML; preservar oito contratos,fichas-07.md#item-062,False,Task-Spec do repositório,False
+P01,PR #126 — atribuição offline execution→stages,registro_associado_issues_centrais,encerrar_entrega_historica_preservando_residuos,fichas-07.md#item-063,False,registro canônico (158),True
+P02,PR #127 — gate determinístico tail-outlier,registro_associado_issues_centrais,encerrar_pr_integrada_e_reconciliar_runtime_historico,fichas-07.md#item-064,False,registro canônico (158),True
+P03,PR #128 — cobertura PowerShell command-aware,registro_associado_issues_centrais,pr_integrada_com_criterio_dispatch_ainda_pendente,fichas-07.md#item-065,False,registro canônico (158),True
+E01,Provar #126 em runtime completo,registro_associado_issues_centrais,prova_runtime_delimitada_a_planejar,fichas-07.md#item-066,False,registro canônico (158),True
+E02,Integrar atribuição de stages aos consumidores (T24b–d),registro_associado_issues_centrais,decidir_superficie_e_integrar_sem_gate_de_tres_prs,fichas-07.md#item-067,False,registro canônico (158),True
+E14,Validar #127 nas combinações Spark prometidas,registro_associado_issues_centrais,matriz_de_suporte_com_prova_por_celula,fichas-07.md#item-068,False,registro canônico (158),True
+E17,"Higiene do gate tail-outlier (P10, P12, P13)",registro_associado_issues_centrais,decidir_garantia_do_gate_e_conservar_destino_123,fichas-07.md#item-069,False,registro canônico (158),True
+L09,HARN-BINDING — run-pathology repassar APEX_OTLP_ENDPOINT,registro_associado_issues_centrais,propagacao_offline_independente_da_politica_global,fichas-07.md#item-070,False,registro canônico (158),True
+X06,Arquivar branches históricas antes de excluir (#105),registro_associado_issues_centrais,arquivo_verificado_custodia_a_reconciliar,fichas-08.md#item-071,False,registro canônico (158),True
+L03,Salvage das cinco branches,registro_associado_issues_centrais,salvage_preservado_sem_reaplicar_produto,fichas-08.md#item-072,False,registro canônico (158),True
+DEC-13,Custódia do bundle #105 e escopo de branches,registro_associado_issues_centrais,decidir_custodia_publicacao_e_eventual_exclusao,fichas-08.md#item-073,False,registro de decisões,False
+F02,Tabela verdade do piso de ruído (T09a),contratos_e_decisoes,ratificar_semantica_por_fronteira,fichas-08.md#item-074,False,registro canônico (158),True
+F03,Atribuição true/false/unknown (T09b),contratos_e_decisoes,decidir_representacao_de_atribuicao,fichas-08.md#item-075,False,registro canônico (158),True
+F04,Corrigir modelo e serialização da atribuição (T13a),contratos_e_decisoes,implementar_fronteira_escolhida_apos_decisao,fichas-08.md#item-076,False,registro canônico (158),True
+F05,Representação persistida e migração (T13b),contratos_e_decisoes,migracao_condicional_a_representacao,fichas-08.md#item-077,False,registro canônico (158),True
+F06,Gravador de fix_verifications / pipeline Verify (T08/T13c),contratos_e_decisoes,identificar_rota_e_owner_sem_presumir_ausencia,fichas-08.md#item-078,False,registro canônico (158),True
+F07,Persistir amostras de replay para recalcular CV (T13d),contratos_e_decisoes,decidir_amostras_retencao_e_recalculo,fichas-08.md#item-079,False,registro canônico (158),True
+F08,VerificationView canônica e versionada (T14),contratos_e_decisoes,projecao_compartilhada_sem_apagar_leitores_existentes,fichas-08.md#item-080,False,registro canônico (158),True
+F09,Consumidor Front live compatível (T15),contratos_e_decisoes,consumo_front_dependente_do_contrato_aprovado,fichas-09.md#item-081,False,registro canônico (158),True
+F10,E2E Verify→storage→Serve→Front (T16),contratos_e_decisoes,prova_integrada_condicionada_a_rota_real,fichas-09.md#item-082,False,registro canônico (158),True
+F11,"Direção, igualdade e delta↔saving (T11)",contratos_e_decisoes,preservar_correcao_de_direcao_e_decidir_fronteiras,fichas-09.md#item-083,False,registro canônico (158),True
+F17,Alinhar ou remover o recálculo de CV no Front (T10),contratos_e_decisoes,alinhar_ou_remover_recalculo_do_piso,fichas-09.md#item-084,False,registro canônico (158),True
+DEC-05,Escopo e representação do contrato de piso/atribuição (#117),contratos_e_decisoes,decisao_de_contrato_sem_bloqueio_global,fichas-09.md#item-085,False,registro de decisões,False
+DEC-06,Ownership de Verify e Memory e existência de escritor externo,contratos_e_decisoes,identificar_escritor_e_responsaveis_por_ambiente,fichas-09.md#item-086,False,registro de decisões,False
+DEC-09,Consumo da atribuição de stage (#115),contratos_e_decisoes,selecionar_primeira_superficie_reutilizando_resolver,fichas-09.md#item-087,False,registro de decisões,False
+DEC-N6,Associação forte/fraca no gate tail-outlier (E17),contratos_e_decisoes,decidir_garantia_e_controles_condicionais,fichas-09.md#item-088,False,decisão nova desta revisão,False
+#21,[FEATURE] CI Integration (pre-merge code review),issues_restantes,decidir_produto_sem_confundir_governanca_ci,fichas-09.md#item-089,False,GitHub issue,False
+#33,[Governance] Add SECURITY.md (LICENSE + NOTICE done),issues_restantes,decidir_canal_e_politica_de_vulnerabilidades,fichas-09.md#item-090,False,GitHub issue,False
+#42,[SPIKE] Definir modo offline/on-prem seguro para agentes Apex,issues_restantes,decidir_prioridade_e_fronteira_offline_onprem,fichas-10.md#item-091,False,GitHub issue,False
+#105,[Governance] Archive historical contribution branches before deletion,issues_restantes,reconciliar_arquivo_existente_e_custodia,fichas-10.md#item-092,False,GitHub issue,False
+#106,[ADR/Study] Evaluate a read-only APEX system and contract graph,issues_restantes,decidir_adocao_do_grafo_sem_gates_para_estudos,fichas-10.md#item-093,False,GitHub issue,False
+#107,[Study][Pod 3 / Serve] Define a read-only APEX system-graph MCP interface,issues_restantes,estudar_interface_em_paralelo_aguardar_schema_para_implementar,fichas-10.md#item-094,False,GitHub issue,False
+#108,[Study][Pod 1 / Front-End] Explore topology and evidence-provenance views,issues_restantes,estudar_view_tipificada_sem_dependencia_obrigatoria_mcp,fichas-10.md#item-095,False,GitHub issue,False
+#109,[Study][Pod 2 / Infra] Define declared-contract versus runtime reconciliation,issues_restantes,planejar_reconciliacao_sem_executar_probes,fichas-10.md#item-096,False,GitHub issue,False
+#112,[Study][Cross-lane] Define versioned deterministic runbooks and negative baselines,issues_restantes,revisar_schema_local_antes_de_decidir_adocao,fichas-10.md#item-097,False,GitHub issue,False
+#113,[Harness] Ratify a versioned R9D overhead evidence protocol,issues_restantes,ratificar_protocolo_sem_gate_previo_de_harness,fichas-10.md#item-098,False,GitHub issue,False
+#114,[Study][Infra] Rehearse ClickHouse 26.x upgrade and rollback,issues_restantes,decidir_estudo_de_upgrade_sem_alterar_pin,fichas-10.md#item-099,False,GitHub issue,False
+#122,[Decision][Cross-pod] Ratify the Ask HTTP/BFF boundary and atomic publication sequence,issues_restantes,reenquadrar_decisao_ask_sobre_api_existente,fichas-10.md#item-100,False,GitHub issue,False
+#125,[Governance] Protect main with required CI checks and pull-request review,issues_restantes,decidir_protecao_por_contexto_e_filtro,fichas-11.md#item-101,False,GitHub issue,False
+#130,[Governance] Restore GitHub Actions billing for required CI,issues_restantes,reconciliar_bloqueio_historico_e_execucao_por_sha,fichas-11.md#item-102,False,GitHub issue,False
+#154,[Test][Pod 2 / Engine] Keep schema preflight aligned with stage queries,issues_restantes,revisar_entrega_publicada_e_residual_de_board,fichas-11.md#item-103,False,GitHub issue,False
+#156,[Test][Pod 3 / Serve] Strengthen transport parity and console findings regression gates,issues_restantes,revisar_integracao_sem_reabrir_provas_delimitadas,fichas-11.md#item-104,False,GitHub issue,False
+CL-01,"Candidato local #167/#174 (`candidate.patch`, sha256 1122d031…) e prova do entrypoint integral sob stubs",candidatos_locais_e_linhagem,revisar_candidato_preservando_duas_linhagens,fichas-11.md#item-105,False,relato local 2026-10-11,False
+CL-02,"Correção de texto: predict.py:19-21,158 e models.py:38-40 (patch local cobre só predict.py; AC-10)",candidatos_locais_e_linhagem,completar_correcao_textual_e_guarda,fichas-11.md#item-106,False,relato local 2026-10-15 + FATO,False
+CL-03,Pacote `windows-ready/` (15 itens previstos),candidatos_locais_e_linhagem,prova_windows_pendente_com_escopo_corrigido,fichas-11.md#item-107,False,relato local 2026-10-11,False
+CL-04,`generate_g2_results.py` com alegação obsoleta de isolamento (tooling de revisão),candidatos_locais_e_linhagem,arquivar_original_e_avaliar_correcao_existente,fichas-11.md#item-108,False,relato local 2026-10-12,False
+CL-05,Correção mínima do Task-Spec 3.9.0 (handoff Tier-2 estrutural),candidatos_locais_e_linhagem,revisar_fix_de_preflight_externo_sem_gate_apex,fichas-11.md#item-109,False,relato local 2026-10-12,False
+CL-06,Linhagem de aceite estrutural C2 (31 passed; sem aceite formal),candidatos_locais_e_linhagem,corrigir_objeto_da_linhagem_para_gerador_g2,fichas-11.md#item-110,False,relato local 2026-10-12,False
+DEC-15,Publicação dos candidatos locais,decisoes_candidatos_locais,decidir_publicacao_do_artefato_correto,fichas-12.md#item-111,False,registro de decisões,False
+DEC-N5,Binding posicional do runner ON (#167),decisoes_candidatos_locais,ratificar_binding_por_variante_e_compatibilidade,fichas-12.md#item-112,False,decisão nova desta revisão,False
+DEC-N3,"Escopo da #164 e da correção de texto (predict.py, models.py)",decisoes_candidatos_locais,decidir_diff_textual_com_guarda_e_sem_promessa_runtime,fichas-12.md#item-113,False,decisão nova desta revisão,False
+PROP-D09-MAIN-TEST,[Test][Loader] Suíte de testes unitários em main_test.go para eventlog-loader (TS11),externo_dataship,externo_reconciliar_candidato_de_testes,fichas-12.md#item-114,False,minuta local 2026-10-11,False
+PROP-D02-LOADER-MODULARIZATION,[Tooling][Dataship] Refatoração modular do eventlog-loader por responsabilidade (D02),externo_dataship,externo_estudar_refatoracao_delimitada,fichas-12.md#item-115,False,minuta local 2026-10-11,False
+PROP-D03-SPARK-JOBS,[Feature][Dataship] Ingestão da entidade spark_jobs no ClickHouse (D03),externo_dataship,externo_adiar_implementacao_e_definir_contrato,fichas-12.md#item-116,False,minuta local 2026-10-11,False
+PROP-D04-SPARK-SQL-EXECUTION-JOBS,[Feature][Dataship] Mapeamento relacional spark_sql_execution_jobs (D04),externo_dataship,externo_estudar_vinculo_sql_job,fichas-12.md#item-117,False,minuta local 2026-10-11,False
+S01,task_time_ms=0 para run não indexado,Pod 3/Serve+Pod 1/Front,ENCERRAR_CORRECAO_INTEGRADA,fichas-12.md#item-118,False,registro canônico (158),True
+S02,Queries da #129 contra ClickHouse real,Pod 3/Serve,AGRUPAR_RECONCILIAR_PROVA_EXISTENTE,fichas-12.md#item-119,False,registro canônico (158),True
+S03,Build/teste nginx com proxy /v1,Pod 3+Pod 1,AGRUPAR_PROVA_NGINX,fichas-12.md#item-120,False,registro canônico (158),True
+S04,Validação visual das telas via HTTP,Pod 1/Front,AGRUPAR_PROVA_BROWSER,fichas-13.md#item-121,False,registro canônico (158),True
+S05,Exposição de /docs e /openapi.json sem token,Pod 3/Segurança,DECIDIR_POLITICA_SCHEMA_POR_PERFIL,fichas-13.md#item-122,False,registro canônico (158),True
+S06,Onde o token HTTP fica (browser vs injeção pelo nginx),Pod 3+Pod 1,DECIDIR_CUSTODIA_TOKEN,fichas-13.md#item-123,False,registro canônico (158),True
+S07,Decidir e implementar /ask,Pod 3+Pod 1,DECIDIR_ASK_SOBRE_API_INTEGRADA,fichas-13.md#item-124,False,registro canônico (158),True
+S08,Caracterizar os oito tools antes de refactor (T19a),Pod 3/Serve,REVISAR_INTEGRAR_PR_EXISTENTE,fichas-13.md#item-125,False,registro canônico (158),True
+S09,MCP sem credencial direta do ClickHouse,Pod 3/Serve,ESTUDAR_NECESSIDADE_CONSUMIDOR,fichas-13.md#item-126,False,registro canônico (158),True
+S10,Piso Memory→Serve com proveniência (T35a/b),Pod 3+Memory,AGRUPAR_CONTRATO_PISO_PROVENIENTE,fichas-13.md#item-127,False,registro canônico (158),True
+S11,Falhas e conflitos do piso Memory→Serve (T35c),Pod 3+Memory,AGRUPAR_CONTROLES_CONTRATO_PISO,fichas-13.md#item-128,False,registro canônico (158),True
+S12,Catálogo de runbooks determinísticos (#112),Pod 3/Serve,ESTUDAR_CATALOGO_SEM_EXECUTOR,fichas-13.md#item-129,False,registro canônico (158),True
+DEC-01,Regularizar billing do GitHub Actions da conta `luanmorenommaciel`,governanca_e_integracao,decisao_pendente_sem_autorizacao,fichas-13.md#item-130,False,registro de decisões,False
+DEC-02,Política de proteção da `main` e de dependências,governanca_e_integracao,decisao_pendente_sem_autorizacao,fichas-14.md#item-131,False,registro de decisões,False
+DEC-03,Merge e ordem da fila #126–#134,governanca_e_integracao,historico_superado_preservado,fichas-14.md#item-132,False,registro de decisões,False
+NOV-01,Migração de `ubuntu-latest` para Ubuntu 26 entre 2026-10-19 e 2026-11-19; o manifesto da imagem lista PowerShell 7.6.6 (AC-07),governanca_e_integracao,achado_documental_com_decisao_pendente,fichas-14.md#item-133,False,achado desta revisão,False
+DEC-N1,Runner do CI frente à migração Ubuntu 26,governanca_e_integracao,decisao_pendente_sem_autorizacao,fichas-14.md#item-134,False,decisão nova desta revisão,False
+NOV-02,CI principal sem run verde na main pós-integração; prova hospedada parcial: `jar` agendado verde em 2026-10-12 no SHA atual (AC-06),governanca_e_integracao,achado_confirmado_no_corte,fichas-14.md#item-135,False,achado desta revisão,False
+NOV-03,"Fila aberta #155, #157–#159, #161–#164 sem review formal registrada; 3 heads com CI só do workflow anterior a #160 (AC-12)",governanca_e_integracao,achado_confirmado_no_corte,fichas-14.md#item-136,False,achado desta revisão,False
+DEC-N4,Método e ordem de integração da fila #155–#164,governanca_e_integracao,decisao_pendente_sem_autorizacao,fichas-14.md#item-137,False,decisão nova desta revisão,False
+NOV-04,"Falta uma visão atual datada: o registro CSV é histórico; o MATRIX.csv não carrega o estado reconciliado, que está em MATRIX.json (AC-04)",governanca_e_integracao,achado_corrigido_derivado_em_andamento,fichas-14.md#item-138,False,achado desta revisão (corrigido),False
+NOV-05,"Front declara `CONTRACT_VERSION = ""0.5""` enquanto `CONTRACT.md` declara v0.6",governanca_e_integracao,divergencia_documental_sem_incidente_provado,fichas-14.md#item-139,False,relato #180 + FATO na main,False
+NOV-06,Status desatualizado de Task-Specs em `tasks/`,governanca_e_integracao,achado_de_declaracoes_com_revisao_individual_pendente,fichas-14.md#item-140,False,achado desta revisão,False
+DEC-N7,Responsável por fechar Task-Specs,governanca_e_integracao,decisao_pendente_sem_autorizacao,fichas-15.md#item-141,False,decisão nova desta revisão,False
+NOV-07,Conflito de desenho: checks exigidos (#125) × `paths-ignore` do CI enxuto,governanca_e_integracao,risco_condicional_confirmado_por_configuracao,fichas-15.md#item-142,False,achado desta revisão,False
+DEC-N2,"Política de versão e distribuição (Verify, release v1, PyPI)",governanca_e_integracao,decisao_pendente_sem_autorizacao,fichas-15.md#item-143,False,decisão nova desta revisão,False
+DEC-04,Fechamento de issues após merge,decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-15.md#item-144,False,registro de decisões,False
+DEC-07,#122 proceed/defer/reject reenquadrado sobre a #129,decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-15.md#item-145,False,registro de decisões,False
+DEC-08,Token e exposição de `/docs`/`/openapi.json` na #129,decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-15.md#item-146,False,registro de decisões,False
+DEC-10,"Contenção operacional da #127 (dev/.env, ownership, Windows, cold start)",decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-15.md#item-147,False,registro de decisões,False
+DEC-11,ADR-004 de correlação de origem e numeração de ADRs,decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-15.md#item-148,False,registro de decisões,False
+DEC-12,Canal e triagem do SECURITY.md,decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-15.md#item-149,False,registro de decisões,False
+DEC-14,Texto do CONTRACT.md e marcadores PROPOSED,decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-15.md#item-150,False,registro de decisões,False
+DEC-16,Atualizar escopo do monitor automático — concluída,decisoes_produto_e_custodia,historico_concluido_declarado_sem_reexecucao,fichas-16.md#item-151,False,registro de decisões,False
+DEC-17,Preservar o candidato Ask V2 não commitado — concluída,decisoes_produto_e_custodia,historico_concluido_declarado_sem_reexecucao,fichas-16.md#item-152,False,registro de decisões,False
+DEC-18,Custódia dos relatórios 09-21 — concluída,decisoes_produto_e_custodia,historico_concluido_declarado_sem_reexecucao,fichas-16.md#item-153,False,registro de decisões,False
+DEC-19,"Estudos #106–#109, #112–#114: adotar/adiar/rejeitar",decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-16.md#item-154,False,registro de decisões,False
+DEC-20,Merge da PR #1 e prioridade do roadmap do laboratório,decisoes_produto_e_custodia,decisao_externa_no_corte,fichas-16.md#item-155,False,registro de decisões,False
+DEC-21,Merge da workspace PR #4 e valores MinIO,decisoes_produto_e_custodia,relato_externo_com_limite_de_acesso,fichas-16.md#item-156,False,registro de decisões,False
+DEC-22,F4.3 como leg própria do Serve,decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-16.md#item-157,False,registro de decisões,False
+DEC-23,"Convenção de tentativa nas leituras do Serve: `ts` × `(stage_attempt, ts)` (delta 2026-09-29)",decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-16.md#item-158,False,registro de decisões,False
+DEC-24,Rótulo de população e migração de `run_outcomes` na Memory (delta 2026-09-29),decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-16.md#item-159,False,registro de decisões,False
+DEC-25,Reaplicação de DDL durante ingestão e escopo do `verify_ddl.py` (delta 2026-09-30),decisoes_produto_e_custodia,decisao_pendente_sem_autorizacao,fichas-16.md#item-160,False,registro de decisões,False
+P04,PR #129 — apex-api HTTP entre ClickHouse e consumidores,serve_api_http,encerrar_pr_integrada_com_residuos_mapeados,fichas-17.md#item-161,False,registro canônico (158),True
+P05,PR #131 — preflight de schema do Engine,engine_preflight_schema,encerrar_pr_integrada_com_residuos_mapeados,fichas-17.md#item-162,False,registro canônico (158),True
+P06,PR #132 — reconciliar docs de contrato/Serve,documentacao_contrato_serve,pr_integrada_com_residuo_documental_delimitado,fichas-17.md#item-163,False,registro canônico (158),True
+P07,PR #133 — ADR-004 fronteira de correlação de origem (F4.1),arquitetura_privacidade,encerrar_pr_integrada_adr_permanece_proposto,fichas-17.md#item-164,False,registro canônico (158),True
+P08,PR #134 — README alinhado a v0.6,documentacao_readme,encerrar_pr_integrada_docs,fichas-17.md#item-165,False,registro canônico (158),True
+P09,Workspace PR #4 — reconciliar roadmap/backlog,workspace_externo,externo_workspace_registrar_evidencia_local,fichas-17.md#item-166,False,registro canônico (158),True
+P10,Dataship PR #1 — output local compartilhado master/worker,dataship_externo,externo_dataship_aguarda_upstream,fichas-17.md#item-167,False,registro canônico (158),True
+T-20260817-cursor-codex-config,T-20260817-cursor-codex-config.md,Serve / L1 Connect — documentação e clientes,decidir_documentacao_por_cliente_com_eval_reescrito,fichas-17.md#item-168,False,Task-Spec do repositório,False
+T-20260817-drop-from-path,T-20260817-drop-from-path.md,Serve / L1 Connect — distribuição PyPI,decidir_distribuicao_v1_superficie_incompleta,fichas-17.md#item-169,False,Task-Spec do repositório,False
+T-20260817-five-tools-assertion,T-20260817-five-tools-assertion.md,Serve / L1 Connect — apex_status,encerrar_meta_numerica_superada_preservando_controle,fichas-17.md#item-170,False,Task-Spec do repositório,False
+T-20260817-four-to-five-doc-ripple,T-20260817-four-to-five-doc-ripple.md,Serve / L1 Connect — documentação e clientes,encerrar_meta_numerica_e_abrir_reconciliacao_documental_atual,fichas-18.md#item-171,False,Task-Spec do repositório,False
+T-20260817-gate-status-assert,T-20260817-gate-status-assert.md,Serve / L1 Connect — apex_status,decidir_com_familia_e_prova_live_condicional,fichas-18.md#item-172,False,Task-Spec do repositório,False
+T-20260817-graphify-rebuild,T-20260817-graphify-rebuild.md,Tooling local / grafo de conhecimento,encerrar_ou_externalizar_tooling_local_nao_versionado,fichas-18.md#item-173,False,Task-Spec do repositório,False
+T-20260817-name-endpoint-in-error,T-20260817-name-endpoint-in-error.md,Serve / L1 Connect — configuração e erros,decidir_politica_de_mensagem_com_controle_discriminante,fichas-18.md#item-174,False,Task-Spec do repositório,False
+T-20260817-pypi-metadata,T-20260817-pypi-metadata.md,Serve / L1 Connect — distribuição PyPI,decidir_distribuicao_v1_preparacao_offline,fichas-18.md#item-175,False,Task-Spec do repositório,False
+T-20260817-pypi-publish,T-20260817-pypi-publish.md,Serve / L1 Connect — distribuição PyPI,decidir_distribuicao_v1_acao_irreversivel,fichas-18.md#item-176,False,Task-Spec do repositório,False
+T-20260817-register-apex-status,T-20260817-register-apex-status.md,Serve / L1 Connect — apex_status,decisao_central_da_familia_apex_status,fichas-18.md#item-177,False,Task-Spec do repositório,False
+T-20260817-resolve-settings-extract,T-20260817-resolve-settings-extract.md,Serve / L1 Connect — configuração e erros,decidir_refatoracao_independente_de_apex_status,fichas-18.md#item-178,False,Task-Spec do repositório,False
+T-20260817-root-mcp-json,T-20260817-root-mcp-json.md,Serve / L1 Connect — documentação e clientes,decidir_configuracao_de_projeto_independente,fichas-18.md#item-179,False,Task-Spec do repositório,False
+T-20260817-startup-stderr-banner,T-20260817-startup-stderr-banner.md,Serve / L1 Connect — configuração e erros,decidir_entrega_pequena_independente_de_apex_status,fichas-18.md#item-180,False,Task-Spec do repositório,False
+T-20260817-status-assembler,T-20260817-status-assembler.md,Serve / L1 Connect — apex_status,decidir_com_familia_apex_status,fichas-19.md#item-181,False,Task-Spec do repositório,False
+T-20260817-status-degraded-path,T-20260817-status-degraded-path.md,Serve / L1 Connect — apex_status,decidir_com_familia_apex_status,fichas-19.md#item-182,False,Task-Spec do repositório,False
+T-20260817-status-store-down-e2e,T-20260817-status-store-down-e2e.md,Serve / L1 Connect — apex_status,decidir_com_familia_apex_status,fichas-19.md#item-183,False,Task-Spec do repositório,False
+T-20260817-stdio-gate-five-tools,T-20260817-stdio-gate-five-tools.md,Serve / L1 Connect — apex_status,encerrar_meta_numerica_e_tratar_deriva_atual_do_gate,fichas-19.md#item-184,False,Task-Spec do repositório,False
+T-20260817-surface-defaulted-vars,T-20260817-surface-defaulted-vars.md,Serve / L1 Connect — apex_status,decidir_com_familia_apex_status_modelo_ja_preparado,fichas-19.md#item-185,False,Task-Spec do repositório,False
+T-20260817-table-columns-probe,T-20260817-table-columns-probe.md,Serve / L1 Connect — apex_status,decidir_com_familia_apex_status_mecanismo_parcial_existente,fichas-19.md#item-186,False,Task-Spec do repositório,False
+T-20260817-testpypi-rehearsal,T-20260817-testpypi-rehearsal.md,Serve / L1 Connect — distribuição PyPI,decidir_distribuicao_v1_etapa_externa_com_credencial,fichas-19.md#item-187,False,Task-Spec do repositório,False
+T-20260817-wheel-content-check,T-20260817-wheel-content-check.md,Serve / L1 Connect — distribuição PyPI,decidir_distribuicao_v1_invariante_desatualizada,fichas-19.md#item-188,False,Task-Spec do repositório,False
+T-20260819-retry-pressure-watcher,T-20260819-retry-pressure-watcher.md,Engine / telemetria retry-safe (#89),reconciliar_status_implementado_em_89_sem_reexecutar_evals,fichas-19.md#item-189,False,Task-Spec do repositório,False
+T-20260819-retry-safe-stage-fields,T-20260819-retry-safe-stage-fields.md,Engine / telemetria retry-safe (#89),reconciliar_status_implementado_em_89_sem_reexecutar_evals,fichas-19.md#item-190,False,Task-Spec do repositório,False
+T-20260820-effective-duration-properties,T-20260820-effective-duration-properties.md,Engine / telemetria retry-safe (#89),reconciliar_status_com_pergunta_aberta_resolvida_por_99,fichas-20.md#item-191,False,Task-Spec do repositório,False
+T-20260820-tail-outlier-raw-fields,T-20260820-tail-outlier-raw-fields.md,Engine / telemetria retry-safe (#89),reconciliar_status_com_eval_invalidado_por_decisao_posterior_99,fichas-20.md#item-192,False,Task-Spec do repositório,False
+T-20260920-tail-outlier-runtime-gate,T-20260920-tail-outlier-runtime-gate.md,DEV / prova tail-outlier (#123),manter_aberta_reconciliar_runtime_historico_e_garantia_do_gate,fichas-20.md#item-193,False,Task-Spec do repositório,False
+T-20260817-serverstatus-model,T-20260817-serverstatus-model.md,Serve / L1 Connect — apex_status,manter_done_historico_com_limite_B3_e_produtor_ausente,fichas-20.md#item-194,False,Task-Spec do repositório,False
+T-20260817-store-health-query,T-20260817-store-health-query.md,Serve / L1 Connect — apex_status,encerrar_concluida_com_reuso_pela_api,fichas-20.md#item-195,False,Task-Spec do repositório,False
+F01,Criar issue específica do /verify,front_verify_tela,encerrar_historico_concluido,fichas-20.md#item-196,False,registro canônico (158),True
+F12,Independência mecanismo/runtime no Front (T12),front_contrato_regras,encerrar_pr_integrada,fichas-20.md#item-197,False,registro canônico (158),True
+F13,Apresentar TAIL_OUTLIER no Front (T29),consumidores_tail_outlier,agrupar_em_166_parte_front,fichas-20.md#item-198,False,registro canônico (158),True
+F14,Endurecer CI do Front,front_ci,encerrar_pr_integrada_audit_separado,fichas-20.md#item-199,False,registro canônico (158),True
+F15,Topologia e proveniência visual (#108),front_proveniencia_grafo,estudar_em_paralelo_implementacao_depende_106,fichas-20.md#item-200,False,registro canônico (158),True
+F16,Atualizar KnownFindingType (RETRY_PRESSURE já na main; TAIL_OUTLIER após #127),consumidores_tail_outlier,dividir_retry_pressure_encerrado_tail_outlier_em_166,fichas-21.md#item-201,False,registro canônico (158),True
+F18,Texto do mechanism_check do Verify para tipos não-skew,consumidores_tail_outlier,agrupar_em_166_parte_verify,fichas-21.md#item-202,False,registro canônico (158),True
+F19,Proveniência de versão e docs do Verify,verify_documentacao_versao,executar_revisao_162_e_decidir_docs_lane_verify,fichas-21.md#item-203,False,registro canônico (158),True
+F20,Verify usa a população de tarefas bem-sucedidas do contrato v0.5 (TS45),verify_populacao_tarefas,encerrar_pr_integrada_residuo_p50_sem_destino,fichas-21.md#item-204,False,registro canônico (158),True
+F21,Verify recusa piso de ruído negativo ou não finito na certificação,verify_piso_ruido,encerrar_pr_integrada_residuos_em_dec05,fichas-21.md#item-205,False,registro canônico (158),True
+E03,Provar #131 contra ClickHouse real com database alternativo,engine_database_configuravel,estudar_prova_leitura_insert_db_alternativo_preflight_ja_provado,fichas-21.md#item-206,False,registro canônico (158),True
+E04,Database configurável nas lanes ainda com 'apex.' literal,engine_database_configuravel,agrupar_em_173_inventario_recontado,fichas-21.md#item-207,False,registro canônico (158),True
+E05,Reconciliação contrato declarado × runtime (#109),arquitetura_contrato_runtime,estudar_em_paralelo_runtime_com_autorizacao_propria,fichas-21.md#item-208,False,registro canônico (158),True
+E06,Protocolo versionado R9D (#113),harness_overhead_r9d,decidir_protocolo_sem_gate_previo_do_harness,fichas-21.md#item-209,False,registro canônico (158),True
+E07,Rehearsal ClickHouse 26.x e rollback (#114),infra_versao_clickhouse,adiar_ou_estudar_upgrade_sem_alterar_pin,fichas-21.md#item-210,False,registro canônico (158),True
+E08,Preservar dev/.env do operador (T33),pacote_configuracao_runner,agrupar_em_174_revisar_candidato_conjunto,fichas-22.md#item-211,False,registro canônico (158),True
+E09,Identidade de checkout/daemon/Compose (T34a),pacote_identidade_stacks,decidir_modelo_identidade_em_175,fichas-22.md#item-212,False,registro canônico (158),True
+E10,Guard de ownership antes de mutações Docker (T34b),pacote_identidade_stacks,agrupar_em_175_executar_apos_decisao_e09,fichas-22.md#item-213,False,registro canônico (158),True
+E11,Preflight read-only de dono de porta,pacote_identidade_stacks,agrupar_em_175_revalidar_candidato_porta,fichas-22.md#item-214,False,registro canônico (158),True
+E12,Fronteira de credenciais S3A do Dev,dev_credenciais_s3a,estudar_sem_destino_publico_ativo,fichas-22.md#item-215,False,registro canônico (158),True
+E13,Rotação local de credencial ClickHouse,infra_credenciais_clickhouse,agrupar_em_176_estudo_sem_gate_v1,fichas-22.md#item-216,False,registro canônico (158),True
+E15,Política de dependências e checks,governanca_ci,decidir_politica_dependencias_issue_propria_ou_125,fichas-22.md#item-217,False,registro canônico (158),True
+E16,Regressões do harness R9D,harness_overhead_r9d,agrupar_em_167_revisar_candidato_conjunto,fichas-22.md#item-218,False,registro canônico (158),True
+E18,Piso absoluto de duração no watcher tail-outlier,engine_tail_outlier,agrupar_em_168_adiar_limiar_ate_corpus,fichas-22.md#item-219,False,registro canônico (158),True
+E19,Endurecer guard SQL×DDL (#94 follow-up),engine_guard_sql_ddl,encerrar_pr_integrada,fichas-22.md#item-220,False,registro canônico (158),True
+E20,Ligar a constante do preflight às colunas lidas pelas queries do Engine,engine_preflight_schema,executar_revisao_155_e_escolher_prova,fichas-23.md#item-221,False,registro canônico (158),True
+E21,Guard do alvo de Materialized View não reconhece TO multilinha,infra_guard_mv,encerrar_pr_integrada_politica_em_170,fichas-23.md#item-222,False,registro canônico (158),True
+E22,Reaplicação de DDL pode regredir temporariamente o MV de spark_events,infra_migracoes,agrupar_em_170_decidir_politica_de_reaplicacao,fichas-23.md#item-223,False,registro canônico (158),True
+E23,Explicitar alcance do verify_ddl.py além de nome e tipo,infra_migracoes,agrupar_em_170_decidir_alcance_verify_ddl,fichas-23.md#item-224,False,registro canônico (158),True
+E24,Alinhar seleção de tentativa no Engine offline e SQL,consumidores_tentativa_stage,agrupar_em_169_decidir_seletor_comum,fichas-23.md#item-225,False,registro canônico (158),True
+S13,Interface MCP read-only de system graph (#107),serve_grafo_mcp,estudar_em_paralelo_implementacao_depende_106,fichas-23.md#item-226,False,registro canônico (158),True
+S14,"Efeito das consultas legadas Serve/Memory (retry-safe, T26)",consumidores_tentativa_stage,agrupar_em_169_decidir_populacao_e_migracao,fichas-23.md#item-227,False,registro canônico (158),True
+S15,"F4.3 — narrar 'AQE fez X, sua config diz Y' a partir de job_conf",serve_explicabilidade_aqe,agrupar_em_177_estudar_narracao_job_conf_existe,fichas-23.md#item-228,False,registro canônico (158),True
+S16,Serve renderiza delta medido abaixo do piso ou sem piso,serve_piso_ruido,encerrar_prs_integradas_residuo_igualdade_em_117,fichas-23.md#item-229,False,registro canônico (158),True
+S17,Serve suggest_fix sem receita para TAIL_OUTLIER,consumidores_tail_outlier,agrupar_em_166_parte_serve,fichas-23.md#item-230,False,registro canônico (158),True
+S18,Compare entre versões do Engine e colapso de AQE_REPLAN,serve_compare_runs,estudar_revalidar_contra_115_antes_de_issue,fichas-24.md#item-231,False,registro canônico (158),True
+S19,list_runs.worst_p99_ms mistura tentativas de stage superadas,consumidores_tentativa_stage,agrupar_em_169_corrigir_apos_politica,fichas-24.md#item-232,False,registro canônico (158),True
+S20,Serve classifica falhas do ClickHouse e recupera probes de metadata,serve_erros_clickhouse,encerrar_pr_integrada,fichas-24.md#item-233,False,registro canônico (158),True
+S21,Serve retém veredito e magnitude com piso inválido,serve_piso_ruido,encerrar_pr_integrada_com_lacuna_na_projecao,fichas-24.md#item-234,False,registro canônico (158),True
+S22,API HTTP rejeita noise_floor_pct negativo ou não finito,serve_api_http,encerrar_pr_integrada,fichas-24.md#item-235,False,registro canônico (158),True
+S23,Guard estático de paridade da projeção fix_verifications Front×Serve,serve_paridade_projecao,encerrar_pr_integrada_paridade_textual,fichas-24.md#item-236,False,registro canônico (158),True
+S24,Reforçar a paridade dos oito tools com argumentos idênticos,serve_paridade_transporte,agrupar_em_156_executar_revisao_157,fichas-24.md#item-237,False,registro canônico (158),True
+X01,Ratificar fronteira HTTP/BFF e sequência (#122),arquitetura_ask_http,decidir_em_122_reenquadrado_sobre_api_v1,fichas-24.md#item-238,False,registro canônico (158),True
+X02,Contrato de piso e atribuição (#117),contrato_piso_atribuicao,decidir_guarda_chuva_117_sem_reabrir_correcoes,fichas-24.md#item-239,False,registro canônico (158),True
+X03,Concluir ADR de correlação de origem,arquitetura_privacidade,encerrar_superado_por_p07,fichas-24.md#item-240,False,registro canônico (158),True
+X04,SECURITY.md e canal privado (#33),governanca_seguranca,decidir_canal_e_executar_security_md,fichas-25.md#item-241,False,registro canônico (158),True
+X05,Modo offline/on-prem seguro (#42),produto_onprem,estudar_em_paralelo_prioridade_do_mantenedor,fichas-25.md#item-242,False,registro canônico (158),True
+X07,System/contract graph (#106),arquitetura_grafo_sistema,decidir_adocao_do_grafo_estudos_paralelos,fichas-25.md#item-243,False,registro canônico (158),True
+X08,CI Integration — análise APEX em PR (#21),produto_ci_integration,adiar_feature_ci_integration_separada_de_125,fichas-25.md#item-244,False,registro canônico (158),True
+X09,Registro canônico de oportunidades,governanca_registro,externo_processo_visao_atual_datada,fichas-25.md#item-245,False,registro canônico (158),True
+X10,Custódia da rodada 2026-09-21 e dos pacotes locais,governanca_custodia,encerrar_sem_acao_com_manifesto_defasado_registrado,fichas-25.md#item-246,False,registro canônico (158),True
+X11,Candidato Ask V2 preservado localmente e em conflito com #129,arquitetura_ask_http,agrupar_em_122_preservado_sem_publicar,fichas-25.md#item-247,False,registro canônico (158),True
+X12,Inventário de branches remotas além das cinco da #105,governanca_branches,agrupar_em_105_inventario_com_dados_atuais,fichas-25.md#item-248,False,registro canônico (158),True
+X13,Reconciliar texto do CONTRACT.md e marcadores PROPOSED,contrato_documentacao,agrupar_em_165_decidir_redacao_com_guarda,fichas-25.md#item-249,False,registro canônico (158),True
+X14,Colisão de numeração de ADR + índice/glossário (resto de T25),documentacao_adr,encerrar_pr_integrada_sem_renumerar,fichas-25.md#item-250,False,registro canônico (158),True
+X15,Juiz externo Claude com circuito aberto,tooling_juiz_externo,encerrar_sem_acao_circuito_aberto_registrado,fichas-26.md#item-251,False,registro canônico (158),True
+X16,Vincular Task-Specs ao workspace correto,tooling_taskspec,externo_tooling_premissa_atualizada,fichas-26.md#item-252,False,registro canônico (158),True
+X17,Clones locais parcialmente 'dataless' no iCloud,governanca_ambiente_local,externo_ambiente_local_contagem_atualizada,fichas-26.md#item-253,False,registro canônico (158),True
+L01,Linhagem v4 do workspace,historico_linhagem,encerrar_historico_catalogado_fonte_confirmada,fichas-26.md#item-254,False,registro canônico (158),True
+L02,Linhagem recursiva #66–#93,historico_linhagem,encerrar_historico_snapshot_preservado,fichas-26.md#item-255,False,registro canônico (158),True
+L04,Reconciliação documental da linhagem,historico_metodo,encerrar_historico_politica_preservada,fichas-26.md#item-256,False,registro canônico (158),True
+L05,Inventário de proveniência de campos (A1),historico_proveniencia,encerrar_historico_residuo_em_l14,fichas-26.md#item-257,False,registro canônico (158),True
+L06,Auditoria de linhagem por chaves (A39),historico_proveniencia,encerrar_historico_documentado_na_main,fichas-26.md#item-258,False,registro canônico (158),True
+L07,Linhagem Ask HTTP contra upstream (R0),historico_ask_http,encerrar_historico_prompt_sem_resultado,fichas-26.md#item-259,False,registro canônico (158),True
+L08,Matriz de compatibilidade de telemetria,arquitetura_matriz_telemetria,encerrar_entregue_atualizacao_em_180,fichas-26.md#item-260,False,registro canônico (158),True
+L10,Verify usar runtime medido (executor_run_time_ms),verify_modelagem,agrupar_em_179_corrigir_texto_e_estudar,fichas-27.md#item-261,False,registro canônico (158),True
+L11,Contribuição e esforço como histórico,historico_contribuicao,encerrar_historico_nao_e_feature,fichas-27.md#item-262,False,registro canônico (158),True
+L12,Genealogia atual #66–#149,historico_linhagem,externo_registro_local_genealogia_ate_149,fichas-27.md#item-263,False,registro canônico (158),True
+L13,"Atualizar a matriz de compatibilidade (Front, v0.6, #129)",arquitetura_matriz_telemetria,agrupar_em_180_executar_atualizacao_preservando_historico,fichas-27.md#item-264,False,registro canônico (158),True
+L14,Lacunas históricas A1 ainda abertas,arquitetura_proveniencia,agrupar_em_180_confirmar_por_lane,fichas-27.md#item-265,False,registro canônico (158),True
+L15,Cenário declarativo e baselines negativos na main,historico_cenarios,encerrar_sem_acao_superado_pelo_mantenedor,fichas-27.md#item-266,False,registro canônico (158),True
+DD01,DOUBLE-DIAMOND-EXECUTION-STANDARD.md,tooling_double_diamond,encerrar_historico_tooling_padrao_preservado,fichas-27.md#item-267,False,registro canônico (158),True
+DD02,C38 piloto limpo,tooling_double_diamond,encerrar_historico_tooling_licao_em_dd07_e09,fichas-27.md#item-268,False,registro canônico (158),True
+DD03,C49 agente Debug Diamond,tooling_double_diamond,encerrar_historico_tooling_criacao_da_skill,fichas-27.md#item-269,False,registro canônico (158),True
+DD04,Skill apex-debug-diamond,tooling_double_diamond,externo_tooling_skill_revista_em_10_10,fichas-27.md#item-270,False,registro canônico (158),True
+DD05,"Roteamento, debugger e schema de evidência",tooling_double_diamond,encerrar_historico_tooling_parcialmente_revisto,fichas-28.md#item-271,False,registro canônico (158),True
+DD06,Parametrizar o escopo autorizado da skill,tooling_double_diamond,externo_tooling_atendido_localmente_em_10_10,fichas-28.md#item-272,False,registro canônico (158),True
+DD07,Rota de identidade de ambiente (porta/perfil Colima/daemon),tooling_double_diamond,externo_tooling_parcial_texto_sem_automacao,fichas-28.md#item-273,False,registro canônico (158),True
+DD08,Checar TTL/ts antes da rota 'materialized-view-loss',tooling_double_diamond,externo_conclusao_local_preservada_verificada,fichas-28.md#item-274,False,registro canônico (158),True
+DD09,Rotas de schema atrasado e de lanes consumidoras,tooling_double_diamond,externo_tooling_majoritariamente_atendido,fichas-28.md#item-275,False,registro canônico (158),True
+DD10,Schema de evidência e versionamento da skill,tooling_double_diamond,externo_tooling_aberto_versionar_e_schema,fichas-28.md#item-276,False,registro canônico (158),True
+T-20260923-console-findings-transitions-projection,T-20260923-console-findings-transitions-projection.md,Serve+Front / paridade da Console (#153),reconciliar_status_implementado_e_registrar_decisao_do_probe,fichas-28.md#item-277,False,Task-Spec do repositório,False
+T-20260923-console-http-deployment-wiring,T-20260923-console-http-deployment-wiring.md,Front / implantação em modo http (#153),reconciliar_status_implementado_prova_nginx_browser_segue_em_172,fichas-28.md#item-278,False,Task-Spec do repositório,False
+T-20260923-navbar-source-badge,T-20260923-navbar-source-badge.md,Front / identidade da fonte de dados (#153),reconciliar_status_implementado_e_ratificar_tom_visual,fichas-28.md#item-279,False,Task-Spec do repositório,False
+T-20260923-run-rollup-unindexed-sentinel,T-20260923-run-rollup-unindexed-sentinel.md,Serve+Front / paridade da Console (#153),reconciliar_status_implementado_com_prova_live_relatada,fichas-28.md#item-280,False,Task-Spec do repositório,False
+T-20260923-screens-surface-query-failures,T-20260923-screens-surface-query-failures.md,Front / estados de falha honestos (#153),reconciliar_status_implementado_com_ajuste_posterior,fichas-29.md#item-281,False,Task-Spec do repositório,False
+T-20260929-console-parity-live-gate,T-20260929-console-parity-live-gate.md,"Serve / gate live de paridade (#153, #159)",reconciliar_status_com_recibo_live_e_continuidade_em_159,fichas-29.md#item-282,False,Task-Spec do repositório,False
+T-20260929-wire-timestamp-format,T-20260929-wire-timestamp-format.md,Serve+Front / contrato de tempo (#153),reconciliar_status_implementado_e_ratificar_precisao,fichas-29.md#item-283,False,Task-Spec do repositório,False
+T-20261006-console-e2e-reflection,T-20261006-console-e2e-reflection.md,Console / prova integrada e DEV (#153),reconciliar_status_com_recibo_live_e_limite_de_browser_real,fichas-29.md#item-284,False,Task-Spec do repositório,False
+T-20261006-dev-c3-driver-host,T-20261006-dev-c3-driver-host.md,DEV / overlay C3-C4 (#153),reconciliar_status_implementado_eval_make_n_nao_isolado,fichas-29.md#item-285,False,Task-Spec do repositório,False
+T-20261006-six-lane-gate-full-detail,T-20261006-six-lane-gate-full-detail.md,Console / prova integrada e DEV (#153),reconciliar_status_implementado_com_teste_que_fixa_argumentos,fichas-29.md#item-286,False,Task-Spec do repositório,False
+T-20260819-auto-baseline,T-20260819-auto-baseline.md,Serve / L2 Discover — descoberta de runs (#83),encerrada_com_limite_de_janela_e_ordem_temporal_nao_testado,fichas-29.md#item-287,False,Task-Spec do repositório,False
+T-20260819-discover-docs,T-20260819-discover-docs.md,Serve / L2 Discover — descoberta de runs (#83),encerrada_historica_documentos_atuais_seguem_reconciliacao,fichas-29.md#item-288,False,Task-Spec do repositório,False
+T-20260819-list-runs-tool,T-20260819-list-runs-tool.md,Serve / L2 Discover — descoberta de runs (#83),encerrada_com_eval_que_nao_invoca_a_tool,fichas-29.md#item-289,False,Task-Spec do repositório,False
+T-20260819-run-summary-models,T-20260819-run-summary-models.md,Serve / L2 Discover — descoberta de runs (#83),encerrada_com_correcao_live_posterior,fichas-29.md#item-290,False,Task-Spec do repositório,False
+T-20260819-runs-gates,T-20260819-runs-gates.md,Serve / L2 Discover — descoberta de runs (#83),encerrada_historica_gate_stdio_atual_com_deriva,fichas-30.md#item-291,False,Task-Spec do repositório,False
+T-20260819-runs-injection-hardening,T-20260819-runs-injection-hardening.md,Serve / L2 Discover — descoberta de runs (#83),encerrada_controles_presentes,fichas-30.md#item-292,False,Task-Spec do repositório,False
+T-20260819-runs-read-layer,T-20260819-runs-read-layer.md,Serve / L2 Discover — descoberta de runs (#83),encerrada_com_correcao_live_posterior,fichas-30.md#item-293,False,Task-Spec do repositório,False
+T-20260819-runs-resource,T-20260819-runs-resource.md,Serve / L2 Discover — descoberta de runs (#83),encerrada_com_b3_sem_teste_dedicado,fichas-30.md#item-294,False,Task-Spec do repositório,False
+T-20260819-serve-brief-five-tools,T-20260819-serve-brief-five-tools.md,Serve / L2 Discover — descoberta de runs (#83),encerrada_historica_brief_atual_desatualizado,fichas-30.md#item-295,False,Task-Spec do repositório,False
+T-20260819-tool-surface-five,T-20260819-tool-surface-five.md,Serve / L2 Discover — descoberta de runs (#83),encerrada_historica_eval_aponta_teste_renomeado,fichas-30.md#item-296,False,Task-Spec do repositório,False
+T-20260820-coverage-freshness,T-20260820-coverage-freshness.md,Serve / L3 Understand — legibilidade do diagnóstico (#88),encerrada_sem_aceite_formal_com_lacuna_live_documentada,fichas-30.md#item-297,False,Task-Spec do repositório,False
+T-20260820-critical-path,T-20260820-critical-path.md,Serve / L3 Understand — legibilidade do diagnóstico (#88),encerrada_sem_aceite_formal_controles_presentes,fichas-30.md#item-298,False,Task-Spec do repositório,False
+T-20260820-detail-parameter,T-20260820-detail-parameter.md,Serve / L3 Understand — legibilidade do diagnóstico (#88),encerrada_sem_aceite_formal_com_efeito_colateral_corrigido_em_153,fichas-30.md#item-299,False,Task-Spec do repositório,False
+T-20260820-explain-stage-tool,T-20260820-explain-stage-tool.md,Serve / L3 Understand — legibilidade do diagnóstico (#88),encerrada_sem_aceite_formal_eval_b3_desconectado,fichas-30.md#item-300,False,Task-Spec do repositório,False
+T-20260820-l3-docs,T-20260820-l3-docs.md,Serve / L3 Understand — legibilidade do diagnóstico (#88),encerrada_historica_sem_aceite_formal,fichas-31.md#item-301,False,Task-Spec do repositório,False
+T-20260820-l5-docs,T-20260820-l5-docs.md,Serve / L5 Fix — superfície da verify lane (#87),encerrada_historica_com_limite_live_ainda_declarado,fichas-31.md#item-302,False,Task-Spec do repositório,False
+T-20260820-l5-tool-surface,T-20260820-l5-tool-surface.md,Serve / L5 Fix — superfície da verify lane (#87),encerrada_historica_eval_aponta_teste_renomeado,fichas-31.md#item-303,False,Task-Spec do repositório,False
+T-20260820-l6-docs,T-20260820-l6-docs.md,Serve / L6 Learn — memória entre runs (#86),encerrada_aceite_com_formato_nao_carimbado,fichas-31.md#item-304,False,Task-Spec do repositório,False
+T-20260820-l6-tool-surface,T-20260820-l6-tool-surface.md,Serve / L6 Learn — memória entre runs (#86),encerrada_origem_da_deriva_do_gate_stdio,fichas-31.md#item-305,False,Task-Spec do repositório,False
+T-20260820-noise-floor-honesty,T-20260820-noise-floor-honesty.md,Serve / L6 Learn — memória entre runs (#86),encerrada_controles_presentes_com_endurecimento_posterior,fichas-31.md#item-306,False,Task-Spec do repositório,False
+T-20260820-plan-memory-read-layer,T-20260820-plan-memory-read-layer.md,Serve / L6 Learn — memória entre runs (#86),encerrada_aceite_antecede_correcao_live,fichas-31.md#item-307,False,Task-Spec do repositório,False
+T-20260820-recall-models,T-20260820-recall-models.md,Serve / L6 Learn — memória entre runs (#86),encerrada_controles_presentes,fichas-31.md#item-308,False,Task-Spec do repositório,False
+T-20260820-recall-runs-tool,T-20260820-recall-runs-tool.md,Serve / L6 Learn — memória entre runs (#86),encerrada_evals_desconectados_controles_reais_em_testes,fichas-31.md#item-309,False,Task-Spec do repositório,False
+T-20260820-suggest-fix-provenance,T-20260820-suggest-fix-provenance.md,Serve / L5 Fix — superfície da verify lane (#87),encerrada_com_endurecimentos_posteriores,fichas-31.md#item-310,False,Task-Spec do repositório,False
+T-20260820-tool-surface-six,T-20260820-tool-surface-six.md,Serve / L3 Understand — legibilidade do diagnóstico (#88),encerrada_historica_sem_aceite_eval_aponta_teste_renomeado,fichas-32.md#item-311,False,Task-Spec do repositório,False
+T-20260820-verification-models,T-20260820-verification-models.md,Serve / L5 Fix — superfície da verify lane (#87),encerrada_controles_presentes_convencao_de_sinal,fichas-32.md#item-312,False,Task-Spec do repositório,False
+T-20260820-verifications-read-layer,T-20260820-verifications-read-layer.md,Serve / L5 Fix — superfície da verify lane (#87),encerrada_sql_sem_prova_live_declarada,fichas-32.md#item-313,False,Task-Spec do repositório,False
+T-20260820-verify-fix-tool,T-20260820-verify-fix-tool.md,Serve / L5 Fix — superfície da verify lane (#87),encerrada_evals_desconectados_controles_reais_em_testes,fichas-32.md#item-314,False,Task-Spec do repositório,False
+T-20260918-execution-stage-attribution-offline,T-20260918-execution-stage-attribution-offline.md,"Engine / atribuição de execução (#115, #126)",encerrada_fatia_offline_sem_consumidor_issue_115_aberta,fichas-32.md#item-315,False,Task-Spec do repositório,False
+T-20260918-pwsh-command-aware-coverage,T-20260918-pwsh-command-aware-coverage.md,"Package / interface e CI PowerShell (#124, #128)",encerrada_com_lacuna_de_invocacao_mantida_em_124,fichas-32.md#item-316,False,Task-Spec do repositório,False
+T-20260918-tail-outlier-finding-contract,T-20260918-tail-outlier-finding-contract.md,"Engine / contrato e watcher de cauda (#123, #127)",encerrada_eval_aponta_teste_renomeado_pela_remediacao,fichas-32.md#item-317,False,Task-Spec do repositório,False
+T-20260918-tail-outlier-package-wiring-offline,T-20260918-tail-outlier-package-wiring-offline.md,"Package / roteamento tail-outlier (#123, #127)",encerrada_testes_estruturais_garantia_do_gate_em_123,fichas-32.md#item-318,False,Task-Spec do repositório,False
+T-20260918-tail-outlier-watcher-offline,T-20260918-tail-outlier-watcher-offline.md,"Engine / contrato e watcher de cauda (#123, #127)",encerrada_controles_presentes,fichas-32.md#item-319,False,Task-Spec do repositório,False
+T-20260919-execution-attribution-audit-hardening,T-20260919-execution-attribution-audit-hardening.md,"Engine / atribuição de execução (#115, #126)",encerrada_remediacao_de_testes_e_docstring,fichas-32.md#item-320,False,Task-Spec do repositório,False
+T-20260919-execution-attribution-conflict-collision,T-20260919-execution-attribution-conflict-collision.md,"Engine / atribuição de execução (#115, #126)",encerrada_teste_discriminante_de_colisao,fichas-33.md#item-321,False,Task-Spec do repositório,False
+T-20260919-execution-attribution-scope-collision,T-20260919-execution-attribution-scope-collision.md,"Engine / atribuição de execução (#115, #126)",encerrada_teste_discriminante_de_escopo,fichas-33.md#item-322,False,Task-Spec do repositório,False
+T-20260919-pwsh-package-audit-hardening,T-20260919-pwsh-package-audit-hardening.md,"Package / interface e CI PowerShell (#124, #128)",encerrada_remediacao_de_testes_lacuna_de_invocacao_persiste,fichas-33.md#item-323,False,Task-Spec do repositório,False
+T-20260919-tail-outlier-contract-audit-hardening,T-20260919-tail-outlier-contract-audit-hardening.md,"Engine / contrato e watcher de cauda (#123, #127)",encerrada_fail_closed_numerico_presente,fichas-33.md#item-324,False,Task-Spec do repositório,False
+T-20260919-tail-outlier-watcher-audit-hardening,T-20260919-tail-outlier-watcher-audit-hardening.md,"Engine / contrato e watcher de cauda (#123, #127)",encerrada_contrato_emitido_pinado,fichas-33.md#item-325,False,Task-Spec do repositório,False
+T-20260919-tail-outlier-wiring-audit-hardening,T-20260919-tail-outlier-wiring-audit-hardening.md,"Package / roteamento tail-outlier (#123, #127)",encerrada_testes_estruturais_mais_fortes_sem_execucao,fichas-33.md#item-326,False,Task-Spec do repositório,False
+T-20260920-api-diagnostic-routes,T-20260920-api-diagnostic-routes.md,Serve+Front / API HTTP e adaptação da Console (#129),encerrada_controle_de_paridade_tool_rota_presente,fichas-33.md#item-327,False,Task-Spec do repositório,False
+T-20260920-api-openapi-auth,T-20260920-api-openapi-auth.md,Serve+Front / API HTTP e adaptação da Console (#129),encerrada_exposicao_dos_docs_em_decisao_171,fichas-33.md#item-328,False,Task-Spec do repositório,False
+T-20260920-api-resource-routes,T-20260920-api-resource-routes.md,Serve+Front / API HTTP e adaptação da Console (#129),encerrada_b2_aceito_com_controle_fraco_corrigido_depois,fichas-33.md#item-329,False,Task-Spec do repositório,False
+T-20260920-api-skeleton,T-20260920-api-skeleton.md,Serve+Front / API HTTP e adaptação da Console (#129),encerrada_controles_presentes_decisao_de_token_em_171,fichas-33.md#item-330,False,Task-Spec do repositório,False
+T-20260920-console-http-repository,T-20260920-console-http-repository.md,Serve+Front / API HTTP e adaptação da Console (#129),encerrada_401_provado_no_repositorio_tela_em_153,fichas-34.md#item-331,False,Task-Spec do repositório,False
+T-20260920-readstore-console-queries,T-20260920-readstore-console-queries.md,Serve+Front / API HTTP e adaptação da Console (#129),encerrada_portes_com_correcao_posterior_do_rollup,fichas-34.md#item-332,False,Task-Spec do repositório,False
+T-20260921-console-same-origin-api,T-20260921-console-same-origin-api.md,Serve+Front / API HTTP e adaptação da Console (#129),encerrada_aceita_sobre_nginx_quebrado_corrigido_no_mesmo_dia,fichas-34.md#item-333,False,Task-Spec do repositório,False
+T-20260921-pr129-review-fixes,T-20260921-pr129-review-fixes.md,Serve+Front / API HTTP e adaptação da Console (#129),encerrada_correcoes_de_revisao_concluidas_por_fab6620,fichas-34.md#item-334,False,Task-Spec do repositório,False
+W01,Revisar/mergear workspace PR #4,workspace_externo,encerrar_duplicata_de_p09,fichas-34.md#item-335,False,registro canônico (158),True
+W02,Captura real com spill,workspace_externo,externo_workspace_bloqueado_por_captura_real,fichas-34.md#item-336,False,registro canônico (158),True
+W03,Baseline real sem spill,workspace_externo,externo_workspace_bloqueado_par_negativo,fichas-34.md#item-337,False,registro canônico (158),True
+W04,Estender Oráculo para spill,workspace_externo,externo_workspace_estender_oraculo_spill,fichas-34.md#item-338,False,registro canônico (158),True
+W05,MinIO do Oráculo semanal,workspace_externo,externo_workspace_bloqueado_credenciais_do_usuario,fichas-34.md#item-339,False,registro canônico (158),True
+W06,Oito tasks reais em worker multi-core,workspace_externo,externo_workspace_runtime_multicore,fichas-34.md#item-340,False,registro canônico (158),True
+W07,Critérios prototype→validated para os quatro cenários,workspace_externo,externo_workspace_concluido_localmente_pr5,fichas-35.md#item-341,False,registro canônico (158),True
+W08,Cost Watcher,workspace_externo,estudar_em_paralelo_com_capturas,fichas-35.md#item-342,False,registro canônico (158),True
+W09,Tiers 2–4 de LLM,workspace_externo,estudar_protocolo_offline,fichas-35.md#item-343,False,registro canônico (158),True
+W10,Manter roadmap histórico marcado,workspace_externo,encerrar_superado_roadmap_marcado_historico,fichas-35.md#item-344,False,registro canônico (158),True
+W11,Resíduos do backlog após PR #4,workspace_externo,encerrar_concluido_pr4,fichas-35.md#item-345,False,registro canônico (158),True
+W12,Ligar workspace issue #1 ao dataship PR #1,workspace_externo,externo_governanca_aguarda_decisao_upstream,fichas-35.md#item-346,False,registro canônico (158),True
+D01,Validar E2E o volume compartilhado da PR #1,dataship_externo,encerrar_superado_por_p10,fichas-35.md#item-347,False,registro canônico (158),True
+D02,Refatorar loader Go por responsabilidade,dataship_externo,externo_dataship_refatoracao_decisao_upstream,fichas-35.md#item-348,False,registro canônico (158),True
+D03,Adicionar spark_jobs,dataship_externo,externo_dataship_tabela_spark_jobs,fichas-35.md#item-349,False,registro canônico (158),True
+D04,Adicionar spark_sql_execution_jobs,dataship_externo,externo_dataship_ponte_sql_job,fichas-35.md#item-350,False,registro canônico (158),True
+D05,Normalizar updates AQE,dataship_externo,externo_dataship_planos_adaptativos,fichas-36.md#item-351,False,registro canônico (158),True
+D06,Adicionar spark_applications,dataship_externo,externo_dataship_tabela_aplicacoes,fichas-36.md#item-352,False,registro canônico (158),True
+D07,Extrair nós do plano,dataship_externo,externo_dataship_adiar_nos_do_plano,fichas-36.md#item-353,False,registro canônico (158),True
+D08,Normalizar métricas de executor,dataship_externo,externo_dataship_adiar_metricas_executor,fichas-36.md#item-354,False,registro canônico (158),True
+D09,Testes do loader com fixtures,dataship_externo,externo_candidato_local_testes_ts11,fichas-36.md#item-355,False,registro canônico (158),True
+D15,Reproduzir dependências do módulo Go do loader,dataship_externo,externo_pr2_aberta_aguarda_upstream,fichas-36.md#item-356,False,registro canônico (158),True
+D10,Catálogo de workloads,dataship_externo,externo_dataship_adiar_catalogo_workloads,fichas-36.md#item-357,False,registro canônico (158),True
+D11,Metadados de experimento,dataship_externo,externo_dataship_adiar_metadados_experimento,fichas-36.md#item-358,False,registro canônico (158),True
+D12,Query pack operacional,dataship_externo,externo_dataship_adiar_query_pack,fichas-36.md#item-359,False,registro canônico (158),True
+D13,Equivalência Spark Connect,dataship_externo,externo_dataship_adiar_spark_connect,fichas-36.md#item-360,False,registro canônico (158),True
+D14,Branches experimentais do upstream (listener/observer),dataship_externo,externo_dataship_estudar_branches_experimentais,fichas-37.md#item-361,False,registro canônico (158),True
+PROP-X13-CONTRACT-RECONCILIATION,[Docs][Contract] Reconciliar texto do CONTRACT.md e marcadores PROPOSED de schema SQL (DEC-14),minutas_publicadas,minuta_publicada_165_premissa_corrigida_na_publicacao,fichas-37.md#item-362,False,minuta local 2026-10-11,False
+PROP-D05-AQE-UPDATES,[Feature][Dataship] Normalização de eventos adaptativos de execução AQE (D05),minutas_dataship,minuta_externa_nao_publicada_alinhar_ao_roadmap_upstream,fichas-37.md#item-363,False,minuta local 2026-10-11,False
+PROP-D06-SPARK-APPLICATIONS,[Feature][Dataship] Tabela de metadados de ciclo de vida spark_applications (D06),minutas_dataship,minuta_externa_estudar_identidade_e_ciclo_de_vida,fichas-37.md#item-364,False,minuta local 2026-10-11,False
+PROP-D07-PLAN-NODES-EXTRACTION,[Study][Dataship] Estudo de viabilidade da extração de nós de plano físico Spark (D07),minutas_dataship,minuta_externa_estudo_condicional,fichas-37.md#item-365,False,minuta local 2026-10-11,False
+PROP-D08-EXECUTOR-METRICS-NORMALIZATION,[Study][Dataship] Avaliação de normalização de métricas de executores Spark (D08),minutas_dataship,minuta_externa_estudo_condicional,fichas-37.md#item-366,False,minuta local 2026-10-11,False
+PROP-D10-WORKLOAD-CATALOG,[Feature][Dataship] Especificação de convenções e catálogo de workloads (D10),minutas_dataship,minuta_externa_adiada_problema_vago,fichas-37.md#item-367,False,minuta local 2026-10-11,False
+PROP-D11-EXPERIMENT-METADATA,[Docs][Dataship] Padronização de metadados para rastreabilidade de experimentos (D11),minutas_dataship,minuta_externa_adiada_template_documental,fichas-37.md#item-368,False,minuta local 2026-10-11,False
+PROP-D12-OPERATIONAL-QUERY-PACK,[Docs][Dataship] Pacote de consultas canônicas para o ClickHouse (D12),minutas_dataship,minuta_externa_conferir_documentacao_existente,fichas-37.md#item-369,False,minuta local 2026-10-11,False
+PROP-D13-SPARK-CONNECT-EQUIVALENCE,[Study][Dataship] Estudo de paridade de telemetria com Spark Connect (D13),minutas_dataship,minuta_externa_estudo_de_paridade_connect_prioridade_pendente,fichas-37.md#item-370,False,minuta local 2026-10-11,False
+PROP-D14-UPSTREAM-BRANCHES-EVALUATION,[Study][Dataship] Avaliação de branches experimentais do repositório upstream (D14),minutas_dataship,minuta_externa_estudo_de_leitura_util,fichas-38.md#item-371,False,minuta local 2026-10-11,False
+P-TAIL,[Feature][Front/Verify/Serve] Tratar TAIL_OUTLIER nos consumidores após #127,minutas_publicadas,minuta_publicada_166_f16_omitido,fichas-38.md#item-372,False,minuta local 2026-10-11,False
+P-GATE,[CONDICIONAL][Tooling][Pod 2/Engine] Higiene do gate tail-outlier e harness R9D pós-#127,minutas_publicadas,minuta_dividida_e16_em_167_e17_em_123,fichas-38.md#item-373,False,minuta local 2026-10-11,False
+P-E18,[Study][Pod 2/Engine] Piso absoluto de duração no watcher tail-outlier,minutas_publicadas,minuta_publicada_168_limiar_retirado,fichas-38.md#item-374,False,minuta local 2026-10-11,False
+P-DEC23,[Decision][Pod 2/Pod 3] Seletor comum de tentativa de stage (DEC-23) e população legada,minutas_publicadas,minuta_publicada_169_sem_residuo_p50,fichas-38.md#item-375,False,minuta local 2026-10-11,False
+P-DEC25,[Decision][Pod 2/Infra] Reaplicação do DDL e escopo do verify_ddl (DEC-25),minutas_publicadas,minuta_publicada_170_classificacao_de_arquivos,fichas-38.md#item-376,False,minuta local 2026-10-11,False
+P-DEC08,[Decision][Pod 3/Serve] Exposição de /docs e credencial HTTP (DEC-08),minutas_publicadas,minuta_publicada_171_por_perfil,fichas-38.md#item-377,False,minuta local 2026-10-11,False
+P-DEC06,[Decision][Pod 1/Verify] Escritor de fix_verifications e dono (DEC-06),minutas_disposicao,minuta_nao_publicada_reaproveita_117,fichas-38.md#item-378,False,minuta local 2026-10-11,False
+P-R129,[Test][Pod 3/Serve] Prova runtime da #129 no head atual,minutas_publicadas,minuta_dividida_s02_em_156_s03_s04_em_172,fichas-38.md#item-379,False,minuta local 2026-10-11,False
+P-S01,[Bug][Pod 3/Serve] task_time_ms=0 para run sem run_outcomes,minutas_disposicao,minuta_nao_publicada_ja_corrigido,fichas-38.md#item-380,False,minuta local 2026-10-11,False
+P-E04,[Audit][Pod 2/Pod 3] Literais 'apex.' restantes após #129 e #131,minutas_publicadas,minuta_publicada_173_inventario_ainda_ausente,fichas-39.md#item-381,False,minuta local 2026-10-11,False
+P-E08,[Bug][Pod 2/Package] Preservar dev/.env antes de sobrescrever,minutas_publicadas,minuta_publicada_174_opcoes_ampliadas,fichas-39.md#item-382,False,minuta local 2026-10-11,False
+P-E09,"[Decision][Pod 2/Package] Modelo de identidade de checkout, daemon e Compose (DEC-10)",minutas_publicadas,minuta_publicada_175_matriz_de_operacoes,fichas-39.md#item-383,False,minuta local 2026-10-11,False
+P-E13,[Study][Pod 2/Infra] Rotação local de credencial ClickHouse,minutas_publicadas,minuta_publicada_176_procedimento_com_matriz,fichas-39.md#item-384,False,minuta local 2026-10-11,False
+P-S15,[Feature][Pod 3/Serve] F4.3: narrar AQE a partir de job_conf,minutas_publicadas,minuta_publicada_177_premissa_corrigida,fichas-39.md#item-385,False,minuta local 2026-10-11,False
+PROP-L09-HARN-BINDING,[Feature][Pod 2/Harness] Repassar APEX_OTLP_ENDPOINT no alvo run-pathology,minutas_publicadas,minuta_publicada_178_propagacao_completa,fichas-39.md#item-386,False,minuta local 2026-10-11,False
+PROP-L10-VERIFY-RUNTIME,[Question][Pod 1/Verify] Verify deve usar executor_run_time_ms medido com fallback estimado?,minutas_publicadas,minuta_publicada_179_estudo_e_texto_separados,fichas-39.md#item-387,False,minuta local 2026-10-11,False
+PROP-L13-MATRIX-UPDATE,"[Docs][Cross-lane] Atualizar matriz de compatibilidade para topologia atual (Front, apex-api)",minutas_publicadas,minuta_publicada_180_absorve_l14,fichas-39.md#item-388,False,minuta local 2026-10-11,False
+PROP-L14-PROVENANCE-GAPS,"[Question][Cross-lane] Lacunas de proveniência A1 restantes (status, ambiente, decisões Memory) ainda existem?",minutas_disposicao,minuta_nao_publicada_agrupada_em_180,fichas-39.md#item-389,False,minuta local 2026-10-11,False
+PROP-DD06-SKILL-SCOPE,[Feature][Método] Parametrizar escopo autorizado da skill apex-debug-diamond,minutas_tooling,minuta_tooling_ja_atendida_antes_da_minuta,fichas-39.md#item-390,False,minuta local 2026-10-11,False
+PROP-DD07-ENV-IDENTITY,[Feature][Método] Rota de identidade de ambiente e checagem de dono de porta,minutas_tooling,minuta_tooling_parcialmente_atendida,fichas-40.md#item-391,False,minuta local 2026-10-11,False
+PROP-DD09-ROUTES,[Feature][Método] Rotas para schema atrasado (Code 47) e lanes consumidoras,minutas_tooling,minuta_tooling_majoritariamente_atendida,fichas-40.md#item-392,False,minuta local 2026-10-11,False
+PROP-DD10-EVIDENCE-SCHEMA,[Feature][Método] Versionar skill e enriquecer schema de evidência,minutas_tooling,minuta_tooling_aberta_aplicavel,fichas-40.md#item-393,False,minuta local 2026-10-11,False
+#5,[ADR-001] Onde o Apex roda?,historico,historico_preservado_com_justificativa,fichas-40.md#item-394,False,GitHub issue,False
+#6,[ADR-002] Quando o classificador (Tier 2) dispara?,historico,historico_preservado_com_justificativa,fichas-40.md#item-395,False,GitHub issue,False
+#7,[ADR-003] Onde mora o estado histórico do Apex?,historico,historico_preservado_com_justificativa,fichas-40.md#item-396,False,GitHub issue,False
+#8,[ADR-004] Linguagem dos componentes,historico,historico_substituido_pela_implementacao,fichas-40.md#item-397,False,GitHub issue,False
+#9,[DATA GEN] Define the data generator specification for Apex,historico,historico_substituido_com_residuo_de_escopo,fichas-40.md#item-398,False,GitHub issue,False
+#10,[LAB PLAT] build Apex Lab Platform v0,historico,historico_preservado_com_divergencia_de_desenho,fichas-40.md#item-399,False,GitHub issue,False
+#11,teste,historico,registro_de_teste_sem_escopo,fichas-40.md#item-400,False,GitHub issue,False
+#12,[TEST] SIDYMAR,historico,registro_de_teste_sem_escopo,fichas-41.md#item-401,False,GitHub issue,False
+#15,[EPIC] Apex — Peak Performance for Spark & Databricks,historico,epico_historico_substituido_por_ledger,fichas-41.md#item-402,False,GitHub issue,False
+#16,[FEATURE] Spark History Parser,historico,historico_substituido_por_pivo_de_arquitetura,fichas-41.md#item-403,False,GitHub issue,False
+#17,[FEATURE] Watcher / Classifier / Judger Pipeline,historico,historico_preservado_com_justificativa,fichas-41.md#item-404,False,GitHub issue,False
+#18,[FEATURE] OTel Collector Stage 02 (Go),historico,historico_substituido_por_configuracao,fichas-41.md#item-405,False,GitHub issue,False
+#19,[FEATURE] Local Bootstrap Platform (dataship-spark-plat-v0),historico,historico_substituido_por_reconstrucao_interna,fichas-41.md#item-406,False,GitHub issue,False
+#20,[FEATURE] Performance Recommendation Engine,historico,entregue_em_parte_com_residuo_em_issue_aberta,fichas-41.md#item-407,False,GitHub issue,False
+#22,[ADR-001] Go as language for OTel Collector,historico,historico_substituido_sem_objeto,fichas-41.md#item-408,False,GitHub issue,False
+#23,[ADR-002] Shadow repo governance — dataship-spark-plat-v0,historico,historico_resolvido_por_reconstrucao,fichas-41.md#item-409,False,GitHub issue,False
+#24,[ADR-003] Intentional deprioritization strategy (bootstrap-before-divergence),historico,historico_obsoleto_janela_vencida,fichas-41.md#item-410,False,GitHub issue,False
+#25,[CA] Decide shadow repo governance — dataship-spark-plat-v0,historico,duplicata_encerrada_com_destino,fichas-42.md#item-411,False,GitHub issue,False
+#26,[CA] Validate Gabriel's 'deprioritization' pivot before Tuesday sync,historico,duplicata_encerrada_com_destino,fichas-42.md#item-412,False,GitHub issue,False
+#27,[CA] Coordinate dual tech leads — Gabriel + Guilherme on independent stacks,historico,historico_obsoleto_ownership_estrutural,fichas-42.md#item-413,False,GitHub issue,False
+#28,[BLOCKER] GitHub repo access for Crew A members,historico,bloqueio_resolvido_com_evidencia_indireta,fichas-42.md#item-414,False,GitHub issue,False
+#29,[TASK] Validar slice skew_on_join_30x v4 corrigido com a Crew A,historico,historico_substituido_slice_em_branch_arquivada,fichas-42.md#item-415,False,GitHub issue,False
+#30,[TASK] Alinhar divisao dos pods e responsabilidades da Crew A,historico,historico_substituido_por_raias,fichas-42.md#item-416,False,GitHub issue,False
+#31,[CA] Liberar acesso Write ao Project Crew A — Apex,historico,obsoleto_criterio_nao_atendido_sem_efeito,fichas-42.md#item-417,False,GitHub issue,False
+#32,[TASK] Validar contrato validation_criteria dos scenarios Apex,historico,historico_nao_implementado_funcao_coberta_em_parte,fichas-42.md#item-418,False,GitHub issue,False
+#34,[COMMANDER] Consolidar escopo Apex V0.1 da reuniao 2026-06-30,historico,historico_preservado_com_justificativa,fichas-42.md#item-419,False,GitHub issue,False
+#35,[TASK] Construir Spark Env reproduzivel para Apex V0.1,historico,concluida_com_evidencia_anexada,fichas-42.md#item-420,False,GitHub issue,False
+#36,[TASK] Implementar SparkListener MVP para telemetria Apex,historico,concluida_mas_fechada_antes_do_merge_da_prova,fichas-43.md#item-421,False,GitHub issue,False
+#37,[TASK] Integrar SparkListener ao ClickStack MVP,historico,concluida_com_evidencia_anexada,fichas-43.md#item-422,False,GitHub issue,False
+#38,[TASK] Criar diagnostico CrewAI/MCP por job_id,historico,fechada_com_perguntas_do_autor_sem_resposta,fichas-43.md#item-423,False,GitHub issue,False
+#39,[TASK] Coletar percepcao DataFlint de cada membro da Crew A,historico,historico_substituido_estudo_em_branch,fichas-43.md#item-424,False,GitHub issue,False
+#40,[TASK] Inventariar branches e evidencias existentes para V0.1,historico,encerrada_em_favor_de_sucessora_105,fichas-43.md#item-425,False,GitHub issue,False
+#41,"[TASK] Definir contratos agenticos: memoria, RAG, skills, harness e contexto",historico,historico_preservado_contrato_distribuido,fichas-43.md#item-426,False,GitHub issue,False
+#43,"[SPIKE] Desenhar UI local de DAG, replay e simulacao para pos-V0.1",historico,spike_concluido_com_escopo_reduzido,fichas-43.md#item-427,False,GitHub issue,False
+#55,tracking(v1): decisões finais e evoluções após ENGINE/SERVE,historico,historico_substituido_decisoes_assentadas_com_residuo,fichas-43.md#item-428,False,GitHub issue,False
+#56,tracking(e2e): decidir incorporação de 093c677 na branch Augusto,historico,historico_sem_objeto_commit_ja_na_main,fichas-43.md#item-429,False,GitHub issue,False
+#58,JAR: correct lifecycle + measured telemetry,historico,concluida_por_pr_com_closes,fichas-43.md#item-430,False,GitHub issue,False
+#59,JDK gate for the Spark 4.x cells,historico,concluida_sem_codigo_novo_gate_preexistente,fichas-44.md#item-431,False,GitHub issue,False
+#60,Typed column for executor runtime,historico,concluida_por_pr_com_closes,fichas-44.md#item-432,False,GitHub issue,False
+#61,Engine consuming the typed runtime column,historico,concluida_por_pr_com_closes,fichas-44.md#item-433,False,GitHub issue,False
+#62,Local operational package (bootstrap/doctor/smoke),historico,concluida_por_pr_com_closes_e_lacuna_registrada,fichas-44.md#item-434,False,GitHub issue,False
+#63,Data integrity in the Collector under retry,historico,concluida_por_pr_com_closes_e_residuo_estatico,fichas-44.md#item-435,False,GitHub issue,False
+#64,Clean Docker environment guard-rail,historico,concluida_por_pr_com_closes_guarda_nao_ligada_ao_bootstrap,fichas-44.md#item-436,False,GitHub issue,False
+#65,Design decision: AQE re-plan detection logic,historico,decidida_e_implementada_com_follow_up_cumprido,fichas-44.md#item-437,False,GitHub issue,False
+#71,"mv_spark_events does not reliably propagate inserts (pre-existing, independent of #66-#68/#61)",historico,nao_e_defeito_retratado_pelo_autor,fichas-44.md#item-438,False,GitHub issue,False
+#72,"MV creation succeeds against a missing target table, then rejects every insert (bootstrap ordering risk)",historico,concluida_por_pr_com_closes,fichas-44.md#item-439,False,GitHub issue,False
+#73,Real-pathology test tooling for dev/ + design docs for merged telemetry fields,historico,concluida_por_pr_com_closes_bloqueio_resolvido,fichas-44.md#item-440,False,GitHub issue,False
+#78,Proposal: canonical end-to-end traceability ledger across APEX lanes,historico,proposta_encerrada_nao_planejada,fichas-45.md#item-441,False,GitHub issue,False
+#90,Design question: should skew_ratio route through the retry-safe fields?,historico,decidida_e_implementada_por_pr_aprovada,fichas-45.md#item-442,False,GitHub issue,False
+#95,Engine fails with a raw ClickHouse error when the store's schema is behind,historico,concluida_por_pr_com_closes_integrada_sem_review_formal,fichas-45.md#item-443,False,GitHub issue,False
+#102,Pod 1: consolidar camada de dados e definir fronteira browser–serviços,historico,concluida_com_fronteira_posteriormente_ampliada,fichas-45.md#item-444,False,GitHub issue,False
+#103,[Cross-lane] Add an executable telemetry compatibility matrix,historico,concluida_por_pr_com_closes,fichas-45.md#item-445,False,GitHub issue,False
+#104,[DevEx] Detect hidden editable .pth files on macOS/Python 3.14,historico,concluida_por_pr_com_closes,fichas-45.md#item-446,False,GitHub issue,False
+#116,[Front] /verify: estados por fonte e apresentação fiel da proposta e das evidências,historico,concluida_por_duas_prs,fichas-45.md#item-447,False,GitHub issue,False
+PR#13,chore: permission check test,historico,pr_de_teste_fechada_sem_merge,fichas-45.md#item-448,False,GitHub PR,False
+PR#14,Add additional spacing in README.md,historico,pr_de_teste_fechada_sem_merge,fichas-45.md#item-449,False,GitHub PR,False
+PR#44,feat(serve): adicionar MCP somente leitura,historico,integrada_em_branch_de_convergencia_codigo_reestruturado_depois,fichas-45.md#item-450,False,GitHub PR,False
+PR#45,docs(v1): definir arquitetura por raias e plano de PRs,historico,integrada_em_branch_de_convergencia_documento_historico,fichas-46.md#item-451,False,GitHub PR,False
+PR#46,feat(engine): adicionar diagnóstico determinístico,historico,integrada_em_branch_de_convergencia_codigo_reestruturado_depois,fichas-46.md#item-452,False,GitHub PR,False
+PR#47,feat(dev): preparar ambiente Spark 4.1.2,historico,integrada_em_branch_de_convergencia,fichas-46.md#item-453,False,GitHub PR,False
+PR#48,feat(infra): adicionar schema OTLP logs,historico,integrada_em_branch_de_convergencia,fichas-46.md#item-454,False,GitHub PR,False
+PR#49,feat(collect): adicionar contrato OTLP v0.2,historico,integrada_em_branch_de_convergencia,fichas-46.md#item-455,False,GitHub PR,False
+PR#50,feat(jar): adicionar plugin Spark 4.1.2,historico,integrada_em_branch_de_convergencia,fichas-46.md#item-456,False,GitHub PR,False
+PR#51,feat(e2e): validar caminho canonico seis raias,historico,integrada_em_branch_de_convergencia,fichas-46.md#item-457,False,GitHub PR,False
+PR#52,feat(engine): add gated CrewAI judge adapter,historico,fechada_sem_merge_conteudo_reimplementado,fichas-46.md#item-458,False,GitHub PR,False
+PR#53,feat(serve): add KB search and safe fix proposals,historico,fechada_sem_merge_conteudo_reimplementado,fichas-46.md#item-459,False,GitHub PR,False
+PR#54,docs(c9): record Engine and Serve delivery status,historico,fechada_sem_merge_documento_preservado_em_branch,fichas-46.md#item-460,False,GitHub PR,False
+PR#57,"Apex v0.1 — eight lanes, one frozen contract, and a system that refuses to guess",historico,integrada_release_v010_com_ci_verde,fichas-47.md#item-461,False,GitHub PR,False
+PR#66,"jar: correct stage listener lifecycle, add measured executor runtime",historico,integrada_com_review_aprovada_e_ci_verde,fichas-47.md#item-462,False,GitHub PR,False
+PR#67,"infra: switch Collector to synchronous inserts, fix retry duplication",historico,integrada_com_review_aprovada_e_ci_verde_residuo_raia_collect,fichas-47.md#item-463,False,GitHub PR,False
+PR#68,infra: typed columns for the telemetry fields the JAR now emits,historico,integrada_com_review_aprovada_e_ci_verde,fichas-47.md#item-464,False,GitHub PR,False
+PR#69,scripts: refuse to bootstrap over leftover APEX Docker resources,historico,integrada_com_review_aprovada_guarda_nao_ligada,fichas-47.md#item-465,False,GitHub PR,False
+PR#70,"engine: read the typed executor runtime column, Map as fallback",historico,integrada_com_review_aprovada,fichas-47.md#item-466,False,GitHub PR,False
+PR#74,dev: real-pathology probe tooling and design-doc rationale for merged telemetry fields,historico,integrada_com_review_aprovada_e_ci_verde,fichas-47.md#item-467,False,GitHub PR,False
+PR#75,infra: guard apply-ddl against MV/target bootstrap ordering,historico,integrada_com_review_aprovada_e_ci_verde,fichas-47.md#item-468,False,GitHub PR,False
+PR#76,scripts: local operational package (bootstrap/doctor/smoke/e2e/status/down),historico,integrada_com_review_aprovada_e_ci_verde_nota_de_review_imprecisa,fichas-47.md#item-469,False,GitHub PR,False
+PR#77,"docs: fix Quick Start README (DDL order, .env step, sbt prereq)",historico,integrada_com_review_aprovada_e_ci_verde,fichas-47.md#item-470,False,GitHub PR,False
+PR#79,"serve/L1 Connect: 23 signed Task-Specs, first two units accepted",historico,integrada_parcial_por_desenho_com_review_aprovada,fichas-48.md#item-471,False,GitHub PR,False
+PR#80,chore: bump contract to v0.5 with additive task analysis fields,historico,integrada_sem_review_formal_introduziu_erro_de_ddl,fichas-48.md#item-472,False,GitHub PR,False
+PR#81,dev: cover the scripts #74 shipped without tests — and make the lane actually run,historico,integrada_com_review_aprovada_e_ci_verde,fichas-48.md#item-473,False,GitHub PR,False
+PR#82,fix: spark_events DDL cannot create the table — no fresh deployment can start,historico,integrada_com_review_aprovada_corrige_regressao_da_pr80,fichas-48.md#item-474,False,GitHub PR,False
+PR#83,"serve/L2 Discover: list_runs, apex://runs, and a self-selecting comparison baseline",historico,integrada_com_review_aprovada_e_ci_verde,fichas-48.md#item-475,False,GitHub PR,False
+PR#84,harness: verify optional ClickHouse endpoint identity,historico,integrada_com_review_aprovada_e_ci_verde,fichas-48.md#item-476,False,GitHub PR,False
+PR#85,docs: define pre-submit provenance for E2E runs,historico,integrada_sem_review_formal_documental,fichas-48.md#item-477,False,GitHub PR,False
+PR#86,serve/L6 — cross-run memory: recall_similar_runs over the memory lane,historico,integrada_com_review_aprovada_e_ci_verde,fichas-48.md#item-478,False,GitHub PR,False
+PR#87,serve/L5: expose the verify lane over MCP as verify_fix,historico,integrada_sem_aprovacao_formal_com_ci_do_head_falho,fichas-48.md#item-479,False,GitHub PR,False
+PR#88,"serve/L3: diagnosis readability — detail levels, coverage, explain_stage, share of tail",historico,integrada_com_review_aprovada_e_ci_verde,fichas-48.md#item-480,False,GitHub PR,False
+PR#89,engine: retry-safe telemetry — reachability + the retry_pressure watcher,historico,integrada_com_review_aprovada_e_ci_verde,fichas-49.md#item-481,False,GitHub PR,False
+PR#91,jar: prove listener sink failure never breaks the job (#36),historico,integrada_com_review_aprovada_apos_mudancas,fichas-49.md#item-482,False,GitHub PR,False
+PR#92,dev: cover scripts/apex.ps1 with dry-run and secrets contract tests,historico,integrada_com_review_aprovada_teste_compara_handler,fichas-49.md#item-483,False,GitHub PR,False
+PR#93,docs: propose AQE re-plan detection decision,historico,fechada_sem_merge_substituida_pela_pr98,fichas-49.md#item-484,False,GitHub PR,False
+PR#94,engine: fail in CI when the SQL reads a column no DDL declares,historico,integrada_com_review_aprovada_apos_mudancas,fichas-49.md#item-485,False,GitHub PR,False
+PR#96,feat(jar): preserve Spark SQL execution_id on apex.stage spans,historico,integrada_com_review_aprovada_quebrou_matriz_na_leva,fichas-49.md#item-486,False,GitHub PR,False
+PR#97,"docs(ui): define read-only Compare, Memory, and Verify contracts",historico,integrada_com_review_aprovada_documental,fichas-49.md#item-487,False,GitHub PR,False
+PR#98,jar: combine AQE join alignment with skew partition counts,historico,integrada_com_review_aprovada_decisao_registrada,fichas-49.md#item-488,False,GitHub PR,False
+PR#99,engine: make skew_ratio retry-safe,historico,integrada_com_review_aprovada_apos_mudancas,fichas-49.md#item-489,False,GitHub PR,False
+PR#100,feat(front): Apex Console — the seven screens as a runnable Vite + React app,historico,integrada_com_review_aprovada_apos_mudancas,fichas-49.md#item-490,False,GitHub PR,False
+PR#101,"chore(serve): make the three legs mergeable — one contracted tool list, untracked generated state",historico,integrada_com_review_aprovada_preparacao_de_merge,fichas-50.md#item-491,False,GitHub PR,False
+PR#110,devex: detect hidden editable .pth files on macOS,historico,integrada_com_review_aprovada_e_ci_verde,fichas-50.md#item-492,False,GitHub PR,False
+PR#111,docs: add executable telemetry compatibility matrix,historico,integrada_com_review_aprovada_quebrou_root_gate_na_leva,fichas-50.md#item-493,False,GitHub PR,False
+PR#118,fix(front): isolate /verify source states and async selections (I1),historico,integrada_com_review_aprovada_ci_por_workflow_dispatch,fichas-50.md#item-494,False,GitHub PR,False
+PR#119,fix(front): present /verify proposals and evidence faithfully (I2),historico,integrada_com_review_aprovada_ci_por_workflow_dispatch,fichas-50.md#item-495,False,GitHub PR,False
+PR#120,fix(front): expose original proposal as named region,historico,integrada_com_review_aprovada_ci_por_workflow_dispatch,fichas-50.md#item-496,False,GitHub PR,False
+PR#121,fix(tests): bump telemetry matrix to contract v0.6,historico,integrada_sem_review_formal_corrigiu_main,fichas-50.md#item-497,False,GitHub PR,False
+PR#126,feat(engine): add offline execution-stage attribution,historico,integrada_sem_review_formal_e_sem_ci_executado,fichas-50.md#item-498,False,GitHub PR,False
+PR#127,feat: add deterministic tail-outlier runtime gate,historico,integrada_sem_review_formal_e_sem_ci_executado,fichas-50.md#item-499,False,GitHub PR,False
+PR#128,test(package): make PowerShell coverage command-aware,historico,integrada_sem_review_formal_e_sem_ci_executado,fichas-50.md#item-500,False,GitHub PR,False
+PR#129,feat(serve): apex-api — one HTTP layer between ClickHouse and its consumers,historico,integrada_sem_review_humana_com_evidencia_de_billing,fichas-51.md#item-501,False,GitHub PR,False
+PR#131,engine: fail fast on connect when spark_events schema is behind,historico,historico_integrado_com_followup_delimitado,fichas-51.md#item-502,False,GitHub PR,False
+PR#132,docs: reconcile current contract and Serve state,historico,historico_integrado_com_followup_delimitado,fichas-51.md#item-503,False,GitHub PR,False
+PR#133,docs: propose source correlation privacy boundary,historico,historico_integrado_com_followup_delimitado,fichas-51.md#item-504,False,GitHub PR,False
+PR#134,docs: align README with current contract,historico,historico_integrado_sem_nova_acao_obrigatoria,fichas-51.md#item-505,False,GitHub PR,False
+PR#135,fix(serve): withhold unresolved replay deltas,historico,historico_integrado_com_followup_delimitado,fichas-51.md#item-506,False,GitHub PR,False
+PR#136,fix(front): keep mechanism and runtime verdicts independent,historico,historico_integrado_com_followup_delimitado,fichas-51.md#item-507,False,GitHub PR,False
+PR#137,fix(front): recognize retry pressure findings,historico,historico_integrado_com_followup_delimitado,fichas-51.md#item-508,False,GitHub PR,False
+PR#138,ci(front): reject warnings and empty suites,historico,historico_integrado_sem_nova_acao_obrigatoria,fichas-51.md#item-509,False,GitHub PR,False
+PR#139,test(engine): harden SQL to DDL column guard,historico,historico_integrado_sem_nova_acao_obrigatoria,fichas-51.md#item-510,False,GitHub PR,False
+PR#140,fix(serve): classify ClickHouse failures and retry failed metadata probes,historico,historico_integrado_com_followup_delimitado,fichas-52.md#item-511,False,GitHub PR,False
+PR#141,docs: add a discoverable index of canonical architecture decisions,historico,historico_integrado_sem_nova_acao_obrigatoria,fichas-52.md#item-512,False,GitHub PR,False
+PR#142,fix(verify): use successful-task duration samples for stage analysis,historico,historico_integrado_com_followup_delimitado,fichas-52.md#item-513,False,GitHub PR,False
+PR#143,fix(api): reject invalid HTTP noise floors,historico,historico_integrado_com_followup_delimitado,fichas-52.md#item-514,False,GitHub PR,False
+PR#144,fix(serve): withhold verdicts from invalid noise floors,historico,historico_integrado_com_followup_delimitado,fichas-52.md#item-515,False,GitHub PR,False
+PR#145,fix(verify): reject invalid noise floors for certification,historico,historico_integrado_com_followup_delimitado,fichas-52.md#item-516,False,GitHub PR,False
+PR#146,test(serve): pin fix_verifications projection parity with the front,historico,historico_integrado_com_followup_delimitado,fichas-52.md#item-517,False,GitHub PR,False
+PR#147,fix(infra): check multiline materialized-view targets,historico,historico_integrado_com_followup_delimitado,fichas-52.md#item-518,False,GitHub PR,False
+PR#148,docs(ci): clarify that live end-to-end paths are not gated,historico,historico_integrado_sem_nova_acao_obrigatoria,fichas-52.md#item-519,False,GitHub PR,False
+PR#149,fix(ci): quote generated Collector secret argument,historico,historico_integrado_sem_nova_acao_obrigatoria,fichas-52.md#item-520,False,GitHub PR,False
+PR#150,test(serve): guard sanitized store errors across transports,historico,historico_integrado_com_followup_delimitado,fichas-53.md#item-521,False,GitHub PR,False
+PR#151,fix(front): render API error detail only when textual,historico,historico_integrado_sem_nova_acao_obrigatoria,fichas-53.md#item-522,False,GitHub PR,False
+PR#152,docs(artifacts): add Apex current-state deck (main @ a289e53),historico,historico_integrado_com_followup_delimitado,fichas-53.md#item-523,False,GitHub PR,False
+PR#153,"fix(serve,front): the console reads the same rows through either door",historico,historico_integrado_com_followup_delimitado,fichas-53.md#item-524,False,GitHub PR,False
+PR#160,"ci: lean default CI (cheap PR check, heavy jobs manual/weekly)",historico,historico_integrado_com_followup_delimitado,fichas-53.md#item-525,False,GitHub PR,False

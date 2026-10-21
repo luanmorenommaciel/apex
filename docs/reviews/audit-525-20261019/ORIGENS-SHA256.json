@@ -1,0 +1,27 @@
+[
+  {
+    "artifact_name": "FICHAS-CODEX.json",
+    "sha256": "344ab5f135d480f44b1cf63f1263e194427cdf50bf79349752cdf3f7eaaec601",
+    "scope": "Hash da versão local de origem, anterior à sanitização; não implica publicação da origem bruta."
+  },
+  {
+    "artifact_name": "A-INVENTARIO-525.json",
+    "sha256": "103a25c09d10384c78d2bbe3eabed3db9eb6dd081adfa64cd5ec07c628c7ec0b",
+    "scope": "Hash da versão local de origem, anterior à sanitização; não implica publicação da origem bruta."
+  },
+  {
+    "artifact_name": "A-REGISTRO-158.json",
+    "sha256": "b7dc703120a0ba03da73f8f77df8b7ce3abacf9f3c73f5cc227c5ce4082dd6c6",
+    "scope": "Hash da versão local de origem, anterior à sanitização; não implica publicação da origem bruta."
+  },
+  {
+    "artifact_name": "MATRIZ-VALIDACAO-POR-ID.json",
+    "sha256": "f6e617e6d0d32b51442da77dbf11da8f11240ccb17e6e4e07db3fbd6714a3faf",
+    "scope": "Hash da versão local de origem, anterior à sanitização; não implica publicação da origem bruta."
+  },
+  {
+    "artifact_name": "MAPA-ACOES-E-LINHAGEM-525.json",
+    "sha256": "3f44b71d0d16884ca2572d3df7254adac402f6fbb508d184b7e06d7a7618d639",
+    "scope": "Hash da versão local de origem, anterior à sanitização; não implica publicação da origem bruta."
+  }
+]

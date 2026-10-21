@@ -1,0 +1,3008 @@
+[
+  {
+    "number": 155,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/155",
+    "author": "gustocezar",
+    "title": "test(engine): keep schema preflight aligned with stage queries",
+    "state": "open",
+    "merged_at": null,
+    "head": "561b27e7d1914dddf4989bf04834a33da726a45f",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:05.860768+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
+    "conclusion": "Guarda de duas queries versus preflight; 11 checks failure no corte não demonstram falha de asserção. Nenhum requisito adicional inferido.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/155",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/155/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/155/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/155/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/155/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/155/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 155,
+      "head": "561b27e7d1914dddf4989bf04834a33da726a45f",
+      "observed_at": "2026-10-20T10:24:14.796579+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {
+        "failure": 11
+      }
+    }
+  },
+  {
+    "number": 157,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/157",
+    "author": "gustocezar",
+    "title": "test(serve): pin eight-tool transport parity with identical arguments",
+    "state": "open",
+    "merged_at": null,
+    "head": "a3ed9723af9461bd8f2ea9ad60347635b1254bad",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:04.297366+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
+    "conclusion": "Oito tools; comparação de payloads sem normalização de campos; segundo arquivo só MCP. Nomes dos guias corrigidos.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/157",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/157/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/157/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/157/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/157/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/157/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 157,
+      "head": "a3ed9723af9461bd8f2ea9ad60347635b1254bad",
+      "observed_at": "2026-10-20T10:24:14.604964+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {
+        "success": 11
+      }
+    }
+  },
+  {
+    "number": 158,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/158",
+    "author": "gustocezar",
+    "title": "test(serve): pin findings score-tie order on both SQL doors",
+    "state": "open",
+    "merged_at": null,
+    "head": "514b0e573bce9593ac1737869568161b3e951a49",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:02.768077+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
+    "conclusion": "Guarda estática confidence_score DESC/finding_id ASC; adaptação condicional com a #182; conflito textual não demonstrado.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/158",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/158/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/158/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/158/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/158/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/158/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 158,
+      "head": "514b0e573bce9593ac1737869568161b3e951a49",
+      "observed_at": "2026-10-20T10:24:14.465898+00:00",
+      "comments": 1,
+      "reviews": 0,
+      "checks": {
+        "success": 11
+      }
+    }
+  },
+  {
+    "number": 159,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/159",
+    "author": "gustocezar",
+    "title": "fix(serve): make parity gate diagnose drift and clean derived fixture rows",
+    "state": "open",
+    "merged_at": null,
+    "head": "1685f8ac91b8e9b68a83d10176519c963e186ad4",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 3,
+      "files": 4
+    },
+    "captured_at": "2026-10-20T02:02:00.977654+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
+    "conclusion": "Provas F1c no corpo distinguidas do checkpoint histórico de 519 testes em VALIDATION; complemento documental, sem nova execução.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/159",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/159/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/159/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/159/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/159/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/159/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 159,
+      "head": "1685f8ac91b8e9b68a83d10176519c963e186ad4",
+      "observed_at": "2026-10-20T10:24:12.524909+00:00",
+      "comments": 1,
+      "reviews": 0,
+      "checks": {
+        "success": 11
+      }
+    }
+  },
+  {
+    "number": 161,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/161",
+    "author": "gustocezar",
+    "title": "ci: keep root gate diagnostics after Python lane failures",
+    "state": "open",
+    "merged_at": null,
+    "head": "d61eab85f258592cae909fd5c2ddc9f21ef24b96",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:01:57.660918+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
+    "conclusion": "!cancelled() e outcomes de setup/root preservados. Sem always() geral ou execução negativa nova.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/161",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/161/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/161/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/161/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/161/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/161/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 161,
+      "head": "d61eab85f258592cae909fd5c2ddc9f21ef24b96",
+      "observed_at": "2026-10-20T10:24:12.133736+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {
+        "success": 3
+      }
+    }
+  },
+  {
+    "number": 162,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/162",
+    "author": "gustocezar",
+    "title": "fix(verify): align module version with package 0.1.0",
+    "state": "open",
+    "merged_at": null,
+    "head": "3955f9de34af39824caec44dd39f307ff9c3513f",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:01:56.463179+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
+    "conclusion": "__version__ de 0.3.0→0.1.0; default de Verdict preexistente de 0.1.0, sem migração de linhas.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/162",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/162/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/162/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/162/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/162/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/162/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 162,
+      "head": "3955f9de34af39824caec44dd39f307ff9c3513f",
+      "observed_at": "2026-10-20T10:24:12.098962+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {
+        "success": 3
+      }
+    }
+  },
+  {
+    "number": 163,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/163",
+    "author": "gustocezar",
+    "title": "test(serve): pin search_kb plan_json hits over both transports",
+    "state": "open",
+    "merged_at": null,
+    "head": "9a7e4c1a775389b60bd33a0a4b61a63234ad8ae4",
+    "base": "codex/serve-transport-parity-156",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:01:54.818682+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
+    "conclusion": "Plan_json com findings vazio; depende de helpers da #157; nenhum check no corte. Não demonstra mistura de resultados/top_k ou store real.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/163",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/163/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/163/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/163/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/163/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/163/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 163,
+      "head": "9a7e4c1a775389b60bd33a0a4b61a63234ad8ae4",
+      "observed_at": "2026-10-20T10:24:12.047785+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {}
+    }
+  },
+  {
+    "number": 164,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/164",
+    "author": "gustocezar",
+    "title": "docs: align Serve and Verify docs with current contract",
+    "state": "open",
+    "merged_at": null,
+    "head": "5d42763aaf1a74e707b41e9958e4a198bfa971a3",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 3,
+      "files": 3
+    },
+    "captured_at": "2026-10-20T02:01:53.050160+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
+    "conclusion": "README/CI/contrato/coluna runtime: reaproveitado na reconciliação L1 para evitar tarefa duplicada.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/164",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/164/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/164/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/164/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/164/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/164/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 164,
+      "head": "5d42763aaf1a74e707b41e9958e4a198bfa971a3",
+      "observed_at": "2026-10-20T10:24:09.730312+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {}
+    }
+  },
+  {
+    "number": 182,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/182",
+    "author": "agmarcastro",
+    "title": "feat(front): harden the console and read only through the Apex API",
+    "state": "open",
+    "merged_at": null,
+    "head": "74fdb0791825aa89c419694ec71f2aa3e6ea4d74",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 59,
+      "files": 65
+    },
+    "captured_at": "2026-10-20T02:01:50.985901+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e todos os patches; conteúdo integral complementar selecionado",
+    "conclusion": "Implementação API-only/hardening/cache/a11y e provas do Agmar reconhecidas; R1/R2 da combinação mantidos; E2E histórico e relato nginx separados por alcance.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/182",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/182/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/182/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/182/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/182/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/182/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 182,
+      "head": "74fdb0791825aa89c419694ec71f2aa3e6ea4d74",
+      "observed_at": "2026-10-20T10:24:09.680049+00:00",
+      "comments": 1,
+      "reviews": 0,
+      "checks": {
+        "success": 3
+      }
+    }
+  },
+  {
+    "number": 183,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/183",
+    "author": "gustocezar",
+    "title": "docs(pod3): reconcile Serve backlog, decisions and evidence for team discussion",
+    "state": "open",
+    "merged_at": null,
+    "head": "cd879dbb01a7c0ff5296de47c8ad85867d81390c",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 3,
+      "files": 34
+    },
+    "captured_at": "2026-10-20T02:01:49.009284+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "reconciliação documental de conteúdo, catálogos, estrutura e referências; leitura focal, não releitura integral de todo pacote",
+    "conclusion": "Nomes MCP corrigidos; prova live/E2E existente reconhecida; matriz L1 referencia a #164; contagens/cortes esclarecidos.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/183",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/183/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/183/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/183/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/183/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/183/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 183,
+      "head": "95e3e8e50c551485e042846734aaf650375b30a6",
+      "observed_at": "2026-10-20T10:24:09.675614+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {}
+    }
+  },
+  {
+    "number": 184,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/184",
+    "author": "gustocezar",
+    "title": "docs(tasks): fix YAML syntax in three TaskPlan manifests",
+    "state": "open",
+    "merged_at": null,
+    "head": "0b1cb7b54d54ca062ad0cce272d2988179e09c1a",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 3
+    },
+    "captured_at": "2026-10-20T02:01:47.104544+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e patches técnicos",
+    "conclusion": "Três ajustes sintáticos YAML; recibos de checks separados de aceite/governança; sem mudança de estado Task-Spec.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/184",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/184/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/184/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/184/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/184/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/184/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 184,
+      "head": "0b1cb7b54d54ca062ad0cce272d2988179e09c1a",
+      "observed_at": "2026-10-20T10:24:09.648164+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {
+        "success": 3
+      }
+    }
+  },
+  {
+    "number": 185,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/185",
+    "author": "agmarcastro",
+    "title": "fix(dev): harden the dev lane — clean clone, secrets-only S3, runner parity, Spark 4.1.2 fingerprint",
+    "state": "open",
+    "merged_at": null,
+    "head": "a5c2ca45bda8e0898dc20460901fe2e83ab7ae8b",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 25,
+      "files": 38
+    },
+    "captured_at": "2026-10-20T02:01:41.150901+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, commits e todos os patches; conteúdo integral complementar selecionado",
+    "conclusion": "Implementação DEV/S3/runners/fingerprint do Agmar reconhecida; wrapper/sbt conferidos; preservar critérios específicos das issues relacionadas.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/185",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/185/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/185/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/185/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/185/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/185/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 185,
+      "head": "a5c2ca45bda8e0898dc20460901fe2e83ab7ae8b",
+      "observed_at": "2026-10-20T10:24:07.065136+00:00",
+      "comments": 1,
+      "reviews": 0,
+      "checks": {
+        "success": 4
+      }
+    }
+  },
+  {
+    "number": 186,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/186",
+    "author": "gustocezar",
+    "title": "docs(audit): publish the 525-ID documentary study and remaining decisions",
+    "state": "open",
+    "merged_at": null,
+    "head": "9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0",
+    "base": "codex/pod3-documentation-completion-20261019",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 68
+    },
+    "captured_at": "2026-10-20T02:01:37.038766+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "reconciliação documental de conteúdo, catálogos, estrutura e referências; leitura focal, não releitura integral de todo pacote",
+    "conclusion": "Estudo dos 525 IDs: fichas, derivados e referências corrigidos; nova relação de 93 PRs com limites por linha. Não representa 525 aceites funcionais.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/186",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/186/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/186/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/186/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/186/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/186/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 186,
+      "head": "9a3bb5e4bdb95c9c787a5f0049d01afb8e6c6bf0",
+      "observed_at": "2026-10-20T10:24:07.062538+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {}
+    }
+  },
+  {
+    "number": 187,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/187",
+    "author": "gustocezar",
+    "title": "docs(pod1): prepare team handoff with contributions, evidence and next actions",
+    "state": "open",
+    "merged_at": null,
+    "head": "3f36b8f58b02542c50453b36183ba4cfd5d93c8e",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 17
+    },
+    "captured_at": "2026-10-20T02:01:34.206989+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "reconciliação documental de conteúdo, catálogos, estrutura e referências; leitura focal, não releitura integral de todo pacote",
+    "conclusion": "Plano da #172 passa a conferir provas existentes; catálogo/base/comentários/checks e organização corrigidos.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/187",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/187/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/187/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/187/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/187/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/187/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 187,
+      "head": "a4ac0b2c77481d85e48a92bfcb566874918fb614",
+      "observed_at": "2026-10-20T10:24:07.062422+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {}
+    }
+  },
+  {
+    "number": 189,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/189",
+    "author": "gustocezar",
+    "title": "docs(pod2): prepare team handoff with contributions, evidence and next actions",
+    "state": "open",
+    "merged_at": null,
+    "head": "fa549094042d4d2c3c5a4f52228e1272eedef1fd",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 17
+    },
+    "captured_at": "2026-10-20T02:01:33.673746+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "reconciliação documental de conteúdo, catálogos, estrutura e referências; leitura focal, não releitura integral de todo pacote",
+    "conclusion": "#54 reclassificada como encerrada sem merge;#185 reconhecida; organização/catálogos/apresentação corrigidos.",
+    "specific_limit": "Sem nova execução de testes/runtime, combinação de branches ou aprovação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/189",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/189/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/189/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/189/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/189/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/189/files"
+    },
+    "latest_metadata_recheck": {
+      "number": 189,
+      "head": "4efe8f3a6be298a5470a1749c5b1dd3b75d2e218",
+      "observed_at": "2026-10-20T10:24:07.061874+00:00",
+      "comments": 0,
+      "reviews": 0,
+      "checks": {}
+    }
+  },
+  {
+    "number": 13,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/13",
+    "author": "antonylucas",
+    "title": "chore: permission check test",
+    "state": "closed",
+    "merged_at": null,
+    "head": "5e3f522c77bd573526eea6f2aea5590dd734ed4f",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:03:28.371013+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/13",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/13/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/13/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/13/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/13/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/13/files"
+    }
+  },
+  {
+    "number": 14,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/14",
+    "author": "sidymar",
+    "title": "Add additional spacing in README.md",
+    "state": "closed",
+    "merged_at": null,
+    "head": "6fdbb07261d8c132ec355affba7027220f99c361",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:03:27.551960+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/14",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/14/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/14/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/14/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/14/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/14/files"
+    }
+  },
+  {
+    "number": 44,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/44",
+    "author": "gustocezar",
+    "title": "feat(serve): adicionar MCP somente leitura",
+    "state": "closed",
+    "merged_at": "2026-07-24T00:42:54Z",
+    "head": "bf99f438842e3189381f708a5af0004030bf3533",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 13
+    },
+    "captured_at": "2026-10-20T02:03:25.768065+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/44",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/44/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/44/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/44/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/44/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/44/files"
+    }
+  },
+  {
+    "number": 45,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/45",
+    "author": "gustocezar",
+    "title": "docs(v1): definir arquitetura por raias e plano de PRs",
+    "state": "closed",
+    "merged_at": "2026-07-24T02:22:40Z",
+    "head": "85de52d374fa465ce9cb6267430a71f99e66ab41",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 3
+    },
+    "captured_at": "2026-10-20T02:03:26.478131+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/45",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/45/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/45/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/45/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/45/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/45/files"
+    }
+  },
+  {
+    "number": 46,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/46",
+    "author": "gustocezar",
+    "title": "feat(engine): adicionar diagnóstico determinístico",
+    "state": "closed",
+    "merged_at": "2026-07-24T00:43:01Z",
+    "head": "f11f6024792f0ec268c2810ff4493a0808105413",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 12
+    },
+    "captured_at": "2026-10-20T02:03:24.945610+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/46",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/46/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/46/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/46/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/46/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/46/files"
+    }
+  },
+  {
+    "number": 47,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/47",
+    "author": "gustocezar",
+    "title": "feat(dev): preparar ambiente Spark 4.1.2",
+    "state": "closed",
+    "merged_at": "2026-07-24T00:43:07Z",
+    "head": "2dee3a77b2aefa2c49d60a0c9f941217a596761b",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 22
+    },
+    "captured_at": "2026-10-20T02:03:24.249811+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/47",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/47/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/47/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/47/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/47/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/47/files"
+    }
+  },
+  {
+    "number": 48,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/48",
+    "author": "gustocezar",
+    "title": "feat(infra): adicionar schema OTLP logs",
+    "state": "closed",
+    "merged_at": "2026-07-24T00:43:13Z",
+    "head": "684770d101f2b4c1199214c23af37597852ff3fb",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 3
+    },
+    "captured_at": "2026-10-20T02:03:23.029275+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/48",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/48/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/48/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/48/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/48/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/48/files"
+    }
+  },
+  {
+    "number": 49,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/49",
+    "author": "gustocezar",
+    "title": "feat(collect): adicionar contrato OTLP v0.2",
+    "state": "closed",
+    "merged_at": "2026-07-24T00:43:19Z",
+    "head": "b3db0577876cf3e560d71300d640591e109ed80d",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 6
+    },
+    "captured_at": "2026-10-20T02:03:22.378697+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/49",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/49/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/49/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/49/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/49/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/49/files"
+    }
+  },
+  {
+    "number": 50,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/50",
+    "author": "gustocezar",
+    "title": "feat(jar): adicionar plugin Spark 4.1.2",
+    "state": "closed",
+    "merged_at": "2026-07-24T00:43:26Z",
+    "head": "da2416f55c52ce71939977d3bcc3ffba9dec6957",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 3,
+      "files": 7
+    },
+    "captured_at": "2026-10-20T02:03:21.218269+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/50",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/50/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/50/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/50/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/50/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/50/files"
+    }
+  },
+  {
+    "number": 51,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/51",
+    "author": "gustocezar",
+    "title": "feat(e2e): validar caminho canonico seis raias",
+    "state": "closed",
+    "merged_at": "2026-07-24T02:22:46Z",
+    "head": "42be11d5d5afa59c6678ab6088de20a0a01a38d1",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 8
+    },
+    "captured_at": "2026-10-20T02:03:20.604104+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/51",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/51/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/51/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/51/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/51/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/51/files"
+    }
+  },
+  {
+    "number": 52,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/52",
+    "author": "gustocezar",
+    "title": "feat(engine): add gated CrewAI judge adapter",
+    "state": "closed",
+    "merged_at": null,
+    "head": "05549bef2b7a9e23e4690926f2eeaf171f24eb45",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 1,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 5
+    },
+    "captured_at": "2026-10-20T02:03:19.369012+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Corrigida nossa camada de leitura para reconhecer o comentário de fechamento; registro original preservado.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/52",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/52/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/52/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/52/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/52/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/52/files"
+    }
+  },
+  {
+    "number": 53,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/53",
+    "author": "gustocezar",
+    "title": "feat(serve): add KB search and safe fix proposals",
+    "state": "closed",
+    "merged_at": null,
+    "head": "b43750ace1a8fd0b91f8aac5e8465ff606bfce02",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 1,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 6
+    },
+    "captured_at": "2026-10-20T02:03:18.150750+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Corrigida nossa camada de leitura para reconhecer o comentário de fechamento; registro original preservado.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/53",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/53/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/53/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/53/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/53/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/53/files"
+    }
+  },
+  {
+    "number": 54,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/54",
+    "author": "gustocezar",
+    "title": "docs(c9): record Engine and Serve delivery status",
+    "state": "closed",
+    "merged_at": null,
+    "head": "2bd02485c03c19a7b4e0393bebfa2cb19fea06f0",
+    "base": "feat/base-project-e2e",
+    "counts": {
+      "comments": 1,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 5
+    },
+    "captured_at": "2026-10-20T02:03:16.935824+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Corrigida nossa camada e sua apresentação como encerrada sem merge.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/54",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/54/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/54/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/54/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/54/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/54/files"
+    }
+  },
+  {
+    "number": 57,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/57",
+    "author": "luanmorenommaciel",
+    "title": "Apex v0.1 — eight lanes, one frozen contract, and a system that refuses to guess",
+    "state": "closed",
+    "merged_at": "2026-07-29T19:14:38Z",
+    "head": "ada98d170a642de594c386dc9f70f4ce6b874b7d",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 54,
+      "files": 237
+    },
+    "captured_at": "2026-10-20T02:03:16.080601+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Corrigida a atribuição dos 54 commits: 36 Luan, 10 Augusto Cezar, 8 merges com autor gustocezar.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/57",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/57/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/57/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/57/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/57/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/57/files"
+    }
+  },
+  {
+    "number": 66,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/66",
+    "author": "gustocezar",
+    "title": "jar: correct stage listener lifecycle, add measured executor runtime",
+    "state": "closed",
+    "merged_at": "2026-08-18T20:05:31Z",
+    "head": "bfd1d2eff0b14dda901071318da44df474077685",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 16
+    },
+    "captured_at": "2026-10-20T02:03:15.199854+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/66",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/66/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/66/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/66/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/66/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/66/files"
+    }
+  },
+  {
+    "number": 67,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/67",
+    "author": "gustocezar",
+    "title": "infra: switch Collector to synchronous inserts, fix retry duplication",
+    "state": "closed",
+    "merged_at": "2026-08-18T20:02:38Z",
+    "head": "98400b34743c77e092754c90340df9ac5e6deb93",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:03:14.065946+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/67",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/67/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/67/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/67/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/67/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/67/files"
+    }
+  },
+  {
+    "number": 68,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/68",
+    "author": "gustocezar",
+    "title": "infra: typed columns for the telemetry fields the JAR now emits",
+    "state": "closed",
+    "merged_at": "2026-08-18T20:03:21Z",
+    "head": "78236de2be6cc979daa82ffaf3c0a7503fceeb97",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 6
+    },
+    "captured_at": "2026-10-20T02:03:13.408053+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Conferência documental com limite específico.",
+    "correction": null,
+    "specific_limit": "A contagem técnica de 15 colunas não foi reconferida por patch nesta rodada; mantém o recorte da ficha original, sem nova validação funcional.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/68",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/68/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/68/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/68/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/68/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/68/files"
+    }
+  },
+  {
+    "number": 69,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/69",
+    "author": "gustocezar",
+    "title": "scripts: refuse to bootstrap over leftover APEX Docker resources",
+    "state": "closed",
+    "merged_at": "2026-08-18T20:02:46Z",
+    "head": "f59c8d9c0bdcdfa973cb62d6dfd087b5abc518dc",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:03:11.791161+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/69",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/69/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/69/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/69/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/69/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/69/files"
+    }
+  },
+  {
+    "number": 70,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/70",
+    "author": "gustocezar",
+    "title": "engine: read the typed executor runtime column, Map as fallback",
+    "state": "closed",
+    "merged_at": "2026-08-18T20:04:50Z",
+    "head": "0a7772bfb340a92d8667e1f3790a08aa5ab91424",
+    "base": "main",
+    "counts": {
+      "comments": 2,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 4
+    },
+    "captured_at": "2026-10-20T02:03:11.195641+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Acrescentados relatos 94 offline/8 integração e composição separada de cinco mudanças; sem nova execução.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/70",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/70/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/70/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/70/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/70/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/70/files"
+    }
+  },
+  {
+    "number": 74,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/74",
+    "author": "gustocezar",
+    "title": "dev: real-pathology probe tooling and design-doc rationale for merged telemetry fields",
+    "state": "closed",
+    "merged_at": "2026-08-18T20:05:58Z",
+    "head": "cf26b68d863a119ba9f73a2239788d8125eb0c5b",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 17
+    },
+    "captured_at": "2026-10-20T02:03:09.912882+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Menção à #81 distinguida da camada editorial posterior; não atribuída ao texto original.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/74",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/74/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/74/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/74/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/74/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/74/files"
+    }
+  },
+  {
+    "number": 75,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/75",
+    "author": "gustocezar",
+    "title": "infra: guard apply-ddl against MV/target bootstrap ordering",
+    "state": "closed",
+    "merged_at": "2026-08-18T20:02:42Z",
+    "head": "b643a9e48198973a4e76396ef446a6b4e2275f3b",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:03:08.959138+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/75",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/75/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/75/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/75/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/75/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/75/files"
+    }
+  },
+  {
+    "number": 76,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/76",
+    "author": "gustocezar",
+    "title": "scripts: local operational package (bootstrap/doctor/smoke/e2e/status/down)",
+    "state": "closed",
+    "merged_at": "2026-08-18T20:06:02Z",
+    "head": "f05a050fbfe7591746ad8eb1cf122fe052e29cec",
+    "base": "main",
+    "counts": {
+      "comments": 2,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 4
+    },
+    "captured_at": "2026-10-20T02:03:07.792978+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/76",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/76/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/76/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/76/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/76/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/76/files"
+    }
+  },
+  {
+    "number": 77,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/77",
+    "author": "JaymeNeto",
+    "title": "docs: fix Quick Start README (DDL order, .env step, sbt prereq)",
+    "state": "closed",
+    "merged_at": "2026-08-18T20:02:06Z",
+    "head": "e2177c77268e03215c4f9a9b436ddbbe128d6e22",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 4,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:03:07.064199+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/77",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/77/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/77/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/77/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/77/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/77/files"
+    }
+  },
+  {
+    "number": 79,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/79",
+    "author": "sidymar",
+    "title": "serve/L1 Connect: 23 signed Task-Specs, first two units accepted",
+    "state": "closed",
+    "merged_at": "2026-08-18T21:11:51Z",
+    "head": "4e2294060f01e53bbca08b17497c9de29ff1d559",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 8,
+      "review-comments": 12,
+      "commits": 8,
+      "files": 57
+    },
+    "captured_at": "2026-10-20T02:03:05.910153+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Acrescentados resultados relatados 102 Serve/DoD 23 e gate/accept locais; sem novo aceite.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/79",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/79/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/79/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/79/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/79/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/79/files"
+    }
+  },
+  {
+    "number": 80,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/80",
+    "author": "luanmorenommaciel",
+    "title": "chore: bump contract to v0.5 with additive task analysis fields",
+    "state": "closed",
+    "merged_at": "2026-08-18T21:17:52Z",
+    "head": "51f4848306fededf2e3fe6e890a03ec8e576b59e",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 20
+    },
+    "captured_at": "2026-10-20T02:03:05.034557+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/80",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/80/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/80/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/80/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/80/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/80/files"
+    }
+  },
+  {
+    "number": 81,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/81",
+    "author": "gustocezar",
+    "title": "dev: cover the scripts #74 shipped without tests — and make the lane actually run",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:17:42Z",
+    "head": "2970e15310d118b8688f5d211158bb8766736eb6",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 3,
+      "files": 8
+    },
+    "captured_at": "2026-10-20T02:03:04.168568+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/81",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/81/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/81/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/81/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/81/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/81/files"
+    }
+  },
+  {
+    "number": 82,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/82",
+    "author": "sidymar",
+    "title": "fix: spark_events DDL cannot create the table — no fresh deployment can start",
+    "state": "closed",
+    "merged_at": "2026-08-20T02:45:27Z",
+    "head": "6bae427d9071a3462a3d8838c67d2df0ae3704ee",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 3
+    },
+    "captured_at": "2026-10-20T02:03:03.045243+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/82",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/82/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/82/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/82/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/82/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/82/files"
+    }
+  },
+  {
+    "number": 83,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/83",
+    "author": "sidymar",
+    "title": "serve/L2 Discover: list_runs, apex://runs, and a self-selecting comparison baseline",
+    "state": "closed",
+    "merged_at": "2026-08-20T02:45:35Z",
+    "head": "9a1ae67ae9235abae479e8f97309d16a9fd68130",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 27,
+      "files": 31
+    },
+    "captured_at": "2026-10-20T02:03:02.259062+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/83",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/83/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/83/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/83/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/83/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/83/files"
+    }
+  },
+  {
+    "number": 84,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/84",
+    "author": "gustocezar",
+    "title": "harness: verify optional ClickHouse endpoint identity",
+    "state": "closed",
+    "merged_at": "2026-08-20T02:45:43Z",
+    "head": "2de02dd7d4076dd2253a427db6344a7274836d5b",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 4
+    },
+    "captured_at": "2026-10-20T02:03:01.215259+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/84",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/84/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/84/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/84/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/84/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/84/files"
+    }
+  },
+  {
+    "number": 85,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/85",
+    "author": "gustocezar",
+    "title": "docs: define pre-submit provenance for E2E runs",
+    "state": "closed",
+    "merged_at": "2026-08-20T02:39:50Z",
+    "head": "9176acd7bc429cb3e973f40a06eefcb683663e76",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:03:00.325749+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/85",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/85/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/85/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/85/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/85/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/85/files"
+    }
+  },
+  {
+    "number": 86,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/86",
+    "author": "sidymar",
+    "title": "serve/L6 — cross-run memory: recall_similar_runs over the memory lane",
+    "state": "closed",
+    "merged_at": "2026-09-14T17:05:10Z",
+    "head": "be0a4d8b090f423806bf3b5766caf77309ce1464",
+    "base": "main",
+    "counts": {
+      "comments": 5,
+      "reviews": 2,
+      "review-comments": 0,
+      "commits": 10,
+      "files": 19
+    },
+    "captured_at": "2026-10-20T02:02:59.449254+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/86",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/86/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/86/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/86/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/86/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/86/files"
+    }
+  },
+  {
+    "number": 87,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/87",
+    "author": "sidymar",
+    "title": "serve/L5: expose the verify lane over MCP as verify_fix",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:47:02Z",
+    "head": "cd59c8d4722867595e197e6b2e3a0aab85316124",
+    "base": "main",
+    "counts": {
+      "comments": 3,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 8,
+      "files": 20
+    },
+    "captured_at": "2026-10-20T02:02:58.526551+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/87",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/87/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/87/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/87/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/87/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/87/files"
+    }
+  },
+  {
+    "number": 88,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/88",
+    "author": "sidymar",
+    "title": "serve/L3: diagnosis readability — detail levels, coverage, explain_stage, share of tail",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:18:37Z",
+    "head": "9ff859bd3b58b022023f1351c6c321600766ce88",
+    "base": "main",
+    "counts": {
+      "comments": 3,
+      "reviews": 2,
+      "review-comments": 0,
+      "commits": 10,
+      "files": 18
+    },
+    "captured_at": "2026-10-20T02:02:57.579782+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/88",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/88/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/88/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/88/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/88/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/88/files"
+    }
+  },
+  {
+    "number": 89,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/89",
+    "author": "gustocezar",
+    "title": "engine: retry-safe telemetry — reachability + the retry_pressure watcher",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:17:47Z",
+    "head": "c731acae2559812bdbee197c580b42b262f2e317",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 11,
+      "files": 13
+    },
+    "captured_at": "2026-10-20T02:02:56.652245+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/89",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/89/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/89/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/89/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/89/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/89/files"
+    }
+  },
+  {
+    "number": 91,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/91",
+    "author": "gustocezar",
+    "title": "jar: prove listener sink failure never breaks the job (#36)",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:17:51Z",
+    "head": "2b735dffd08eda681ff5aa265a64adffc55b0c93",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 2,
+      "review-comments": 0,
+      "commits": 3,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:55.708011+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/91",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/91/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/91/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/91/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/91/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/91/files"
+    }
+  },
+  {
+    "number": 92,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/92",
+    "author": "gustocezar",
+    "title": "dev: cover scripts/apex.ps1 with dry-run and secrets contract tests",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:17:55Z",
+    "head": "729587f852fd7ad42a19ef195d0609683fcc6bdb",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:54.700151+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/92",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/92/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/92/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/92/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/92/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/92/files"
+    }
+  },
+  {
+    "number": 93,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/93",
+    "author": "gustocezar",
+    "title": "docs: propose AQE re-plan detection decision",
+    "state": "closed",
+    "merged_at": null,
+    "head": "237de62fbb6e17711f1722339d119eaa93d28387",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:53.731388+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/93",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/93/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/93/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/93/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/93/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/93/files"
+    }
+  },
+  {
+    "number": 94,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/94",
+    "author": "gustocezar",
+    "title": "engine: fail in CI when the SQL reads a column no DDL declares",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:17:59Z",
+    "head": "f9f0457584166333b719fd92f0336abc2eb15696",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 2,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:52.806784+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/94",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/94/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/94/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/94/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/94/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/94/files"
+    }
+  },
+  {
+    "number": 96,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/96",
+    "author": "gustocezar",
+    "title": "feat(jar): preserve Spark SQL execution_id on apex.stage spans",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:18:04Z",
+    "head": "155c44b48f5169915cb97fe4634a9c621198f247",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 8
+    },
+    "captured_at": "2026-10-20T02:02:51.929941+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/96",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/96/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/96/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/96/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/96/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/96/files"
+    }
+  },
+  {
+    "number": 97,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/97",
+    "author": "gustocezar",
+    "title": "docs(ui): define read-only Compare, Memory, and Verify contracts",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:18:08Z",
+    "head": "4a2678177ff39129da459326757ea88fb4b685af",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:50.992557+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/97",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/97/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/97/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/97/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/97/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/97/files"
+    }
+  },
+  {
+    "number": 98,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/98",
+    "author": "gustocezar",
+    "title": "jar: combine AQE join alignment with skew partition counts",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:22:35Z",
+    "head": "8c0739e05bc70190c7089fbc2ed4caf6c1354a74",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 2,
+      "review-comments": 0,
+      "commits": 3,
+      "files": 6
+    },
+    "captured_at": "2026-10-20T02:02:49.925412+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/98",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/98/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/98/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/98/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/98/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/98/files"
+    }
+  },
+  {
+    "number": 99,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/99",
+    "author": "gustocezar",
+    "title": "engine: make skew_ratio retry-safe",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:54:08Z",
+    "head": "4c3ad27389f2539fa762a1d9f8eba7da9c9c8537",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 2,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 9
+    },
+    "captured_at": "2026-10-20T02:02:49.181497+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/99",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/99/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/99/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/99/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/99/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/99/files"
+    }
+  },
+  {
+    "number": 100,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/100",
+    "author": "agmarcastro",
+    "title": "feat(front): Apex Console — the seven screens as a runnable Vite + React app",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:20:13Z",
+    "head": "5b4fc4f1e020ab42d77b251edc4328d1befec078",
+    "base": "main",
+    "counts": {
+      "comments": 1,
+      "reviews": 2,
+      "review-comments": 0,
+      "commits": 10,
+      "files": 70
+    },
+    "captured_at": "2026-10-20T02:02:48.033239+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Precisão dos commits substantivos de Augusto Silva; PR e resposta pública permanecem de Agmar.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/100",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/100/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/100/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/100/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/100/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/100/files"
+    }
+  },
+  {
+    "number": 101,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/101",
+    "author": "sidymar",
+    "title": "chore(serve): make the three legs mergeable — one contracted tool list, untracked generated state",
+    "state": "closed",
+    "merged_at": "2026-08-26T13:38:58Z",
+    "head": "df6fe77fecb660270e1b249c732607753ef10150",
+    "base": "main",
+    "counts": {
+      "comments": 2,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 4
+    },
+    "captured_at": "2026-10-20T02:02:47.242345+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/101",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/101/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/101/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/101/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/101/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/101/files"
+    }
+  },
+  {
+    "number": 110,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/110",
+    "author": "gustocezar",
+    "title": "devex: detect hidden editable .pth files on macOS",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:19:57Z",
+    "head": "82571163f9bb71553378eddf25394d0a1860913f",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:46.234501+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/110",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/110/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/110/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/110/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/110/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/110/files"
+    }
+  },
+  {
+    "number": 111,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/111",
+    "author": "gustocezar",
+    "title": "docs: add executable telemetry compatibility matrix",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:20:02Z",
+    "head": "4f833c71f11503cd465cb4e58b41f4382130254f",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:45.273463+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/111",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/111/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/111/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/111/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/111/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/111/files"
+    }
+  },
+  {
+    "number": 118,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/118",
+    "author": "gustocezar",
+    "title": "fix(front): isolate /verify source states and async selections (I1)",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:20:47Z",
+    "head": "a8ccc52e8a9db89e84a976ba28cfd00f4401f81f",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 7
+    },
+    "captured_at": "2026-10-20T02:02:44.603588+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/118",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/118/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/118/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/118/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/118/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/118/files"
+    }
+  },
+  {
+    "number": 119,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/119",
+    "author": "gustocezar",
+    "title": "fix(front): present /verify proposals and evidence faithfully (I2)",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:21:10Z",
+    "head": "0f1971255d55b654dc3ead5e0dda6aedd91f12ae",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 7
+    },
+    "captured_at": "2026-10-20T02:02:43.625515+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/119",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/119/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/119/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/119/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/119/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/119/files"
+    }
+  },
+  {
+    "number": 120,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/120",
+    "author": "gustocezar",
+    "title": "fix(front): expose original proposal as named region",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:21:23Z",
+    "head": "961e296b190ee84eff83b50161a03171884dfce2",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 1,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:42.728925+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/120",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/120/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/120/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/120/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/120/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/120/files"
+    }
+  },
+  {
+    "number": 121,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/121",
+    "author": "luanmorenommaciel",
+    "title": "fix(tests): bump telemetry matrix to contract v0.6",
+    "state": "closed",
+    "merged_at": "2026-09-14T16:46:27Z",
+    "head": "efb677374102b6beaef53a83a679580f57864e53",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:41.730972+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/121",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/121/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/121/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/121/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/121/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/121/files"
+    }
+  },
+  {
+    "number": 126,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/126",
+    "author": "gustocezar",
+    "title": "feat(engine): add offline execution-stage attribution",
+    "state": "closed",
+    "merged_at": "2026-10-06T19:55:46Z",
+    "head": "4ddb082cf8e916736e336d6a5554bccbba083a19",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 13,
+      "files": 10
+    },
+    "captured_at": "2026-10-20T02:02:40.792842+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/126",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/126/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/126/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/126/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/126/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/126/files"
+    }
+  },
+  {
+    "number": 127,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/127",
+    "author": "gustocezar",
+    "title": "feat: add deterministic tail-outlier runtime gate",
+    "state": "closed",
+    "merged_at": "2026-10-06T19:56:00Z",
+    "head": "4e44bfdce5586fe9b8ed7c96e41932b55f231a88",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 19,
+      "files": 30
+    },
+    "captured_at": "2026-10-20T02:02:39.770338+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/127",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/127/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/127/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/127/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/127/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/127/files"
+    }
+  },
+  {
+    "number": 128,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/128",
+    "author": "gustocezar",
+    "title": "test(package): make PowerShell coverage command-aware",
+    "state": "closed",
+    "merged_at": "2026-10-06T19:56:14Z",
+    "head": "2b84c7a14fbcc5c009a3366536ccb80ebe316ca0",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 5,
+      "files": 7
+    },
+    "captured_at": "2026-10-20T02:02:39.169578+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Precisão de nomes nos commits; autoria mista já estava preservada.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/128",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/128/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/128/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/128/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/128/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/128/files"
+    }
+  },
+  {
+    "number": 129,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/129",
+    "author": "sidymar",
+    "title": "feat(serve): apex-api — one HTTP layer between ClickHouse and its consumers",
+    "state": "closed",
+    "merged_at": "2026-10-06T19:56:50Z",
+    "head": "fab662080da499df5d2d4b563ad68be7ddc4cc9f",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 2,
+      "review-comments": 4,
+      "commits": 16,
+      "files": 42
+    },
+    "captured_at": "2026-10-20T02:02:38.087116+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Reconhecidas correções c71c2e4 de Sidymar antes de fab6620 e relato 289 Serve/130 Front, distinto de 275 intermediários.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/129",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/129/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/129/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/129/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/129/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/129/files"
+    }
+  },
+  {
+    "number": 131,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/131",
+    "author": "gustocezar",
+    "title": "engine: fail fast on connect when spark_events schema is behind",
+    "state": "closed",
+    "merged_at": "2026-10-06T19:56:20Z",
+    "head": "7b7b9b41aafa9b6fd3d45513ec7a8f394f9318fc",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 4,
+      "files": 5
+    },
+    "captured_at": "2026-10-20T02:02:37.350474+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/131",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/131/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/131/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/131/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/131/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/131/files"
+    }
+  },
+  {
+    "number": 132,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/132",
+    "author": "gustocezar",
+    "title": "docs: reconcile current contract and Serve state",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:18:13Z",
+    "head": "1f3c2745605184d79d1dbbec73977160005b1420",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 5
+    },
+    "captured_at": "2026-10-20T02:02:36.505299+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/132",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/132/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/132/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/132/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/132/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/132/files"
+    }
+  },
+  {
+    "number": 133,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/133",
+    "author": "gustocezar",
+    "title": "docs: propose source correlation privacy boundary",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:19:24Z",
+    "head": "5cd5968c8cd9a1901fcc60db446dab1c8f9a7226",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:35.600002+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/133",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/133/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/133/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/133/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/133/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/133/files"
+    }
+  },
+  {
+    "number": 134,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/134",
+    "author": "gustocezar",
+    "title": "docs: align README with current contract",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:18:19Z",
+    "head": "3340e2fafce06605ecc89dd4836703b2f4d3c275",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:35.377749+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/134",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/134/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/134/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/134/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/134/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/134/files"
+    }
+  },
+  {
+    "number": 135,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/135",
+    "author": "gustocezar",
+    "title": "fix(serve): withhold unresolved replay deltas",
+    "state": "closed",
+    "merged_at": "2026-10-06T19:56:38Z",
+    "head": "474284cab3a6cf88fb210f3f8e63017c5a3e84a1",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 3
+    },
+    "captured_at": "2026-10-20T02:02:33.144535+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/135",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/135/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/135/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/135/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/135/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/135/files"
+    }
+  },
+  {
+    "number": 136,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/136",
+    "author": "gustocezar",
+    "title": "fix(front): keep mechanism and runtime verdicts independent",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:11:54Z",
+    "head": "2fa078104758cf97070328f16ab6066df7d92ce2",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:32.351352+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/136",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/136/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/136/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/136/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/136/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/136/files"
+    }
+  },
+  {
+    "number": 137,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/137",
+    "author": "gustocezar",
+    "title": "fix(front): recognize retry pressure findings",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:11:58Z",
+    "head": "2c3ae4bdaebef0edcadaa2f344b2937ec79f0cb6",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:30.613841+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/137",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/137/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/137/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/137/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/137/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/137/files"
+    }
+  },
+  {
+    "number": 138,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/138",
+    "author": "gustocezar",
+    "title": "ci(front): reject warnings and empty suites",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:12:02Z",
+    "head": "4b5798d5a2f0ef23199faea32743e960b69570e6",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 3
+    },
+    "captured_at": "2026-10-20T02:02:29.288007+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/138",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/138/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/138/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/138/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/138/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/138/files"
+    }
+  },
+  {
+    "number": 139,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/139",
+    "author": "gustocezar",
+    "title": "test(engine): harden SQL to DDL column guard",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:12:05Z",
+    "head": "087ce22947e60525913c62fba3a49585e46bb32a",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:27.826194+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Fonte esclarecida: diff lido não é leitura integral do guard/DDL na main atual.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/139",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/139/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/139/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/139/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/139/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/139/files"
+    }
+  },
+  {
+    "number": 140,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/140",
+    "author": "gustocezar",
+    "title": "fix(serve): classify ClickHouse failures and retry failed metadata probes",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:14:32Z",
+    "head": "b149569f0a95412caf3c491b8330e94fb4a39e77",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 4,
+      "files": 5
+    },
+    "captured_at": "2026-10-20T02:02:26.172903+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/140",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/140/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/140/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/140/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/140/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/140/files"
+    }
+  },
+  {
+    "number": 141,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/141",
+    "author": "gustocezar",
+    "title": "docs: add a discoverable index of canonical architecture decisions",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:20:34Z",
+    "head": "185a67ba4b21b479d03c9bec02643b6b531168ab",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:24.833394+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Corrigida inclusão indevida de ADR-004 na descrição do diff: a PR acrescenta ADR-001/002/003; árvore posterior separada.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/141",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/141/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/141/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/141/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/141/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/141/files"
+    }
+  },
+  {
+    "number": 142,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/142",
+    "author": "gustocezar",
+    "title": "fix(verify): use successful-task duration samples for stage analysis",
+    "state": "closed",
+    "merged_at": "2026-10-06T19:56:33Z",
+    "head": "761f2c5af6feabab06ab81536ea336cedc20feed",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 4
+    },
+    "captured_at": "2026-10-20T02:02:23.587159+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/142",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/142/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/142/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/142/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/142/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/142/files"
+    }
+  },
+  {
+    "number": 143,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/143",
+    "author": "gustocezar",
+    "title": "fix(api): reject invalid HTTP noise floors",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:11:24Z",
+    "head": "823376327a18009979280c893cae106a40f67139",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:22.338847+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/143",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/143/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/143/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/143/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/143/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/143/files"
+    }
+  },
+  {
+    "number": 144,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/144",
+    "author": "gustocezar",
+    "title": "fix(serve): withhold verdicts from invalid noise floors",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:11:15Z",
+    "head": "82be2e2369dc11d006c4a5381a1a9544ff9a1b20",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 3
+    },
+    "captured_at": "2026-10-20T02:02:20.996384+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/144",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/144/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/144/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/144/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/144/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/144/files"
+    }
+  },
+  {
+    "number": 145,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/145",
+    "author": "gustocezar",
+    "title": "fix(verify): reject invalid noise floors for certification",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:11:20Z",
+    "head": "142d6ea843103459f840f11ba7340370b072241c",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 2,
+      "files": 3
+    },
+    "captured_at": "2026-10-20T02:02:18.992342+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Fonte esclarecida: leitura do diff de models/replay/testes, sem afirmar leitura integral atual da main.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/145",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/145/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/145/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/145/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/145/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/145/files"
+    }
+  },
+  {
+    "number": 146,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/146",
+    "author": "gustocezar",
+    "title": "test(serve): pin fix_verifications projection parity with the front",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:11:28Z",
+    "head": "2e0e1023e25c8a7b70e7987031dcf612b726ecce",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:17.856891+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Precisado o nome de autor do commit: Augusto Cezar.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/146",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/146/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/146/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/146/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/146/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/146/files"
+    }
+  },
+  {
+    "number": 147,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/147",
+    "author": "gustocezar",
+    "title": "fix(infra): check multiline materialized-view targets",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:12:09Z",
+    "head": "a07fc0477ab60b5ff5605062732261a6e29f0ae5",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:16.481038+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/147",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/147/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/147/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/147/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/147/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/147/files"
+    }
+  },
+  {
+    "number": 148,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/148",
+    "author": "gustocezar",
+    "title": "docs(ci): clarify that live end-to-end paths are not gated",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:18:24Z",
+    "head": "d4f85c3c58931654c91c3ba627cbca0a116d75d1",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:15.608902+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/148",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/148/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/148/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/148/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/148/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/148/files"
+    }
+  },
+  {
+    "number": 149,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/149",
+    "author": "gustocezar",
+    "title": "fix(ci): quote generated Collector secret argument",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:12:13Z",
+    "head": "bf308c77ccf3996d9fd58320cfa0eaccca51ce06",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:13.170213+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/149",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/149/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/149/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/149/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/149/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/149/files"
+    }
+  },
+  {
+    "number": 150,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/150",
+    "author": "gustocezar",
+    "title": "test(serve): guard sanitized store errors across transports",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:11:47Z",
+    "head": "1cef5687a102fbcd9a9b36a32b535a6efa4d3a86",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 1
+    },
+    "captured_at": "2026-10-20T02:02:12.047281+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Fonte esclarecida: diff de testes de fronteira da API; leitura integral da main separada.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/150",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/150/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/150/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/150/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/150/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/150/files"
+    }
+  },
+  {
+    "number": 151,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/151",
+    "author": "gustocezar",
+    "title": "fix(front): render API error detail only when textual",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:11:50Z",
+    "head": "488bd8aed068e732f287ac73e939f6642f33fb65",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:02:10.174964+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Sem divergência material no recorte documental comparado.",
+    "correction": null,
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/151",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/151/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/151/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/151/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/151/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/151/files"
+    }
+  },
+  {
+    "number": 152,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/152",
+    "author": "antonylucas",
+    "title": "docs(artifacts): add Apex current-state deck (main @ a289e53)",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:18:29Z",
+    "head": "28b6822997a11b8df4bc1e59dc70bf806ce66bb1",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 25
+    },
+    "captured_at": "2026-10-20T02:02:08.544826+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Limite esclarecido: README/lista de arquivos inspecionados; deck integral não foi revisto nesta rodada.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/152",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/152/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/152/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/152/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/152/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/152/files"
+    }
+  },
+  {
+    "number": 153,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/153",
+    "author": "agmarcastro",
+    "title": "fix(serve,front): the console reads the same rows through either door",
+    "state": "closed",
+    "merged_at": "2026-10-06T20:32:30Z",
+    "head": "eb449cbec5fab0e32bc81714579bce91557173a3",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 13,
+      "files": 63
+    },
+    "captured_at": "2026-10-20T02:02:07.260420+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Precisados 13 commits/11 trailers Task, leitura estática do E2E e relato histórico de aviso job_conf.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/153",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/153/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/153/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/153/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/153/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/153/files"
+    }
+  },
+  {
+    "number": 160,
+    "url": "https://github.com/luanmorenommaciel/apex/pull/160",
+    "author": "luanmorenommaciel",
+    "title": "ci: lean default CI (cheap PR check, heavy jobs manual/weekly)",
+    "state": "closed",
+    "merged_at": "2026-10-08T19:19:31Z",
+    "head": "e6343ca4e3cce90caef54a76d951129879fce723",
+    "base": "main",
+    "counts": {
+      "comments": 0,
+      "reviews": 0,
+      "review-comments": 0,
+      "commits": 1,
+      "files": 2
+    },
+    "captured_at": "2026-10-20T02:01:59.735369+00:00",
+    "runtime_reproduced": false,
+    "review_scope": "corpo, conversas, reviews/inline, mensagens de commits, lista de arquivos e campos3/4/5/6/10/14 da ficha; sem code review histórica ou nova conferência de runs antigos",
+    "conclusion": "Correção ou complemento documental incorporado.",
+    "correction": "Fonte esclarecida: diff dos workflows não é consulta de toda a configuração atual nem execução.",
+    "specific_limit": "Confronto documental; sem nova execução de produto/CI e sem releitura integral de código fora do recorte. Runs históricos preservam fontes e datas próprias.",
+    "source_urls": {
+      "body": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/160",
+      "conversation": "https://api.github.com/repos/luanmorenommaciel/apex/issues/160/comments",
+      "reviews": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/160/reviews",
+      "inline": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/160/comments",
+      "commits": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/160/commits",
+      "files": "https://api.github.com/repos/luanmorenommaciel/apex/pulls/160/files"
+    }
+  }
+]
