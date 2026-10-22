@@ -64,6 +64,8 @@ make down                    # stop (keep data)   |   make clean = down -v (full
 
 Ports (host, overridable in `.env`): S3 API `:9010` (shifted off `:9000` to dodge the collect-lane ClickHouse), RustFS console `:9001`, Spark master `:8080`, History Server `:18080`.
 
+**Upgrading from the MinIO store:** the local S3 store is now RustFS, which cannot read a volume written by MinIO. Run `make clean` (or `docker volume rm apex-dev_minio-data`) once before `make up`; the buckets are recreated and `make gen-data` regenerates the tables.
+
 ## The pathologies
 
 Each job self-configures its pathology conf (**AQE OFF + `autoBroadcastJoinThreshold=-1`** so it can't self-heal), seeds every `rand()`, and relies on `ApexPlugin` to emit one canonical event per completed stage through OTLP.

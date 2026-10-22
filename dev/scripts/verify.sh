@@ -4,8 +4,8 @@
 # Fresh clone → `cp .env.example .env && make verify` must pass on any host.
 #
 # Steps: (1) .env quartet consistent · (2) all 4 JARs reachable · (3) clean build+up
-#        waiting for every healthcheck green · (4) smoke Delta write/read on MinIO ·
-#        (5) event log landed in MinIO · (6) app visible in the History Server · teardown.
+#        waiting for every healthcheck green · (4) smoke Delta write/read on the S3 store ·
+#        (5) event log landed in the S3 store · (6) app visible in the History Server · teardown.
 #
 # Env: KEEP_UP=1 skips the final teardown (for debugging a failed run).
 # ─────────────────────────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ else
 fi
 $COMPOSE ps --format '  {{.Service}}\t{{.State}}\t{{.Status}}'
 
-# ── 4: smoke Delta write/read on MinIO ──────────────────────────────────────
+# ── 4: smoke Delta write/read on the S3 store ─────────────────────────────────
 step "4/6  smoke Delta write/read"
 $COMPOSE exec -T spark-master /opt/spark/bin/spark-submit \
   --master spark://spark-master:7077 --deploy-mode client \
