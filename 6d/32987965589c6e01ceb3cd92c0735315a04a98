@@ -1,0 +1,51 @@
+serve/tools/mcp_stdio_gate.py
+  s_e1070fee7f3bf4::t_4cf65215fcfa81 109-116
+serve/src/apex_mcp/models.py
+  s_e1070fee7f3bf4::t_a8cffbbd259675 659-664
+serve/tests/test_run_list_alignment.py
+  s_e1070fee7f3bf4::t_1a336a38df4596 1-236
+front/src/data/httpRepository.test.ts
+  s_e1070fee7f3bf4::t_09883c8d3ff8d0 376-420
+front/src/data/queries.ts
+  s_e1070fee7f3bf4::t_676e06da5c65b8 157-172
+front/src/data/repository.ts
+  s_e1070fee7f3bf4::t_c7d827f95d260e 58-81,84-85,169-180,271-287,344-355
+front/src/data/runList.test.ts
+  s_e1070fee7f3bf4::t_51224663caadc4 1-116
+serve/README.md
+  s_e1070fee7f3bf4::t_42f640adcd5632 15
+serve/src/apex_api/routes/diagnostics.py
+  s_e1070fee7f3bf4::t_7b00651d667d8a 209-210,212-215,217-222,226-230
+serve/src/apex_api/routes/resources.py
+  s_e1070fee7f3bf4::t_8a55fa9d1f6cef 72-80,82-91,94-98
+serve/src/apex_mcp/api_client.py
+  s_e1070fee7f3bf4::t_242defc4aacc64 477-484,488-492
+serve/src/apex_mcp/ch.py
+  s_e1070fee7f3bf4::t_8d6d944ab22073 97-156,167,169-170,173-176,453-454,793-795,797-805,809-810,812-816,818,827-836,838-844,846,849-872,1123-1133,1139-1145,1150-1154,1156
+serve/src/apex_mcp/server.py
+  s_e1070fee7f3bf4::t_75a0057e2b2af3 316-325,339-342,469-473,622,625-628,630,634-641,643-649,655-658
+serve/tests/test_ch.py
+  s_e1070fee7f3bf4::t_d9faa87d7896ea 224,262-265
+serve/tests/test_console_parity_gate.py
+  s_e1070fee7f3bf4::t_fa72f73eee454f 48-55,185-246
+serve/tests/test_mcp_over_http.py
+  s_e1070fee7f3bf4::t_227303a4d949da 105-107,141-145,167-184,237-244,292-324
+serve/tools/console_parity_gate.py
+  s_e1070fee7f3bf4::t_164f1a4c38732b 18-22,94,501-543,547,559-563,633-662,816-820,826-827
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d32987965589c6e01ceb3cd92c0735315a04a98",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
