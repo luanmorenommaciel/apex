@@ -1,0 +1,25 @@
+front/src/data/httpRepository.test.ts
+  s_4afec7b1e4caff::t_a6c9cf88e0a00d 4-6,433-453
+front/src/data/kb.ts
+  s_4afec7b1e4caff::t_f2fbe320e35ebf 16-21,82-86,88,90
+front/src/screens/KbSearchScreen.test.tsx
+  s_4afec7b1e4caff::t_22888621ec4ee3 59-60,63,66-72,109-117,119,146-223
+front/src/screens/KbSearchScreen.tsx
+  s_4afec7b1e4caff::t_dd93144787292f 34-42,46-48,51-53,62,109,115,164-173,177,196,198-236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "595e2b1dccdaacc029f9cf533c6057d77da1d68c",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "unknown"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
