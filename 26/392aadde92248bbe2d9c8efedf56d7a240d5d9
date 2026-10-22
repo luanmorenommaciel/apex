@@ -1,0 +1,25 @@
+docs/lanes/SERVE-LEGS.md
+  s_4afec7b1e4caff::t_775ebc4954c2c3 27-28
+serve/README.md
+  s_4afec7b1e4caff::t_24495fd09f2f88 12,106-108
+serve/src/apex_mcp/prompts.py
+  s_4afec7b1e4caff::t_6d55bc49f92dcc 13-16
+serve/tests/test_server_prompts.py
+  s_4afec7b1e4caff::t_cf6f03ac9a744e 10,18,92,186-193,238,241,252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "26392aadde92248bbe2d9c8efedf56d7a240d5d9",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "unknown"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
