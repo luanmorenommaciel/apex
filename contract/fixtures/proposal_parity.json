@@ -1,0 +1,1350 @@
+{
+  "description": "Shared parity cases for apex.fix_verifications.proposed_config. Driven by front/src/contract/proposalParity.test.ts (parseProposal + overlayEntries) and serve/tests/test_proposal_parity.py (VerificationView / read_overlay). 'input' is the raw stored column text. 'expected.kind': overlay | empty-overlay | none (no usable overlay). 'expected.entries': [key, value] pairs in Unicode code-point key order. Rules: (1) strip exactly the JS String.prototype.trim set from both ends; (2) {} proposes nothing; (3) keys in code-point order. Deep nesting (~1500 levels) is generated in-test.",
+  "cases": [
+    {
+      "name": "js-trim U+0009 leading",
+      "input": "\t{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+0009 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\t",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+000A leading",
+      "input": "\n{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+000A trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\n",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+000B leading",
+      "input": "\u000b{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+000B trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u000b",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+000C leading",
+      "input": "\f{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+000C trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\f",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+000D leading",
+      "input": "\r{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+000D trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\r",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+0020 leading",
+      "input": " {\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+0020 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"} ",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+00A0 leading",
+      "input": "\u00a0{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+00A0 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u00a0",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+1680 leading",
+      "input": "\u1680{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+1680 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u1680",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2000 leading",
+      "input": "\u2000{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2000 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2000",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2001 leading",
+      "input": "\u2001{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2001 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2001",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2002 leading",
+      "input": "\u2002{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2002 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2002",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2003 leading",
+      "input": "\u2003{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2003 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2003",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2004 leading",
+      "input": "\u2004{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2004 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2004",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2005 leading",
+      "input": "\u2005{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2005 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2005",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2006 leading",
+      "input": "\u2006{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2006 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2006",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2007 leading",
+      "input": "\u2007{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2007 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2007",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2008 leading",
+      "input": "\u2008{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2008 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2008",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2009 leading",
+      "input": "\u2009{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2009 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2009",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+200A leading",
+      "input": "\u200a{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+200A trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u200a",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2028 leading",
+      "input": "\u2028{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2028 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2028",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2029 leading",
+      "input": "\u2029{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+2029 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u2029",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+202F leading",
+      "input": "\u202f{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+202F trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u202f",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+205F leading",
+      "input": "\u205f{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+205F trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u205f",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+3000 leading",
+      "input": "\u3000{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+3000 trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u3000",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+FEFF leading",
+      "input": "\ufeff{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim U+FEFF trailing",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\ufeff",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "js-trim every char on both sides",
+      "input": "\t\n\u000b\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff{\"spark.b\": \"2\", \"spark.a\": \"1\"}\ufeff\u3000\u205f\u202f\u2029\u2028\u200a\u2009\u2008\u2007\u2006\u2005\u2004\u2003\u2002\u2001\u2000\u1680\u00a0 \r\f\u000b\n\t",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "1"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "non-trim U+0085 leading is rejected",
+      "input": "\u0085{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+0085 trailing is rejected",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u0085",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+180E leading is rejected",
+      "input": "\u180e{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+180E trailing is rejected",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u180e",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+200B leading is rejected",
+      "input": "\u200b{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+200B trailing is rejected",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u200b",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+001C leading is rejected",
+      "input": "\u001c{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+001C trailing is rejected",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u001c",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+001D leading is rejected",
+      "input": "\u001d{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+001D trailing is rejected",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u001d",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+001E leading is rejected",
+      "input": "\u001e{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+001E trailing is rejected",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u001e",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+001F leading is rejected",
+      "input": "\u001f{\"spark.b\": \"2\", \"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "non-trim U+001F trailing is rejected",
+      "input": "{\"spark.b\": \"2\", \"spark.a\": \"1\"}\u001f",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "NBSP inside the JSON (between tokens) is rejected",
+      "input": "{\u00a0\"spark.a\": \"1\"}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "empty object",
+      "input": "{}",
+      "expected": {
+        "kind": "empty-overlay",
+        "entries": []
+      }
+    },
+    {
+      "name": "empty object wrapped in spaces",
+      "input": "  {}  ",
+      "expected": {
+        "kind": "empty-overlay",
+        "entries": []
+      }
+    },
+    {
+      "name": "empty object wrapped in NBSP and BOM",
+      "input": "\ufeff\u00a0{}\u00a0",
+      "expected": {
+        "kind": "empty-overlay",
+        "entries": []
+      }
+    },
+    {
+      "name": "empty object with inner whitespace",
+      "input": "{ \n }",
+      "expected": {
+        "kind": "empty-overlay",
+        "entries": []
+      }
+    },
+    {
+      "name": "empty string",
+      "input": "",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "whitespace only",
+      "input": " \u00a0\ufeff\n",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "not json",
+      "input": "{not json",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "array",
+      "input": "[]",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "string scalar",
+      "input": "\"x\"",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "canonical two keys",
+      "input": "{\"spark.sql.adaptive.enabled\": \"true\", \"spark.sql.shuffle.partitions\": \"800\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.sql.adaptive.enabled",
+            "true"
+          ],
+          [
+            "spark.sql.shuffle.partitions",
+            "800"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "unsorted input order is presented sorted",
+      "input": "{\"spark.z\": \"1\", \"spark.m\": \"2\", \"spark.a\": \"3\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "3"
+          ],
+          [
+            "spark.m",
+            "2"
+          ],
+          [
+            "spark.z",
+            "1"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "integer-like keys sort as strings, not first",
+      "input": "{\"spark.a\": \"x\", \"10\": \"a\", \"9\": \"b\", \"2\": \"c\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "10",
+            "a"
+          ],
+          [
+            "2",
+            "c"
+          ],
+          [
+            "9",
+            "b"
+          ],
+          [
+            "spark.a",
+            "x"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "mixed case sorts by code point (upper before lower)",
+      "input": "{\"spark.b\": \"1\", \"Spark.B\": \"2\", \"spark.B\": \"3\", \"SPARK.a\": \"4\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "SPARK.a",
+            "4"
+          ],
+          [
+            "Spark.B",
+            "2"
+          ],
+          [
+            "spark.B",
+            "3"
+          ],
+          [
+            "spark.b",
+            "1"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "astral key sorts after high-BMP key (code point, not UTF-16 unit)",
+      "input": "{\"\ud83d\ude00\": \"astral\", \"\uffff\": \"bmp\", \"a\": \"ascii\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "a",
+            "ascii"
+          ],
+          [
+            "\uffff",
+            "bmp"
+          ],
+          [
+            "\ud83d\ude00",
+            "astral"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "astral vs U+E000 private-use",
+      "input": "{\"\ue000\": \"pua\", \"\ud83d\ude00\": \"astral\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "\ue000",
+            "pua"
+          ],
+          [
+            "\ud83d\ude00",
+            "astral"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "duplicate keys: last value wins",
+      "input": "{\"spark.a\": \"1\", \"spark.b\": \"2\", \"spark.a\": \"3\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "3"
+          ],
+          [
+            "spark.b",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "scalars stringified like String()",
+      "input": "{\"spark.b\": true, \"spark.a\": 5, \"spark.c\": 0.7, \"spark.d\": 1.0, \"spark.e\": false}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "5"
+          ],
+          [
+            "spark.b",
+            "true"
+          ],
+          [
+            "spark.c",
+            "0.7"
+          ],
+          [
+            "spark.d",
+            "1"
+          ],
+          [
+            "spark.e",
+            "false"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "1e400 overflows",
+      "input": "{\"spark.a\": 1e400}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "-1e400 overflows",
+      "input": "{\"spark.a\": -1e400}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "9007199254740993 beyond MAX_SAFE_INTEGER",
+      "input": "{\"spark.a\": 9007199254740993}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "-9007199254740993 beyond MAX_SAFE_INTEGER",
+      "input": "{\"spark.a\": -9007199254740993}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "9007199254740991 is MAX_SAFE_INTEGER",
+      "input": "{\"spark.a\": 9007199254740991}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "9007199254740991"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "-9007199254740991",
+      "input": "{\"spark.a\": -9007199254740991}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "spark.a",
+            "-9007199254740991"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "NaN literal",
+      "input": "{\"spark.a\": NaN}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "Infinity literal",
+      "input": "{\"spark.a\": Infinity}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "-Infinity literal",
+      "input": "{\"spark.a\": -Infinity}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "null member",
+      "input": "{\"spark.a\": null}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "nested object member",
+      "input": "{\"spark.a\": {\"b\": \"c\"}}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "array member",
+      "input": "{\"spark.a\": [\"1\"]}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    },
+    {
+      "name": "one bad member invalidates the whole overlay",
+      "input": "{\"spark.a\": \"1\", \"spark.b\": null}",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
+    }
+  ]
+}

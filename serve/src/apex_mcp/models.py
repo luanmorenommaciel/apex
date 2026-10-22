@@ -375,6 +375,59 @@ def _js_scalar_string(value: object) -> str | None:
     return None
 
 
+
+# What JavaScript's ``String.prototype.trim`` removes: WhiteSpace plus
+# LineTerminator (ECMA-262). Python's ``str.strip()`` is NOT this set — it also
+# strips U+001C-U+001F and U+0085, which ``trim`` keeps (and ``JSON.parse`` then
+# rejects). Both doors strip exactly these code points from both ends of the
+# stored text before parsing; whitespace outside the JSON value carries no
+# meaning, the console always accepted it, and rejecting it here would hide a
+# usable verified overlay on the MCP door only.
+JS_TRIM_CHARS = (
+    "\u0009\u000a\u000b\u000c\u000d\u0020\u00a0\u1680"
+    "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+    "\u2028\u2029\u202f\u205f\u3000\ufeff"
+)
+
+
+def read_overlay(value: object) -> dict[str, str] | None:
+    """Read a stored ``proposed_config`` the way the console's ``parseProposal``
+    does (front/src/contract/rules.ts).
+
+    Returns ``None`` when there is no usable overlay (absent, blank, not JSON,
+    not an object, or any member the console would reject), ``{}`` for an empty
+    object — a row that proposes NOTHING — and otherwise the overlay with keys
+    in Unicode code-point order (``sorted``; the order ``sort_keys=True``
+    writes, and the order the console's ``overlayEntries`` lists).
+
+    Both doors are driven over the same cases by
+    contract/fixtures/proposal_parity.json.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        text = value.strip(JS_TRIM_CHARS)
+        if not text:
+            return None
+        try:
+            value = json.loads(text, parse_constant=_reject_json_constant)
+        except (ValueError, RecursionError):
+            # RecursionError: json.loads recurses per nesting level, so an
+            # overlay nested ~1000 deep exhausts the stack. The console
+            # reports it as invalid-overlay; so does this door. The walk
+            # below is flat (non-scalar members are rejected, never
+            # descended), so parsing is the only recursion.
+            return None
+    if not isinstance(value, dict):
+        return None
+    out: dict[str, str] = {}
+    for key in sorted(value, key=str):
+        text = _js_scalar_string(value[key])
+        if text is None:
+            return None
+        out[str(key)] = text
+    return out
+
 # The one convention a reader must not get wrong. It is repeated in the field
 # descriptions because the schema is what a client actually sees.
 _SIGN_CONVENTION = (
@@ -505,40 +558,35 @@ class VerificationView(BaseModel):
 
         A malformed or non-object value degrades to ``{}`` rather than failing
         the whole read — an unparseable overlay must not hide the safety
-        verdict that sits in the same row.
+        verdict that sits in the same row. (``read_overlay`` keeps the
+        difference between "empty ``{}``" and "unreadable" for callers that
+        need it; this field holds ``{}`` for both.)
 
         It parses the way the console's ``parseProposal`` does, so both doors
-        read the same overlay out of the same row: scalar members are
-        stringified like JavaScript's ``String()`` (``true``, ``5``), and one
-        non-scalar member (null, object, array) invalidates the whole overlay
-        rather than leaving a partial, false proposal. NaN/Infinity, which
-        ``JSON.parse`` rejects, are rejected here too, as are numbers that
-        overflow to infinity or exceed ``Number.MAX_SAFE_INTEGER`` — the
-        console rejects the same ones (see ``_js_scalar_string``). Keys come back sorted —
-        the canonical order the verify lane writes (``sort_keys=True``).
+        read the same overlay out of the same row:
+
+        1. Whitespace: exactly the code points JavaScript's ``trim`` removes
+           (``JS_TRIM_CHARS``) are stripped from both ends before parsing —
+           not Python's ``str.strip()`` set.
+        2. Empty: ``{}`` proposes nothing. The console reports it as its own
+           ``empty-overlay`` kind; ``suggest_fix`` withholds the diff for it.
+        3. Key order: Unicode code point (``sorted``), the order the verify
+           lane writes (``sort_keys=True``) and the console lists.
+
+        Scalar members are stringified like JavaScript's ``String()``
+        (``true``, ``5``), and one non-scalar member (null, object, array)
+        invalidates the whole overlay rather than leaving a partial, false
+        proposal. NaN/Infinity, which ``JSON.parse`` rejects, are rejected here
+        too, as are numbers that overflow to infinity or exceed
+        ``Number.MAX_SAFE_INTEGER`` (see ``_js_scalar_string``).
+
+        The shared cases both doors are tested against live in
+        contract/fixtures/proposal_parity.json.
         """
-        if value is None or value == "":
+        if value == "":
             return {}
-        if isinstance(value, str):
-            try:
-                parsed = json.loads(value, parse_constant=_reject_json_constant)
-            except (ValueError, RecursionError):
-                # RecursionError: json.loads recurses per nesting level, so an
-                # overlay nested ~1000 deep exhausts the stack. The console
-                # reports it as invalid-overlay; so does this door. The walk
-                # below is flat (non-scalar members are rejected, never
-                # descended), so parsing is the only recursion.
-                return {}
-            value = parsed
-        if not isinstance(value, dict):
-            return {}
-        out: dict[str, str] = {}
-        for key in sorted(value, key=str):
-            text = _js_scalar_string(value[key])
-            if text is None:
-                return {}
-            out[str(key)] = text
-        return out
+        overlay = read_overlay(value)
+        return {} if overlay is None else overlay
 
     @field_validator("safe", mode="before")
     @classmethod

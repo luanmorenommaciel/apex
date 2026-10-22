@@ -1,6 +1,6 @@
 import { Card, Label, Metric, Mono, Pill, Prose, VerdictPill } from "@/components/atoms";
 import {
-  fmt, measureNoiseFloorPct, parseProposal, ruleFourNoInference, ruleTwoRuntimeResolvable,
+  fmt, measureNoiseFloorPct, overlayEntries, parseProposal, ruleFourNoInference, ruleTwoRuntimeResolvable,
 } from "@/contract/rules";
 import type { FixVerificationRow } from "@/contract/types";
 
@@ -74,9 +74,14 @@ export function DualVerdictPanel({ v }: { v: FixVerificationRow }) {
         <div className="flex flex-col gap-1.5">
           <Label>WHAT WAS EVALUATED</Label>
           {overlay ? (
-            Object.entries(overlay).map(([k, val]) => (
+            overlayEntries(overlay).map(([k, val]) => (
               <Metric key={k} label={k} value={val} />
             ))
+          ) : proposal.kind === "empty-overlay" ? (
+            <Prose size="xs" className="text-dim">
+              The stored overlay is empty: the verify lane evaluated no
+              setting, so no key is listed.
+            </Prose>
           ) : (
             <Prose size="xs" className="text-dim">
               The proposal could not be read as a conf overlay, so no key is
