@@ -94,6 +94,7 @@ aligned by `stage_id+plan_fingerprint`.
 
 ```bash
 claude mcp add --scope user --transport stdio apex \
+  --env APEX_MCP_BACKEND=clickhouse \
   --env CLICKHOUSE_HOST=127.0.0.1 --env CLICKHOUSE_PORT=8123 \
   --env CLICKHOUSE_USER=apex --env CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD}" \
   --env CLICKHOUSE_DATABASE=apex \
@@ -101,6 +102,11 @@ claude mcp add --scope user --transport stdio apex \
 
 claude mcp list   # → apex: uvx --from … apex-mcp - ✔ Connected
 ```
+
+Direct ClickHouse is now an explicit opt-in (`APEX_MCP_BACKEND=clickhouse`).
+To read through the Apex API instead, replace the `CLICKHOUSE_*` flags with
+`--env APEX_API_URL=http://127.0.0.1:8099 --env APEX_API_TOKEN="${APEX_API_TOKEN}"`
+(see [README.md](README.md#configuration)).
 
 `uvx` launched with an immediate EOF wrote **0 bytes to stdout**; all
 diagnostics appeared on stderr.
