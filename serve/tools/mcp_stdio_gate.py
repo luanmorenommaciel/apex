@@ -2,8 +2,10 @@
 
 Verifies what only a real client can verify:
   * the server survives `initialize` over stdio (no stray stdout byte),
-  * it lists exactly the six contracted tools with the right annotations,
+  * it lists exactly the eight contracted tools with the right annotations,
   * it exposes apex://runs as a resource and NOT as a tool,
+  * it lists exactly the two prompts (diagnose, fix) with their arguments, and
+    each renders the tool sequence — fix states the diff is never applied,
   * every tool returns schema-valid structured output,
   * `suggest_fix` reports `applied=False` / `requires_human_approval=True`.
 
@@ -31,12 +33,17 @@ EXPECTED_TOOLS = [
     {"name": "compare_runs", "readOnlyHint": True},
     {"name": "list_runs", "readOnlyHint": True},
     {"name": "search_kb", "readOnlyHint": True},
+    {"name": "recall_similar_runs", "readOnlyHint": True},
     {"name": "verify_fix", "readOnlyHint": True},
     {"name": "suggest_fix", "readOnlyHint": False},
 ]
 
 # A resource is not a tool. It must appear here and NOT in EXPECTED_TOOLS.
 EXPECTED_RESOURCES = ["apex://runs"]
+
+# Prompts are neither tools nor resources. Sorted equality: an unnoticed prompt
+# is text injected into a user's conversation.
+EXPECTED_PROMPTS = ["diagnose", "fix"]
 
 
 def _payload(result) -> dict:  # noqa: ANN001
@@ -103,6 +110,29 @@ async def main() -> int:
             runs_payload = json.loads(runs_doc.contents[0].text)
             assert "runs" in runs_payload and "untrusted_fields" in runs_payload, runs_payload
             assert "runs[].app_name" in runs_payload["untrusted_fields"]
+
+            # The prompt surface (F5.4). Rendering reads nothing from the store.
+            listed_prompts = (await session.list_prompts()).prompts
+            prompt_names = sorted(p.name for p in listed_prompts)
+            assert prompt_names == EXPECTED_PROMPTS, prompt_names
+            prompt_args = {
+                p.name: {a.name: bool(a.required) for a in p.arguments or []}
+                for p in listed_prompts
+            }
+            assert prompt_args["diagnose"] == {"job_id": True}, prompt_args
+            assert prompt_args["fix"] == {"job_id": True, "finding_id": False}, (
+                prompt_args
+            )
+            diagnose_text = (
+                await session.get_prompt("diagnose", {"job_id": job_id})
+            ).messages[0].content.text
+            fix_text = (
+                await session.get_prompt("fix", {"job_id": job_id})
+            ).messages[0].content.text
+            assert "`analyze_run`" in diagnose_text and job_id in diagnose_text
+            assert fix_text.index("`verify_fix`") < fix_text.index("`suggest_fix`")
+            assert "`applied` is always False" in fix_text
+            assert "NEVER APPLIED" in fix_text
 
             suggest = next(t for t in listed.tools if t.name == "suggest_fix")
             assert suggest.annotations is not None
@@ -181,6 +211,11 @@ async def main() -> int:
                 "gate": "serve-stdio-mcp",
                 "job_id": job_id,
                 "tools": tool_metadata,
+                "prompts": {
+                    "names": prompt_names,
+                    "arguments": prompt_args,
+                    "fix_states_never_applied": True,
+                },
                 "analyze_run": {
                     "status": diagnosis["status"],
                     "detail_default": "summary",
