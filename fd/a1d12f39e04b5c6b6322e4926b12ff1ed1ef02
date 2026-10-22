@@ -1,0 +1,20 @@
+Makefile
+  s_e1070fee7f3bf4::t_07dd14355a2627 149
+  s_e1070fee7f3bf4::t_9244852bc2ec93 137-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fda1d12f39e04b5c6b6322e4926b12ff1ed1ef02",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
