@@ -68,11 +68,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      # serve's proposal-parity test runs the console parser (front/src) under
-      # node; same major as the front job.
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
