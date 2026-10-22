@@ -1,0 +1,25 @@
+engine/src/apex_engine/validation.py
+  s_e1070fee7f3bf4::t_bc5443b9d7ffe8 126-134,151
+engine/src/apex_engine/watchers/retry_pressure.py
+  s_e1070fee7f3bf4::t_222b718870bb7a 11-14,53
+engine/tests/test_contract_engine.py
+  s_e1070fee7f3bf4::t_071a0c0bfcd221 282-358
+engine/tests/test_watchers.py
+  s_e1070fee7f3bf4::t_5302548989fa4c 352-374
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ec246c4bc4ffa61776df6899b1d5fe9a74ecb2c",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
