@@ -15,7 +15,11 @@ the type check and the ordering are ClickHouse's and no fake has them:
    and ``if()`` found a common type for every branch;
 3. findings come back ``confidence_score DESC`` when that differs from ts ASC;
 4. an execution re-planned three times is ONE transition, carrying the last;
-5. every timestamp leaves the API in the wire format the console declares.
+5. every timestamp leaves the API in the wire format the console declares;
+6. (P7.5) the run list — default, filtered and paged — is the same rows in the
+   same order through both doors, and the MCP's list_runs
+   (/v1/diagnostics/runs) names the same job_ids in the same order as the
+   console's /v1/runs for the same arguments.
 
 It seeds its own disposable rows, under job ids carrying a random suffix, and
 removes exactly those rows — the same arrangement as ``read_only_gate.py``.
@@ -87,7 +91,7 @@ def console_statements(source: str) -> dict[str, str]:
     if rollup:
         body = unescape(rollup.group(1))
         for match in re.finditer(
-            r'export const (\w+) = runRollup\(\s*"([^"]*)",\s*"([^"]*)"\s*\);', source
+            r'export const (\w+) = runRollup\(\s*"([^"]*)",\s*"([^"]*)",?\s*\);', source
         ):
             statements[match.group(1)] = body.replace("${where}", match.group(2)).replace(
                 "${tail}", match.group(3)
@@ -494,10 +498,53 @@ class Report:
         return sum(1 for seen, _, _ in self.lines if seen == verdict)
 
 
+# The run list's shared defaults (ch.ReadStore.DEFAULT_*), as the browser
+# binds them: every placeholder RUN_LIST names, has_findings -1 meaning "none".
+RUN_LIST_DEFAULTS: dict[str, Any] = {
+    "limit": 50, "since_hours": 168, "offset": 0, "app_name": "",
+    "job_id_prefix": "", "plan_fingerprint": "", "has_findings": -1,
+}
+
+
+def run_list_params(**overrides: Any) -> dict[str, Any]:
+    """RUN_LIST's bound values: the defaults, with the named filters set."""
+    return {**RUN_LIST_DEFAULTS, **overrides}
+
+
+def run_list_query(params: dict[str, Any]) -> str:
+    """The same arguments as an HTTP query string, in the routes' vocabulary.
+
+    has_findings is a bool on the routes and absent when unset; everything
+    else travels under its own name.
+    """
+    query = {k: v for k, v in params.items() if k != "has_findings"}
+    if params.get("has_findings", -1) != -1:
+        query["has_findings"] = "true" if params["has_findings"] == 1 else "false"
+    return urllib.parse.urlencode(query)
+
+
+def run_list_cases(prefix: str, fingerprint: str) -> list[tuple[str, dict[str, Any]]]:
+    """Filtered and paged run lists, each checked on every door.
+
+    ``prefix`` narrows to the gate's own runs (seeded) or the given run
+    (--job-id), so the filters are exercised on rows whose truth is known.
+    """
+    cases = [
+        ("runs", run_list_params()),
+        ("runs · job_id prefix", run_list_params(job_id_prefix=prefix)),
+        ("runs · has findings", run_list_params(job_id_prefix=prefix, has_findings=1)),
+        ("runs · no findings", run_list_params(job_id_prefix=prefix, has_findings=0)),
+        ("runs · page 2", run_list_params(job_id_prefix=prefix, limit=1, offset=1)),
+    ]
+    if fingerprint:
+        cases.append(("runs · plan shape", run_list_params(plan_fingerprint=fingerprint)))
+    return cases
+
+
 def compare_doors(
     report: Report, store: Store, api: Api, statements: dict[str, str],
     job: str, fingerprint: str, finding: str,
-    *, only: set[str] | None = None, suffix: str = "",
+    *, only: set[str] | None = None, suffix: str = "", prefix: str = "",
 ) -> dict[str, Any]:
     """Each console statement through both doors. Returns the API's payloads.
 
@@ -509,7 +556,11 @@ def compare_doors(
     enc = urllib.parse.quote
     plan: list[tuple[str, str, dict[str, Any], str, str | None]] = [
         # name, console statement, its parameters, the API path, tie-break key
-        ("runs", "RUN_LIST", {"limit": 50}, "/v1/runs?limit=50", "job_id"),
+        # The run lists compare IN ORDER (no tie-break key): since P7.5 the
+        # order is started_at DESC, job_id ASC on both doors, and an order
+        # that differs is a failure, not noise to sort away.
+        *[(name, "RUN_LIST", params, f"/v1/runs?{run_list_query(params)}", None)
+          for name, params in run_list_cases(prefix or job, fingerprint)],
         ("run", "RUN_ONE", {"job": job}, f"/v1/runs/{enc(job)}", None),
         ("stages", "LATEST_STAGES", {"job": job}, f"/v1/runs/{enc(job)}/stages", None),
         ("conf", "JOB_CONF", {"job": job}, f"/v1/runs/{enc(job)}/conf", None),
@@ -577,6 +628,36 @@ def compare_doors(
         report.add(FAIL if found else PASS, label, found or f"same through both doors · {size}")
         seen[name] = payload
     return seen
+
+
+def cross_door_order(
+    report: Report, api: Api, *, prefix: str, fingerprint: str,
+) -> None:
+    """The MCP's list_runs and the console's list name the same runs, in order.
+
+    GET /v1/diagnostics/runs is the MCP tool (API mode reads exactly this
+    route) and GET /v1/runs is the console. They project different columns,
+    so only the ordered job_ids are compared — which is the P7.5 claim: for
+    the same arguments, the same runs in the same order.
+    """
+    for name, params in run_list_cases(prefix, fingerprint):
+        label = f"cross-door order · {name}"
+        query = run_list_query(params)
+        mcp_status, mcp = api.get(f"/v1/diagnostics/runs?{query}")
+        console_status, console = api.get(f"/v1/runs?{query}")
+        if mcp_status != 200 or console_status != 200:
+            unavailable = "memory_unavailable" in json.dumps([mcp, console])
+            report.add(SKIP if unavailable and params["plan_fingerprint"] else FAIL, label,
+                       f"mcp {mcp_status} · console {console_status}")
+            continue
+        mcp_ids = [run.get("job_id") for run in (mcp or {}).get("runs", [])]
+        console_ids = [row.get("job_id") for row in console or []]
+        if not mcp_ids and not console_ids:
+            report.add(SKIP, label, "both doors listed no runs; an empty order proves nothing")
+        elif mcp_ids == console_ids:
+            report.add(PASS, label, f"{len(mcp_ids)} job_ids, same order on both doors")
+        else:
+            report.add(FAIL, label, f"mcp {mcp_ids[:5]}… != console {console_ids[:5]}…")
 
 
 def live_only(
@@ -732,11 +813,17 @@ def main(argv: list[str] | None = None) -> int:
             job, unindexed = fixture.indexed, fixture.unindexed
             fingerprint, finding = fixture.fingerprint, fixture.finding_high
 
-        seen = compare_doors(report, store, api, statements, job, fingerprint, finding)
+        # The run-list filters narrow to rows whose truth is known: the
+        # gate's own seeded runs, or (--job-id) the one run named.
+        prefix = "parity-gate-" if fixture is not None else job
+        seen = compare_doors(report, store, api, statements, job, fingerprint, finding,
+                             prefix=prefix)
         if unindexed:
             # The unindexed run through both doors too: parity on the miss itself.
             compare_doors(report, store, api, statements, unindexed, "", "",
                           only={"run"}, suffix=" (unindexed)")
+        print()
+        cross_door_order(report, api, prefix=prefix, fingerprint=fingerprint)
         print()
         live_only(report, store, api, statements, pattern, seen, job=job, unindexed_job=unindexed)
     finally:

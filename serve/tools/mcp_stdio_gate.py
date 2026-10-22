@@ -106,6 +106,14 @@ async def main() -> int:
                 job_id = discovered[0]["job_id"]
                 baseline_id = baseline_id or discovered[-1]["job_id"]
 
+            # P7.5 — the filters reach the store and come back echoed: the
+            # subject itself, by its full job_id as a prefix, on page one.
+            narrowed = _payload(await session.call_tool(
+                "list_runs", {"limit": 5, "offset": 0, "job_id_prefix": job_id}
+            ))
+            assert narrowed["job_id_prefix_filter"] == job_id, narrowed
+            assert all(r["job_id"].startswith(job_id) for r in narrowed["runs"]), narrowed
+
             # The lane's first resource. Orientation must not cost a tool call,
             # and a resource must never inflate the tool surface a model sees.
             resources = await session.list_resources()

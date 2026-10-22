@@ -55,9 +55,34 @@ export interface BaselineCandidate {
   observed_at: WireTimestamp;
 }
 
+/**
+ * Server-side filters for the run list (P7.5). Every one is optional and an
+ * absent or empty value means "no filter". The same names, defaults and
+ * semantics as the API's GET /v1/runs and the MCP's list_runs, so the same
+ * arguments list the same runs on every door.
+ */
+export interface RunListFilters {
+  /** Runs with any event in the last N hours. Default 168 (one week). */
+  sinceHours?: number;
+  /** Rows to skip, over started_at DESC, job_id ASC. Default 0. */
+  offset?: number;
+  /** job_id starts with this. */
+  jobIdPrefix?: string;
+  /** The run executed this plan shape (any of its run_outcomes rows). */
+  planFingerprint?: string;
+  /** true: only runs with findings; false: only runs without. */
+  hasFindings?: boolean;
+  /** Exact app_name. */
+  appName?: string;
+}
+
+/** The shared defaults — ch.py's DEFAULT_RUNS_LIMIT / DEFAULT_SINCE_HOURS. */
+export const RUN_LIST_DEFAULTS = { limit: 50, sinceHours: 168, offset: 0 } as const;
+
 export interface Repository {
   readonly kind: "clickhouse" | "fixtures" | "http";
-  listRuns(limit?: number): Promise<(RunSummary & { age?: string })[]>;
+  /** Newest-started first. `listRuns(50)` keeps its old meaning, now within a 7-day window. */
+  listRuns(limit?: number, filters?: RunListFilters): Promise<(RunSummary & { age?: string })[]>;
   /** One run's summary row. null when the job is unknown — never a synthesised zero. */
   run(jobId: string): Promise<(RunSummary & { age?: string }) | null>;
   /** Other runs that executed at least one of this run's plan shapes, newest first. */
@@ -141,8 +166,18 @@ const toRunSummary = (r: RunRollupRow): RunSummary & { age?: string } => ({
 export class ClickHouseRepository implements Repository {
   readonly kind = "clickhouse" as const;
 
-  async listRuns(limit = 50) {
-    const rows = await query<RunRollupRow>(Q.RUN_LIST, { limit });
+  async listRuns(limit: number = RUN_LIST_DEFAULTS.limit, filters: RunListFilters = {}) {
+    // Every placeholder RUN_LIST names must be bound, so the defaults are sent
+    // explicitly here; the values are bound by ClickHouse, never formatted in.
+    const rows = await query<RunRollupRow>(Q.RUN_LIST, {
+      limit,
+      since_hours: filters.sinceHours ?? RUN_LIST_DEFAULTS.sinceHours,
+      offset: filters.offset ?? RUN_LIST_DEFAULTS.offset,
+      app_name: filters.appName ?? "",
+      job_id_prefix: filters.jobIdPrefix ?? "",
+      plan_fingerprint: filters.planFingerprint ?? "",
+      has_findings: filters.hasFindings === undefined ? -1 : filters.hasFindings ? 1 : 0,
+    });
     return rows.map(toRunSummary);
   }
 
@@ -233,8 +268,23 @@ export class FixtureRepository implements Repository {
 
   // The recording keeps the form it was captured in; it becomes a row here,
   // in the wire format, like a row from any other source.
-  async listRuns() {
-    return wireRows(fx.runs, "started_at");
+  /**
+   * The recording, filtered and paged the way RUN_LIST is: same filters, same
+   * offset/limit. Two things differ, both because it is a fixed past snapshot:
+   * the time window is NOT applied (it would empty the recording), and rows
+   * keep their RECORDED order — every recorded started_at is the same instant,
+   * so RUN_LIST's job_id tie-break would reshuffle a list whose order the
+   * walkthrough (and the verify screen's first-run pick) relies on.
+   */
+  async listRuns(limit: number = RUN_LIST_DEFAULTS.limit, filters: RunListFilters = {}) {
+    const offset = Math.max(0, filters.offset ?? RUN_LIST_DEFAULTS.offset);
+    const matching = fx.runs
+      .filter((r) =>
+        (!filters.appName || r.app_name === filters.appName) &&
+        r.job_id.startsWith(filters.jobIdPrefix ?? "") &&
+        (!filters.planFingerprint || r.plan_fingerprint === filters.planFingerprint) &&
+        (filters.hasFindings === undefined || (r.finding_count > 0) === filters.hasFindings));
+    return wireRows(matching.slice(offset, offset + Math.max(1, limit)), "started_at");
   }
   async run(jobId: string) {
     const found = fx.runs.find((r) => r.job_id === jobId);
@@ -291,8 +341,18 @@ export class FixtureRepository implements Repository {
 export class HttpRepository implements Repository {
   readonly kind = "http" as const;
 
-  async listRuns(limit = 50) {
-    const { data } = await apiGet<RunRollupRow[]>("/v1/runs", { limit });
+  async listRuns(limit: number = RUN_LIST_DEFAULTS.limit, filters: RunListFilters = {}) {
+    // Only what was asked for travels: the route's defaults ARE the shared
+    // defaults, so an unfiltered call stays /v1/runs?limit=N.
+    const { data } = await apiGet<RunRollupRow[]>("/v1/runs", {
+      limit,
+      since_hours: filters.sinceHours,
+      offset: filters.offset || undefined,
+      app_name: filters.appName || undefined,
+      job_id_prefix: filters.jobIdPrefix || undefined,
+      plan_fingerprint: filters.planFingerprint || undefined,
+      has_findings: filters.hasFindings === undefined ? undefined : String(filters.hasFindings),
+    });
     return (data ?? []).map(toRunSummary);
   }
 

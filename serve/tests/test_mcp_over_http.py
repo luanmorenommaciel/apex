@@ -102,6 +102,9 @@ class _WorldClient:
                 "stage_count": 2, "spill_disk_bytes": 0, "worst_p99_ms": 100,
             },
         ]
+        # Which listed run executed which shape, for list_runs' plan filter.
+        # Kept apart from self.outcomes so recall's fixtures are unchanged.
+        self.run_shapes = {"j": FP}
         self.plans = [
             {"plan_fingerprint": FP_NEAR, "similarity": 0.91, "node_count": 12,
              "join_count": 2, "agg_count": 1, "exchange_count": 3,
@@ -135,6 +138,11 @@ class _WorldClient:
                 rows = [{"name": name} for name in FINDINGS_COLUMNS]
         elif "system.tables" in query:
             rows = [{"name": "plan_memory"}, {"name": "run_outcomes"}]
+        elif "since_hours" in parameters:
+            # Run listing — recognised FIRST, because its membership reads
+            # findings and run_outcomes in sub-selects. Applies the filters,
+            # order and page the way RUN_MEMBERSHIP / RUN_PAGE do.
+            rows = self._listed(parameters)
         elif "positionCaseInsensitive" in query:
             rows = list(self.search)
         elif reads(query, "plan_memory"):
@@ -151,13 +159,27 @@ class _WorldClient:
             rows = list(self.transitions.get(job_id, []))
         elif reads(query, "findings"):
             rows = list(self.findings.get(job_id, []))
-        elif "since" in parameters:
-            rows = [r for r in self.runs
-                    if not parameters.get("app_name")
-                    or r["app_name"] == parameters["app_name"]]
         else:
             rows = list(self.stages.get(job_id, []))
         return type("R", (), {"named_results": lambda _self: list(rows)})()
+
+
+    def _listed(self, parameters: dict) -> list[dict]:
+        shaped = {job for job, fp in self.run_shapes.items()
+                  if fp == parameters.get("plan_fingerprint")}
+        with_findings = {job for job, rows in self.findings.items() if rows}
+        has = parameters["has_findings"]
+        rows = [
+            r for r in self.runs
+            if (not parameters["app_name"] or r["app_name"] == parameters["app_name"])
+            and r["job_id"].startswith(parameters["job_id_prefix"])
+            and (has == -1 or (r["job_id"] in with_findings) == bool(has))
+            and (not parameters.get("plan_fingerprint") or r["job_id"] in shaped)
+        ]
+        rows.sort(key=lambda r: r["job_id"])
+        rows.sort(key=lambda r: r["first_ts"], reverse=True)
+        start = parameters["offset"]
+        return rows[start:start + parameters["limit"]]
 
 
 def _settings() -> Settings:
@@ -212,6 +234,14 @@ CASES = [
     ("compare_runs", {"current_job_id": "j"}),  # auto-baseline
     ("list_runs", {}),
     ("list_runs", {"limit": 1, "since_hours": 24, "app_name": "test-app"}),
+    # P7.5 — paging and the filters, each through both backends.
+    ("list_runs", {"limit": 1, "offset": 1}),
+    ("list_runs", {"job_id_prefix": "ba"}),
+    ("list_runs", {"has_findings": True}),
+    ("list_runs", {"has_findings": False}),
+    ("list_runs", {"plan_fingerprint": FP}),
+    ("list_runs", {"job_id_prefix": "' OR 1=1 --", "plan_fingerprint": "' OR 1=1 --",
+                   "app_name": "' OR 1=1 --"}),
     ("search_kb", {"query": "skew tail", "top_k": 3}),
     ("search_kb", {"query": ""}),
     ("recall_similar_runs", {"job_id": "job-current"}),
@@ -257,6 +287,39 @@ def test_parity_cases_take_substantive_paths():
     assert _call(mcp, "list_runs", {})["returned"] == 2
     assert _call(mcp, "search_kb", {"query": "skew"})["hits"]
     assert _call(mcp, "compare_runs", {"current_job_id": "j"})["baseline_job_id"] == "base"
+
+
+LIST_RUNS_FILTERS = [
+    ({}, ["j", "base"]),
+    ({"limit": 1, "offset": 1}, ["base"]),
+    ({"job_id_prefix": "ba"}, ["base"]),
+    ({"has_findings": True}, ["j"]),
+    ({"has_findings": False}, ["base"]),
+    ({"plan_fingerprint": FP}, ["j"]),
+    ({"app_name": "test-app", "job_id_prefix": "j", "has_findings": True,
+      "plan_fingerprint": FP, "since_hours": 24}, ["j"]),
+]
+
+
+@pytest.mark.parametrize(("arguments", "expected"), LIST_RUNS_FILTERS)
+def test_list_runs_filters_are_identical_on_both_backends(arguments, expected):
+    """P7.5 — same arguments, same job_ids, same order, same bound values.
+
+    Not only the payloads: the ReadStore under the API must receive exactly
+    the parameters the direct backend binds, so the two cannot agree by
+    accident on a fixture too small to tell them apart.
+    """
+    direct_client, api_client_ = _WorldClient(), _WorldClient()
+    direct = _call(_direct_server(direct_client), "list_runs", arguments)
+    over_http = _call(_api_server(api_client_), "list_runs", arguments)
+    assert over_http == direct
+    assert [run["job_id"] for run in direct["runs"]] == expected
+
+    def bound(client: _WorldClient) -> list[dict]:
+        return [params for _, params in client.calls if "since_hours" in params]
+
+    assert bound(api_client_) == bound(direct_client)
+    assert len(bound(direct_client)) == 1
 
 
 def test_runs_resource_is_byte_identical_over_the_api():

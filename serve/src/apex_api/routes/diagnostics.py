@@ -206,15 +206,28 @@ async def suggest_fix(
 @router.get(TOOL_ROUTES["list_runs"][1])
 async def list_runs(
     request: Request,
-    limit: int = 20,
-    since_hours: int = 168,
+    limit: int = ReadStore.DEFAULT_RUNS_LIMIT,
+    since_hours: int = ReadStore.DEFAULT_SINCE_HOURS,
     app_name: str = "",
+    offset: int = 0,
+    job_id_prefix: str = "",
+    plan_fingerprint: str = "",
+    has_findings: bool | None = None,
 ) -> Any:
-    """Recent runs, newest first — where a job_id comes from."""
+    """Recent runs, newest-started first — where a job_id comes from.
+
+    Same defaults, membership, order and filters as the console's GET /v1/runs
+    (P7.5): for the same arguments both list the same job_ids in the same
+    order. The default limit is 50 (it was 20).
+    """
     return await _call(
         request,
         "list_runs",
-        {"limit": limit, "since_hours": since_hours, "app_name": app_name},
+        {
+            "limit": limit, "since_hours": since_hours, "app_name": app_name,
+            "offset": offset, "job_id_prefix": job_id_prefix,
+            "plan_fingerprint": plan_fingerprint, "has_findings": has_findings,
+        },
     )
 
 

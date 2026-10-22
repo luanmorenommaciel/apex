@@ -474,11 +474,22 @@ class ApiTools:
                 comparison.notes, COMPARE_NO_FLOOR_NOTE, COMPARE_INVALID_FLOOR_NOTE)})
         return comparison
 
-    def list_runs(self, limit: int, since_hours: int, app_name: str) -> RunList:
+    def list_runs(
+        self, limit: int, since_hours: int, app_name: str,
+        offset: int = 0, job_id_prefix: str = "", plan_fingerprint: str = "",
+        has_findings: bool | None = None,
+    ) -> RunList:
+        # has_findings None is dropped by get_json, which is the route's own
+        # "no filter" default; the strings travel as query parameters and are
+        # bound again by the API's ReadStore.
         return self._call(
             "list_runs",
             RunList,
-            {"limit": limit, "since_hours": since_hours, "app_name": app_name},
+            {
+                "limit": limit, "since_hours": since_hours, "app_name": app_name,
+                "offset": offset, "job_id_prefix": job_id_prefix,
+                "plan_fingerprint": plan_fingerprint, "has_findings": has_findings,
+            },
         )
 
     def search_kb(self, query: str, top_k: int) -> KbHits:

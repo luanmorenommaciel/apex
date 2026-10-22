@@ -373,3 +373,48 @@ describe("wire timestamp", () => {
     expect(ages[0]).toBe(ages[1]);
   });
 });
+
+describe("run list filters (P7.5)", () => {
+  it("sends every filter as a query parameter, under the API's names", async () => {
+    stubFetch(() => respond([]));
+    await new HttpRepository().listRuns(20, {
+      sinceHours: 24,
+      offset: 40,
+      appName: "etl",
+      jobIdPrefix: "app-2026",
+      planFingerprint: "c".repeat(64),
+      hasFindings: true,
+    });
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe("/v1/runs");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      limit: "20",
+      since_hours: "24",
+      offset: "40",
+      app_name: "etl",
+      job_id_prefix: "app-2026",
+      plan_fingerprint: "c".repeat(64),
+      has_findings: "true",
+    });
+  });
+
+  it("sends has_findings=false, which is a filter, not an absence", async () => {
+    stubFetch(() => respond([]));
+    await new HttpRepository().listRuns(50, { hasFindings: false });
+    expect(calls[0].url).toBe("http://api.test/v1/runs?limit=50&has_findings=false");
+  });
+
+  it("leaves an unfiltered call as it was, so the route's shared defaults apply", async () => {
+    stubFetch(() => respond([]));
+    await new HttpRepository().listRuns(50, { offset: 0, jobIdPrefix: "", planFingerprint: "" });
+    expect(calls[0].url).toBe("http://api.test/v1/runs?limit=50");
+  });
+
+  it("encodes a hostile value as data in the URL, never as path or syntax", async () => {
+    stubFetch(() => respond([]));
+    await new HttpRepository().listRuns(50, { jobIdPrefix: "' OR 1=1 --&limit=9999" });
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("job_id_prefix")).toBe("' OR 1=1 --&limit=9999");
+    expect(url.searchParams.getAll("limit")).toEqual(["50"]);
+  });
+});
