@@ -1,0 +1,29 @@
+.github/workflows/ci.yml
+  s_e1070fee7f3bf4::t_52feaf88884317 71-75
+contract/fixtures/proposal_parity.json
+  s_e1070fee7f3bf4::t_4e0429ec34f17f 1348-1444
+front/src/components/molecules/DualVerdictPanel.tsx
+  s_e1070fee7f3bf4::t_653b1182a0fa9f 82
+front/src/contract/proposalParity.test.ts
+  s_e1070fee7f3bf4::t_7bc42f0f6c47f5 42-47
+front/src/screens/VerifyScreen.source-state.test.tsx
+  s_e1070fee7f3bf4::t_34c35d69be975c 164-180
+serve/tests/test_proposal_parity.py
+  s_e1070fee7f3bf4::t_330410740fe5c0 19,89-90,105-116,118-122,127-130,138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "21dece2715223deebf379c3658dfe0d94e5f6ea9",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
