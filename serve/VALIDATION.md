@@ -21,6 +21,11 @@ stack (ClickHouse `127.0.0.1:8123`, database `apex`) holding the real P0 run
 | `diagnose(job_id)` *(prompt)* | renders text only — reads nothing |
 | `fix(job_id, finding_id?)` *(prompt)* | renders text only — never applies a diff |
 
+> The two prompts (P7.12) postdate the live run recorded above. They are covered
+> offline by `tests/test_server_prompts.py`, including a real-stdio round trip.
+> The prompt assertions added to `tools/mcp_stdio_gate.py` have **not** yet been
+> run against live ClickHouse.
+
 The three read tools issue `SELECT`s exclusively. `suggest_fix` performs no
 filesystem, git or database write; it returns a diff as data. No lane code
 calls an LLM.
