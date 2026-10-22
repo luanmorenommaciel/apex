@@ -163,7 +163,7 @@ spark-submit --conf spark.driver.memory=512m jobs/driver_oom.py   # df.collect()
 - **`autoBroadcastJoinThreshold` defaults to 10MB** → a small dim gets broadcast → skew join produces NO shuffle. Set `-1` for `skew_join.py` and `spill.py`.
 - **Use `optimizedPlan().canonicalized()`** — NOT `executedPlan()`/`sparkPlan()` (physical), or the fingerprint churns across environments/partition counts.
 - **History Server won't show an app until the `.inprogress` log is finalized.** `driver_oom.py` crashes the driver → may leave `.inprogress`. Flush listener records **before** the `collect()`; expect an incomplete History entry.
-- **MinIO buckets must exist before the first write** → add a one-shot `minio-init` (`mc mb warehouse spark-logs`) with `depends_on`, else `NoSuchBucket`.
+- **MinIO buckets must exist before the first write** → add a one-shot `minio-init` (today: AWS CLI `s3 mb` against the RustFS store; originally `mc mb warehouse spark-logs`) with `depends_on`, else `NoSuchBucket`.
 - **Keep `SPARK_WORKER_MEMORY/CORES` low (2g/2c)** — on a beefy host, generous executors absorb the spill/OOM you're trying to trigger.
 - **dbldatagen Zipf/skew distributions only apply to INTEGER ranges** (float columns fold to uniform). Use the plain-Spark `rand()<0.5` recipe for the guaranteed 50% split.
 
