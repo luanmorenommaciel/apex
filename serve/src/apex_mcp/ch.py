@@ -123,6 +123,11 @@ _FINDINGS_ADDITIVE = {
 # SELECTs alias ``argMax(app_name, ts) AS app_name``, and an unqualified
 # app_name would resolve to that aggregate (ILLEGAL_AGGREGATION).
 #
+# The fingerprint is compared the house way (see SIMILAR_PLANS_SQL): capped
+# with substring() before toFixedString(), which THROWS past 64, so a hostile
+# value from the browser door binds as data and matches nothing. ReadStore
+# refuses anything longer than 64 outright (plan_fingerprint_too_long).
+#
 # The plan_fingerprint filter reads apex.run_outcomes, a v0.3 ADDITIVE table.
 # The console's rollup joins that table anyway, so RUN_LIST_SQL always carries
 # it. The MCP's RUNS_SQL must keep working on a v0.2 deployment, so it carries
@@ -140,9 +145,46 @@ RUN_MEMBERSHIP = (
 RUN_SHAPE_FILTER = (
     " AND ({plan_fingerprint:String} = ''"
     " OR job_id IN (SELECT o.job_id FROM run_outcomes AS o FINAL"
-    " WHERE o.plan_fingerprint = {plan_fingerprint:String}))"
+    " WHERE o.plan_fingerprint"
+    " = toFixedString(substring({plan_fingerprint:String}, 1, 64), 64)))"
 )
 RUN_PAGE = "LIMIT {limit:UInt32} OFFSET {offset:UInt32}"
+
+# Paging bounds, shared by ReadStore, the MCP tool's API client and the HTTP
+# routes. limit and since_hours CLAMP (a page smaller than asked is still a
+# true page); offset is REFUSED outside its range, because a clamped offset
+# silently returns a different page than the one asked for.
+MAX_RUNS = 200
+MAX_RUNS_OFFSET = 10_000
+# Ten years. Keeps the value inside UInt32; the tables' own TTL is far shorter.
+MAX_SINCE_HOURS = 87_600
+# A plan_fingerprint is a 64-char hex digest stored as FixedString(64).
+MAX_FINGERPRINT_CHARS = 64
+
+
+def require_run_offset(offset: int) -> int:
+    """The offset, or ``offset_out_of_range`` — never a silently clamped page."""
+    offset = int(offset)
+    if not 0 <= offset <= MAX_RUNS_OFFSET:
+        raise ApexStoreError(
+            f"offset_out_of_range: offset must be between 0 and {MAX_RUNS_OFFSET}."
+        )
+    return offset
+
+
+def effective_run_list_args(
+    limit: int, since_hours: int, offset: int
+) -> tuple[int, int, int]:
+    """(limit, since_hours, offset) exactly as the store will bind them.
+
+    list_runs echoes these, so a caller reads the page it GOT, not the one it
+    asked for.
+    """
+    return (
+        max(1, min(int(limit), MAX_RUNS)),
+        max(1, min(int(since_hours), MAX_SINCE_HOURS)),
+        require_run_offset(offset),
+    )
 
 
 def _runs_sql(where: str) -> str:
@@ -793,16 +835,14 @@ class ReadStore:
     # Shared by runs() and run_list(), and by every door above them: the MCP
     # tool, GET /v1/diagnostics/runs and GET /v1/runs all default to these, so
     # the same call with no arguments lists the same runs everywhere.
-    MAX_RUNS = 200
+    MAX_RUNS = MAX_RUNS
     DEFAULT_RUNS_LIMIT = 50
     DEFAULT_SINCE_HOURS = 168
     # Paging is offset-based over a deterministic order. The cap keeps a
     # caller from asking ClickHouse to sort and discard an unbounded prefix;
     # 10 000 is 50 pages of the maximum page, far past any console use.
-    MAX_RUNS_OFFSET = 10_000
-    # Ten years. The bound keeps the value inside UInt32 and the window
-    # meaningful; the contract tables' own TTL is far shorter.
-    MAX_SINCE_HOURS = 87_600
+    MAX_RUNS_OFFSET = MAX_RUNS_OFFSET
+    MAX_SINCE_HOURS = MAX_SINCE_HOURS
 
     def runs(
         self,
@@ -831,17 +871,25 @@ class ReadStore:
         same filters and same defaults (limit 50 — it was 20). See
         RUN_MEMBERSHIP.
 
-        ``plan_fingerprint`` reads the v0.3 run_outcomes table, so passing one
-        on a deployment without it raises ``memory_unavailable`` rather than
-        answering "no runs of that shape".
+        ``plan_fingerprint`` reads the v0.3 run_outcomes table — and only that
+        one, so only its presence is required — and passing one on a
+        deployment without it raises ``memory_unavailable`` rather than
+        answering "no runs of that shape". ``offset`` outside 0..10 000 raises
+        ``offset_out_of_range``.
         """
         parameters = self._run_list_parameters(
             limit, since_hours, app_name, offset, job_id_prefix, has_findings
         )
-        plan_fingerprint = _require_optional_id(plan_fingerprint, "plan_fingerprint")
+        plan_fingerprint = _require_fingerprint(plan_fingerprint)
         if not plan_fingerprint:
             return self._query(RUNS_SQL, parameters)
-        self._require_memory()
+        if not self.table_exists("run_outcomes"):
+            raise ApexStoreError(
+                f"memory_unavailable: {self._database}.run_outcomes is not "
+                "present on this deployment, and filtering runs by "
+                "plan_fingerprint reads it. This is not an empty result. Apply "
+                "the v0.3 DDL via the infra lane."
+            )
         return self._query(
             RUNS_BY_SHAPE_SQL, {**parameters, "plan_fingerprint": plan_fingerprint}
         )
@@ -855,19 +903,22 @@ class ReadStore:
         job_id_prefix: str,
         has_findings: bool | None,
     ) -> dict[str, Any]:
-        """The bound values RUN_MEMBERSHIP and RUN_PAGE read, clamped.
+        """The bound values RUN_MEMBERSHIP and RUN_PAGE read.
 
-        Every caller-supplied string is length-guarded and then BOUND; the
-        guard is a resource limit, not the injection defense.
+        limit and since_hours are clamped; offset is refused out of range (see
+        effective_run_list_args). Every caller-supplied string is
+        length-guarded and then BOUND; the guard is a resource limit, not the
+        injection defense.
         """
+        limit, since_hours, offset = effective_run_list_args(limit, since_hours, offset)
         return {
-            "since_hours": max(1, min(int(since_hours), self.MAX_SINCE_HOURS)),
+            "since_hours": since_hours,
             "app_name": _require_optional_id(app_name, "app_name"),
             "job_id_prefix": _require_optional_id(job_id_prefix, "job_id_prefix"),
             # Tri-state as Int8: -1 is "no filter", 1 "has findings", 0 "none".
             "has_findings": -1 if has_findings is None else int(bool(has_findings)),
-            "limit": max(1, min(int(limit), self.MAX_RUNS)),
-            "offset": max(0, min(int(offset), self.MAX_RUNS_OFFSET)),
+            "limit": limit,
+            "offset": offset,
         }
 
     def store_health(self) -> dict[str, Any]:
@@ -1150,9 +1201,7 @@ class ReadStore:
         parameters = self._run_list_parameters(
             limit, since_hours, app_name, offset, job_id_prefix, has_findings
         )
-        parameters["plan_fingerprint"] = _require_optional_id(
-            plan_fingerprint, "plan_fingerprint"
-        )
+        parameters["plan_fingerprint"] = _require_fingerprint(plan_fingerprint)
         return self._query(RUN_LIST_SQL, parameters)
 
     def fix_verification(self, finding_id: str) -> dict[str, Any] | None:
@@ -1310,6 +1359,20 @@ def _require_optional_id(value: str, name: str) -> str:
     value = value or ""
     if len(value) > 512:
         raise ApexStoreError(f"{name}_too_long: {name} exceeds 512 characters.")
+    return value
+
+
+def _require_fingerprint(value: str) -> str:
+    """An optional plan_fingerprint: empty is "no filter"; past 64 is refused.
+
+    64 is the column's width (FixedString(64)), so a longer value cannot name
+    a stored shape and is an error, not a non-match.
+    """
+    value = value or ""
+    if len(value) > MAX_FINGERPRINT_CHARS:
+        raise ApexStoreError(
+            "plan_fingerprint_too_long: plan_fingerprint exceeds 64 characters."
+        )
     return value
 
 

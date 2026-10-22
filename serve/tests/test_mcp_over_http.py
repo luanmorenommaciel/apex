@@ -553,11 +553,76 @@ def test_every_code_the_api_can_raise_is_on_the_allowlist():
     for path in [SRC / "apex_mcp" / "ch.py", SRC / "apex_mcp" / "server.py",
                  *(SRC / "apex_api").rglob("*.py")]:
         found |= set(pattern.findall(path.read_text()))
-    # ch._require_optional_id builds "{name}_too_long"; finding_id is the
-    # only name a TOOL passes it.
-    found.add("finding_id_too_long")
+    # ch._require_optional_id builds "{name}_too_long" from the name it is
+    # given, which the scan cannot read. These are the names a TOOL passes:
+    # verify_fix/suggest_fix's finding_id and list_runs' two string filters
+    # (plan_fingerprint has its own literal in ch._require_fingerprint).
+    found |= {"finding_id_too_long", "app_name_too_long", "job_id_prefix_too_long"}
+    assert {"plan_fingerprint_too_long", "offset_out_of_range"} <= found
     assert {"clickhouse_unavailable", "apex_tool_result_unreadable"} <= found
     assert found - set(api_client.STORE_ERRORS) == set()
+
+
+# -- P7.5: list_runs refusals and an older API -------------------------------
+REFUSED_LISTINGS = [
+    ({"app_name": "x" * 513}, "app_name_too_long"),
+    ({"job_id_prefix": "x" * 513}, "job_id_prefix_too_long"),
+    ({"plan_fingerprint": "x" * 65}, "plan_fingerprint_too_long"),
+    ({"offset": -1}, "offset_out_of_range"),
+    ({"offset": 10_001}, "offset_out_of_range"),
+]
+
+
+@pytest.mark.parametrize(("arguments", "code"), REFUSED_LISTINGS)
+def test_list_runs_refusals_are_identical_on_both_backends(arguments, code):
+    direct = _error(_direct_server(), "list_runs", arguments)
+    over_http = _error(_api_server(), "list_runs", arguments)
+    assert over_http == direct
+    assert direct.endswith(api_client.STORE_ERRORS[code])
+
+
+def _pre_p75_api(seen: list[str]):
+    """An API from before P7.5: list_runs answers without the echo fields."""
+    payload = {
+        "runs": [{"job_id": "j", "app_id": "app-j", "app_name": "test-app",
+                  "first_ts": "2026-08-19T09:00:00", "last_ts": "2026-08-19T09:12:00",
+                  "stage_count": 2, "spill_disk_bytes": 0, "worst_p99_ms": 1}],
+        "returned": 1, "limit": 50, "since_hours": 168, "app_name_filter": None,
+        "notes": [], "untrusted_fields": ["runs[].app_name"],
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(200, json=payload)
+
+    return _mock_server(handler)
+
+
+def test_a_new_mcp_still_lists_runs_through_an_older_api():
+    seen: list[str] = []
+    listed = _call(_pre_p75_api(seen), "list_runs", {})
+    assert [r["job_id"] for r in listed["runs"]] == ["j"]
+    # The echoes an old API cannot send take their defaults.
+    assert listed["offset"] == 0 and listed["has_findings_filter"] is None
+    assert json.loads(asyncio.run(_pre_p75_api(seen).read_resource("apex://runs"))[0]
+                      .content)["returned"] == 1
+
+
+@pytest.mark.parametrize("arguments", [
+    {"offset": 50}, {"job_id_prefix": "app-"}, {"plan_fingerprint": FP},
+    {"has_findings": True}, {"has_findings": False},
+])
+def test_an_older_api_cannot_pass_off_an_unfiltered_page_as_filtered(arguments):
+    message = _error(_pre_p75_api([]), "list_runs", arguments)
+    assert message.endswith(api_client.OUTDATED)
+    for leak in LEAKS:
+        assert leak not in message
+
+
+def test_a_payload_missing_a_contracted_field_is_still_refused():
+    """Only the P7.5 echoes are optional on the wire; the rest stay required."""
+    handler = _responds(200, body={"runs": [], "returned": 0})
+    assert _error(_mock_server(handler), "list_runs", {}).endswith(api_client.BAD_RESPONSE)
 
 
 def _free_port() -> int:

@@ -28,7 +28,7 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Query, Request
 from mcp.server.fastmcp import FastMCP
 
-from apex_mcp.ch import ApexStoreError, ReadStore
+from apex_mcp.ch import MAX_RUNS_OFFSET, ApexStoreError, ReadStore
 from apex_mcp.server import create_server
 
 router = APIRouter(tags=["diagnostics"])
@@ -209,7 +209,7 @@ async def list_runs(
     limit: int = ReadStore.DEFAULT_RUNS_LIMIT,
     since_hours: int = ReadStore.DEFAULT_SINCE_HOURS,
     app_name: str = "",
-    offset: int = 0,
+    offset: Annotated[int, Query(ge=0, le=MAX_RUNS_OFFSET)] = 0,
     job_id_prefix: str = "",
     plan_fingerprint: str = "",
     has_findings: bool | None = None,

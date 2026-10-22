@@ -318,6 +318,9 @@ class _StoreTools:
         offset: int = 0, job_id_prefix: str = "", plan_fingerprint: str = "",
         has_findings: bool | None = None,
     ) -> RunList:
+        # The values the store will actually bind: limit and since_hours are
+        # clamped, an out-of-range offset raises offset_out_of_range here.
+        limit, since_hours, offset = ch.effective_run_list_args(limit, since_hours, offset)
         rows = self._store.runs(
             limit=limit, since_hours=since_hours, app_name=app_name,
             offset=offset, job_id_prefix=job_id_prefix,
@@ -325,11 +328,21 @@ class _StoreTools:
         )
         runs = [RunSummary.model_validate(row) for row in rows]
         notes: list[str] = []
-        if len(runs) == self._store.MAX_RUNS:
-            notes.append(
-                f"Result truncated at {self._store.MAX_RUNS} runs — narrow with "
-                f"app_name or a shorter since_hours."
-            )
+        if runs and len(runs) == limit:
+            following = offset + limit
+            if following <= ch.MAX_RUNS_OFFSET:
+                notes.append(
+                    f"Page full at {limit} runs — more may match. Call again with "
+                    f"offset={following} for the next page, or narrow with a "
+                    f"filter or a shorter since_hours."
+                )
+            else:
+                notes.append(
+                    f"Page full at {limit} runs, and offset cannot pass "
+                    f"{ch.MAX_RUNS_OFFSET} — narrow with a filter or a shorter "
+                    f"since_hours to reach the rest."
+                )
+        # Echo the EFFECTIVE values, so the caller reads the page it got.
         return RunList(
             runs=runs,
             returned=len(runs),
@@ -636,7 +649,9 @@ def _build_server(tools: ToolBackend) -> FastMCP:
         are ordered by start time, newest first, ties broken by job_id, so
         `offset` pages through them stably: call again with
         `offset = offset + limit` for the next page. `limit` defaults to 50 and
-        is capped at 200. These are the console's defaults and order — the
+        is capped at 200; `offset` must be 0..10000 (outside that the call
+        fails with offset_out_of_range rather than returning another page).
+        The response echoes the limit, offset and since_hours actually used. These are the console's defaults and order — the
         same arguments list the same runs on GET /v1/runs.
 
         `since_hours` bounds the scan: apex.spark_events is sorted by job_id and

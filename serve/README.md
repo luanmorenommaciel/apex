@@ -21,6 +21,14 @@ confidence-gated proposal tool that **never applies anything** — and one **res
 | `verify_fix` | `job_id`, `finding_id?` | `FixVerdict` — what the **verify lane** predicted, measured and allowed for this run's fixes | `readOnlyHint=true` |
 | `suggest_fix` | `job_id`, `finding_id?`, `min_confidence=0.75` | `FixSuggestion` — unified diff + PR body, **`applied=False`** | `readOnlyHint=false`, `destructiveHint=false` |
 
+`list_runs` paging and filters (P7.5): `offset` must be 0–10000 (the call fails
+with `offset_out_of_range` otherwise; `limit` clamps to 1–200), and the response
+echoes the limit, offset and since_hours actually used. **Deploy apex-api before
+apex-mcp.** A new apex-mcp in API mode still lists runs through an older API for
+unfiltered first-page calls, but refuses a filtered or paged call with
+`apex_api_outdated` rather than returning an older API's unfiltered page as the
+filtered answer.
+
 ## Reading a diagnosis
 
 The real P0 run has 17 stages. `analyze_run` therefore answers at three widths, and

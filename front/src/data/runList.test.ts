@@ -100,6 +100,16 @@ describe("FixtureRepository.listRuns applies the filters in memory", () => {
     expect(await repo.listRuns(50, { planFingerprint: fx.PLAN_FINGERPRINT.slice(0, 10) })).toEqual([]);
   });
 
+  it("matches a run on ANY shape its stages ran, like run_outcomes on the server", async () => {
+    const rows = await repo.listRuns(50, { planFingerprint: fx.PLAN_FINGERPRINT });
+    const expected = fx.runs.filter((r) =>
+      r.plan_fingerprint === fx.PLAN_FINGERPRINT ||
+      (fx.stagesByJob[r.job_id] ?? []).some((st) => st.plan_fingerprint === fx.PLAN_FINGERPRINT));
+    expect(ids(rows)).toEqual(ids(expected));
+    // The recording's "n/a" means no shape; it is not a fingerprint to match.
+    expect(await repo.listRuns(50, { planFingerprint: "n/a" })).toEqual([]);
+  });
+
   it("filters on has_findings, both ways", async () => {
     const withF = await repo.listRuns(50, { hasFindings: true });
     const without = await repo.listRuns(50, { hasFindings: false });

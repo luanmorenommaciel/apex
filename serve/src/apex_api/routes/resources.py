@@ -23,11 +23,11 @@ what the driver happened to hand back.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 
-from apex_mcp.ch import ReadStore
+from apex_mcp.ch import MAX_RUNS_OFFSET, ReadStore
 
 from ..wire import wire
 
@@ -73,7 +73,7 @@ async def list_runs(
     response: Response,
     limit: int = ReadStore.DEFAULT_RUNS_LIMIT,
     since_hours: int = ReadStore.DEFAULT_SINCE_HOURS,
-    offset: int = 0,
+    offset: Annotated[int, Query(ge=0, le=MAX_RUNS_OFFSET)] = 0,
     app_name: str = "",
     job_id_prefix: str = "",
     plan_fingerprint: str = "",

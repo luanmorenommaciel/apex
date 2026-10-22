@@ -140,6 +140,52 @@ describe("RunsScreen (server-side filters, offset paging)", () => {
     expect(host.textContent).toContain("3 runs");
   });
 
+  it("stops 'next' where the store's offset cap stops paging", async () => {
+    await mount();
+    for (let i = 0; i < 200; i += 1) await click("next");
+    // 200 pages of 50 = offset 10 000, the cap; another page would be refused.
+    expect(lastFilters()).toMatchObject({ offset: 10_000 });
+    expect(button("next").disabled).toBe(true);
+  });
+
+  it("labels an empty page without an impossible range", async () => {
+    listRuns.mockImplementation(async () => []);
+    await mount();
+    expect(host.textContent).toContain("no runs");
+    expect(host.textContent).not.toMatch(/\b0 runs · /);
+    expect(host.textContent).not.toContain("50–50");
+  });
+
+  it("does not claim a 7-day window for the recording, which has none", async () => {
+    await mount();
+    expect(host.textContent).toContain("from the recording");
+    expect(host.textContent).not.toContain("last 7 days");
+    current.repo = Object.assign(current.repo!, { kind: "http" as const });
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await mount();
+    expect(host.textContent).toContain("active in the last 7 days");
+  });
+
+  it("keeps the filters on screen when the store rejects the query", async () => {
+    listRuns.mockImplementation(async () => {
+      throw new Error("rejected");
+    });
+    await mount();
+    expect(host.textContent).toContain("query failed");
+    expect(host.querySelector('input[aria-label="job_id prefix"]')).not.toBeNull();
+    expect(host.querySelector('input[aria-label="plan fingerprint"]')).not.toBeNull();
+    // Correcting the input retries the query.
+    listRuns.mockImplementation(async () => page(1));
+    type("job_id prefix", "job-");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, RUNS_FILTER_DEBOUNCE_MS + 50));
+    });
+    await settle();
+    expect(lastFilters()).toMatchObject({ jobIdPrefix: "job-" });
+    expect(host.textContent).not.toContain("query failed");
+  });
+
   it("renders the rows the store returned, without filtering them again", async () => {
     listRuns.mockImplementation(async () => page(2).map((r) => ({ ...r, finding_count: 0 })));
     await mount();

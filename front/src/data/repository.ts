@@ -78,6 +78,8 @@ export interface RunListFilters {
 
 /** The shared defaults — ch.py's DEFAULT_RUNS_LIMIT / DEFAULT_SINCE_HOURS. */
 export const RUN_LIST_DEFAULTS = { limit: 50, sinceHours: 168, offset: 0 } as const;
+/** The largest offset the store accepts (ch.py MAX_RUNS_OFFSET); past it the API answers 422. */
+export const RUN_LIST_MAX_OFFSET = 10_000;
 
 export interface Repository {
   readonly kind: "clickhouse" | "fixtures" | "http";
@@ -263,6 +265,17 @@ const toFixVerification = (r: Record<string, unknown>): FixVerificationRow => ({
   proposed_diff: String(r.proposed_diff ?? ""),
 });
 
+/**
+ * Every plan shape a recorded run executed: its stages' fingerprints plus the
+ * run's own. The server matches a run on ANY of its run_outcomes rows (one per
+ * shape), not only the dominant one RunSummary carries, so the recording is
+ * matched the same way, over the per-stage shapes it does carry.
+ */
+const runShapes = (r: { job_id: string; plan_fingerprint: string }): Set<string> =>
+  new Set([r.plan_fingerprint, ...(fx.stagesByJob[r.job_id] ?? []).map((s) => s.plan_fingerprint)]
+    // "n/a" is the recording's own word for "no shape", never a shape.
+    .filter((fp): fp is string => Boolean(fp) && fp !== "n/a"));
+
 export class FixtureRepository implements Repository {
   readonly kind = "fixtures" as const;
 
@@ -282,7 +295,7 @@ export class FixtureRepository implements Repository {
       .filter((r) =>
         (!filters.appName || r.app_name === filters.appName) &&
         r.job_id.startsWith(filters.jobIdPrefix ?? "") &&
-        (!filters.planFingerprint || r.plan_fingerprint === filters.planFingerprint) &&
+        (!filters.planFingerprint || runShapes(r).has(filters.planFingerprint)) &&
         (filters.hasFindings === undefined || (r.finding_count > 0) === filters.hasFindings));
     return wireRows(matching.slice(offset, offset + Math.max(1, limit)), "started_at");
   }

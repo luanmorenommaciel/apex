@@ -164,10 +164,12 @@ ${tail}
  * on ts, so partitions prune), and its rollup covers ALL its events. Order is
  * started_at DESC, job_id ASC: the tie-break keeps OFFSET paging stable.
  * Every filter is bound, and an empty value (has_findings: -1) means none.
+ * The fingerprint is capped with substring() before toFixedString(), which
+ * throws past 64 chars, so an over-long value matches nothing instead of failing.
  * Each is one line because console_parity_gate.py reads them as "..." literals.
  */
 export const RUN_LIST = runRollup(
-  "WHERE job_id IN (SELECT w.job_id FROM spark_events AS w WHERE w.ts >= now() - toIntervalHour({since_hours:UInt32}) AND ({app_name:String} = '' OR w.app_name = {app_name:String}) AND startsWith(w.job_id, {job_id_prefix:String})) AND ({has_findings:Int8} = -1 OR (job_id IN (SELECT job_id FROM findings)) = {has_findings:Int8}) AND ({plan_fingerprint:String} = '' OR job_id IN (SELECT o.job_id FROM run_outcomes AS o FINAL WHERE o.plan_fingerprint = {plan_fingerprint:String}))",
+  "WHERE job_id IN (SELECT w.job_id FROM spark_events AS w WHERE w.ts >= now() - toIntervalHour({since_hours:UInt32}) AND ({app_name:String} = '' OR w.app_name = {app_name:String}) AND startsWith(w.job_id, {job_id_prefix:String})) AND ({has_findings:Int8} = -1 OR (job_id IN (SELECT job_id FROM findings)) = {has_findings:Int8}) AND ({plan_fingerprint:String} = '' OR job_id IN (SELECT o.job_id FROM run_outcomes AS o FINAL WHERE o.plan_fingerprint = toFixedString(substring({plan_fingerprint:String}, 1, 64), 64)))",
   "ORDER BY b.started_at DESC, b.job_id ASC LIMIT {limit:UInt32} OFFSET {offset:UInt32}",
 );
 

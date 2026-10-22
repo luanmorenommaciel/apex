@@ -47,7 +47,12 @@ class _ListClient:
 
     def query(self, query: str, parameters: dict | None = None):
         self.calls.append((query, dict(parameters or {})))
-        rows = [{"name": t} for t in self.tables] if "system.tables" in query else []
+        if "system.tables" in query:
+            rows = [{"name": t} for t in self.tables]
+        elif "system.columns" in query:  # ReadStore.table_exists
+            rows = [{"name": "job_id"}] if (parameters or {}).get("table") in self.tables else []
+        else:
+            rows = []
         return type("R", (), {"named_results": lambda _s: list(rows)})()
 
     def listing(self) -> tuple[str, dict]:
@@ -179,31 +184,81 @@ def test_has_findings_over_http(path, query, bound):
     assert client.listing()[1]["has_findings"] == bound
 
 
-def test_paging_and_window_are_clamped():
+def test_limit_and_window_clamp_but_offset_is_refused():
     client = _ListClient()
-    ReadStore(client).run_list(limit=0, since_hours=0, offset=-5)
+    ReadStore(client).run_list(limit=0, since_hours=0)
     params = client.listing()[1]
     assert (params["limit"], params["since_hours"], params["offset"]) == (1, 1, 0)
     client = _ListClient()
-    ReadStore(client).runs(limit=10**6, since_hours=10**9, offset=10**9)
+    ReadStore(client).runs(limit=10**6, since_hours=10**9, offset=ReadStore.MAX_RUNS_OFFSET)
     params = client.listing()[1]
     assert params["limit"] == ReadStore.MAX_RUNS
     assert params["since_hours"] == ReadStore.MAX_SINCE_HOURS
-    assert params["offset"] == ReadStore.MAX_RUNS_OFFSET
+    assert params["offset"] == ReadStore.MAX_RUNS_OFFSET == 10_000
+    # A clamped offset is a DIFFERENT page than the one asked for: refused.
+    for method in ("runs", "run_list"):
+        for offset in (-1, 10_001):
+            client = _ListClient()
+            with pytest.raises(ApexStoreError, match=r"^offset_out_of_range: "):
+                getattr(ReadStore(client), method)(offset=offset)
+            assert client.calls == []
 
 
-def test_oversized_filter_is_refused_before_any_query():
+@pytest.mark.parametrize("path", ["/v1/runs", "/v1/diagnostics/runs"])
+@pytest.mark.parametrize("offset", ["-1", "10001"])
+def test_http_refuses_an_out_of_range_offset_with_422(path, offset):
     client = _ListClient()
-    with pytest.raises(ApexStoreError, match="job_id_prefix_too_long"):
-        ReadStore(client).runs(job_id_prefix="x" * 513)
+    response = _app(client).get(path, params={"offset": offset}, headers=AUTH)
+    assert response.status_code == 422
+    assert client.calls == []
+    assert _app(_ListClient()).get(path, params={"offset": "10000"}, headers=AUTH).status_code == 200
+
+
+def test_mcp_echoes_the_effective_page_not_the_requested_one():
+    client = _ListClient()
+    payload = asyncio.run(create_server(ReadStore(client)).call_tool(
+        "list_runs", {"limit": 10**6, "since_hours": 0}))
+    payload = payload[1] if isinstance(payload, tuple) else payload
+    assert (payload["limit"], payload["since_hours"], payload["offset"]) == (200, 1, 0)
+
+
+@pytest.mark.parametrize("offset", [-1, 10_001])
+def test_mcp_refuses_an_out_of_range_offset(offset):
+    client = _ListClient()
+    with pytest.raises(Exception, match="offset_out_of_range"):
+        asyncio.run(create_server(ReadStore(client)).call_tool("list_runs", {"offset": offset}))
     assert client.calls == []
 
 
-def test_mcp_fingerprint_filter_needs_the_memory_tables():
+@pytest.mark.parametrize("method", ["runs", "run_list"])
+@pytest.mark.parametrize(("field", "size"), [
+    ("app_name", 513), ("job_id_prefix", 513), ("plan_fingerprint", 65),
+])
+def test_oversized_filter_is_refused_before_any_query(method, field, size):
+    client = _ListClient()
+    with pytest.raises(ApexStoreError, match=rf"^{field}_too_long: "):
+        getattr(ReadStore(client), method)(**{field: "x" * size})
+    assert client.calls == []
+    # At the limit it is still a filter, not an error.
+    getattr(ReadStore(_ListClient()), method)(**{field: "x" * (size - 1)})
+
+
+def test_fingerprint_is_compared_as_the_column_is_stored():
+    """FixedString(64), the house way: capped before toFixedString, which throws."""
+    assert "toFixedString(substring({plan_fingerprint:String}, 1, 64), 64)" in ch.RUN_SHAPE_FILTER
+
+
+def test_mcp_fingerprint_filter_needs_run_outcomes_only():
     """Not an empty list: "no table" and "no runs of that shape" differ."""
     client = _ListClient(tables=())
-    with pytest.raises(ApexStoreError, match="memory_unavailable"):
+    with pytest.raises(ApexStoreError, match="memory_unavailable.*run_outcomes"):
         ReadStore(client).runs(plan_fingerprint=FP)
+    # plan_memory is not read by this filter, so its absence does not matter
+    # (a partial v0.3 rollout, as in fix_verification).
+    client = _ListClient(tables=("run_outcomes",))
+    ReadStore(client).runs(plan_fingerprint=FP)
+    sql, params = client.listing()
+    assert sql == ch.RUNS_BY_SHAPE_SQL and params["plan_fingerprint"] == FP
     # Without the filter, a v0.2 deployment still lists runs and probes nothing.
     client = _ListClient(tables=())
     ReadStore(client).runs()
