@@ -4,6 +4,8 @@
 > already shipped (T1–T14). This file is the **forward plan**: the lane
 > decomposed into six legs of user-facing work, each broken into candidate features.
 > **Snapshot:** 2026-08-12 · branch `feat/base-project-e2e` · head `093c677` · 87 tests green.
+> **Updated:** 2026-10-22 · `main` @ `c3c3ea3` — adds [L7 · Pair](#l7--pair--every-ui-action-has-an-mcp-twin),
+> the task list that pairs each console action with an MCP tool.
 
 ## What the lane is today
 
@@ -290,6 +292,114 @@ would close the last manual step, and needs a contract surface for the figure.
 
 ---
 
+## L7 · Pair — every UI action has an MCP twin
+
+**Decision (Crew A sync, 2026-09-15):** a FastAPI layer sits between ClickHouse and
+every consumer. Claude / Codex / Cursor reach Apex through `apex-mcp`; the console
+reaches it through FastAPI; **the MCP routes its queries through that same API**
+instead of opening its own ClickHouse connection. The console and the MCP are two
+front doors onto one product, so anything a user can do by clicking must be
+something an agent can do by calling a tool — and both must get the same answer.
+
+**Where main stands (`c3c3ea3`):**
+
+- `serve/src/apex_api` is merged: 11 resource routes (raw rows) + 8 diagnostic
+  routes (one per MCP tool) under `/v1`, behind a token.
+- The console (`front/`) reads only the **resource** routes and computes its
+  verdicts in TypeScript (`front/src/contract/rules.ts`).
+- `apex-mcp` still opens ClickHouse directly (`ch.py` → `clickhouse_connect`) and
+  computes verdicts in Python (`diagnose.py`).
+- `serve/tools/console_parity_gate.py` proves the console's rows match across *its*
+  two doors (browser→ClickHouse vs browser→API). **Nothing yet proves the console
+  and the MCP agree on a verdict** — two implementations of the seven rules can
+  drift, which is the contradiction class the contract exists to close.
+- `AskScreen` is a scripted mockup with no backend.
+
+### Pairing map
+
+| Screen · action | Console reads today | MCP twin | Gap |
+|---|---|---|---|
+| Health badge | `GET /v1/health` | `apex_status` — **not registered** (L1) | finish L1; same payload both doors |
+| Runs · recent list | `GET /runs?limit=50` — no time window | `list_runs` — defaults `limit=20`, `since_hours=168` | different defaults: a run older than 7 days, or the 21st–50th, shows in the console only |
+| Runs · search job_id / app_name / fingerprint | client-side filter | `list_runs(app_name)` | no `job_id` or `plan_fingerprint` filter |
+| Runs · "findings only" | client-side filter | — | no `has_findings` filter |
+| Run detail · verdict, stages, findings, transitions | `/runs/{id}`, `/stages`, `/findings`, `/transitions` + `rules.ts` | `analyze_run(detail)` | two verdict engines; no cross-door check |
+| Run detail · stage drill-down | in-page, from rows | `explain_stage` | console never calls `/stages/{id}/diagnosis` |
+| Run detail · conf tab | `/runs/{id}/conf` | — | job_conf not exposed to MCP (ties to F4.3) |
+| Run detail · plan sample | `/plans/{fp}/sample` | — | not exposed to MCP |
+| Run detail · "compare to baseline" | → Compare | `compare_runs` | see Compare |
+| Run detail · "ask about this run" | → Ask (mock) | — | MCP prompt `/apex:diagnose` (F5.4) |
+| Run detail · "propose fix" | → Verify | `suggest_fix` | MCP prompt `/apex:fix` (F5.4) |
+| Finding detail | findings + `fixVerification` + `shapeRuns` | `verify_fix(job_id, finding_id)` (partial) | no single-finding lookup by `finding_id` |
+| Compare · pick baseline | `/runs/{id}/baseline-candidates` | `compare_runs` auto-baseline | MCP cannot list candidates; console ignores `/comparison` |
+| Memory · plan shapes + runs per shape | `/plans`, `/plans/{fp}/runs` | `recall_similar_runs` (per job only) | no shape-level listing (F6.3 fleet view) |
+| Verify · proposal + two verdicts | `fix_verifications.proposed_config`, projected as `proposed_diff` | `verify_fix` + `suggest_fix` (generates a diff and carries `proposed_config`) | two representations of one proposal — confirm they cannot disagree |
+| Verify · copy diff | clipboard | n/a — `applied=False` | paired by design ✅ |
+| Ask · natural-language question | scripted mock | all tools | no backend at all |
+| — | — | `search_kb` | no console surface |
+
+### Tasks
+
+Sizes follow the taskspec scale. "Owner" is a suggestion from the 09-15 sync.
+
+| # | Task | Size | Depends on | Owner |
+|---|---|---|---|---|
+| P7.1 | **MCP over HTTP.** Add an API-backed read path to `apex-mcp` (`APEX_API_URL` + token) so every tool reads through FastAPI; keep direct ClickHouse only as an explicit opt-in for local dev. Errors keep `_sanitize()` discipline — no token or URL reaches the model. | M | — | Sidymar |
+| P7.2 | **One verdict engine.** Make the console call the diagnostic routes (`/diagnosis`, `/comparison`, `/recall`, `/verification`) instead of re-deriving verdicts from raw rows, or — if `rules.ts` must stay client-side — add a gate that runs both on the same seeded runs and fails on any difference. | L | P7.1 | Agmar + Sidymar |
+| P7.3 | **Cross-door parity gate.** Extend `console_parity_gate.py` (or a sibling) with one check per pairing-map row, in three kinds: *job-scoped* rows compare both doors' answers for the same `job_id`; *unscoped* rows (health, run list) compare them under the same normalized parameters; *n/a* rows (copy diff) are listed as excluded, with the reason. P7.3 ships the gate and the rows already paired once P7.2 lands. Each later pairing task adds its own row as part of its done criteria, so the gate never waits on unrelated work and never silently skips a row. | M | P7.2 | — |
+| P7.4 | **Finish L1 `apex_status`** and make `GET /v1/health` return the same `ServerStatus` model. | S | L1 tasks | — |
+| P7.5 | **Align the run list.** Give `list_runs` and `GET /runs` the same default limit, time window and paging (today 20 rows / 168 h vs 50 rows / no window). Then add `job_id` prefix, `plan_fingerprint` and `has_findings` filters to both, so the console stops filtering client-side. | S | — | — |
+| P7.6 | **Expose job_conf + plan sample** to the MCP by extending `analyze_run(detail="full")` rather than adding tools (keeps the tool surface flat, per the L2 rule). Unblocks F4.3. | S | — | — |
+| P7.7 | **Finding lookup.** Decide: extend `verify_fix` / `analyze_run` to accept `finding_id` alone, or add one `get_finding` tool. Default to extending. | S | — | — |
+| P7.8 | **Baseline candidates in `compare_runs`.** Return the candidate list in the payload (always, and as the reason on `not_comparable`); switch Compare to `/comparison`. | S | P7.2 | — |
+| P7.9 | **Plan-shape listing** for the Memory screen: an `apex://plans` resource (not a tool) mirroring `/plans` and `/plans/{fp}/runs`. Delivers F6.3. | S | — | — |
+| P7.10 | **One proposal source.** `apex.fix_verifications` stores `proposed_config` (canonical JSON). `proposed_diff` is only the name the console and `ch.py` project it under, while `suggest_fix` generates a real diff. Compare the normalized `proposed_config` the two doors carry for the same finding, not the rendered text. If they can differ, make the stored row authoritative and have `suggest_fix` render from it. No schema change. | S | — | — |
+| P7.11 | **Wire Ask.** Replace the script with calls to the diagnostic routes. Open question first: does Ask put an LLM in the loop (`llm_calls` > 0), or is it a structured router over the tools? | M | P7.1, P7.2 | Agmar |
+| P7.12 | **MCP prompts** `/apex:diagnose` and `/apex:fix` — the agent-side twins of "ask about this run" and "propose fix". Closes F5.4. | S | — | — |
+| P7.13 | **`search_kb` in the console** — a search box on Ask or Runs over `/diagnostics/search`. | XS | — | — |
+| P7.14 | **Retire `apex-mcp-http`.** FastAPI now owns the HTTP path, so the prototype has nothing left to serve; delete it or record why it stays. | XS | P7.1 | Agmar |
+
+**Order:** P7.1 → P7.2 → P7.3 is the spine — until the MCP reads through the API and
+both doors share one verdict engine, every other pairing can drift silently. The S/XS
+rows are independent and can run in parallel with the spine.
+
+**Done when** every row of the pairing map has an MCP twin (or a written reason it
+should not), and the cross-door gate passes on a live cluster.
+
+### Status — 2026-10-22
+
+Tracked in Linear (project **Apex**, `SRP-*`). Nothing in L7 is merged yet.
+
+| # | State | PR | Linear | Evidence / note |
+|---|---|---|---|---|
+| P7.1 | **in review — ready** | #195 | SRP-16 | Live QA on 7 real Spark runs: all 8 tools + `apex://runs` identical through ClickHouse and through the API (0 differences); console parity 0 failed; no secret leaks under failure. Serve suite 749 passed. |
+| P7.10 | in review | #193 | SRP-22 | `suggest_fix` now renders the stored verified `proposed_config`. Codex follow-ups fixed: both doors reject the same numbers, per-finding lookup (no 50-row cap), same tie-break. 517 passed; live parity 17/0. |
+| P7.12 | in review | #194 | SRP-23 | Prompts `/apex:diagnose`, `/apex:fix`; 525 passed; stdio-listed with no database. |
+| P7.13 | in review | #192 | SRP-24 | Search KB screen; CI green (route registered against the existing search route). |
+| P7.2 | **needs a decision** | — | SRP-25 | Console calls the diagnostic routes, or `rules.ts` stays behind a parity gate? Blocks P7.3, P7.8. |
+| P7.11 | **needs a decision** | — | SRP-29 | Does Ask put an LLM in the loop? |
+| P7.14 | **needs a decision** | — | SRP-26 | Retire `apex-mcp-http`? |
+| P7.3, P7.8 | blocked | — | SRP-27, SRP-28 | Wait on P7.2. |
+| P7.5 | in review — stacked on #195 | #200 | SRP-18 | Same defaults on both doors (50 rows, 7 days, offset paging) + server-side filters; 826 passed; live parity 28/0. CI runs once retargeted to main. |
+| P7.6, P7.7, P7.9 | next | — | SRP-19, -20, -21 | Follow P7.5 on the same stack. |
+| P7.4 | blocked | — | SRP-17 | Waits on the remaining L1 status tasks. |
+
+**Found while live-testing** (outside L7, all pre-existing on `main`):
+
+| Item | PR / Linear |
+|---|---|
+| `serve/tools/recall_gate.py` asserted a stale 6-tool list | #196 · SRP-30 |
+| Pinned `minio/minio` + `minio/mc` can't be pulled; dev store moved to RustFS (verify 6/6, canonical E2E 4/4) | #197 · SRP-31 |
+| MCP stalls when the store hangs (serial calls × 30 s timeout) | SRP-34 |
+| verify lane never writes `apex.fix_verifications` | SRP-33 |
+| engine evidence validator rejected the driver_oom finding (validator rule stricter than the contract) | #198 · SRP-36 |
+| `make verify-e2e` env + scripts not executable (`e2e_canonical.sh`, `scripts/apex.sh`) | #199 · SRP-32, SRP-35 |
+| compare refuses two plain skew_join runs (1 of 9 fingerprints differs) | SRP-37 |
+| jar may sample a `TaskResultLost` attempt as a success | SRP-38 |
+| six-lane gate labels the serve lane "degraded" when it passes | SRP-39 |
+
+---
+
 ## Cross-cutting rail — the safety guarantees stay visible
 
 Not a leg; an invariant no leg may break.
@@ -316,6 +426,7 @@ Every new tool inherits the read-only annotation discipline and the param-bindin
 | 4 | **L5 Fix** ✅ | `verify_fix` is a thin wrapper with outsized value — over the *verify lane*, not over `compare_runs` (**shipped**) |
 | 5 | **L6 Learn** ✅ | compounding, and delivered ahead of its slot once the memory lane made it a read rather than a build |
 | 6 | **L4 Correlate** | depends on contract/jar work outside this lane |
+| 7 | **L7 Pair** | the 2026-09-15 FastAPI decision; can run alongside L1 and ahead of L4 — its P7.1→P7.3 spine is the next build |
 
 **L1 is being built first by decision**, ahead of L2 — see [`L1_tasks.md`](L1_tasks.md).
 
