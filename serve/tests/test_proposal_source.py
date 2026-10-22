@@ -547,3 +547,23 @@ def test_a_same_millisecond_tie_picks_the_row_the_console_picks():
     assert suggestion.verification is not None
     assert suggestion.verification.verification_id == "v-a"
     assert suggestion.proposed_config == {"spark.a": "1"}
+
+
+# -- QA follow-up: a deeply nested overlay must degrade, not raise -------------
+@pytest.mark.parametrize(
+    "stored",
+    [
+        '{"a":' + "[" * 5000 + "]" * 5000 + "}",
+        '{"a":' + '{"b":' * 5000 + "1" + "}" * 5000 + "}",
+        "[" * 5000 + "]" * 5000,
+    ],
+    ids=["nested-arrays", "nested-objects", "top-level-arrays"],
+)
+def test_a_deeply_nested_overlay_degrades_to_the_recipe_without_raising(stored):
+    view = VerificationView.model_validate(_row(stored))
+    assert view.proposed_config == {}
+
+    suggestion = _suggest([_row(stored)])
+    assert suggestion.proposed_config == SKEW_RECIPE
+    assert any("no readable overlay" in w for w in suggestion.warnings)
+    assert suggestion.applied is False

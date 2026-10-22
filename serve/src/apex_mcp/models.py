@@ -522,7 +522,12 @@ class VerificationView(BaseModel):
         if isinstance(value, str):
             try:
                 parsed = json.loads(value, parse_constant=_reject_json_constant)
-            except ValueError:
+            except (ValueError, RecursionError):
+                # RecursionError: json.loads recurses per nesting level, so an
+                # overlay nested ~1000 deep exhausts the stack. The console
+                # reports it as invalid-overlay; so does this door. The walk
+                # below is flat (non-scalar members are rejected, never
+                # descended), so parsing is the only recursion.
                 return {}
             value = parsed
         if not isinstance(value, dict):
