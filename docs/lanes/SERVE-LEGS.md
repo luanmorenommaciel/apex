@@ -309,7 +309,7 @@ something an agent can do by calling a tool — and both must get the same answe
   verdicts in TypeScript (`front/src/contract/rules.ts`).
 - `apex-mcp` still opens ClickHouse directly (`ch.py` → `clickhouse_connect`) and
   computes verdicts in Python (`diagnose.py`).
-- `tools/console_parity_gate.py` proves the console's rows match across *its*
+- `serve/tools/console_parity_gate.py` proves the console's rows match across *its*
   two doors (browser→ClickHouse vs browser→API). **Nothing yet proves the console
   and the MCP agree on a verdict** — two implementations of the seven rules can
   drift, which is the contradiction class the contract exists to close.
@@ -365,6 +365,35 @@ rows are independent and can run in parallel with the spine.
 
 **Done when** every row of the pairing map has an MCP twin (or a written reason it
 should not), and the cross-door gate passes on a live cluster.
+
+### Status — 2026-10-22
+
+Tracked in Linear (project **Apex**, `SRP-*`). Nothing in L7 is merged yet.
+
+| # | State | PR | Linear | Evidence / note |
+|---|---|---|---|---|
+| P7.1 | **in review — ready** | #195 | SRP-16 | Live QA on 7 real Spark runs: all 8 tools + `apex://runs` identical through ClickHouse and through the API (0 differences); console parity 0 failed; no secret leaks under failure. Serve suite 749 passed. |
+| P7.10 | in review | #193 | SRP-22 | `suggest_fix` now renders the stored verified `proposed_config`. Codex follow-ups (numeric parsing, 50-row cap, tie-break) being addressed. |
+| P7.12 | in review | #194 | SRP-23 | Prompts `/apex:diagnose`, `/apex:fix`; 525 passed; stdio-listed with no database. |
+| P7.13 | in review | #192 | SRP-24 | Search KB screen; CI route-registration check being fixed. |
+| P7.2 | **needs a decision** | — | SRP-25 | Console calls the diagnostic routes, or `rules.ts` stays behind a parity gate? Blocks P7.3, P7.8. |
+| P7.11 | **needs a decision** | — | SRP-29 | Does Ask put an LLM in the loop? |
+| P7.14 | **needs a decision** | — | SRP-26 | Retire `apex-mcp-http`? |
+| P7.3, P7.8 | blocked | — | SRP-27, SRP-28 | Wait on P7.2. |
+| P7.5, P7.6, P7.7, P7.9 | next | — | SRP-18, -19, -20, -21 | Start after #195 merges (they add reads on its new path). |
+| P7.4 | blocked | — | SRP-17 | Waits on the remaining L1 status tasks. |
+
+**Found while live-testing** (outside L7, all pre-existing on `main`):
+
+| Item | PR / Linear |
+|---|---|
+| `serve/tools/recall_gate.py` asserted a stale 6-tool list | #196 · SRP-30 |
+| Pinned `minio/minio` + `minio/mc` can't be pulled; dev store moved to RustFS (verify 6/6, canonical E2E 4/4) | #197 · SRP-31 |
+| MCP stalls when the store hangs (serial calls × 30 s timeout) | SRP-34 |
+| `make verify-e2e` env lacks `clickhouse-connect` / `mcp` | SRP-32 |
+| verify lane never writes `apex.fix_verifications` | SRP-33 |
+| `dev/scripts/e2e_canonical.sh` not executable | SRP-35 |
+| engine evidence validator rejects the driver_oom finding | SRP-36 |
 
 ---
 
