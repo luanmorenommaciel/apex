@@ -1,0 +1,26 @@
+serve/tests/test_proposal_source.py
+  s_4afec7b1e4caff::t_9d16be87e9c535 1-252
+  s_4afec7b1e4caff::t_869499959becbd 253-284
+serve/src/apex_mcp/diagnose.py
+  s_4afec7b1e4caff::t_ed3f732121a93a 1380,1385-1390,1408-1413,1415-1423,1520-1542,1611-1619,1737-1744,1753,1763-1772,1807,1810,1815
+serve/src/apex_mcp/models.py
+  s_4afec7b1e4caff::t_b0f7e1d6925753 19,324-356,486-493,499,505-511
+serve/tests/test_suggest_fix_safety.py
+  s_4afec7b1e4caff::t_6eef5931d3552e 339-340,348-353
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c384c316c0a0ffb45fc8e75058d29877c2b406ba",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
