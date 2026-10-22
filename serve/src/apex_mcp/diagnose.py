@@ -15,6 +15,7 @@ hunks or markdown structure.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from datetime import datetime, timezone
 
 from .models import (
@@ -35,6 +36,7 @@ from .models import (
     StageSymptom,
     StageView,
     VerificationView,
+    read_overlay,
 )
 
 MB = 1 << 20
@@ -1377,12 +1379,17 @@ def _replay_measurement(view: VerificationView) -> str:
 
 
 def _verification_notes(
-    view: VerificationView, proposed_config: dict[str, str]
+    view: VerificationView, recipe_config: dict[str, str]
 ) -> list[str]:
     """What the verify lane concluded, as prose a suggestion can carry.
 
     Apex-authored throughout: these strings are built from the verify lane's
-    own numbers and enum values, never from observed-job text.
+    own numbers and enum values, never from observed-job text. The stored
+    overlay's keys and values are not interpolated here — they travel in
+    ``proposed_config`` and the diff, the same as recipe values do.
+
+    ``recipe_config`` is the heuristic recipe for the symptom; when the row
+    carries a usable overlay, that overlay (not the recipe) is the proposal.
     """
     notes = [
         f"Verify lane ({view.method or 'unknown method'}, predictor "
@@ -1400,12 +1407,22 @@ def _verification_notes(
         )
     else:
         notes.append(_replay_measurement(view) + ".")
-    if view.proposed_config and view.proposed_config != proposed_config:
-        notes.append(
-            "The verify lane evaluated a DIFFERENT overlay than the one "
-            f"proposed here: it tested {view.proposed_config}. Its verdict "
-            "does not transfer to these settings unchanged."
+    if view.proposed_config:
+        note = (
+            "The proposed settings are taken from the verify lane's stored "
+            "overlay for this finding (apex.fix_verifications.proposed_config, "
+            "the same overlay the console shows), so the verdict above is about "
+            "exactly these settings."
         )
+        if normalize_overlay(view.proposed_config) != normalize_overlay(
+            recipe_config
+        ):
+            note += (
+                " That overlay differs from the heuristic recipe for this "
+                "symptom; the title and rationale describe the recipe, the "
+                "settings are the verified overlay."
+            )
+        notes.append(note)
     if view.evidence:
         notes.append(f"Verify evidence: {view.evidence}")
     if view.caveats:
@@ -1502,6 +1519,29 @@ def build_verdict(
     )
 
 
+def normalize_overlay(config: dict[str, object]) -> dict[str, str]:
+    """A Spark conf overlay in canonical form: string keys and values, keys
+    sorted — the order the verify lane writes ``proposed_config`` in
+    (``json.dumps(..., sort_keys=True)``). Every door renders a proposal from
+    this form, so the recipe and the stored overlay list identically.
+    """
+    pairs = {str(key): str(value) for key, value in config.items()}
+    return {key: pairs[key] for key in sorted(pairs)}
+
+
+def _renders_safely(config: dict[str, str]) -> bool:
+    """True when every pair can be written as one ``key value`` conf line and
+    one markdown bullet without forging extra lines or breaking the code span.
+    """
+    for key, value in config.items():
+        if not key or any(ch.isspace() for ch in key):
+            return False
+        for text in (key, value):
+            if "`" in text or any(not ch.isprintable() for ch in text):
+                return False
+    return True
+
+
 def _unified_diff(config: dict[str, str], job_id: str, stage_id: int | None) -> str:
     """A proposal as a unified diff creating a NEW file.
 
@@ -1532,8 +1572,11 @@ def _pr_body(
     stage_id: int | None,
     evidence: str,
     source: str,
+    settings_source: str = "",
 ) -> str:
     settings = "\n".join(f"- `{k}` = `{v}`" for k, v in config.items())
+    if settings_source:
+        settings += f"\n\n{settings_source}"
     return (
         f"## {title}\n\n"
         f"**Job:** `{job_id}`"
@@ -1561,6 +1604,7 @@ def suggest_fix(
     stage_rows: list[dict],
     transition_rows: list[dict] | None = None,
     verification_rows: list[dict] | None = None,
+    verification_lookup: Callable[[str], list[dict]] | None = None,
 ) -> FixSuggestion:
     """Build a fix PROPOSAL. Performs no filesystem, git or database writes.
 
@@ -1570,10 +1614,27 @@ def suggest_fix(
          the same ones ``analyze_run`` uses.
 
     ``verification_rows`` is what ``apex.fix_verifications`` already holds for
-    this job. It changes NOTHING about which fix is proposed — it only changes
-    what the proposal discloses. The one exception is a fix the verify lane
-    REFUSED: the recipe is still named, but no ready-to-apply diff is handed
-    over for it.
+    this job, newest first. The newest row for the finding is the one the
+    console shows. When its ``proposed_config`` parses to a non-empty overlay,
+    that overlay IS the proposal — ``proposed_config``, the diff and the PR
+    body all render it — so both doors name the same settings for the same
+    finding (the console projects the same column as ``proposed_diff``).
+    Without a row, the heuristic recipe is proposed. With a row whose overlay
+    is empty (``{}`` — nothing proposed) or unreadable, the recipe stays
+    visible in ``proposed_config`` as data but no diff or PR body is handed
+    over: the row's verdict does not transfer to settings it never assessed.
+    Either way the overlay is normalized (``normalize_overlay``: keys in
+    Unicode code-point order, as the console's ``overlayEntries`` lists them).
+    A fix the verify lane REFUSED is still named in ``proposed_config``, but
+    no ready-to-apply diff is handed over for it.
+
+    ``verification_lookup``, when given, is called with the CHOSEN finding's id
+    and returns that finding's rows, newest first (the store's
+    ``verifications(job_id, finding_id)``). It replaces ``verification_rows``
+    for the selection: a job-wide list is capped, so when ``finding_id`` was
+    omitted the chosen finding's newest row could fall outside it and MCP would
+    propose the recipe while the console — which filters by finding — showed
+    the stored overlay.
     """
     notes: list[str] = []
     warnings: list[str] = [
@@ -1632,13 +1693,31 @@ def suggest_fix(
         # A verification is keyed to a finding, so only the findings path can
         # have one. The store returns newest-first; the newest is the one that
         # reflects the current predictor and the current bench.
-        verification = next(
+        # Fetched per finding when a lookup is available, so no job-wide cap
+        # can push the chosen finding's newest row out of view.
+        rows_for_finding = (
+            verification_lookup(finding.finding_id)
+            if verification_lookup is not None
+            else verification_rows
+        )
+        verification_row = next(
             (
-                VerificationView.model_validate(row)
-                for row in (verification_rows or [])
+                row
+                for row in (rows_for_finding or [])
                 if str(row.get("finding_id") or "") == finding.finding_id
             ),
             None,
+        )
+        verification = (
+            VerificationView.model_validate(verification_row)
+            if verification_row is not None
+            else None
+        )
+        # The view holds {} for both "empty object" and "unreadable"; the raw
+        # column tells them apart for the warning only.
+        stored_empty_object = (
+            verification_row is not None
+            and read_overlay(verification_row.get("proposed_config")) == {}
         )
     # -- 2. stub: heuristics until the engine lane lands --------------------
     else:
@@ -1667,6 +1746,7 @@ def suggest_fix(
                 notes=notes,
             )
         verification = None  # a verification is keyed to a finding; there is none
+        stored_empty_object = False
         worst = diagnosis.symptoms[0]
         symptom = worst.symptom
         target_stage = worst.stage_id
@@ -1691,6 +1771,29 @@ def suggest_fix(
         ),
     )
     title = f"{title_suffix} (job {job_id}, stage {target_stage})"
+    recipe_config = normalize_overlay(config)
+    # One proposal source: the verify lane's stored overlay, when usable, is
+    # authoritative over the recipe — it is what the console shows and what
+    # the verdict is about.
+    settings_source = ""
+    if verification is not None and verification.proposed_config:
+        config = normalize_overlay(verification.proposed_config)
+        # Apex-authored; the verification_id is a verify-lane identifier but
+        # is neutralized like any other stored text before it enters prose.
+        vid = neutralize(verification.verification_id, 64).replace("`", "'")
+        settings_source = (
+            "_These settings are the overlay the verify lane evaluated "
+            f"(verification `{vid}` "
+            "in apex.fix_verifications), not the heuristic recipe."
+        )
+        if config != recipe_config:
+            settings_source += (
+                " They differ from the heuristic recipe the Why section "
+                "above describes."
+            )
+        settings_source += "_"
+    else:
+        config = recipe_config
 
     # -- disclose what verify already concluded about this finding ---------
     # This block DISCLOSES; it does not decide. The single exception is a
@@ -1698,8 +1801,40 @@ def suggest_fix(
     # refused is the worst output this lane can produce, so the diff is
     # withheld while the recipe itself stays visible in proposed_config.
     refused = verification is not None and _is_refusal(verification)
+    # A verification row whose overlay is empty ({}) or unreadable proposes
+    # nothing usable. Its verdict sits beside the proposal, so handing over a
+    # ready-to-apply diff of the RECIPE would dress settings the verify lane
+    # never assessed in that verdict. Same pattern as a refusal: the recipe
+    # stays visible in proposed_config as data, no diff or PR body is offered.
+    # The console reports the same row as "empty overlay — nothing proposed"
+    # (or an unreadable proposal) and gates nothing over it.
+    no_verified_overlay = (
+        verification is not None and not verification.proposed_config
+    )
+    # Decided here so every warning below is true on the path it ships with:
+    # a gated suggestion carries proposed_config={}, so it must not claim the
+    # settings are "in proposed_config as data".
+    gated = confidence < min_confidence
+    as_data = (
+        "" if gated else " The settings are in proposed_config as data only."
+    )
     if verification is not None:
-        notes.extend(_verification_notes(verification, config))
+        notes.extend(_verification_notes(verification, recipe_config))
+        if no_verified_overlay and stored_empty_object:
+            warnings.append(
+                "The verification row for this finding stores an empty overlay "
+                "({}): the verify lane proposed nothing. No diff or PR body is "
+                "offered, and the verify lane's verdict does not transfer to the "
+                "recipe settings." + as_data
+            )
+        elif no_verified_overlay:
+            warnings.append(
+                "The verification row for this finding has no readable overlay "
+                "(its proposed_config is missing or could not be parsed). No "
+                "diff or PR body is offered. The verify lane's verdict "
+                "concerns settings that cannot be shown, and it does not "
+                "transfer to the recipe settings." + as_data
+            )
         if refused:
             warnings.insert(
                 0,
@@ -1709,7 +1844,15 @@ def suggest_fix(
                 f"it was refused.",
             )
 
-    gated = confidence < min_confidence
+    unrenderable = not _renders_safely(config)
+    if unrenderable:
+        warnings.append(
+            "The stored overlay contains a key or value that cannot be written "
+            "as a single conf line (whitespace in a key, a control character or "
+            "a backtick). No diff or PR body is offered." + as_data
+        )
+    withheld = refused or unrenderable or no_verified_overlay
+
     if gated:
         warnings.append(
             f"confidence {confidence:.2f} < min_confidence {min_confidence:.2f} — "
@@ -1743,17 +1886,24 @@ def suggest_fix(
         confidence=round(confidence, 3),
         min_confidence=min_confidence,
         gated=False,
-        advisory_only=refused,
+        advisory_only=withheld,
         target_stage_id=target_stage,
         proposed_diff=(
-            "" if refused else _unified_diff(config, job_id, target_stage)
+            "" if withheld else _unified_diff(config, job_id, target_stage)
         ),
         proposed_config=config,
         pr_body=(
             ""
-            if refused
+            if withheld
             else _pr_body(
-                title, rationale, config, job_id, target_stage, evidence, source
+                title,
+                rationale,
+                config,
+                job_id,
+                target_stage,
+                evidence,
+                source,
+                settings_source,
             )
         ),
         verification=verification,

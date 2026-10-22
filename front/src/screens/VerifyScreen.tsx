@@ -6,7 +6,7 @@ import {
 import { Button, DualVerdictPanel, GuardrailList, ScreenHeader, type Guardrail } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import {
-  assessStage, fmt, measureNoiseFloorPct, noOpGate, parseProposal,
+  assessStage, fmt, measureNoiseFloorPct, noOpGate, overlayEntries, parseProposal,
   readConfiguredPartitions, readSlots, ruleFiveSkewAbsence, ruleSevenReshaped,
   ruleTwoRuntimeResolvable,
 } from "@/contract/rules";
@@ -184,10 +184,14 @@ export function VerifyScreen() {
    * `apex.fix_verifications.proposed_config` is a conf overlay; the recorded
    * run predates that column and carries a unified diff. parseProposal names
    * each outcome, so only a complete valid overlay receives config checks.
+   * An empty `{}` overlay proposes nothing: no key list, no gate over it.
+   * Keys are listed in code-point order (overlayEntries), as MCP lists them.
    */
   const proposal = v ? parseProposal(v.proposed_diff) : null;
   const overlay = proposal?.kind === "overlay" ? proposal.config : null;
-  const proposalKeys = overlay ? Object.keys(overlay) : [];
+  const entries = overlay ? overlayEntries(overlay) : [];
+  const proposalKeys = entries.map(([k]) => k);
+  const emptyOverlay = proposal?.kind === "empty-overlay";
   const nonConfKeys = proposalKeys.filter((k) => !k.startsWith("spark."));
 
   const guardrails: Guardrail[] = [
@@ -244,9 +248,10 @@ export function VerifyScreen() {
         : !overlay
           ? {
               vacant: true,
-              reason:
-                "proposal is not a valid conf overlay; verify's own safe/safety_verdict " +
-                "columns are not read by this console",
+              reason: emptyOverlay
+                ? "empty overlay — nothing proposed, so there is nothing to check"
+                : "proposal is not a valid conf overlay; verify's own safe/safety_verdict " +
+                  "columns are not read by this console",
             }
           : nonConfKeys.length === 0
             ? {
@@ -276,7 +281,7 @@ export function VerifyScreen() {
     // so the gate could report a real change while the actual overlay was a
     // no-op, which is the one thing a no-op gate exists to catch.
     const gates: Guardrail[] = overlay
-      ? Object.entries(overlay).map(([key, value]) => ({
+      ? entries.map(([key, value]) => ({
           name: `no-op gate · ${key.replace(/^spark\.(sql\.)?/, "")}`,
           rule: "conf",
           verdict: confGap ?? noOpGate(conf, key, value),
@@ -286,7 +291,9 @@ export function VerifyScreen() {
           rule: "conf",
           verdict: {
             vacant: true,
-            reason: "proposal is not a valid conf overlay — nothing to gate",
+            reason: emptyOverlay
+              ? "empty overlay — nothing proposed, nothing to gate"
+              : "proposal is not a valid conf overlay — nothing to gate",
           },
         }];
     guardrails.unshift(...gates);
@@ -397,6 +404,7 @@ export function VerifyScreen() {
             <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-edge font-mono text-[11px] text-sub">
               <span>{
                 proposal?.kind === "overlay" ? "proposed_config · valid JSON overlay"
+                  : proposal?.kind === "empty-overlay" ? "proposed_config · empty overlay — nothing proposed"
                   : proposal?.kind === "diff" ? "proposed_diff · unified diff"
                     : proposal?.kind === "invalid-json" ? "proposed_config · invalid JSON"
                       : proposal?.kind === "invalid-overlay" ? "proposed_config · invalid overlay"
@@ -405,16 +413,22 @@ export function VerifyScreen() {
               <span className="text-muted">
                 {overlay
                   ? `${proposalKeys.length} conf ${proposalKeys.length === 1 ? "key" : "keys"}`
+                  : emptyOverlay ? "0 conf keys"
                   : "original text shown verbatim"}
               </span>
             </div>
             <div className="p-3.5">
               {overlay ? (
                 <div className="flex flex-col gap-1.5">
-                  {Object.entries(overlay).map(([k, val]) => (
+                  {entries.map(([k, val]) => (
                     <Metric key={k} label={k} value={val} />
                   ))}
                 </div>
+              ) : emptyOverlay ? (
+                <Prose size="xs" className="text-dim">
+                  The verify lane stored an empty overlay: it proposes no setting, so there is
+                  nothing to gate or apply.
+                </Prose>
               ) : (
                 <Diff text={v.proposed_diff} />
               )}
@@ -435,6 +449,8 @@ export function VerifyScreen() {
                 <>Apply it yourself: review this unified diff, then <Mono className="text-body">git apply</Mono>.</>
               ) : proposal?.kind === "overlay" ? (
                 <>This is a configuration overlay, not a patch: copy the original proposal and apply its keys manually.</>
+              ) : proposal?.kind === "empty-overlay" ? (
+                <>The stored overlay is empty: nothing is proposed, so there is nothing to apply.</>
               ) : (
                 <>This proposal format is not actionable here; inspect or copy the original text without executing it.</>
               )} The console never executes a proposal.

@@ -9,7 +9,7 @@ import {
 } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import {
-  assessStage, breakEvenSlots, fmt, isVacant, measureNoiseFloorPct, parseProposal, ratioOf,
+  assessStage, breakEvenSlots, fmt, isVacant, measureNoiseFloorPct, overlayEntries, parseProposal, ratioOf,
   readSlots, ruleFiveSkewAbsence, ruleTwoRuntimeResolvable, TAIL_SAMPLE,
 } from "@/contract/rules";
 import { severityRank } from "@/contract/types";
@@ -157,7 +157,7 @@ export function RunDetailScreen() {
    * the captured job_conf rather than a number typed here.
    */
   const proposedDiff = overlay
-    ? Object.entries(overlay)
+    ? overlayEntries(overlay)
         .map(([key, value]) => {
           const currentValue = conf.find((c) => c.key === key)?.value;
           return currentValue === undefined
@@ -570,7 +570,11 @@ export function RunDetailScreen() {
                   <Prose size="xs" className="text-sub">
                     Prose, not a configuration —{" "}
                     <Mono className="text-body2">apex.fix_verifications</Mono>{" "}
-                    {v ? "carries no readable overlay for it" : "holds no row for this finding"}, so
+                    {v
+                      ? proposal?.kind === "empty-overlay"
+                        ? "carries an empty overlay for it — nothing proposed"
+                        : "carries no readable overlay for it"
+                      : "holds no row for this finding"}, so
                     there is no diff to show. Turning the sentence into testable keys is the verify
                     lane&rsquo;s job. UNTRUSTED: authored about the observed job.
                   </Prose>
