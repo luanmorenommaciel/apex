@@ -94,7 +94,6 @@ aligned by `stage_id+plan_fingerprint`.
 
 ```bash
 claude mcp add --scope user --transport stdio apex \
-  --env APEX_MCP_BACKEND=clickhouse \
   --env CLICKHOUSE_HOST=127.0.0.1 --env CLICKHOUSE_PORT=8123 \
   --env CLICKHOUSE_USER=apex --env CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD}" \
   --env CLICKHOUSE_DATABASE=apex \
@@ -103,13 +102,18 @@ claude mcp add --scope user --transport stdio apex \
 claude mcp list   # → apex: uvx --from … apex-mcp - ✔ Connected
 ```
 
-Direct ClickHouse is now an explicit opt-in (`APEX_MCP_BACKEND=clickhouse`).
-To read through the Apex API instead, replace the `CLICKHOUSE_*` flags with
-`--env APEX_API_URL=http://127.0.0.1:8099 --env APEX_API_TOKEN="${APEX_API_TOKEN}"`
-(see [README.md](README.md#configuration)).
-
 `uvx` launched with an immediate EOF wrote **0 bytes to stdout**; all
 diagnostics appeared on stderr.
+
+> **Current configuration (P7.1).** The command above is the record of what
+> ran at the time, not current usage. Since P7.1, apex-mcp reads through the
+> Apex API by default and selects ClickHouse only on an explicit opt-in, so the
+> same command today needs `--env APEX_MCP_BACKEND=clickhouse`; with
+> `CLICKHOUSE_*` alone every tool answers `apex_mcp_unconfigured`. To read
+> through the API instead, pass `--env APEX_API_URL=http://127.0.0.1:8099
+> --env APEX_API_TOKEN="${APEX_API_TOKEN}"`, drop the `CLICKHOUSE_*` flags, and
+> **drop `APEX_MCP_BACKEND=clickhouse`** — when set, that variable wins over
+> `APEX_API_URL`. See [README.md](README.md#configuration).
 
 ## Security properties asserted
 
