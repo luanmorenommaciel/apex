@@ -23,6 +23,7 @@ const TABS = [
   { to: "/compare", label: "Compare" },
   { to: "/memory", label: "Memory" },
   { to: "/verify", label: "Verify" },
+  { to: "/search", label: "Search KB" },
 ];
 
 export function NavBar() {
