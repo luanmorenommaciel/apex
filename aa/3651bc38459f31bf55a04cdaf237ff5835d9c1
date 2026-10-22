@@ -1,0 +1,23 @@
+serve/.mcp.json
+  s_4afec7b1e4caff::t_003477b054444b 10-13,21
+serve/VALIDATION.md
+  s_4afec7b1e4caff::t_9f0c88f179e0ec 97,106-110
+serve/scripts/c3_real_mcp_smoke.py
+  s_4afec7b1e4caff::t_3fe2172856be72 19-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa3651bc38459f31bf55a04cdaf237ff5835d9c1",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "unknown"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
