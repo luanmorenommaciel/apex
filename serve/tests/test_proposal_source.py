@@ -14,7 +14,7 @@ import json
 import pytest
 
 from apex_mcp import diagnose
-from apex_mcp.models import FixSuggestion, VerificationView
+from apex_mcp.models import JS_TRIM_CHARS, FixSuggestion, VerificationView
 from tests.conftest import finding_row, stage_row
 
 FINDING = finding_row(finding_id="finding-1", confidence_score=0.99)  # SKEW_ON_JOIN
@@ -86,8 +86,12 @@ def _js_string(value: object) -> str:
 
 def console_overlay(stored: str) -> dict[str, str] | None:
     """What the console shows: a faithful port of ``parseProposal``'s overlay
-    branch (front/src/contract/rules.ts). ``None`` = not an overlay."""
-    trimmed = stored.strip()
+    branch (front/src/contract/rules.ts). ``None`` = not an overlay.
+
+    ``trim()`` is JavaScript's set (``JS_TRIM_CHARS``), not ``str.strip()``.
+    The authoritative cross-door check is contract/fixtures/proposal_parity.json
+    (tests/test_proposal_parity.py), which drives the real parsers."""
+    trimmed = stored.strip(JS_TRIM_CHARS)
     if not trimmed:
         return None
 
@@ -167,15 +171,122 @@ def test_no_row_keeps_the_recipe_in_canonical_order():
     "stored",
     ["{not json", "", "[]", '"x"', "{}", '{"a": null}', '{"a": {"b": "c"}}', '{"a": NaN}'],
 )
-def test_an_unusable_stored_overlay_falls_back_to_the_recipe(stored):
-    """Whatever the console cannot render as an overlay is not authoritative."""
+def test_an_unusable_stored_overlay_shows_the_recipe_but_hands_over_nothing(stored):
+    """Whatever the console cannot render as an overlay is not authoritative.
+
+    The recipe stays visible as data, but a verification row sits beside it
+    whose verdict never assessed those settings — so no diff and no PR body,
+    the same pattern as a refusal."""
     suggestion = _suggest([_row(stored)])
 
     assert console_overlay(stored) in (None, {})
     assert suggestion.verification is not None
     assert suggestion.proposed_config == SKEW_RECIPE
-    assert _diff_pairs(suggestion.proposed_diff) == sorted(SKEW_RECIPE.items())
+    assert list(suggestion.proposed_config) == sorted(SKEW_RECIPE)
+    assert suggestion.proposed_diff == ""
+    assert suggestion.pr_body == ""
+    assert suggestion.advisory_only is True
+    assert suggestion.applied is False
+    assert any("does not transfer to the recipe" in w for w in suggestion.warnings)
     assert not any("verify lane's stored overlay" in n for n in suggestion.notes)
+
+
+# -- SRP-22 coordinator decisions: empty overlay, whitespace, key order -------
+@pytest.mark.parametrize("stored", ["{}", "  {}  ", "\ufeff{ }\u00a0"])
+def test_an_empty_overlay_proposes_nothing_and_gets_no_diff(stored):
+    suggestion = _suggest([_row(stored)])
+
+    assert suggestion.proposed_diff == ""
+    assert suggestion.pr_body == ""
+    assert suggestion.advisory_only is True
+    assert suggestion.gated is False
+    assert suggestion.applied is False
+    # the recipe stays visible as data, in code-point order
+    assert suggestion.proposed_config == SKEW_RECIPE
+    assert list(suggestion.proposed_config) == sorted(SKEW_RECIPE)
+    assert suggestion.verification is not None
+    assert suggestion.verification.proposed_config == {}
+    empty = [w for w in suggestion.warnings if "empty overlay" in w]
+    assert len(empty) == 1
+    assert "proposed nothing" in empty[0]
+    assert "No diff or PR body is offered" in empty[0]
+    assert "does not transfer to the recipe" in empty[0]
+    assert not any("no readable overlay" in w for w in suggestion.warnings)
+
+
+def test_an_unparseable_overlay_is_named_differently_from_an_empty_one():
+    suggestion = _suggest([_row("{not json")])
+
+    assert any("no readable overlay" in w for w in suggestion.warnings)
+    assert not any("empty overlay" in w for w in suggestion.warnings)
+    assert suggestion.proposed_diff == ""
+
+
+def test_no_verification_row_still_hands_over_the_recipe_diff():
+    suggestion = _suggest([])
+
+    assert suggestion.advisory_only is False
+    assert _diff_pairs(suggestion.proposed_diff) == sorted(SKEW_RECIPE.items())
+    assert suggestion.pr_body != ""
+
+
+# Keys whose code-point order differs from JS insertion order (integer-like
+# keys first) and from UTF-16 code-unit order (astral before U+FFFF).
+CODE_POINT_KEYS = {
+    "spark.z": "1",
+    "10": "a",
+    "9": "b",
+    "2": "c",
+    "Spark.B": "d",
+    "spark.b": "e",
+    "\uff21": "bmp",  # FULLWIDTH A: printable, above every surrogate unit
+    "\U0001F600": "astral",
+}
+
+
+def _pr_bullets(body: str) -> list[tuple[str, str]]:
+    import re
+
+    return re.findall(r"^- `([^`]*)` = `([^`]*)`$", body, re.M)
+
+
+def test_a_multi_key_overlay_renders_in_code_point_order_everywhere():
+    stored = json.dumps(
+        dict(reversed(list(CODE_POINT_KEYS.items()))), ensure_ascii=False
+    )
+    suggestion = _suggest([_row(stored)])
+
+    expected = sorted(CODE_POINT_KEYS.items())  # Python: code-point order
+    assert [k for k, _ in expected] == [
+        "10", "2", "9", "Spark.B", "spark.b", "spark.z", "\uff21", "\U0001F600",
+    ]
+    assert list(suggestion.proposed_config.items()) == expected
+    assert _diff_pairs(suggestion.proposed_diff) == expected
+    assert _pr_bullets(suggestion.pr_body) == expected
+    assert suggestion.advisory_only is False
+
+
+@pytest.mark.parametrize("wrap", ["\u00a0", "\ufeff", "\u3000", "\u2028"])
+def test_a_js_trim_wrapped_overlay_is_the_stored_overlay_not_the_recipe(wrap):
+    stored = f"{wrap}{STORED}{wrap}"
+    suggestion = _suggest([_row(stored)])
+
+    assert suggestion.proposed_config == console_overlay(STORED)
+    assert suggestion.proposed_config != SKEW_RECIPE
+    assert _diff_pairs(suggestion.proposed_diff) == sorted(console_overlay(STORED).items())
+    assert "overlay the verify lane evaluated" in suggestion.pr_body
+    assert suggestion.advisory_only is False
+
+
+@pytest.mark.parametrize("wrap", ["\u0085", "\u180e", "\u200b", "\u001c"])
+def test_a_non_trim_wrapped_overlay_is_unreadable_on_both_doors(wrap):
+    stored = f"{wrap}{STORED}"
+    suggestion = _suggest([_row(stored)])
+
+    assert console_overlay(stored) is None
+    assert suggestion.verification.proposed_config == {}
+    assert suggestion.proposed_diff == ""
+    assert any("no readable overlay" in w for w in suggestion.warnings)
 
 
 def test_scalar_values_are_stringified_like_the_console():

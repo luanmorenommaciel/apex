@@ -36,6 +36,7 @@ from .models import (
     StageSymptom,
     StageView,
     VerificationView,
+    read_overlay,
 )
 
 MB = 1 << 20
@@ -1618,8 +1619,12 @@ def suggest_fix(
     that overlay IS the proposal — ``proposed_config``, the diff and the PR
     body all render it — so both doors name the same settings for the same
     finding (the console projects the same column as ``proposed_diff``).
-    Without a row, or with an empty/unparseable overlay, the heuristic recipe
-    is proposed. Either way the overlay is normalized (``normalize_overlay``).
+    Without a row, the heuristic recipe is proposed. With a row whose overlay
+    is empty (``{}`` — nothing proposed) or unreadable, the recipe stays
+    visible in ``proposed_config`` as data but no diff or PR body is handed
+    over: the row's verdict does not transfer to settings it never assessed.
+    Either way the overlay is normalized (``normalize_overlay``: keys in
+    Unicode code-point order, as the console's ``overlayEntries`` lists them).
     A fix the verify lane REFUSED is still named in ``proposed_config``, but
     no ready-to-apply diff is handed over for it.
 
@@ -1695,13 +1700,24 @@ def suggest_fix(
             if verification_lookup is not None
             else verification_rows
         )
-        verification = next(
+        verification_row = next(
             (
-                VerificationView.model_validate(row)
+                row
                 for row in (rows_for_finding or [])
                 if str(row.get("finding_id") or "") == finding.finding_id
             ),
             None,
+        )
+        verification = (
+            VerificationView.model_validate(verification_row)
+            if verification_row is not None
+            else None
+        )
+        # The view holds {} for both "empty object" and "unreadable"; the raw
+        # column tells them apart for the warning only.
+        stored_empty_object = (
+            verification_row is not None
+            and read_overlay(verification_row.get("proposed_config")) == {}
         )
     # -- 2. stub: heuristics until the engine lane lands --------------------
     else:
@@ -1730,6 +1746,7 @@ def suggest_fix(
                 notes=notes,
             )
         verification = None  # a verification is keyed to a finding; there is none
+        stored_empty_object = False
         worst = diagnosis.symptoms[0]
         symptom = worst.symptom
         target_stage = worst.stage_id
@@ -1784,14 +1801,34 @@ def suggest_fix(
     # refused is the worst output this lane can produce, so the diff is
     # withheld while the recipe itself stays visible in proposed_config.
     refused = verification is not None and _is_refusal(verification)
+    # A verification row whose overlay is empty ({}) or unreadable proposes
+    # nothing usable. Its verdict sits beside the proposal, so handing over a
+    # ready-to-apply diff of the RECIPE would dress settings the verify lane
+    # never assessed in that verdict. Same pattern as a refusal: the recipe
+    # stays visible in proposed_config as data, no diff or PR body is offered.
+    # The console reports the same row as "empty overlay — nothing proposed"
+    # (or an unreadable proposal) and gates nothing over it.
+    no_verified_overlay = (
+        verification is not None and not verification.proposed_config
+    )
     if verification is not None:
         notes.extend(_verification_notes(verification, recipe_config))
-        if not verification.proposed_config:
+        if no_verified_overlay and stored_empty_object:
+            warnings.append(
+                "The verification row for this finding stores an empty overlay "
+                "({}): the verify lane proposed nothing. No diff or PR body is "
+                "offered; the recipe settings in proposed_config are data only. "
+                "The verify lane's verdict does not transfer to the recipe "
+                "settings shown here."
+            )
+        elif no_verified_overlay:
             warnings.append(
                 "The verification row for this finding has no readable overlay "
-                "(its proposed_config is empty or could not be parsed). The "
-                "verify lane's verdict concerns settings that cannot be shown, "
-                "and it does not transfer to the recipe settings proposed here."
+                "(its proposed_config is missing or could not be parsed). No "
+                "diff or PR body is offered; the recipe settings in "
+                "proposed_config are data only. The verify lane's verdict "
+                "concerns settings that cannot be shown, and it does not "
+                "transfer to the recipe settings proposed here."
             )
         if refused:
             warnings.insert(
@@ -1810,7 +1847,7 @@ def suggest_fix(
             "a backtick). No diff or PR body is offered; the settings are in "
             "proposed_config as data."
         )
-    withheld = refused or unrenderable
+    withheld = refused or unrenderable or no_verified_overlay
 
     gated = confidence < min_confidence
     if gated:
