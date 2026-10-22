@@ -1,0 +1,21 @@
+serve/src/apex_mcp/models.py
+  s_e1070fee7f3bf4::t_5d88cbcd6906d0 525-530
+serve/tests/test_proposal_source.py
+  s_e1070fee7f3bf4::t_7d7ed08818cf15 550-569
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "96b79e3100a290ead1f94688e4c081e777558c00",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
