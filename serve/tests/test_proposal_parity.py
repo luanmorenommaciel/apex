@@ -133,7 +133,7 @@ def test_zero_disagreement_with_the_console_parser(tmp_path):
     rules = (front / "src" / "contract" / "rules.ts").as_uri()
     proc = subprocess.run(
         [node, "--experimental-strip-types", "--no-warnings", str(script), str(FIXTURE), rules],
-        capture_output=True, text=True, timeout=120, check=False,
+        capture_output=True, text=True, encoding="utf-8", timeout=120, check=False,
     )
     assert proc.returncode == 0, f"console parser failed to run: {proc.stderr[-2000:]}"
     console = json.loads(proc.stdout)
@@ -143,6 +143,9 @@ def test_zero_disagreement_with_the_console_parser(tmp_path):
         mcp.append(
             {"kind": _kind(overlay), "entries": [list(p) for p in (overlay or {}).items()]}
         )
+    # zip() stops at the shorter list: a short node output must not pass.
+    assert len(console) == len(CASES)
+    assert len(mcp) == len(CASES)
     disagreements = [
         (case["name"], c, m) for case, c, m in zip(CASES, console, mcp) if c != m
     ]
