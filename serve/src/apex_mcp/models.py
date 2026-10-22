@@ -16,6 +16,7 @@ does not fit these models, so injected prose has no channel to ride on.
 from __future__ import annotations
 
 import json
+import math
 from decimal import Decimal
 from typing import Literal
 
@@ -319,8 +320,6 @@ class KbHits(BaseModel):
 # that Apex authored would devalue the marker everywhere else it is used.
 VERIFICATION_UNTRUSTED_FIELDS: list[str] = []
 
-# The one convention a reader must not get wrong. It is repeated in the field
-# descriptions because the schema is what a client actually sees.
 def _reject_json_constant(name: str) -> object:
     """``JSON.parse`` rejects NaN/Infinity; Python's ``json`` accepts them."""
     raise ValueError(f"non-standard JSON constant {name}")
@@ -329,10 +328,13 @@ def _reject_json_constant(name: str) -> object:
 def _js_scalar_string(value: object) -> str | None:
     """``String(value)`` as the console computes it for a JSON scalar.
 
-    ``None`` means "not a scalar the console accepts" (null, object, array).
-    Numbers follow JavaScript's shortest round-trip rendering: integral values
-    print without ``.0`` and plain notation is used for 1e-6 <= |x| < 1e21.
-    Integers beyond 2**53 are not reproduced (JavaScript would round them);
+    ``None`` means "not a scalar the console accepts" (null, object, array)
+    or a non-finite number. Overflowing literals such as ``1e400`` parse to
+    infinity; they are treated as an invalid overlay rather than rendered, so
+    a hostile or corrupt value can never raise inside the validator. Numbers
+    follow JavaScript's shortest round-trip rendering: integral values print
+    without ``.0`` and plain notation is used for 1e-6 <= |x| < 1e21. JSON
+    integers beyond 2**53 are not reproduced (JavaScript would round them);
     no Spark conf value is one.
     """
     if isinstance(value, str):
@@ -342,18 +344,24 @@ def _js_scalar_string(value: object) -> str | None:
     if isinstance(value, int):
         return str(value)
     if isinstance(value, float):
+        if not math.isfinite(value):
+            return None
         if value == 0:
             return "0"
         if 1e-6 <= abs(value) < 1e21:
-            if value.is_integer():
+            if value.is_integer() and abs(value) < 2**53:
                 return str(int(value))
-            return format(Decimal(repr(value)), "f")
+            # repr is the shortest round-trip digits, as JavaScript prints
+            # them; only an integral repr ends in ".0", which JS omits
+            return format(Decimal(repr(value)), "f").removesuffix(".0")
         mantissa, _, exponent = repr(value).partition("e")
         exp = int(exponent)
         return f"{mantissa.removesuffix('.0')}e{'+' if exp >= 0 else '-'}{abs(exp)}"
     return None
 
 
+# The one convention a reader must not get wrong. It is repeated in the field
+# descriptions because the schema is what a client actually sees.
 _SIGN_CONVENTION = (
     "SIGNED percentage change in job runtime: negative means FASTER, positive "
     "means slower."

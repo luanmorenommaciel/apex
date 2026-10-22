@@ -1570,8 +1570,11 @@ def _pr_body(
     stage_id: int | None,
     evidence: str,
     source: str,
+    settings_source: str = "",
 ) -> str:
     settings = "\n".join(f"- `{k}` = `{v}`" for k, v in config.items())
+    if settings_source:
+        settings += f"\n\n{settings_source}"
     return (
         f"## {title}\n\n"
         f"**Job:** `{job_id}`"
@@ -1738,8 +1741,23 @@ def suggest_fix(
     # One proposal source: the verify lane's stored overlay, when usable, is
     # authoritative over the recipe — it is what the console shows and what
     # the verdict is about.
+    settings_source = ""
     if verification is not None and verification.proposed_config:
         config = normalize_overlay(verification.proposed_config)
+        # Apex-authored; the verification_id is a verify-lane identifier but
+        # is neutralized like any other stored text before it enters prose.
+        vid = neutralize(verification.verification_id, 64).replace("`", "'")
+        settings_source = (
+            "_These settings are the overlay the verify lane evaluated "
+            f"(verification `{vid}` "
+            "in apex.fix_verifications), not the heuristic recipe."
+        )
+        if config != recipe_config:
+            settings_source += (
+                " They differ from the heuristic recipe the Why section "
+                "above describes."
+            )
+        settings_source += "_"
     else:
         config = recipe_config
 
@@ -1751,6 +1769,13 @@ def suggest_fix(
     refused = verification is not None and _is_refusal(verification)
     if verification is not None:
         notes.extend(_verification_notes(verification, recipe_config))
+        if not verification.proposed_config:
+            warnings.append(
+                "The verification row for this finding has no readable overlay "
+                "(its proposed_config is empty or could not be parsed). The "
+                "verify lane's verdict concerns settings that cannot be shown, "
+                "and it does not transfer to the recipe settings proposed here."
+            )
         if refused:
             warnings.insert(
                 0,
@@ -1814,7 +1839,14 @@ def suggest_fix(
             ""
             if withheld
             else _pr_body(
-                title, rationale, config, job_id, target_stage, evidence, source
+                title,
+                rationale,
+                config,
+                job_id,
+                target_stage,
+                evidence,
+                source,
+                settings_source,
             )
         ),
         verification=verification,
