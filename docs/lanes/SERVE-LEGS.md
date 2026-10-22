@@ -320,7 +320,7 @@ something an agent can do by calling a tool — and both must get the same answe
 | Screen · action | Console reads today | MCP twin | Gap |
 |---|---|---|---|
 | Health badge | `GET /v1/health` | `apex_status` — **not registered** (L1) | finish L1; same payload both doors |
-| Runs · recent list | `GET /runs` | `list_runs` | paired ✅ |
+| Runs · recent list | `GET /runs?limit=50` — no time window | `list_runs` — defaults `limit=20`, `since_hours=168` | different defaults: a run older than 7 days, or the 21st–50th, shows in the console only |
 | Runs · search job_id / app_name / fingerprint | client-side filter | `list_runs(app_name)` | no `job_id` or `plan_fingerprint` filter |
 | Runs · "findings only" | client-side filter | — | no `has_findings` filter |
 | Run detail · verdict, stages, findings, transitions | `/runs/{id}`, `/stages`, `/findings`, `/transitions` + `rules.ts` | `analyze_run(detail)` | two verdict engines; no cross-door check |
@@ -333,7 +333,7 @@ something an agent can do by calling a tool — and both must get the same answe
 | Finding detail | findings + `fixVerification` + `shapeRuns` | `verify_fix(job_id, finding_id)` (partial) | no single-finding lookup by `finding_id` |
 | Compare · pick baseline | `/runs/{id}/baseline-candidates` | `compare_runs` auto-baseline | MCP cannot list candidates; console ignores `/comparison` |
 | Memory · plan shapes + runs per shape | `/plans`, `/plans/{fp}/runs` | `recall_similar_runs` (per job only) | no shape-level listing (F6.3 fleet view) |
-| Verify · proposal + two verdicts | `fix_verifications.proposed_diff` | `verify_fix` + `suggest_fix` | two diff sources — confirm they cannot disagree |
+| Verify · proposal + two verdicts | `fix_verifications.proposed_config`, projected as `proposed_diff` | `verify_fix` + `suggest_fix` (generates a diff and carries `proposed_config`) | two representations of one proposal — confirm they cannot disagree |
 | Verify · copy diff | clipboard | n/a — `applied=False` | paired by design ✅ |
 | Ask · natural-language question | scripted mock | all tools | no backend at all |
 | — | — | `search_kb` | no console surface |
@@ -346,14 +346,14 @@ Sizes follow the taskspec scale. "Owner" is a suggestion from the 09-15 sync.
 |---|---|---|---|---|
 | P7.1 | **MCP over HTTP.** Add an API-backed read path to `apex-mcp` (`APEX_API_URL` + token) so every tool reads through FastAPI; keep direct ClickHouse only as an explicit opt-in for local dev. Errors keep `_sanitize()` discipline — no token or URL reaches the model. | M | — | Sidymar |
 | P7.2 | **One verdict engine.** Make the console call the diagnostic routes (`/diagnosis`, `/comparison`, `/recall`, `/verification`) instead of re-deriving verdicts from raw rows, or — if `rules.ts` must stay client-side — add a gate that runs both on the same seeded runs and fails on any difference. | L | P7.1 | Agmar + Sidymar |
-| P7.3 | **Cross-door parity gate.** Extend `console_parity_gate.py` (or a sibling) so each row of the pairing map is asserted: the console's answer and the MCP tool's answer for the same `job_id` match. | M | P7.2 | — |
+| P7.3 | **Cross-door parity gate.** Extend `console_parity_gate.py` (or a sibling) with one check per pairing-map row, in three kinds: *job-scoped* rows compare both doors' answers for the same `job_id`; *unscoped* rows (health, run list) compare them under the same normalized parameters; *n/a* rows (copy diff) are listed as excluded, with the reason. P7.3 ships the gate and the rows already paired once P7.2 lands. Each later pairing task adds its own row as part of its done criteria, so the gate never waits on unrelated work and never silently skips a row. | M | P7.2 | — |
 | P7.4 | **Finish L1 `apex_status`** and make `GET /v1/health` return the same `ServerStatus` model. | S | L1 tasks | — |
-| P7.5 | **`list_runs` filters:** `job_id` prefix, `plan_fingerprint`, `has_findings`; mirror them as query params on `GET /runs` so the console stops filtering client-side. | S | — | — |
+| P7.5 | **Align the run list.** Give `list_runs` and `GET /runs` the same default limit, time window and paging (today 20 rows / 168 h vs 50 rows / no window). Then add `job_id` prefix, `plan_fingerprint` and `has_findings` filters to both, so the console stops filtering client-side. | S | — | — |
 | P7.6 | **Expose job_conf + plan sample** to the MCP by extending `analyze_run(detail="full")` rather than adding tools (keeps the tool surface flat, per the L2 rule). Unblocks F4.3. | S | — | — |
 | P7.7 | **Finding lookup.** Decide: extend `verify_fix` / `analyze_run` to accept `finding_id` alone, or add one `get_finding` tool. Default to extending. | S | — | — |
 | P7.8 | **Baseline candidates in `compare_runs`.** Return the candidate list in the payload (always, and as the reason on `not_comparable`); switch Compare to `/comparison`. | S | P7.2 | — |
 | P7.9 | **Plan-shape listing** for the Memory screen: an `apex://plans` resource (not a tool) mirroring `/plans` and `/plans/{fp}/runs`. Delivers F6.3. | S | — | — |
-| P7.10 | **One diff source.** Confirm whether `fix_verifications.proposed_diff` and `suggest_fix`'s diff can differ for the same finding; if they can, make one authoritative and have the other read it. | S | — | — |
+| P7.10 | **One proposal source.** `apex.fix_verifications` stores `proposed_config` (canonical JSON). `proposed_diff` is only the name the console and `ch.py` project it under, while `suggest_fix` generates a real diff. Compare the normalized `proposed_config` the two doors carry for the same finding, not the rendered text. If they can differ, make the stored row authoritative and have `suggest_fix` render from it. No schema change. | S | — | — |
 | P7.11 | **Wire Ask.** Replace the script with calls to the diagnostic routes. Open question first: does Ask put an LLM in the loop (`llm_calls` > 0), or is it a structured router over the tools? | M | P7.1, P7.2 | Agmar |
 | P7.12 | **MCP prompts** `/apex:diagnose` and `/apex:fix` — the agent-side twins of "ask about this run" and "propose fix". Closes F5.4. | S | — | — |
 | P7.13 | **`search_kb` in the console** — a search box on Ask or Runs over `/diagnostics/search`. | XS | — | — |
