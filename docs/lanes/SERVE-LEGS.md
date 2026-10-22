@@ -380,7 +380,7 @@ Tracked in Linear (project **Apex**, `SRP-*`). Nothing in L7 is merged yet.
 | P7.11 | **needs a decision** | — | SRP-29 | Does Ask put an LLM in the loop? |
 | P7.14 | **needs a decision** | — | SRP-26 | Retire `apex-mcp-http`? |
 | P7.3, P7.8 | blocked | — | SRP-27, SRP-28 | Wait on P7.2. |
-| P7.5 | in progress — stacked on #195 | — | SRP-18 | Run list aligned + server-side filters; PR will target #195's branch. |
+| P7.5 | in review — stacked on #195 | #200 | SRP-18 | Same defaults on both doors (50 rows, 7 days, offset paging) + server-side filters; 826 passed; live parity 28/0. CI runs once retargeted to main. |
 | P7.6, P7.7, P7.9 | next | — | SRP-19, -20, -21 | Follow P7.5 on the same stack. |
 | P7.4 | blocked | — | SRP-17 | Waits on the remaining L1 status tasks. |
 
