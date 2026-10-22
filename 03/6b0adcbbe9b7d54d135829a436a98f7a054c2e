@@ -1,0 +1,33 @@
+front/src/contract/rules.test.ts
+  s_e1070fee7f3bf4::t_f798b848ef223d 213-234
+front/src/contract/rules.ts
+  s_e1070fee7f3bf4::t_81f684dd26e138 447-455
+front/src/data/queries.ts
+  s_e1070fee7f3bf4::t_5a38b03a175afa 310
+serve/src/apex_mcp/ch.py
+  s_e1070fee7f3bf4::t_f8bd3e796ce250 412-415,444
+serve/src/apex_mcp/diagnose.py
+  s_e1070fee7f3bf4::t_6f5279ceb2126c 18,1606,1625-1632,1691-1697,1701
+serve/src/apex_mcp/models.py
+  s_e1070fee7f3bf4::t_ead546b756fcd9 328-334,338-351,358-359,362,367,515-517
+serve/src/apex_mcp/server.py
+  s_e1070fee7f3bf4::t_2e12195e9926ee 602-603
+serve/tests/test_proposal_source.py
+  s_e1070fee7f3bf4::t_10e21588ddd53e 320-321,323-324,327,332-371,420-549
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "036b0adcbbe9b7d54d135829a436a98f7a054c2e",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
