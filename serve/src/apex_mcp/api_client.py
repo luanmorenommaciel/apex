@@ -213,8 +213,9 @@ def _floor(value: float | None) -> float | None:
     Direct mode treats a negative or non-finite floor as no floor at all
     (diagnose._valid_noise_floor). The API instead rejects it with 422, which
     would turn the same call into an error. Sending None keeps the verdict
-    identical; only diagnose's note differs (it says "no floor was supplied"
-    rather than "an invalid floor was supplied").
+    identical. diagnose's note then says "no floor was supplied", so
+    ApiTools swaps in direct mode's "an invalid floor was supplied" sentence
+    (see COMPARE_INVALID_FLOOR_NOTE / RECALL_INVALID_FLOOR_NOTE).
     """
     if value is None:
         return None
@@ -299,6 +300,9 @@ class ApiClient:
                 params=query,
                 headers={"Accept": "application/json"},
                 auth=_Bearer(self._token),
+                # Per request, so an injected client that follows by default
+                # cannot carry the token to wherever a redirect points.
+                follow_redirects=False,
             )
         except httpx.TimeoutException as exc:
             self._log_failure("timed out", exc)
@@ -369,6 +373,39 @@ class ApiClient:
         return STORE_ERRORS.get(code, FAILED)
 
 
+# diagnose.py builds these inline, so they are copied VERBATIM rather than
+# imported; a test asserts each equals what diagnose produces. They let API
+# mode report an invalid floor exactly as direct mode does: the API refuses
+# the value (422) before diagnose can see it, so the client sends no floor and
+# swaps diagnose's "none supplied" sentence for its "invalid" one.
+COMPARE_NO_FLOOR_NOTE = (
+    "No noise floor was supplied, so metric deltas above are "
+    "measurements, not regressions (CONTRACT.md rule 2: the floor is "
+    "MEASURED per shape and scale — 32-59% at 8 tasks and 32.9% at "
+    "100 tasks on this system — and two runs cannot measure their "
+    "own). Pass noise_floor_pct to adjudicate them; an unresolvable "
+    "delta is not proof of zero change."
+)
+COMPARE_INVALID_FLOOR_NOTE = (
+    "An invalid noise floor was supplied, so metric deltas above remain "
+    "measurements, not adjudicated regressions."
+)
+RECALL_NO_FLOOR_NOTE = (
+    "No noise floor was supplied (CONTRACT.md rule 2: the floor is "
+    "MEASURED per shape and scale, and these runs cannot measure "
+    "their own). Pass noise_floor_pct to adjudicate the spread."
+)
+RECALL_INVALID_FLOOR_NOTE = (
+    "An invalid noise floor was supplied; no faster or slower "
+    "claim can be adjudicated from it."
+)
+
+
+def _swap(notes: list[str], old: str, new: str) -> list[str]:
+    """Exact-match replacement only: any other note passes through untouched."""
+    return [new if note == old else note for note in notes]
+
+
 def _validated(model: type[M], payload: Any) -> M:
     """The payload as the tool's own model, or a sanitized failure.
 
@@ -425,13 +462,17 @@ class ApiTools:
 
     def compare_runs(self, current_job_id: str, baseline_job_id: str,
                      noise_floor_pct: float | None) -> RunComparison:
-        return self._call(
+        sent = _floor(noise_floor_pct)
+        comparison = self._call(
             "compare_runs",
             RunComparison,
-            {"baseline_job_id": baseline_job_id,
-             "noise_floor_pct": _floor(noise_floor_pct)},
+            {"baseline_job_id": baseline_job_id, "noise_floor_pct": sent},
             job_id=_require_job_id(current_job_id),
         )
+        if noise_floor_pct is not None and sent is None:
+            comparison = comparison.model_copy(update={"notes": _swap(
+                comparison.notes, COMPARE_NO_FLOOR_NOTE, COMPARE_INVALID_FLOOR_NOTE)})
+        return comparison
 
     def list_runs(self, limit: int, since_hours: int, app_name: str) -> RunList:
         return self._call(
@@ -445,12 +486,18 @@ class ApiTools:
 
     def recall_similar_runs(self, job_id: str, top_k: int,
                             noise_floor_pct: float | None) -> RecallResult:
-        return self._call(
+        sent = _floor(noise_floor_pct)
+        recall = self._call(
             "recall_similar_runs",
             RecallResult,
-            {"top_k": top_k, "noise_floor_pct": _floor(noise_floor_pct)},
+            {"top_k": top_k, "noise_floor_pct": sent},
             job_id=_require_job_id(job_id),
         )
+        if noise_floor_pct is not None and sent is None and recall.summary:
+            summary = recall.summary.model_copy(update={"notes": _swap(
+                recall.summary.notes, RECALL_NO_FLOOR_NOTE, RECALL_INVALID_FLOOR_NOTE)})
+            recall = recall.model_copy(update={"summary": summary})
+        return recall
 
     def verify_fix(self, job_id: str, finding_id: str | None) -> FixVerdict:
         return self._call("verify_fix", FixVerdict, {"finding_id": finding_id},

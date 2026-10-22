@@ -541,6 +541,47 @@ def test_the_request_carries_the_bearer_token_and_no_redirects_are_followed():
     assert seen[0].url.host == HOST
 
 
+@pytest.mark.parametrize("injected", ["httpx_follows", "testclient"])
+def test_an_injected_client_that_follows_redirects_still_does_not(injected):
+    """No-follow is set per request, not inherited from whichever client is injected."""
+    if injected == "httpx_follows":
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            if request.url.host == HOST:
+                return httpx.Response(302, headers={
+                    "location": "http://evil.example/v1/diagnostics/runs"})
+            return httpx.Response(200, json={"runs": [], "returned": 0})
+
+        http = httpx.Client(base_url=BASE_URL, follow_redirects=True,
+                            transport=httpx.MockTransport(handler))
+    else:
+        from fastapi import FastAPI
+        from fastapi.responses import RedirectResponse
+
+        app = FastAPI()
+        seen = []
+
+        @app.get("/v1/diagnostics/runs")
+        def redirect():  # noqa: ANN202
+            seen.append("redirected")
+            return RedirectResponse("/v1/elsewhere", status_code=307)
+
+        @app.get("/v1/elsewhere")
+        def elsewhere():  # noqa: ANN202
+            seen.append("followed")
+            return {"runs": [], "returned": 0}
+
+        http = TestClient(app, base_url=BASE_URL)
+        assert http.follow_redirects is True  # TestClient's default
+
+    mcp = create_api_server(ApiClient(BASE_URL, TOKEN, http=http))
+    message = _error(mcp, "list_runs", {})
+    assert message.endswith(api_client.FAILED)
+    assert len(seen) == 1  # the redirect target was never requested
+
+
 @pytest.mark.parametrize(
     ("configured", "expected"),
     [
@@ -826,54 +867,64 @@ def test_plain_http_to_a_remote_host_warns_once(url, warns, caplog):
 # ===========================================================================
 # noise_floor_pct parity (review #5)
 # ===========================================================================
-INVALID_FLOORS = [-0.1, float("inf"), float("-inf"), float("nan")]
-
-_NO_FLOOR_NOTE = "No noise floor was supplied"
-_INVALID_FLOOR_NOTE = "An invalid noise floor was supplied"
-
-
-def _without_floor_notes(payload: dict) -> dict:
-    """The payload minus the one note direct and API mode word differently."""
-    def keep(note: str) -> bool:
-        return not note.startswith((_NO_FLOOR_NOTE, _INVALID_FLOOR_NOTE))
-
-    trimmed = json.loads(json.dumps(payload))
-    trimmed["notes"] = [n for n in trimmed.get("notes", []) if keep(n)]
-    if isinstance(trimmed.get("summary"), dict):
-        trimmed["summary"]["notes"] = [
-            n for n in trimmed["summary"].get("notes", []) if keep(n)]
-    return trimmed
+INVALID_FLOORS = [-1.0, -0.0001, -0.1, float("inf"), float("-inf"), float("nan")]
 
 
 @pytest.mark.parametrize("floor", INVALID_FLOORS, ids=str)
 @pytest.mark.parametrize(
     ("tool", "arguments"),
     [("compare_runs", {"current_job_id": "j", "baseline_job_id": "base"}),
+     ("compare_runs", {"current_job_id": "j"}),  # auto-baseline
      ("recall_similar_runs", {"job_id": "job-current"})],
 )
-def test_an_invalid_noise_floor_succeeds_over_the_api_like_direct_mode(
-    tool, arguments, floor
-):
-    """Same verdict as direct mode — not a 422.
-
-    What remains different, by construction: direct mode passes the invalid
-    value to diagnose, which says "An invalid noise floor was supplied"; API
-    mode sends no floor, so diagnose says "No noise floor was supplied". The
-    API rejects the value before diagnose could see it, and apex_api is out of
-    scope, so that note is the one difference left.
-    """
+def test_an_invalid_noise_floor_matches_direct_mode_exactly(tool, arguments, floor):
+    """FULL payload equality — the invalid-floor note included, no stripping."""
     arguments = {**arguments, "noise_floor_pct": floor}
     direct = _call(_direct_server(), tool, arguments)
     over_http = _call(_api_server(), tool, arguments)
-    assert _without_floor_notes(over_http) == _without_floor_notes(direct)
+    assert over_http == direct
+    # Guard the fixture: the invalid-floor sentence is really in play.
+    notes = direct["notes"] if tool == "compare_runs" else direct["summary"]["notes"]
+    expected = (api_client.COMPARE_INVALID_FLOOR_NOTE if tool == "compare_runs"
+                else api_client.RECALL_INVALID_FLOOR_NOTE)
+    assert expected in notes
 
-    def notes(payload: dict) -> list[str]:
-        nested = payload.get("summary")
-        return payload.get("notes", []) + (
-            nested.get("notes", []) if isinstance(nested, dict) else [])
 
-    assert any(n.startswith(_INVALID_FLOOR_NOTE) for n in notes(direct))
-    assert any(n.startswith(_NO_FLOOR_NOTE) for n in notes(over_http))
+@pytest.mark.parametrize("floor", [None, 0.0, 0.05, 0.159])
+def test_valid_or_absent_floors_are_not_rewritten(floor):
+    for tool, arguments in (
+        ("compare_runs", {"current_job_id": "j", "baseline_job_id": "base"}),
+        ("recall_similar_runs", {"job_id": "job-current"}),
+    ):
+        arguments = {**arguments, "noise_floor_pct": floor}
+        assert _call(_api_server(), tool, arguments) == _call(
+            _direct_server(), tool, arguments)
+
+
+def test_the_copied_floor_notes_equal_what_diagnose_produces():
+    """The four sentences are copied from diagnose.py; they must not drift."""
+    from apex_mcp import diagnose
+
+    store = ReadStore(_WorldClient())
+
+    def compare_notes(floor):
+        return diagnose.compare(
+            "base", "j", store.stages("base"), store.stages("j"),
+            store.findings("base"), store.findings("j"), noise_floor_pct=floor,
+        ).notes
+
+    assert api_client.COMPARE_NO_FLOOR_NOTE in compare_notes(None)
+    assert api_client.COMPARE_INVALID_FLOOR_NOTE in compare_notes(-1.0)
+
+    priors = _call(_direct_server(), "recall_similar_runs",
+                   {"job_id": "job-current"})["prior_runs"]
+    from apex_mcp.models import PriorRun
+
+    runs = [PriorRun.model_validate(run) for run in priors]
+    assert diagnose.summarise_recall(runs, None).notes == [
+        api_client.RECALL_NO_FLOOR_NOTE]
+    assert diagnose.summarise_recall(runs, -1.0).notes == [
+        api_client.RECALL_INVALID_FLOOR_NOTE]
 
 
 def test_a_valid_noise_floor_is_sent_unchanged():

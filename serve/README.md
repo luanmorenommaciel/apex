@@ -240,8 +240,9 @@ stderr. A store error the API reports keeps its code (`clickhouse_unavailable`,
 here and points at the **API process's** `CLICKHOUSE_*`, not this server's; an
 unknown code answers `apex_api_failed`. A `job_id` containing `/` cannot be
 addressed over HTTP and answers `apex_api_not_found`. A negative or non-finite
-`noise_floor_pct` is sent as no floor (the API would refuse it), so the verdict
-matches direct mode; only the note reads "no noise floor was supplied".
+`noise_floor_pct` is sent as no floor (the API would refuse it), and the
+answer — including direct mode's "an invalid noise floor was supplied" note —
+matches direct mode exactly.
 
 The HTTP client keeps httpx's default `trust_env`: `HTTP_PROXY` /
 `HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY` and `SSL_CERT_FILE` / `SSL_CERT_DIR`
