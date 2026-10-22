@@ -14,6 +14,10 @@ dependencies = [
   # pulls in — this adds a router and validation layer, not a second runtime.
   "fastapi>=0.115,<1",
   "uvicorn>=0.30,<1",
+  # apex-mcp's API backend (APEX_API_URL) reads through the Apex API over
+  # HTTP. Already present transitively via mcp; pinned directly so the read
+  # path does not depend on another package's dependency list.
+  "httpx>=0.27,<1",
 ]
 
 [project.optional-dependencies]
