@@ -1,0 +1,27 @@
+CHANGELOG.md
+  s_4afec7b1e4caff::t_ba6c34cf5a89db 22-30
+README.md
+  s_4afec7b1e4caff::t_e3195e812bcaa7 91-98,101-103
+scripts/e2e_six_lanes.py
+  s_4afec7b1e4caff::t_ec05c62b23d622 187-189
+serve/README.md
+  s_4afec7b1e4caff::t_ad74a6907fa01c 227,238-249
+serve/VALIDATION.md
+  s_4afec7b1e4caff::t_09b56251fbda97 108-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b965bf3b3c4f82453120d562d01ad4e40cb5f68",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
