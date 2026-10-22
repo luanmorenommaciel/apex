@@ -1,0 +1,21 @@
+serve/src/apex_mcp/api_client.py
+  s_e1070fee7f3bf4::t_c6c8fe14be1c0e 37,161-163
+serve/src/apex_mcp/server.py
+  s_e1070fee7f3bf4::t_1f70e6e5d4be80 654-656,663-666
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4833529dbd6473f478f20a56fe13c55838b75f4d",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
