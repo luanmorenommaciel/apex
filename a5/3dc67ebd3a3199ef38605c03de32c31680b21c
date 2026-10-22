@@ -1,0 +1,45 @@
+front/src/data/queries.ts
+  s_e1070fee7f3bf4::t_0d0e96c0a3f112 167-168,172
+front/src/data/repository.ts
+  s_e1070fee7f3bf4::t_5d8345d420cbab 81-82,268-278,298
+front/src/data/runList.test.ts
+  s_e1070fee7f3bf4::t_41f4c9b6b92b01 103-112
+front/src/screens/RunsScreen.test.tsx
+  s_e1070fee7f3bf4::t_12df149935fe1f 143-188
+front/src/screens/RunsScreen.tsx
+  s_e1070fee7f3bf4::t_4d8a0a45064af7 7,64-66,120-161,169,184,186
+serve/README.md
+  s_e1070fee7f3bf4::t_4893cf0764acd0 24-31
+serve/src/apex_api/routes/diagnostics.py
+  s_e1070fee7f3bf4::t_18400be2912313 31,212
+serve/src/apex_api/routes/resources.py
+  s_e1070fee7f3bf4::t_ae2dec481bc971 26,28,30,76
+serve/src/apex_mcp/api_client.py
+  s_e1070fee7f3bf4::t_afdde9b7cd2612 37,105-109,152-161,424-434,447,508-511,515,524-531
+serve/src/apex_mcp/ch.py
+  s_e1070fee7f3bf4::t_8643e6a27624d0 126-130,148-149,153-188,838,844-845,874-878,883,886-892,906,908-911,913,915,920-921,1204,1365-1378
+serve/src/apex_mcp/server.py
+  s_e1070fee7f3bf4::t_30b05d6ff40263 321-323,331-345,652-654
+serve/tests/test_mcp_over_http.py
+  s_e1070fee7f3bf4::t_e6d299a38089fe 556-561,566-627
+serve/tests/test_run_list_alignment.py
+  s_e1070fee7f3bf4::t_51183a94d3cfb4 50-55,187,189,193,197-204,207-226,228-229,233-251,254,256-261
+serve/tools/mcp_stdio_gate.py
+  s_e1070fee7f3bf4::t_73a449a52f80e2 112-115,118-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a53dc67ebd3a3199ef38605c03de32c31680b21c",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
