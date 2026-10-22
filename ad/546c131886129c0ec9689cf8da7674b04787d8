@@ -1,0 +1,21 @@
+serve/src/apex_api/routes/resources.py
+  s_e1070fee7f3bf4::t_5e0a07d7c99870 3-4,33,52-56
+serve/tests/test_api_diagnostics.py
+  s_e1070fee7f3bf4::t_44f74287c1042c 105-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ad546c131886129c0ec9689cf8da7674b04787d8",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
