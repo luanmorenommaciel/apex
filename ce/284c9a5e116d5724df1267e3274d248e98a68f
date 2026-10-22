@@ -1,0 +1,25 @@
+serve/pyproject.toml
+  s_4afec7b1e4caff::t_2087b63fb246b6 24-25
+serve/src/apex_mcp/api_client.py
+  s_4afec7b1e4caff::t_be901519b701ca 27,29,94-95,106-156,175-180,183,186-189,193-227,238-255,300-301,330,349-351,353-358,363,365,367-369,431-432,451
+serve/src/apex_mcp/server.py
+  s_4afec7b1e4caff::t_880d587ce45179 49,786-788,847-853
+serve/tests/test_mcp_over_http.py
+  s_4afec7b1e4caff::t_55d81d1add74ba 349-351,405,409-415,457-459,462,464-497,614-629,781-907
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce284c9a5e116d5724df1267e3274d248e98a68f",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
