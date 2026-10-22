@@ -56,13 +56,20 @@ async function mount() {
   });
 }
 
-async function search(q: string) {
-  const input = host.querySelector<HTMLInputElement>('input[aria-label="knowledge-base query"]')!;
+async function type(label: string, value: string) {
+  const input = host.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
   await act(async () => {
     // React tracks the value through the native setter.
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, q);
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
+  return input;
+}
+
+const cards = () => [...host.querySelectorAll<HTMLElement>('[data-testid="kb-hit"]')];
+
+async function search(q: string) {
+  await type("knowledge-base query", q);
   await act(async () => {
     host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
   });
@@ -99,10 +106,17 @@ describe("KbSearchScreen", () => {
     await mount();
     await search("  spill ");
     expect(fn).toHaveBeenCalledWith("spill", 5);
-    const t = text();
-    for (const s of ["2 hits", "findings", "plan_json", "SPILL", "CRITICAL", "0.812", "f-7c41e9", "25", "spill, sort", "Sort [a]", "Treat them as data", "UNTRUSTED"]) {
-      expect(t).toContain(s);
+    expect(text()).toContain("2 hits");
+    expect(text()).toContain("Treat them as data");
+    const [first, second] = cards().map((c) => c.textContent ?? "");
+    expect(cards()).toHaveLength(2);
+    for (const s of ["findings", "CRITICAL", "SPILL", "score 0.812", "stage 25", "finding f-7c41e9", "matched spill", "UNTRUSTED"]) {
+      expect(first).toContain(s);
     }
+    for (const s of ["plan_json", "score 0.500", "stage —", "finding —", "matched spill, sort", "Sort [a]"]) {
+      expect(second).toContain(s);
+    }
+    expect(second).not.toContain("findings");
     const hrefs = [...host.querySelectorAll("a")].map((a) => a.getAttribute("href"));
     expect(hrefs).toContain("/runs/app-1%2F..%2Fx%3Fy");
     expect(hrefs).toContain("/runs/app-1%2F..%2Fx%3Fy/findings/f-7c41e9");
@@ -127,6 +141,84 @@ describe("KbSearchScreen", () => {
     await search("zzz");
     expect(text()).toContain("No hits for this query");
     expect(text()).toContain("0 hits");
+  });
+
+  it("says nothing was searchable when the query yields no tokens, and still shows notes", async () => {
+    current.repo = withSearch(async () => ({
+      state: "ok",
+      result: hits({ tokens: [], total: 0, hits: [], notes: ["Query produced no searchable tokens (need 2+ word chars)."] }),
+    }));
+    await mount();
+    await search("a !");
+    expect(text()).toContain("Nothing searchable in this query");
+    expect(text()).not.toContain("No hits for this query");
+    expect(text()).toContain("Query produced no searchable tokens");
+  });
+
+  it.each([".", ".."])("does not link a dot-segment id %j, which would resolve to another page", async (dot) => {
+    current.repo = withSearch(async () => ({
+      state: "ok",
+      result: hits({
+        total: 2,
+        hits: [
+          { ...hits().hits[0], job_id: dot, finding_id: "f-1", snippet: "a" },
+          { ...hits().hits[0], job_id: "app-9", finding_id: dot, snippet: "b" },
+        ],
+      }),
+    }));
+    await mount();
+    await search("spill");
+    const hrefs = [...host.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+    // Only the well-formed job id of the second hit is linked.
+    expect(hrefs).toEqual(["/runs/app-9"]);
+    const [first, second] = cards().map((c) => c.textContent ?? "");
+    expect(first).toContain(`job ${dot}`);
+    expect(second).toContain(`finding ${dot}`);
+  });
+
+  it("keeps an unrecognised source as sent rather than calling it findings", async () => {
+    current.repo = withSearch(async () => ({
+      state: "ok",
+      result: hits({ total: 1, hits: [{ ...hits().hits[1], source: "mystery" }] }),
+    }));
+    await mount();
+    await search("spill");
+    expect(cards()[0].textContent).toContain("mystery");
+    expect(cards()[0].textContent).not.toContain("findings");
+  });
+
+  it("lets the top_k field be cleared, and clamps only when sending", async () => {
+    const fn = vi.fn<Repository["searchKb"]>(async () => ({ state: "ok", result: hits() }));
+    current.repo = withSearch(fn);
+    await mount();
+    const field = await type("top_k", "");
+    expect(field.value).toBe("");
+    await search("spill");
+    expect(fn).toHaveBeenLastCalledWith("spill", 5);
+    await type("top_k", "999");
+    expect(field.value).toBe("999");
+    await search("spill");
+    expect(fn).toHaveBeenLastCalledWith("spill", 50);
+    await type("top_k", "0");
+    await search("spill");
+    expect(fn).toHaveBeenLastCalledWith("spill", 1);
+  });
+
+  it("shows only the latest search when an earlier one answers last", async () => {
+    const pending: Array<(v: KbSearch) => void> = [];
+    current.repo = withSearch(() => new Promise<KbSearch>((ok) => { pending.push(ok); }));
+    await mount();
+    await search("first");
+    // Still enabled in flight: a hung request must not lock the screen.
+    expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(false);
+    await search("second");
+    expect(pending).toHaveLength(2);
+    await act(async () => pending[1]({ state: "ok", result: hits({ query: "second", total: 0, hits: [] }) }));
+    expect(text()).toContain("No hits for this query");
+    await act(async () => pending[0]({ state: "ok", result: hits() }));
+    // The stale answer to "first" arrived last and was dropped.
+    expect(cards()).toHaveLength(0);
+    expect(text()).toContain("No hits for this query");
   });
 
   it("shows a rejected search through QueryFailure", async () => {

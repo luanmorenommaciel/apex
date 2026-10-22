@@ -1,9 +1,9 @@
 /**
  * The http data source.
  *
- * The claim under test is that implementing Repository is the WHOLE change —
- * so these tests exercise the interface, not the screens, and a sibling eval
- * asserts `src/screens` has no diff at all.
+ * These tests exercise the Repository interface, not the screens: what each
+ * method requests and how it maps the answer. (Adding the http source changed
+ * no screen; later features, such as knowledge-base search, did add screens.)
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -428,6 +428,27 @@ describe("searchKb", () => {
     expect(hit).toMatchObject({ source: "plan_json", stage_id: null, finding_id: null, type: "", severity: "", score: 0, matched_tokens: [] });
     expect(typeof hit.snippet).toBe("string");
     expect(out.result.notes).toEqual([]);
+  });
+
+  it.each([["abc"], [{}], [Number.POSITIVE_INFINITY], [true]])(
+    "maps a non-numeric stage_id %j to null, never NaN",
+    async (stage) => {
+      stubFetch(() => respond({ ...payload, hits: [{ ...payload.hits[0], stage_id: stage }] }));
+      const out = await new HttpRepository().searchKb("spill");
+      expect(out.state === "ok" && out.result.hits[0].stage_id).toBeNull();
+    },
+  );
+
+  it("keeps a numeric stage_id, including one sent as text", async () => {
+    stubFetch(() => respond({ ...payload, hits: [{ ...payload.hits[0], stage_id: "7" }] }));
+    const out = await new HttpRepository().searchKb("spill");
+    expect(out.state === "ok" && out.result.hits[0].stage_id).toBe(7);
+  });
+
+  it("keeps an unrecognised source as sent instead of coercing it to findings", async () => {
+    stubFetch(() => respond({ ...payload, hits: [{ ...payload.hits[0], source: "mystery" }] }));
+    const out = await new HttpRepository().searchKb("spill");
+    expect(out.state === "ok" && out.result.hits[0].source).toBe("mystery");
   });
 
   it("reports a missing route as a failure, not as zero hits", async () => {

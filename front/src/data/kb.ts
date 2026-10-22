@@ -13,7 +13,12 @@
  */
 
 export interface KbHit {
-  source: "findings" | "plan_json";
+  /**
+   * "findings" or "plan_json" per the model. Kept as the API sent it: mapping
+   * an unrecognised value onto a known one would name a table the hit may not
+   * have come from. Empty when the API sent none.
+   */
+  source: string;
   job_id: string;
   stage_id: number | null;
   finding_id: string | null;
@@ -74,11 +79,15 @@ export const toKbHits = (raw: unknown): KbHits => {
     untrusted_fields: strList(r.untrusted_fields),
     hits: hits.map((h): KbHit => {
       const x = (h ?? {}) as Record<string, unknown>;
-      const stage = x.stage_id;
+      // Any value that is not a finite number is no stage — NaN rendered as a
+      // stage id is a fabrication.
+      const stage = typeof x.stage_id === "number" ? x.stage_id
+        : typeof x.stage_id === "string" && x.stage_id.trim() !== "" ? Number(x.stage_id)
+        : Number.NaN;
       return {
-        source: x.source === "plan_json" ? "plan_json" : "findings",
+        source: str(x.source),
         job_id: str(x.job_id),
-        stage_id: stage === null || stage === undefined || stage === "" ? null : Number(stage),
+        stage_id: Number.isFinite(stage) ? stage : null,
         finding_id: x.finding_id ? str(x.finding_id) : null,
         type: str(x.type),
         severity: str(x.severity),
