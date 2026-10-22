@@ -1811,24 +1811,29 @@ def suggest_fix(
     no_verified_overlay = (
         verification is not None and not verification.proposed_config
     )
+    # Decided here so every warning below is true on the path it ships with:
+    # a gated suggestion carries proposed_config={}, so it must not claim the
+    # settings are "in proposed_config as data".
+    gated = confidence < min_confidence
+    as_data = (
+        "" if gated else " The settings are in proposed_config as data only."
+    )
     if verification is not None:
         notes.extend(_verification_notes(verification, recipe_config))
         if no_verified_overlay and stored_empty_object:
             warnings.append(
                 "The verification row for this finding stores an empty overlay "
                 "({}): the verify lane proposed nothing. No diff or PR body is "
-                "offered; the recipe settings in proposed_config are data only. "
-                "The verify lane's verdict does not transfer to the recipe "
-                "settings shown here."
+                "offered, and the verify lane's verdict does not transfer to the "
+                "recipe settings." + as_data
             )
         elif no_verified_overlay:
             warnings.append(
                 "The verification row for this finding has no readable overlay "
                 "(its proposed_config is missing or could not be parsed). No "
-                "diff or PR body is offered; the recipe settings in "
-                "proposed_config are data only. The verify lane's verdict "
+                "diff or PR body is offered. The verify lane's verdict "
                 "concerns settings that cannot be shown, and it does not "
-                "transfer to the recipe settings proposed here."
+                "transfer to the recipe settings." + as_data
             )
         if refused:
             warnings.insert(
@@ -1844,12 +1849,10 @@ def suggest_fix(
         warnings.append(
             "The stored overlay contains a key or value that cannot be written "
             "as a single conf line (whitespace in a key, a control character or "
-            "a backtick). No diff or PR body is offered; the settings are in "
-            "proposed_config as data."
+            "a backtick). No diff or PR body is offered." + as_data
         )
     withheld = refused or unrenderable or no_verified_overlay
 
-    gated = confidence < min_confidence
     if gated:
         warnings.append(
             f"confidence {confidence:.2f} < min_confidence {min_confidence:.2f} — "

@@ -214,6 +214,50 @@ def test_an_empty_overlay_proposes_nothing_and_gets_no_diff(stored):
     assert not any("no readable overlay" in w for w in suggestion.warnings)
 
 
+def test_an_ungated_empty_overlay_says_the_recipe_is_data_only():
+    suggestion = _suggest([_row("{}")])
+    empty = [w for w in suggestion.warnings if "empty overlay" in w]
+    assert "in proposed_config as data only" in empty[0]
+
+
+@pytest.mark.parametrize(
+    ("stored", "needle"),
+    [("{}", "empty overlay"), ("{not json", "no readable overlay")],
+)
+def test_a_gated_empty_or_unreadable_overlay_claims_nothing_is_in_proposed_config(
+    stored, needle
+):
+    """On the confidence-gated path proposed_config is {}, so no warning may
+    say the settings are in it."""
+    suggestion = _suggest(
+        [_row(stored)],
+        findings=[finding_row(finding_id="finding-1", confidence_score=0.40)],
+    )
+
+    assert suggestion.gated is True
+    assert suggestion.advisory_only is True
+    assert suggestion.proposed_config == {}
+    assert suggestion.proposed_diff == ""
+    assert suggestion.pr_body == ""
+    assert suggestion.applied is False
+    hits = [w for w in suggestion.warnings if needle in w]
+    assert len(hits) == 1
+    assert "does not transfer to the recipe" in hits[0]
+    assert not any("proposed_config as data" in w for w in suggestion.warnings)
+
+
+def test_a_gated_unrenderable_overlay_claims_nothing_is_in_proposed_config():
+    suggestion = _suggest(
+        [_row(json.dumps({"spark a": "1"}))],
+        findings=[finding_row(finding_id="finding-1", confidence_score=0.40)],
+    )
+
+    assert suggestion.gated is True
+    assert suggestion.proposed_config == {}
+    assert any("single conf line" in w for w in suggestion.warnings)
+    assert not any("proposed_config as data" in w for w in suggestion.warnings)
+
+
 def test_an_unparseable_overlay_is_named_differently_from_an_empty_one():
     suggestion = _suggest([_row("{not json")])
 
