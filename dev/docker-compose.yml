@@ -43,22 +43,27 @@ x-spark-common: &spark-common
 
 services:
   # ── Object store (S3-compatible) ──────────────────────────────────────────
+  # The upstream minio/minio and minio/mc images can no longer be pulled, so this runs
+  # RustFS (S3-compatible, Apache-2.0). The service keeps the name `minio` and the
+  # MINIO_* variables on purpose: Spark's endpoint (http://minio:9000), the package
+  # launcher (container apex-dev-minio-1, volume apex-dev_minio-data) and the generated
+  # credentials all keep working unchanged.
   minio:
-    image: ${MINIO_IMAGE:-minio/minio:latest}   # pinned by digest in .env
-    command: server /data --console-address ":9001"
+    image: ${RUSTFS_IMAGE:-rustfs/rustfs:1.0.3@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b}
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      RUSTFS_ACCESS_KEY: ${MINIO_ROOT_USER}
+      RUSTFS_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ENABLE: "true"
     ports:
       - "${MINIO_API_PORT:-9010}:9000"       # S3 API (host port shifted off 9000)
       - "${MINIO_CONSOLE_PORT:-9001}:9001"   # console
     volumes:
       - minio-data:/data
-    # `mc ready local` is MinIO's own recommended probe — checks the server can actually
-    # SERVE (quorum ready), not just that the port is open. Robust vs. curl being dropped
-    # from the (UBI-micro) image. Verified: `local` alias resolves to :9000 out-of-the-box.
+    # /health answers 200 only once the S3 endpoint is serving, not merely listening.
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -66,17 +71,24 @@ services:
 
   # ── One-shot: create buckets, then exit 0 (buckets must exist before first write) ──
   minio-init:
-    image: ${MC_IMAGE:-minio/mc:latest}   # pinned by digest in .env
+    image: ${S3_INIT_IMAGE:-amazon/aws-cli:2.38.5@sha256:c8156a0e74e13929a42d7e60f0d4e14e7d28d980cd21822505d4bff80e5460c1}
     depends_on:
       minio:
-        condition: service_healthy   # buckets are created only after MinIO is truly ready
+        condition: service_healthy   # buckets are created only after the store is truly ready
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: ${S3_REGION:-us-east-1}
+    # head-bucket first keeps re-runs idempotent (what mc mb --ignore-existing did).
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
-      mc mb --ignore-existing local/${WAREHOUSE_BUCKET} &&
-      mc mb --ignore-existing local/${LOGS_BUCKET} &&
-      echo apex | mc pipe local/${LOGS_BUCKET}/events/.keep &&
-      mc ls local &&
+      set -e;
+      for b in ${WAREHOUSE_BUCKET} ${LOGS_BUCKET}; do
+        aws --endpoint-url http://minio:9000 s3api head-bucket --bucket $$b 2>/dev/null ||
+        aws --endpoint-url http://minio:9000 s3 mb s3://$$b;
+      done;
+      echo apex | aws --endpoint-url http://minio:9000 s3 cp - s3://${LOGS_BUCKET}/events/.keep;
+      aws --endpoint-url http://minio:9000 s3 ls;
       echo 'buckets ready';
       "
     restart: "no"

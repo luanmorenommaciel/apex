@@ -1,6 +1,6 @@
 # dev/ — ① generate
 
-**Role:** Spark/Delta pathology lab. Deterministic jobs (skew · spill · bad-shuffle · driver-OOM) on a local standalone Spark cluster + Delta on MinIO + History Server. `ApexPlugin` emits the contract telemetry per stage through OTLP.
+**Role:** Spark/Delta pathology lab. Deterministic jobs (skew · spill · bad-shuffle · driver-OOM) on a local standalone Spark cluster + Delta on a local S3 store (RustFS, service `minio`) + History Server. `ApexPlugin` emits the contract telemetry per stage through OTLP.
 **Language:** Python + Docker (+ a tiny JVM helper) · **Full brief:** [../docs/lanes/DEV.md](../docs/lanes/DEV.md) · **Obeys:** [../CONTRACT.md](../CONTRACT.md)
 **Exit criterion:** `make run-pathology JOB=skew_join` completes, appears in the History Server, and lands a `spark_events` row per stage keyed by `job_id`.
 
@@ -62,7 +62,7 @@ make calibrate RUNS=3        # prove each pathology is mechanical (3-run signal 
 make down                    # stop (keep data)   |   make clean = down -v (full reset)
 ```
 
-Ports (host, overridable in `.env`): MinIO API `:9010` (shifted off `:9000` to dodge the collect-lane ClickHouse), MinIO console `:9001`, Spark master `:8080`, History Server `:18080`.
+Ports (host, overridable in `.env`): S3 API `:9010` (shifted off `:9000` to dodge the collect-lane ClickHouse), RustFS console `:9001`, Spark master `:8080`, History Server `:18080`.
 
 ## The pathologies
 
@@ -171,8 +171,8 @@ regardless.
 
 ## Determinism & reproducibility
 
-- **Pinned everything:** the default quartet (Spark 4.0.1 · Hadoop/hadoop-aws 3.4.1 · Delta 4.0.0/Scala 2.13 · AWS SDK v2 bundle 2.24.6) lives in `.env`; the additive validated 4.1.2 cell is `./.env.spark41.example` (Hadoop 3.4.2, Delta 4.1.0, `apex_41`). MinIO + mc are pinned by **image digest**.
-- **Readiness-gated startup:** every service has a healthcheck; `docker compose up --wait` comes up green in dependency order. MinIO uses `mc ready local`.
+- **Pinned everything:** the default quartet (Spark 4.0.1 · Hadoop/hadoop-aws 3.4.1 · Delta 4.0.0/Scala 2.13 · AWS SDK v2 bundle 2.24.6) lives in `.env`; the additive validated 4.1.2 cell is `./.env.spark41.example` (Hadoop 3.4.2, Delta 4.1.0, `apex_41`). The S3 store (RustFS) and the bucket-init AWS CLI are pinned by **image digest** (the upstream `minio/minio` and `minio/mc` images can no longer be pulled).
+- **Readiness-gated startup:** every service has a healthcheck; `docker compose up --wait` comes up green in dependency order. The S3 store answers `GET /health`.
 - **Seeded data:** `common/data.py` seeds every `rand()` and **pins `numPartitions=16`**, so the fact table is byte-identical across runs *and* across different cluster core counts (`rand(seed)` depends on partition layout). Proven: two runs → identical `hot_rows` and identical `grand_total`.
 - **Staleness-safe:** a `_gen_meta` marker (generator version, rows, seed, partitions) is written with the data; `ensure_data` regenerates deterministically on any mismatch, so stale wrong-scale tables can never silently persist.
 - **`PYTHONHASHSEED=0`, `TZ=UTC`** on all Spark services.

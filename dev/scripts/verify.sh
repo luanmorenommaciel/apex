@@ -71,9 +71,11 @@ else
   bad "smoke job did not report success (see out/smoke.log)"; tail -5 out/smoke.log | sed 's/^/      /'
 fi
 
-# ── 5: event log object actually landed in MinIO ────────────────────────────
-step "5/6  event log in MinIO (s3a://$LOGS_BUCKET/events/)"
-LOGS=$($COMPOSE exec -T minio sh -c "mc alias set local http://localhost:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD >/dev/null 2>&1; mc ls --recursive local/$LOGS_BUCKET/events/ 2>/dev/null" | grep -v '\.keep' || true)
+# ── 5: event log object actually landed in the S3 store ──────────────────────
+step "5/6  event log in the S3 store (s3a://$LOGS_BUCKET/events/)"
+# The store (RustFS) ships no mc; list through the init service's AWS CLI image.
+LOGS=$($COMPOSE run --rm --no-deps --entrypoint aws minio-init \
+  --endpoint-url http://minio:9000 s3 ls --recursive "s3://$LOGS_BUCKET/events/" 2>/dev/null | grep -v '\.keep' || true)
 if [ -n "$LOGS" ]; then
   ok "event log present:"; echo "$LOGS" | sed 's/^/      /'
 else
