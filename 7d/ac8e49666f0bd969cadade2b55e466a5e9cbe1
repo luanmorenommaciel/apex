@@ -1,0 +1,21 @@
+front/src/screens/RunsScreen.test.tsx
+  s_e1070fee7f3bf4::t_92f579c8393b5e 1-151
+front/src/screens/RunsScreen.tsx
+  s_e1070fee7f3bf4::t_f14243e8dd2603 1,7,14-28,32-33,35-38,40-50,52-65,139-141,146-157,218,221,233-256
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7dac8e49666f0bd969cadade2b55e466a5e9cbe1",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
