@@ -1,0 +1,35 @@
+front/src/screens/KbSearchScreen.tsx
+  s_4afec7b1e4caff::t_aa4ed5c9c50660 1-212
+  s_4afec7b1e4caff::t_9f22eaf5cc63b4 213
+front/src/data/kb.ts
+  s_4afec7b1e4caff::t_8835089eab2fa5 1-62,65-91
+  s_4afec7b1e4caff::t_0e158b5724e00b 63-64
+front/src/screens/KbSearchScreen.test.tsx
+  s_4afec7b1e4caff::t_6b75fa49936d01 1-163
+front/src/App.tsx
+  s_4afec7b1e4caff::t_f896fb580e8887 6,24
+front/src/components/molecules/NavBar.tsx
+  s_4afec7b1e4caff::t_6fe546343fd20d 26
+front/src/data/httpRepository.test.ts
+  s_4afec7b1e4caff::t_5647e4625085e9 376-457
+front/src/data/repository.ts
+  s_4afec7b1e4caff::t_648dcfdc34813b 16-17,77-82,195-197,290-294,382-396
+front/src/screens/QueryFailure.test.tsx
+  s_4afec7b1e4caff::t_9bf60f1e4c0a1f 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3fe268cfbc8f3ec40971530714dbfb4d600d5200",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
