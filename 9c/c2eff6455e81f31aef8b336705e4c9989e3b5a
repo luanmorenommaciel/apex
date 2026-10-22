@@ -1,0 +1,21 @@
+serve/README.md
+  s_4afec7b1e4caff::t_62c7f824ec1aa5 187-189,191-197,221-244,255-257
+serve/tools/mcp_stdio_gate.py
+  s_4afec7b1e4caff::t_c958a3b2687f86 5,10,13-19,41,64-66,69,194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9cc2eff6455e81f31aef8b336705e4c9989e3b5a",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
