@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import shutil
 import subprocess
 
@@ -85,7 +86,8 @@ def test_deep_nesting_is_unreadable_not_an_error(depth):
     assert _view(nested).proposed_config == {}
 
 
-# -- optional: the real console parser over the same fixture --------------------
+# -- the real console parser over the same fixture ------------------------------
+# Runs in CI: the python job sets up Node 22 (.github/workflows/ci.yml).
 _NODE_SCRIPT = r"""
 import { readFileSync } from "node:fs";
 const { parseProposal, overlayEntries } = await import(process.argv[3]);
@@ -100,13 +102,32 @@ process.stdout.write(JSON.stringify(out));
 """
 
 
+# Type stripping (loading rules.ts directly) needs Node >= 22.6.
+_MIN_NODE = (22, 6)
+
+
+def _node_version(node: str) -> tuple[int, int] | None:
+    out = subprocess.run(
+        [node, "--version"], capture_output=True, text=True, timeout=30, check=False
+    ).stdout.strip()
+    match = re.fullmatch(r"v(\d+)\.(\d+)\.\d+.*", out)
+    return (int(match.group(1)), int(match.group(2))) if match else None
+
+
 def test_zero_disagreement_with_the_console_parser(tmp_path):
-    """Runs the console's real parseProposal under node (type stripping, Node
-    >= 22.6) when available. Skipped when node is absent or cannot load it."""
+    """Runs the console's real parseProposal under node over the fixture.
+
+    Skipped ONLY when node is absent or older than 22.6. Any other failure to
+    run or load the console parser fails the test: a silent skip would hide
+    exactly the drift this test exists to catch."""
     front = REPO / "front"
     node = shutil.which("node")
     if node is None:
         pytest.skip("node not available")
+    version = _node_version(node)
+    assert version is not None, "could not parse `node --version`"
+    if version < _MIN_NODE:
+        pytest.skip(f"node {version} is older than {_MIN_NODE} (no type stripping)")
     script = tmp_path / "parity.mjs"
     script.write_text(_NODE_SCRIPT, encoding="utf-8")
     rules = (front / "src" / "contract" / "rules.ts").as_uri()
@@ -114,8 +135,7 @@ def test_zero_disagreement_with_the_console_parser(tmp_path):
         [node, "--experimental-strip-types", "--no-warnings", str(script), str(FIXTURE), rules],
         capture_output=True, text=True, timeout=120, check=False,
     )
-    if proc.returncode != 0:
-        pytest.skip(f"console parser could not run: {proc.stderr[-400:]}")
+    assert proc.returncode == 0, f"console parser failed to run: {proc.stderr[-2000:]}"
     console = json.loads(proc.stdout)
     mcp = []
     for case in CASES:

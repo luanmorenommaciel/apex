@@ -39,6 +39,12 @@ describe("proposal parity fixture (shared with the MCP door)", () => {
     expect(consoleReading(c.input)).toEqual(c.expected);
   });
 
+  it("the diff case really is a unified diff to the console (expected none = no overlay)", () => {
+    const diffCase = fixture.cases.find((c) => c.name === "a valid unified diff is not an overlay");
+    expect(diffCase).toBeDefined();
+    expect(parseProposal(diffCase!.input)).toEqual({ kind: "diff" });
+  });
+
   it("reads an overlay nested ~1500 deep as unusable, without throwing", () => {
     const nested = `{"spark.a":${"[".repeat(1500)}${"]".repeat(1500)}}`;
     expect(consoleReading(nested)).toEqual({ kind: "none", entries: [] });

@@ -1345,6 +1345,103 @@
         "kind": "none",
         "entries": []
       }
+    },
+    {
+      "name": "lone high-surrogate key (JSON escape)",
+      "input": "{\"\\ud800\": \"x\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "\ud800",
+            "x"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "reversed surrogate pair key is two lone surrogates",
+      "input": "{\"\\ude00\\ud83d\": \"x\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "\ude00\ud83d",
+            "x"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "lone surrogates order against astral, high-BMP and ASCII keys (code point)",
+      "input": "{\"\\ud83d\\ude00\": \"astral\", \"\\uffff\": \"bmp\", \"\\ude00\\ud83d\": \"low-high\", \"\\ud800\": \"high\", \"a\": \"ascii\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "a",
+            "ascii"
+          ],
+          [
+            "\ud800",
+            "high"
+          ],
+          [
+            "\ude00\ud83d",
+            "low-high"
+          ],
+          [
+            "\uffff",
+            "bmp"
+          ],
+          [
+            "\ud83d\ude00",
+            "astral"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "__proto__ key is an ordinary member",
+      "input": "{\"spark.a\": \"1\", \"__proto__\": \"x\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "__proto__",
+            "x"
+          ],
+          [
+            "spark.a",
+            "1"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "empty-string key",
+      "input": "{\"a\": \"1\", \"\": \"v\"}",
+      "expected": {
+        "kind": "overlay",
+        "entries": [
+          [
+            "",
+            "v"
+          ],
+          [
+            "a",
+            "1"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "a valid unified diff is not an overlay",
+      "input": "--- a/conf/spark-defaults.conf\n+++ b/conf/spark-defaults.conf\n@@ -1 +1 @@\n-spark.sql.shuffle.partitions 200\n+spark.sql.shuffle.partitions 800\n",
+      "expected": {
+        "kind": "none",
+        "entries": []
+      }
     }
   ]
 }

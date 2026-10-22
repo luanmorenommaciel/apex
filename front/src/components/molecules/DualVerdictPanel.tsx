@@ -79,7 +79,7 @@ export function DualVerdictPanel({ v }: { v: FixVerificationRow }) {
             ))
           ) : proposal.kind === "empty-overlay" ? (
             <Prose size="xs" className="text-dim">
-              The stored overlay is empty: the verify lane evaluated no
+              The stored overlay is empty: the row stores no
               setting, so no key is listed.
             </Prose>
           ) : (
