@@ -346,8 +346,9 @@ def test_store_errors_from_the_api_keep_their_code():
             raise ConnectionError(f"clickhouse://apex:pw@{HOST}:8123 refused")
 
     message = _error(_api_server(Down()), "analyze_run", {"job_id": "j"})
-    assert "clickhouse_unavailable:" in message
-    assert "reported by the Apex API" in message
+    # The code survives; the text is this server's own and points at the API.
+    assert message.endswith(api_client.STORE_ERRORS["clickhouse_unavailable"])
+    assert "Apex API" in message and "not of this MCP server" in message
     for leak in LEAKS + ("pw@", "8123"):
         assert leak not in message
 
@@ -401,11 +402,17 @@ FAILURES = {
             api_client.FAILED),
     "502_leaky_detail": (_responds(502, body={"error": "store_error",
                                               "detail": LEAKY_DETAIL}),
-                         api_client.UNAVAILABLE),
+                         api_client.STORE_ERRORS["clickhouse_unavailable"]),
     "502_host_in_detail": (_responds(502, body={
         "error": "store_error",
         "detail": f"clickhouse_query_failed: {HOST} said no"}),
-        api_client.UNAVAILABLE),
+        api_client.STORE_ERRORS["clickhouse_query_failed"]),
+    "502_unknown_code": (_responds(502, body={
+        "error": "store_error", "detail": f"brand_new_code: {BASE_URL}"}),
+        api_client.FAILED),
+    "502_no_code": (_responds(502, body={
+        "error": "store_error", "detail": f"{HOST} exploded"}),
+        api_client.FAILED),
     "502_proxy_html": (_responds(502, content=b"<html>bad gateway nginx</html>"),
                        api_client.UNAVAILABLE),
     "503": (_responds(503, content=HOST.encode()), api_client.UNAVAILABLE),
@@ -447,13 +454,47 @@ def test_resource_errors_never_leak_the_endpoint_or_token(case):
         assert leak not in message
 
 
-def test_a_sanitized_store_detail_is_forwarded():
+@pytest.mark.parametrize("code", sorted(api_client.STORE_ERRORS))
+def test_a_known_store_code_maps_to_a_fixed_local_message(code):
+    """Only the code is read; the API's own text never reaches the model."""
     handler = _responds(502, body={
         "error": "store_error",
-        "detail": "clickhouse_schema_missing: the apex schema is not applied. "
-                  "Apply contract/*.ddl.sql via the infra lane."})
+        "detail": f"{code}: API-AUTHORED TEXT that must not be forwarded"})
     message = _error(_mock_server(handler), "analyze_run", {"job_id": "j"})
-    assert "clickhouse_schema_missing:" in message
+    assert message.endswith(api_client.STORE_ERRORS[code])
+    assert "API-AUTHORED" not in message
+
+
+def test_f1_free_text_in_a_known_code_does_not_reach_the_model():
+    """QA F-1: a plausible, code-prefixed detail with infrastructure in it."""
+    detail = ("clickhouse_query_failed: replica ch-internal-zz9 at 10.9.8.7 "
+              "port 9440 rejected the query")
+    handler = _responds(502, body={"error": "store_error", "detail": detail})
+    for tool, arguments in (("analyze_run", {"job_id": "j"}), ("list_runs", {})):
+        message = _error(_mock_server(handler), tool, arguments)
+        assert message.endswith(api_client.STORE_ERRORS["clickhouse_query_failed"])
+        for leak in ("ch-internal-zz9", "10.9.8.7", "9440", "replica"):
+            assert leak not in message
+
+
+def test_every_code_the_api_can_raise_is_on_the_allowlist():
+    """A new ApexStoreError code must be mapped, or it degrades to apex_api_failed.
+
+    Scanned from source so the allowlist cannot silently fall behind ch.py,
+    server.py or the API's diagnostics route.
+    """
+    import re
+
+    pattern = re.compile(r'ApexStoreError\(\s*\(?\s*f?"([a-z][a-z0-9_]*):')
+    found: set[str] = set()
+    for path in [SRC / "apex_mcp" / "ch.py", SRC / "apex_mcp" / "server.py",
+                 *(SRC / "apex_api").rglob("*.py")]:
+        found |= set(pattern.findall(path.read_text()))
+    # ch._require_optional_id builds "{name}_too_long"; finding_id is the
+    # only name a TOOL passes it.
+    found.add("finding_id_too_long")
+    assert {"clickhouse_unavailable", "apex_tool_result_unreadable"} <= found
+    assert found - set(api_client.STORE_ERRORS) == set()
 
 
 def _free_port() -> int:
@@ -569,6 +610,22 @@ def test_clickhouse_variables_alone_do_not_opt_in():
         ({"APEX_API_URL": f"ftp://{HOST}:{PORT}", "APEX_API_TOKEN": TOKEN},
          server.BAD_API_URL),
         ({"APEX_API_URL": f"{HOST}:{PORT}", "APEX_API_TOKEN": TOKEN},
+         server.BAD_API_URL),
+        # D-1: malformed or out-of-range ports must not kill startup.
+        ({"APEX_API_URL": f"http://{HOST}:99999", "APEX_API_TOKEN": TOKEN},
+         server.BAD_API_URL),
+        ({"APEX_API_URL": f"http://{HOST}:abc", "APEX_API_TOKEN": TOKEN},
+         server.BAD_API_URL),
+        ({"APEX_API_URL": f"http://{HOST}:-1", "APEX_API_TOKEN": TOKEN},
+         server.BAD_API_URL),
+        ({"APEX_API_URL": f"http://{HOST}:65536", "APEX_API_TOKEN": TOKEN},
+         server.BAD_API_URL),
+        ({"APEX_API_URL": f"http://{HOST}:0", "APEX_API_TOKEN": TOKEN},
+         server.BAD_API_URL),
+        # Review #3: userinfo would become Basic auth and replace the bearer.
+        ({"APEX_API_URL": f"http://apex:{PORT}pw@{HOST}", "APEX_API_TOKEN": TOKEN},
+         server.BAD_API_URL),
+        ({"APEX_API_URL": f"https://user@{HOST}:{PORT}", "APEX_API_TOKEN": TOKEN},
          server.BAD_API_URL),
     ],
 )
@@ -721,3 +778,130 @@ def test_the_api_client_module_never_prints():
              if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
              and n.func.id == "print"]
     assert calls == []
+
+
+# ===========================================================================
+# URL hygiene
+# ===========================================================================
+@pytest.mark.parametrize(
+    "url", [f"http://{HOST}:99999", f"http://{HOST}:abc", f"http://{HOST}:-1",
+            f"http://{HOST}:65536", f"http://u:p@{HOST}"],
+)
+def test_a_bad_url_never_raises_at_startup(url):
+    """resolve_backend never raises, and ApiClient survives direct construction."""
+    assert isinstance(server.resolve_backend(
+        {"APEX_API_URL": url, "APEX_API_TOKEN": TOKEN}), server._UnconfiguredTools)
+    ApiClient(url, TOKEN)  # must not raise
+
+
+def test_userinfo_would_have_replaced_the_bearer_token():
+    """Why userinfo is refused: httpx sends Basic auth INSTEAD of our header."""
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={})
+
+    url = f"http://apex:pw@{HOST}"
+    httpx.Client(base_url=url, transport=httpx.MockTransport(handler)).get(
+        "/v1/x", headers={"Authorization": f"Bearer {TOKEN}"})
+    assert not seen[0].headers["authorization"].startswith("Bearer")
+    assert api_client.valid_base_url(url) is False
+
+
+@pytest.mark.parametrize(
+    ("url", "warns"),
+    [(f"http://{HOST}:{PORT}", True), ("http://10.0.0.5:8099", True),
+     ("http://127.0.0.1:8099", False), ("http://localhost:8099", False),
+     ("http://[::1]:8099", False), (f"https://{HOST}", False)],
+)
+def test_plain_http_to_a_remote_host_warns_once(url, warns, caplog):
+    caplog.set_level("WARNING", logger="apex_mcp")
+    server.resolve_backend({"APEX_API_URL": url, "APEX_API_TOKEN": TOKEN})
+    hits = [r for r in caplog.records if "sent unencrypted" in r.getMessage()]
+    assert len(hits) == (1 if warns else 0)
+    assert TOKEN not in caplog.text
+
+
+# ===========================================================================
+# noise_floor_pct parity (review #5)
+# ===========================================================================
+INVALID_FLOORS = [-0.1, float("inf"), float("-inf"), float("nan")]
+
+_NO_FLOOR_NOTE = "No noise floor was supplied"
+_INVALID_FLOOR_NOTE = "An invalid noise floor was supplied"
+
+
+def _without_floor_notes(payload: dict) -> dict:
+    """The payload minus the one note direct and API mode word differently."""
+    def keep(note: str) -> bool:
+        return not note.startswith((_NO_FLOOR_NOTE, _INVALID_FLOOR_NOTE))
+
+    trimmed = json.loads(json.dumps(payload))
+    trimmed["notes"] = [n for n in trimmed.get("notes", []) if keep(n)]
+    if isinstance(trimmed.get("summary"), dict):
+        trimmed["summary"]["notes"] = [
+            n for n in trimmed["summary"].get("notes", []) if keep(n)]
+    return trimmed
+
+
+@pytest.mark.parametrize("floor", INVALID_FLOORS, ids=str)
+@pytest.mark.parametrize(
+    ("tool", "arguments"),
+    [("compare_runs", {"current_job_id": "j", "baseline_job_id": "base"}),
+     ("recall_similar_runs", {"job_id": "job-current"})],
+)
+def test_an_invalid_noise_floor_succeeds_over_the_api_like_direct_mode(
+    tool, arguments, floor
+):
+    """Same verdict as direct mode — not a 422.
+
+    What remains different, by construction: direct mode passes the invalid
+    value to diagnose, which says "An invalid noise floor was supplied"; API
+    mode sends no floor, so diagnose says "No noise floor was supplied". The
+    API rejects the value before diagnose could see it, and apex_api is out of
+    scope, so that note is the one difference left.
+    """
+    arguments = {**arguments, "noise_floor_pct": floor}
+    direct = _call(_direct_server(), tool, arguments)
+    over_http = _call(_api_server(), tool, arguments)
+    assert _without_floor_notes(over_http) == _without_floor_notes(direct)
+
+    def notes(payload: dict) -> list[str]:
+        nested = payload.get("summary")
+        return payload.get("notes", []) + (
+            nested.get("notes", []) if isinstance(nested, dict) else [])
+
+    assert any(n.startswith(_INVALID_FLOOR_NOTE) for n in notes(direct))
+    assert any(n.startswith(_NO_FLOOR_NOTE) for n in notes(over_http))
+
+
+def test_a_valid_noise_floor_is_sent_unchanged():
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(503)
+
+    for floor, expected in ((0.159, "0.159"), (0.0, "0.0"), (-1.0, None),
+                            (float("nan"), None), (None, None)):
+        seen.clear()
+        with pytest.raises(Exception):
+            asyncio.run(_mock_server(handler).call_tool(
+                "compare_runs", {"current_job_id": "j", "noise_floor_pct": floor}))
+        assert seen[0].url.params.get("noise_floor_pct") == expected
+
+
+def test_the_bearer_token_outranks_url_userinfo():
+    """valid_base_url refuses userinfo; a directly built client is safe anyway."""
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={})
+
+    url = f"http://apex:pw@{HOST}"
+    client = ApiClient(url, TOKEN, http=httpx.Client(
+        base_url=url, transport=httpx.MockTransport(handler)))
+    client.get_json("GET", "/diagnostics/runs")
+    assert seen[-1].headers["authorization"] == f"Bearer {TOKEN}"

@@ -21,8 +21,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# httpx backs starlette.testclient; without it TestClient raises on import.
-dev = ["pytest>=8,<9", "httpx>=0.27,<1"]
+# starlette.testclient needs httpx, now a runtime dependency above.
+dev = ["pytest>=8,<9"]
 
 [project.scripts]
 # enables `uvx apex-mcp` — the single-command install path

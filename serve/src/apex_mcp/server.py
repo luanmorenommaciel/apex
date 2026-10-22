@@ -46,6 +46,7 @@ from .api_client import (
     DEFAULT_TIMEOUT_S,
     ApiClient,
     ApiTools,
+    sends_token_in_clear,
     valid_base_url,
 )
 from .ch import ApexStoreError, ReadStore
@@ -782,7 +783,9 @@ NO_API_URL = (
     "(http or https)."
 )
 BAD_API_URL = (
-    "apex_api_unconfigured: APEX_API_URL is not an http(s) URL with a host."
+    "apex_api_unconfigured: APEX_API_URL is not a usable http(s) URL: it "
+    "needs a host, a port between 1 and 65535 if one is given, and no "
+    "user:password@ part (send the token in APEX_API_TOKEN)."
 )
 NO_API_TOKEN = (
     "apex_api_unconfigured: API mode needs APEX_API_TOKEN, a bearer token the "
@@ -841,6 +844,13 @@ def resolve_backend(env: Mapping[str, str] | None = None) -> ToolBackend:
     if not token:
         log.error("%s is set but %s is not", API_URL_VAR, API_TOKEN_VAR)
         return _UnconfiguredTools(NO_API_TOKEN)
+    if sends_token_in_clear(url):
+        # Once, at startup. Not a refusal: a private network or a sidecar can
+        # make this acceptable, and that is the operator's call to make.
+        log.warning(
+            "%s is plain http to a non-loopback host: the bearer token is "
+            "sent unencrypted. Use https.", API_URL_VAR,
+        )
     log.info("apex-mcp backend: Apex API")
     return ApiTools(
         ApiClient(url, token, timeout=_timeout(source.get(API_TIMEOUT_VAR, "")))

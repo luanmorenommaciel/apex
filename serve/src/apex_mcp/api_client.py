@@ -24,7 +24,9 @@ STDOUT IS THE JSON-RPC CHANNEL. Nothing here may print().
 
 from __future__ import annotations
 
+import ipaddress
 import logging
+import math
 import re
 from typing import Any, TypeVar
 from urllib.parse import quote, urlsplit
@@ -89,8 +91,8 @@ NOT_FOUND = (
     "server. A job_id containing '/' cannot be addressed over HTTP."
 )
 INVALID_REQUEST = (
-    "apex_api_invalid_request: the Apex API rejected the arguments. "
-    "noise_floor_pct, when given, must be a finite non-negative fraction."
+    "apex_api_invalid_request: the Apex API rejected the arguments of this "
+    "call. See the server's stderr log for details."
 )
 BAD_RESPONSE = (
     "apex_api_bad_response: the Apex API answered with a payload that is not "
@@ -101,9 +103,57 @@ FAILED = (
     "server's stderr log for details."
 )
 
-# What an ApexStoreError looks like: a lowercase code, a colon, a sentence.
-# The API forwards these from its 502 handler after ch._sanitize produced them.
-_STORE_DETAIL_RE = re.compile(r"^[a-z][a-z0-9_]{1,63}: [^\r\n]{1,480}$")
+# The API's 502 handler forwards ``str(ApexStoreError)``. Its TEXT is never
+# forwarded: only its leading code is read, and only a code on this allowlist
+# maps to a message — one authored HERE. Everything the API can raise on a
+# tool path is listed (ch._sanitize, ch's id guards, server._fail,
+# diagnostics._structured). The store these describe is the API PROCESS's
+# store, so the messages point at its configuration, not this server's.
+_API_STORE = "the Apex API process's"
+STORE_ERRORS: dict[str, str] = {
+    "clickhouse_unavailable": (
+        f"clickhouse_unavailable: the Apex API could not reach its ClickHouse "
+        f"store. Check the CLICKHOUSE_* environment of {_API_STORE} "
+        f"deployment, not of this MCP server."
+    ),
+    "clickhouse_access_denied": (
+        f"clickhouse_access_denied: ClickHouse refused the Apex API's database "
+        f"user. Check CLICKHOUSE_USER, CLICKHOUSE_PASSWORD and that user's "
+        f"grants in {_API_STORE} deployment, not this MCP server's."
+    ),
+    "clickhouse_database_missing": (
+        f"clickhouse_database_missing: the database the Apex API is configured "
+        f"to read does not exist. Check CLICKHOUSE_DATABASE of {_API_STORE} "
+        f"deployment."
+    ),
+    "clickhouse_schema_missing": (
+        "clickhouse_schema_missing: the apex schema is not applied on the Apex "
+        "API's store. Apply contract/*.ddl.sql via the infra lane."
+    ),
+    "clickhouse_query_failed": (
+        "clickhouse_query_failed: the Apex API's store rejected the query. See "
+        "the Apex API's stderr log for details."
+    ),
+    "memory_unavailable": (
+        "memory_unavailable: the cross-run memory tables are not present on the "
+        "Apex API's store."
+    ),
+    "job_id_required": "job_id_required: pass a non-empty job_id.",
+    "job_id_too_long": "job_id_too_long: job_id exceeds 512 characters.",
+    "finding_id_required": "finding_id_required: pass a non-empty finding_id.",
+    "finding_id_too_long": (
+        "finding_id_too_long: finding_id exceeds 512 characters."
+    ),
+    "apex_tool_failed": (
+        "apex_tool_failed: the Apex API could not complete the request. See the "
+        "Apex API's stderr log for details."
+    ),
+    "apex_tool_result_unreadable": (
+        "apex_tool_result_unreadable: the Apex API's tool returned no "
+        "structured payload."
+    ),
+}
+_CODE_RE = re.compile(r"^([a-z][a-z0-9_]{1,63}):")
 
 M = TypeVar("M", bound=BaseModel)
 
@@ -122,11 +172,57 @@ def normalize_base_url(url: str) -> str:
 
 
 def valid_base_url(url: str) -> bool:
+    """http(s), a host, a usable port if one is given, and NO userinfo.
+
+    Userinfo is refused rather than ignored: httpx turns ``user:pw@`` into
+    Basic auth, which REPLACES the bearer header — the token would silently
+    not be sent, and the password would be.
+    """
+    try:
+        parts = urlsplit(url)
+        port = parts.port  # raises ValueError when malformed or out of range
+    except ValueError:
+        return False
+    if port is not None and not 0 < port <= 65535:
+        return False
+    if "@" in parts.netloc or parts.username is not None:
+        return False
+    return parts.scheme in ("http", "https") and bool(parts.hostname)
+
+
+def sends_token_in_clear(url: str) -> bool:
+    """Plain http to a host that is not loopback: the token crosses a network."""
     try:
         parts = urlsplit(url)
     except ValueError:
         return False
-    return parts.scheme in ("http", "https") and bool(parts.hostname)
+    if parts.scheme != "http":
+        return False
+    host = parts.hostname or ""
+    if host == "localhost" or host.endswith(".localhost"):
+        return False
+    try:
+        return not ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return True
+
+
+def _floor(value: float | None) -> float | None:
+    """A noise floor the API will accept, or None.
+
+    Direct mode treats a negative or non-finite floor as no floor at all
+    (diagnose._valid_noise_floor). The API instead rejects it with 422, which
+    would turn the same call into an error. Sending None keeps the verdict
+    identical; only diagnose's note differs (it says "no floor was supplied"
+    rather than "an invalid floor was supplied").
+    """
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) and number >= 0 else None
 
 
 def _segment(value: str) -> str:
@@ -137,6 +233,24 @@ def _segment(value: str) -> str:
     route. The API decodes the segment back to the same value.
     """
     return quote(value, safe="").replace(".", "%2E")
+
+
+class _Bearer(httpx.Auth):
+    """The token as an httpx auth flow, not a hand-set header.
+
+    An explicit ``auth=`` outranks the auth httpx would otherwise derive from
+    the request: URL userinfo becomes Basic auth, which REPLACES a hand-set
+    Authorization header and sends no bearer token at all. valid_base_url
+    already refuses userinfo; this keeps a directly constructed client safe
+    too. (httpx 0.28 applies no implicit .netrc auth.)
+    """
+
+    def __init__(self, token: str) -> None:
+        self._token = token
+
+    def auth_flow(self, request: httpx.Request):  # noqa: ANN201
+        request.headers["Authorization"] = f"Bearer {self._token}"
+        yield request
 
 
 class ApiClient:
@@ -163,20 +277,6 @@ class ApiClient:
         self._token = token
         self._timeout = timeout
         self._http = http
-        parts = urlsplit(self._base_url)
-        # Everything that could identify the endpoint. A forwarded detail that
-        # contains any of these is dropped, not trimmed.
-        self._secrets = tuple(
-            s
-            for s in (
-                token,
-                self._base_url,
-                parts.netloc,
-                parts.hostname or "",
-                str(parts.port) if parts.port else "",
-            )
-            if s
-        )
 
     def _client(self) -> httpx.Client:
         if self._http is None:
@@ -197,10 +297,8 @@ class ApiClient:
                 method,
                 f"{API_PREFIX}{path}",
                 params=query,
-                headers={
-                    "Authorization": f"Bearer {self._token}",
-                    "Accept": "application/json",
-                },
+                headers={"Accept": "application/json"},
+                auth=_Bearer(self._token),
             )
         except httpx.TimeoutException as exc:
             self._log_failure("timed out", exc)
@@ -229,7 +327,7 @@ class ApiClient:
         if status == 422:
             raise ApexStoreError(INVALID_REQUEST)
         if status == 502:
-            raise ApexStoreError(self._store_detail(response) or UNAVAILABLE)
+            raise ApexStoreError(self._store_error(response))
         if status in (503, 504):
             raise ApexStoreError(UNAVAILABLE)
         raise ApexStoreError(FAILED)
@@ -248,33 +346,27 @@ class ApiClient:
             text = text.replace(self._token, "[redacted]")
         log.error("apex api %s: %s: %s", what, type(exc).__name__, text)
 
-    def _store_detail(self, response: httpx.Response) -> str | None:
-        """The API's sanitized store error, when it is provably that.
+    @staticmethod
+    def _store_error(response: httpx.Response) -> str:
+        """A locally-authored message for the API's 502, never its text.
 
-        The API's 502 handler forwards ``str(ApexStoreError)``, which
-        ch._sanitize (or a fixed string in ch/server) produced and which
-        carries no connection detail by construction. Forwarding it keeps the
-        actionable code (``clickhouse_unavailable``, ``job_id_required``...)
-        identical to what direct mode reports.
-
-        It is still checked, because a 502 can come from a proxy in between
-        and not from the API: the body must be the API's ``store_error``
-        shape, the detail must look like a code-prefixed sentence, carry no
-        URL, and contain none of this client's token, URL, host or port.
-        Anything else is replaced by the generic code.
+        Only the API's own ``store_error`` body is read, and from it only the
+        leading code, looked up in STORE_ERRORS. A known code gets its fixed
+        message; an unknown one is ``apex_api_failed`` (the API answered, so
+        it is not "unavailable"). A 502 that is not the API's shape came from
+        something in between — a proxy whose upstream is down — and is
+        ``apex_api_unavailable``.
         """
         try:
             body = response.json()
         except ValueError:
-            return None
+            return UNAVAILABLE
         if not isinstance(body, dict) or body.get("error") != "store_error":
-            return None
+            return UNAVAILABLE
         detail = body.get("detail")
-        if not isinstance(detail, str) or not _STORE_DETAIL_RE.match(detail):
-            return None
-        if "://" in detail or any(secret in detail for secret in self._secrets):
-            return None
-        return f"{detail} (reported by the Apex API)"
+        match = _CODE_RE.match(detail) if isinstance(detail, str) else None
+        code = match.group(1) if match else ""
+        return STORE_ERRORS.get(code, FAILED)
 
 
 def _validated(model: type[M], payload: Any) -> M:
@@ -336,7 +428,8 @@ class ApiTools:
         return self._call(
             "compare_runs",
             RunComparison,
-            {"baseline_job_id": baseline_job_id, "noise_floor_pct": noise_floor_pct},
+            {"baseline_job_id": baseline_job_id,
+             "noise_floor_pct": _floor(noise_floor_pct)},
             job_id=_require_job_id(current_job_id),
         )
 
@@ -355,7 +448,7 @@ class ApiTools:
         return self._call(
             "recall_similar_runs",
             RecallResult,
-            {"top_k": top_k, "noise_floor_pct": noise_floor_pct},
+            {"top_k": top_k, "noise_floor_pct": _floor(noise_floor_pct)},
             job_id=_require_job_id(job_id),
         )
 
