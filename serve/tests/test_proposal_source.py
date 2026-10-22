@@ -317,14 +317,55 @@ def test_a_non_finite_number_invalidates_the_overlay_without_raising(raw):
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
-        (1e20, "100000000000000000000"),
-        (float(2**60), "1152921504606847000"),  # node: String(2**60)
-        (2.0**53, "9007199254740992"),
+        (float(2**53 - 1), "9007199254740991"),  # node: String(MAX_SAFE_INTEGER)
+        (-float(2**53 - 1), "-9007199254740991"),
         (5.0, "5"),
+        (0.5, "0.5"),
+        (1e-7, "1e-7"),  # node: String(1e-7)
     ],
 )
-def test_whole_number_floats_render_like_javascript(value, expected):
+def test_safe_floats_render_like_javascript(value, expected):
     view = VerificationView.model_validate(_row(json.dumps({"spark.a": value})))
+    assert view.proposed_config == {"spark.a": expected}
+
+
+# Each of these is a number the console's parseProposal rejects as
+# invalid-overlay (front/src/contract/rules.test.ts mirrors this list): either
+# non-finite after parsing, or beyond Number.MAX_SAFE_INTEGER, where JSON.parse
+# would silently round the stored value. Both doors must reject, not render.
+UNFAITHFUL_NUMBERS = [
+    '{"spark.a": 1e400}',
+    '{"spark.a": -1e400}',
+    '{"spark.a": 9007199254740993}',  # JSON.parse -> 9007199254740992
+    '{"spark.a": 9007199254740992}',  # 2**53: first unsafe integer
+    '{"spark.a": -9007199254740992}',
+    '{"spark.a": 1e20}',
+    '{"spark.a": 1.5e300}',
+    '{"spark.a": "1", "spark.b": 18446744073709551616}',
+]
+
+
+@pytest.mark.parametrize("stored", UNFAITHFUL_NUMBERS)
+def test_an_unfaithful_number_is_rejected_like_the_console(stored):
+    view = VerificationView.model_validate(_row(stored))
+    assert view.proposed_config == {}
+
+    suggestion = _suggest([_row(stored)])
+    assert suggestion.proposed_config == SKEW_RECIPE
+    assert any("no readable overlay" in w for w in suggestion.warnings)
+    assert "verify lane evaluated" not in suggestion.pr_body
+
+
+@pytest.mark.parametrize(
+    ("stored", "expected"),
+    [
+        ('{"spark.a": 9007199254740991}', "9007199254740991"),
+        ('{"spark.a": -9007199254740991}', "-9007199254740991"),
+        ('{"spark.a": 800}', "800"),
+    ],
+)
+def test_a_safe_integer_literal_is_kept_exactly(stored, expected):
+    view = VerificationView.model_validate(_row(stored))
     assert view.proposed_config == {"spark.a": expected}
 
 
@@ -376,3 +417,133 @@ def test_an_unreadable_refused_overlay_keeps_the_refusal_first():
 
 def test_a_readable_overlay_carries_no_unreadable_warning():
     assert not any("no readable overlay" in w for w in _suggest([_row()]).warnings)
+
+
+# -- review follow-up b: the chosen finding's row, not a capped job-wide list --
+def test_a_lookup_fetches_the_chosen_findings_row_by_its_id():
+    asked: list[str] = []
+
+    def lookup(finding_id: str) -> list[dict]:
+        asked.append(finding_id)
+        return [_row()]
+
+    # verification_rows is a job-wide list that no longer holds finding-1
+    suggestion = diagnose.suggest_fix(
+        "job-1",
+        None,
+        0.75,
+        [FINDING],
+        [stage_row(2, p50_ms=20, p99_ms=460)],
+        [],
+        [_row(finding_id="finding-other")] * 3,
+        verification_lookup=lookup,
+    )
+
+    assert asked == ["finding-1"]
+    assert suggestion.proposed_config == console_overlay(STORED)
+    assert suggestion.verification is not None
+    assert suggestion.verification.verification_id == "v-1"
+
+
+def test_no_finding_no_lookup():
+    """The heuristic path has no finding, so it must not query verifications."""
+    def lookup(finding_id: str) -> list[dict]:  # pragma: no cover - must not run
+        raise AssertionError("looked up a verification without a finding")
+
+    suggestion = diagnose.suggest_fix(
+        "job-1", None, 0.75, [], [stage_row(2, p50_ms=20, p99_ms=460)], [],
+        verification_lookup=lookup,
+    )
+    assert suggestion.source == "spark_events_heuristic"
+    assert suggestion.verification is None
+
+
+class _ManyVerificationsClient:
+    """fix_verifications honouring the finding filter and the LIMIT, the way
+    ClickHouse does: 60 newer rows for another finding bury finding-1's row
+    beyond the store's default 50-row job-wide cap."""
+
+    def __init__(self) -> None:
+        from tests.conftest import FakeClient
+
+        self._base = FakeClient(
+            stages={"job-1": [stage_row(2, p50_ms=20, p99_ms=460)]},
+            findings={"job-1": [FINDING]},
+        )
+        other = [
+            _row(
+                json.dumps({"spark.other": str(i)}),
+                verification_id=f"v-other-{i:03d}",
+                finding_id="finding-other",
+                verified_at=f"2026-08-21T10:00:{i:02d}.000",
+            )
+            for i in range(60)
+        ]
+        self.rows = other + [_row()]  # newest first; finding-1's row is last
+
+    def query(self, query: str, parameters: dict | None = None):
+        from tests.conftest import FakeResult, reads
+
+        parameters = parameters or {}
+        if reads(query, "fix_verifications") and "system.columns" not in query:
+            fid = parameters.get("finding_id", "")
+            rows = [r for r in self.rows if not fid or r["finding_id"] == fid]
+            return FakeResult(rows[: int(parameters.get("limit", 50))])
+        return self._base.query(query, parameters)
+
+
+def test_the_server_finds_the_chosen_findings_row_beyond_the_job_wide_cap():
+    import asyncio
+
+    from apex_mcp.ch import ReadStore
+    from apex_mcp.server import create_server
+
+    server = create_server(ReadStore(_ManyVerificationsClient()))
+    result = asyncio.run(server.call_tool("suggest_fix", {"job_id": "job-1"}))
+    payload = result[1] if isinstance(result, tuple) else result
+
+    assert payload["verification"]["finding_id"] == "finding-1"
+    assert payload["proposed_config"] == console_overlay(STORED)
+    assert payload["verification"]["verification_id"] == "v-1"
+    assert payload["applied"] is False
+
+
+# -- review follow-up c: both doors break verified_at ties the same way ---------
+def _order_by(sql: str) -> str:
+    import re
+
+    match = re.search(r"ORDER BY\s+(.+?)\s*\n\s*LIMIT", sql, re.S)
+    assert match, "no ORDER BY ... LIMIT in statement"
+    # the console projection aliases the table as v.; compare column order
+    return " ".join(match.group(1).replace("v.", "").split())
+
+
+def test_every_door_breaks_verified_at_ties_on_verification_id():
+    import pathlib
+    import re
+
+    from apex_mcp import ch
+
+    queries_ts = (
+        pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "data" / "queries.ts"
+    ).read_text()
+    match = re.search(r"export const FIX_VERIFICATIONS = `(.*?)`;", queries_ts, re.S)
+    assert match, "front/src/data/queries.ts no longer exports FIX_VERIFICATIONS"
+
+    expected = "verified_at DESC, verification_id ASC"
+    assert _order_by(ch.VERIFICATIONS_SQL) == expected  # MCP suggest_fix source
+    assert _order_by(ch.FIX_VERIFICATION_SQL) == expected  # console API door
+    assert _order_by(match.group(1)) == expected  # console browser door
+
+
+def test_a_same_millisecond_tie_picks_the_row_the_console_picks():
+    """Rows come back ordered (verified_at DESC, verification_id ASC); the
+    first row for the finding is the one both doors show."""
+    tied = [
+        _row(json.dumps({"spark.a": "1"}), verification_id="v-a"),
+        _row(json.dumps({"spark.a": "2"}), verification_id="v-b"),
+    ]
+    suggestion = _suggest(tied)
+    assert suggestion.verification is not None
+    assert suggestion.verification.verification_id == "v-a"
+    assert suggestion.proposed_config == {"spark.a": "1"}

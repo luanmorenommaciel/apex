@@ -444,6 +444,15 @@ export function parseProposal(text: string): ProposalParse {
     for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
       // Spark conf values are scalars. One invalid member invalidates the
       // whole overlay; dropping it would make this a partial, false proposal.
+      // A number is accepted only when String(v) is faithful to what was
+      // stored: an overflowing literal (1e400) parses to Infinity, and an
+      // integer beyond MAX_SAFE_INTEGER (9007199254740993) is silently rounded
+      // by JSON.parse. Neither is a Spark conf value; both invalidate the
+      // overlay. The MCP door (serve/src/apex_mcp/models.py
+      // `_js_scalar_string`) rejects exactly the same numbers.
+      if (typeof v === "number" && !(Number.isFinite(v) && Math.abs(v) <= Number.MAX_SAFE_INTEGER)) {
+        return { kind: "invalid-overlay" };
+      }
       if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
         // Assignment treats __proto__ specially on ordinary objects and would
         // silently discard the JSON member. Define an own data property so

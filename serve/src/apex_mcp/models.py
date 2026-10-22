@@ -325,31 +325,46 @@ def _reject_json_constant(name: str) -> object:
     raise ValueError(f"non-standard JSON constant {name}")
 
 
+# Largest integer JavaScript represents exactly (``Number.MAX_SAFE_INTEGER``).
+# Both doors reject a numeric overlay value whose magnitude exceeds it; the
+# console's ``parseProposal`` (front/src/contract/rules.ts) applies the same
+# bound, so a row neither door can render faithfully is invalid in both.
+JS_MAX_SAFE_INTEGER = 2**53 - 1
+
+
 def _js_scalar_string(value: object) -> str | None:
     """``String(value)`` as the console computes it for a JSON scalar.
 
-    ``None`` means "not a scalar the console accepts" (null, object, array)
-    or a non-finite number. Overflowing literals such as ``1e400`` parse to
-    infinity; they are treated as an invalid overlay rather than rendered, so
-    a hostile or corrupt value can never raise inside the validator. Numbers
-    follow JavaScript's shortest round-trip rendering: integral values print
-    without ``.0`` and plain notation is used for 1e-6 <= |x| < 1e21. JSON
-    integers beyond 2**53 are not reproduced (JavaScript would round them);
-    no Spark conf value is one.
+    ``None`` means "not a scalar both doors accept": null, object, array, or a
+    number that cannot be carried faithfully. A number is rejected when it is
+    non-finite (an overflowing literal such as ``1e400`` parses to infinity,
+    which is neither valid JSON nor a Spark conf value) or when its magnitude
+    exceeds ``Number.MAX_SAFE_INTEGER`` (``JSON.parse`` would silently round
+    ``9007199254740993`` while Python keeps it exact — a proposed config must
+    never change a value without saying so). The console rejects exactly the
+    same numbers, so both doors report the overlay as invalid rather than
+    each rendering something different.
+
+    Accepted numbers follow JavaScript's shortest round-trip rendering:
+    integral values print without ``.0`` and plain notation is used for
+    1e-6 <= |x| < 1e21 (every accepted value is below 2**53, so exponent
+    notation only remains for tiny magnitudes).
     """
     if isinstance(value, str):
         return value
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
+        if abs(value) > JS_MAX_SAFE_INTEGER:
+            return None
         return str(value)
     if isinstance(value, float):
-        if not math.isfinite(value):
+        if not math.isfinite(value) or abs(value) > JS_MAX_SAFE_INTEGER:
             return None
         if value == 0:
             return "0"
         if 1e-6 <= abs(value) < 1e21:
-            if value.is_integer() and abs(value) < 2**53:
+            if value.is_integer():
                 return str(int(value))
             # repr is the shortest round-trip digits, as JavaScript prints
             # them; only an integral repr ends in ".0", which JS omits
@@ -497,7 +512,9 @@ class VerificationView(BaseModel):
         stringified like JavaScript's ``String()`` (``true``, ``5``), and one
         non-scalar member (null, object, array) invalidates the whole overlay
         rather than leaving a partial, false proposal. NaN/Infinity, which
-        ``JSON.parse`` rejects, are rejected here too. Keys come back sorted —
+        ``JSON.parse`` rejects, are rejected here too, as are numbers that
+        overflow to infinity or exceed ``Number.MAX_SAFE_INTEGER`` — the
+        console rejects the same ones (see ``_js_scalar_string``). Keys come back sorted —
         the canonical order the verify lane writes (``sort_keys=True``).
         """
         if value is None or value == "":

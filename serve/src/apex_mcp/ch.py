@@ -409,6 +409,10 @@ RUN_LIST_SQL = _run_rollup_sql(
 # with negative meaning faster. mechanism_confirmed has no source at all and
 # stays NULL: deriving it from the safety verdict would collapse rule 4's two
 # independent verdicts into one.
+# Ties on verified_at (two attempts in the same millisecond) break on
+# verification_id ASC, exactly as VERIFICATIONS_SQL does, so the console and
+# MCP suggest_fix pick the SAME row (SRP-22). front/src/data/queries.ts
+# FIX_VERIFICATIONS carries the identical ORDER BY.
 FIX_VERIFICATION_SQL = """
 WITH slots AS (
   SELECT job_id,
@@ -437,7 +441,7 @@ SELECT
 FROM fix_verifications AS v
 LEFT JOIN slots s ON s.job_id = v.job_id
 WHERE v.finding_id = {finding_id:String}
-ORDER BY v.verified_at DESC
+ORDER BY v.verified_at DESC, v.verification_id ASC
 LIMIT 1
 """
 

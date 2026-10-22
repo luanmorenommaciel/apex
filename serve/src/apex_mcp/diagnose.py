@@ -15,6 +15,7 @@ hunks or markdown structure.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from datetime import datetime, timezone
 
 from .models import (
@@ -1602,6 +1603,7 @@ def suggest_fix(
     stage_rows: list[dict],
     transition_rows: list[dict] | None = None,
     verification_rows: list[dict] | None = None,
+    verification_lookup: Callable[[str], list[dict]] | None = None,
 ) -> FixSuggestion:
     """Build a fix PROPOSAL. Performs no filesystem, git or database writes.
 
@@ -1620,6 +1622,14 @@ def suggest_fix(
     is proposed. Either way the overlay is normalized (``normalize_overlay``).
     A fix the verify lane REFUSED is still named in ``proposed_config``, but
     no ready-to-apply diff is handed over for it.
+
+    ``verification_lookup``, when given, is called with the CHOSEN finding's id
+    and returns that finding's rows, newest first (the store's
+    ``verifications(job_id, finding_id)``). It replaces ``verification_rows``
+    for the selection: a job-wide list is capped, so when ``finding_id`` was
+    omitted the chosen finding's newest row could fall outside it and MCP would
+    propose the recipe while the console — which filters by finding — showed
+    the stored overlay.
     """
     notes: list[str] = []
     warnings: list[str] = [
@@ -1678,10 +1688,17 @@ def suggest_fix(
         # A verification is keyed to a finding, so only the findings path can
         # have one. The store returns newest-first; the newest is the one that
         # reflects the current predictor and the current bench.
+        # Fetched per finding when a lookup is available, so no job-wide cap
+        # can push the chosen finding's newest row out of view.
+        rows_for_finding = (
+            verification_lookup(finding.finding_id)
+            if verification_lookup is not None
+            else verification_rows
+        )
         verification = next(
             (
                 VerificationView.model_validate(row)
-                for row in (verification_rows or [])
+                for row in (rows_for_finding or [])
                 if str(row.get("finding_id") or "") == finding.finding_id
             ),
             None,
