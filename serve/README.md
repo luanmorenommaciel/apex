@@ -9,7 +9,7 @@ and two **prompts** (`diagnose`, `fix`).
 **Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.5) · DDL in [../contract/](../contract/) ·
 **Lane brief:** [../docs/lanes/SERVE.md](../docs/lanes/SERVE.md)
 
-## The six tools
+## The tools
 
 | Tool | Input | Returns | MCP annotation |
 |---|---|---|---|
@@ -103,8 +103,9 @@ own way.
 Arguments are user- or model-supplied, so each id must match
 `[A-Za-z0-9][A-Za-z0-9._:-]{0,127}` (Spark applicationIds, `spark.apex.job_id`
 overrides, finding uuids). Anything else — whitespace, newlines, quotes, shell or
-SQL metacharacters, a leading `-`, over 128 characters — is rejected with an
-error that does not echo the value. An empty `finding_id` means "not given". The
+SQL metacharacters, a leading `-`, over 128 characters — is rejected. The id
+validator's own errors do not echo the value; the SDK's schema errors for an
+undeclared or mistyped argument may. An empty `finding_id` means "not given". The
 value is only ever placed in the rendered text, never in a query or a command.
 
 ## Finding a run

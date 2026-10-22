@@ -24,8 +24,8 @@ feature below is judged against one question:
 ## Two structural facts that shape every leg
 
 1. **`create_server()` registers eight `@mcp.tool` and one MCP resource.** The
-   tools are listed above; `apex://runs` is the resource. Apex still defines no
-   prompts.
+   tools are listed above; `apex://runs` is the resource. Two MCP prompts,
+   `diagnose` and `fix`, now exist (P7.12).
 2. **Every tool takes a `job_id` the user must already possess.** `ReadStore` exposes
    `stages` / `findings` / `plan_transitions` / `search` (`ch.py:206-254`) — there is no
    "list runs", no lookup by `app_name` or time. **The lane can diagnose a run but cannot

@@ -7,6 +7,7 @@ the surface is pinned like the tool surface and every argument is validated.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 
@@ -14,6 +15,7 @@ from apex_mcp import prompts
 from apex_mcp.ch import ReadStore
 from apex_mcp.server import create_server
 from tests.conftest import FakeClient
+from tests.test_server_tools import CONTRACTED_TOOLS
 
 # The contracted prompt surface. Exact sorted equality, as for CONTRACTED_TOOLS:
 # an unnoticed prompt is text injected into a user's conversation.
@@ -87,7 +89,7 @@ def test_the_contracted_prompt_surface(server):
 def test_prompts_do_not_change_the_tool_surface(server):
     # Prompts are additive; the tool surface is pinned in test_server_tools.py.
     names = {t.name for t in asyncio.run(server.list_tools())}
-    assert len(names) == 8
+    assert sorted(names) == CONTRACTED_TOOLS
     assert not names & set(CONTRACTED_PROMPTS)
 
 
@@ -181,6 +183,14 @@ def test_missing_job_id_is_rejected(server):
             asyncio.run(server.get_prompt(name, {}))
 
 
+def test_unknown_extra_argument_is_rejected(server):
+    # Rejected by the SDK's schema validation, not by validate_id, so only the
+    # rejection is asserted — its message wording belongs to the SDK.
+    for name in CONTRACTED_PROMPTS:
+        with pytest.raises(ValueError):
+            asyncio.run(server.get_prompt(name, {"job_id": "job-1", "detail": "full"}))
+
+
 def test_unknown_prompt_is_rejected(server):
     with pytest.raises(ValueError):
         asyncio.run(server.get_prompt("apply_fix", {"job_id": "job-1"}))
@@ -225,8 +235,10 @@ def test_prompts_over_real_stdio_without_clickhouse():
     from mcp.client.stdio import stdio_client
     from mcp.shared.exceptions import McpError
 
+    src = Path(prompts.__file__).resolve().parents[1]
     environment = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        "PYTHONPATH": str(src),
         "CLICKHOUSE_HOST": "192.0.2.1",
         "CLICKHOUSE_PORT": "1",
         "CLICKHOUSE_USER": "nobody",
@@ -237,6 +249,7 @@ def test_prompts_over_real_stdio_without_clickhouse():
         command=sys.executable,
         args=["-c", "from apex_mcp.server import main; main()"],
         env=environment,
+        cwd=src.parent,
     )
 
     async def run():

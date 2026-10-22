@@ -10,8 +10,10 @@ Arguments arrive from a user typing a slash command or from a model, so they
 are untrusted. Each one must match a conservative allowlist before it is
 placed in the message, and it is NEVER interpolated into anything executed —
 no shell, no SQL, no eval. The worst a bad value could do is steer the text a
-model reads, which is exactly what the allowlist forbids: no whitespace, no
-newlines, no quotes, no markup, bounded length.
+model reads, so the allowlist forbids whitespace, newlines, quotes and markup,
+and bounds the length. It bounds format and charset, not meaning: a valid id
+can still spell words, which is why every value is backtick-framed in the text
+and the rendered prompt marks tool output from the job as untrusted data.
 
 In Claude Code these surface as ``/apex:diagnose (MCP)`` in the ``/`` menu, and
 ``/mcp__apex__diagnose <job_id>`` also runs them (server registered as
