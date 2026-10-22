@@ -1,0 +1,24 @@
+serve/src/apex_mcp/api_client.py
+  s_4afec7b1e4caff::t_31fd5cc24482b1 216-218
+  s_4afec7b1e4caff::t_f3b9530abaeeeb 303-305,376-408,465-466,469,472-475,489-490,493,496-500
+serve/README.md
+  s_4afec7b1e4caff::t_27e0571db53f78 243-245
+serve/tests/test_mcp_over_http.py
+  s_4afec7b1e4caff::t_caa4c64d16a2c5 544-584,870,877,880-881,885-917,919-921,923-927
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "333d1164f8e58d61196abf08e1ec7757cdd011e4",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
