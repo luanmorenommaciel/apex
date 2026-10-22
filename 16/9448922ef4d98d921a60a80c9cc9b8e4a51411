@@ -1,0 +1,38 @@
+dev/.env.example
+  s_4afec7b1e4caff::t_d634eca1bdc159 38-45
+dev/docker-compose.yml
+  s_4afec7b1e4caff::t_4964e4707898a0 46-50,52,54-58,64,66
+  s_4afec7b1e4caff::t_1e5dc2e5683bcb 74,77-82,85-91
+dev/scripts/verify.sh
+  s_4afec7b1e4caff::t_c9e2a368707fd5 74-78
+dev/Makefile
+  s_e1070fee7f3bf4::t_ea6d1879e0ce1b 34
+dev/README.md
+  s_e1070fee7f3bf4::t_bb96d26f0e78ae 3,65,174-175
+dev/scripts/smoke_delta.py
+  s_e1070fee7f3bf4::t_b0d9b6aa49ad25 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "169448922ef4d98d921a60a80c9cc9b8e4a51411",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    },
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
