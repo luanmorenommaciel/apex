@@ -1,0 +1,23 @@
+serve/src/apex_mcp/diagnose.py
+  s_4afec7b1e4caff::t_72583d55e15e5d 1573,1576-1577,1744,1747-1760,1772-1778,1842-1849
+serve/src/apex_mcp/models.py
+  s_4afec7b1e4caff::t_f82c1cdb9fb60f 19,331-337,347-348,352,354-356,363-364
+serve/tests/test_proposal_source.py
+  s_4afec7b1e4caff::t_23a3fad53b4c26 285-378
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "996fefeec5dbe319dad7fb5ee18022771e88a98e",
+  "prompts": {},
+  "sessions": {
+    "s_4afec7b1e4caff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e21eccb-a336-495b-bebf-fc074cbc7742",
+        "model": "unknown"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
