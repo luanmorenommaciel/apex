@@ -34,7 +34,7 @@ from urllib.parse import quote, urlsplit
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from .ch import ApexStoreError, _require_job_id, require_run_offset
+from .ch import MAX_RUNS_OFFSET, ApexStoreError, _require_job_id, require_run_offset
 from .models import (
     Diagnosis,
     FixSuggestion,
@@ -158,7 +158,9 @@ STORE_ERRORS: dict[str, str] = {
     "plan_fingerprint_too_long": (
         "plan_fingerprint_too_long: plan_fingerprint exceeds 64 characters."
     ),
-    "offset_out_of_range": "offset_out_of_range: offset must be between 0 and 10000.",
+    "offset_out_of_range": (
+        f"offset_out_of_range: offset must be between 0 and {MAX_RUNS_OFFSET}."
+    ),
     "apex_tool_failed": (
         "apex_tool_failed: the Apex API could not complete the request. See the "
         "Apex API's stderr log for details."
