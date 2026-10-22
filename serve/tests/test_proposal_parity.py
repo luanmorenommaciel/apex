@@ -87,7 +87,8 @@ def test_deep_nesting_is_unreadable_not_an_error(depth):
 
 
 # -- the real console parser over the same fixture ------------------------------
-# Runs in CI: the python job sets up Node 22 (.github/workflows/ci.yml).
+# Runs wherever Node >= 22.6 is on PATH (the GitHub runner image ships one;
+# the python job does not pin it). Skips only when node is absent or older.
 _NODE_SCRIPT = r"""
 import { readFileSync } from "node:fs";
 const { parseProposal, overlayEntries } = await import(process.argv[3]);
