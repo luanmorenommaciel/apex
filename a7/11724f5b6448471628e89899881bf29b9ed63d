@@ -1,0 +1,37 @@
+front/src/contract/proposalParity.test.ts
+  s_e1070fee7f3bf4::t_fd6440f0d09674 1-69
+contract/README.md
+  s_e1070fee7f3bf4::t_bb0f52e269651a 11
+contract/fixtures/proposal_parity.json
+  s_e1070fee7f3bf4::t_0d90ef96c21446 1-1350
+front/src/components/molecules/DualVerdictPanel.tsx
+  s_e1070fee7f3bf4::t_328c8eca1709f5 3,77,80-84
+front/src/contract/rules.ts
+  s_e1070fee7f3bf4::t_ca020664a9b300 423-435,439,481-483,494-523
+front/src/screens/FindingScreen.tsx
+  s_e1070fee7f3bf4::t_2ce4a0a927e667 8,201,212-214
+front/src/screens/RunDetailScreen.tsx
+  s_e1070fee7f3bf4::t_18449e379b15f4 12,160,573-577
+front/src/screens/VerifyScreen.tsx
+  s_e1070fee7f3bf4::t_2260f330ef6f95 9,187-188,192-194,251-254,284,294-296,407,416,423,427-431,452-453
+serve/src/apex_mcp/models.py
+  s_e1070fee7f3bf4::t_e7c311e8ad855c 378-430,561-563,566-584,586,588-589
+serve/tests/test_proposal_parity.py
+  s_e1070fee7f3bf4::t_aa993739854141 1-129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a711724f5b6448471628e89899881bf29b9ed63d",
+  "prompts": {},
+  "sessions": {
+    "s_e1070fee7f3bf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48aba469-eb36-4c2f-a255-6bd3e6ea6065",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
