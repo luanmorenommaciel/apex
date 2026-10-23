@@ -124,8 +124,9 @@ _FINDINGS_ADDITIVE = {
 # app_name would resolve to that aggregate (ILLEGAL_AGGREGATION).
 #
 # The fingerprint is compared the house way (see SIMILAR_PLANS_SQL): capped
-# with substring() before toFixedString(), which THROWS past 64, so a hostile
-# value from the browser door binds as data and matches nothing. ReadStore
+# with substring() before toFixedString(), which THROWS past 64. The length
+# guard makes an over-long value match nothing without a conversion error.
+# A value from the browser door always binds as data. ReadStore
 # refuses anything longer than 64 outright (plan_fingerprint_too_long).
 #
 # The plan_fingerprint filter reads apex.run_outcomes, a v0.3 ADDITIVE table.
@@ -145,7 +146,7 @@ RUN_MEMBERSHIP = (
 RUN_SHAPE_FILTER = (
     " AND ({plan_fingerprint:String} = ''"
     " OR job_id IN (SELECT o.job_id FROM run_outcomes AS o FINAL"
-    " WHERE o.plan_fingerprint"
+    " WHERE length({plan_fingerprint:String}) <= 64 AND o.plan_fingerprint"
     " = toFixedString(substring({plan_fingerprint:String}, 1, 64), 64)))"
 )
 RUN_PAGE = "LIMIT {limit:UInt32} OFFSET {offset:UInt32}"

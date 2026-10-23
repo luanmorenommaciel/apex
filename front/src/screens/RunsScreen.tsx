@@ -159,6 +159,33 @@ export function RunsScreen() {
     ? (offset === 0 ? "no runs" : `no runs past ${offset}`)
     : `${runs.length} runs · ${offset + 1}–${offset + runs.length}`;
 
+  const pager = (
+    <div className="flex items-center gap-2 font-mono text-xs">
+      <button
+        type="button"
+        disabled={loading || offset === 0}
+        onClick={() => turn(offset - RUNS_PAGE_SIZE)}
+        className="px-2.5 py-[7px] bg-raised border border-edge rounded-sm text-sub hover:text-body2 disabled:opacity-40"
+      >
+        ← prev
+      </button>
+      <button
+        type="button"
+        disabled={loading || !hasNext}
+        onClick={() => turn(offset + RUNS_PAGE_SIZE)}
+        className="px-2.5 py-[7px] bg-raised border border-edge rounded-sm text-sub hover:text-body2 disabled:opacity-40"
+      >
+        next →
+      </button>
+      {!error && filtered && (
+        <>
+          <Pill tone="spark">{runs.length} on this page</Pill>
+          <span className="text-dim">matching the filters, applied by the store</span>
+        </>
+      )}
+    </div>
+  );
+
   // A rejected query is not a store with no runs. This screen used to keep
   // rendering around the error — "0 most recent applications", KPIs at 0,
   // "No rows match this filter" — every one of them a measured-zero claim
@@ -168,6 +195,7 @@ export function RunsScreen() {
       <Page>
         <ScreenHeader title="Runs" subtitle="query failed" right={controls} />
         <QueryFailure error={error} source={repo.kind} what="runs" />
+        {pager}
       </Page>
     );
   }
@@ -244,30 +272,7 @@ export function RunsScreen() {
         }
       />
 
-      <div className="flex items-center gap-2 font-mono text-xs">
-        <button
-          type="button"
-          disabled={loading || offset === 0}
-          onClick={() => turn(offset - RUNS_PAGE_SIZE)}
-          className="px-2.5 py-[7px] bg-raised border border-edge rounded-sm text-sub hover:text-body2 disabled:opacity-40"
-        >
-          ← prev
-        </button>
-        <button
-          type="button"
-          disabled={loading || !hasNext}
-          onClick={() => turn(offset + RUNS_PAGE_SIZE)}
-          className="px-2.5 py-[7px] bg-raised border border-edge rounded-sm text-sub hover:text-body2 disabled:opacity-40"
-        >
-          next →
-        </button>
-        {filtered && (
-          <>
-            <Pill tone="spark">{runs.length} on this page</Pill>
-            <span className="text-dim">matching the filters, applied by the store</span>
-          </>
-        )}
-      </div>
+      {pager}
     </Page>
   );
 }

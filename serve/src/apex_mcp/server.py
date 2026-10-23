@@ -441,10 +441,12 @@ class _StoreTools:
         )
 
     def runs_resource(self) -> RunList:
-        rows = self._store.runs()
+        limit, since_hours, offset = ch.effective_run_list_args(50, 168, 0)
+        rows = self._store.runs(limit=limit, since_hours=since_hours, offset=offset)
         payload = RunList(
             runs=[RunSummary.model_validate(row) for row in rows],
             returned=len(rows),
+            limit=limit, since_hours=since_hours, offset=offset,
         )
         return payload
 
