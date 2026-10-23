@@ -140,6 +140,28 @@ describe("RunsScreen (server-side filters, offset paging)", () => {
     expect(host.textContent).toContain("3 runs");
   });
 
+  it("keeps prev/next after a later-page rejection and prev restores the earlier page", async () => {
+    listRuns.mockImplementation(async (_limit, filters) => {
+      if (filters?.offset === RUNS_PAGE_SIZE) throw new Error("later page rejected");
+      return page(RUNS_PAGE_SIZE);
+    });
+    await mount();
+    expect(host.textContent).toContain("job-0");
+    await click("next");
+    expect(lastFilters()).toMatchObject({ offset: RUNS_PAGE_SIZE });
+    expect(host.textContent).toContain("query failed");
+    expect(button("prev")).toBeDefined();
+    expect(button("next")).toBeDefined();
+    expect(button("prev").disabled).toBe(false);
+    await click("prev");
+    expect(listRuns.mock.calls.map(([, filters]) => filters?.offset)).toEqual([0, RUNS_PAGE_SIZE, 0]);
+    expect(host.textContent).not.toContain("query failed");
+    expect(host.textContent).toContain("job-0");
+    expect(host.textContent).toContain(`job-${RUNS_PAGE_SIZE - 1}`);
+    expect(button("prev").disabled).toBe(true);
+    expect(button("next").disabled).toBe(false);
+  });
+
   it("stops 'next' where the store's offset cap stops paging", async () => {
     await mount();
     for (let i = 0; i < 200; i += 1) await click("next");

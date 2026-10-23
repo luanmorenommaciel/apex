@@ -12,19 +12,25 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import json
 import pathlib
 import re
+import sqlite3
 import sys
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
+import httpx
 from fastapi.testclient import TestClient
 
 from apex_api.app import create_app
 from apex_api.config import Settings
 from apex_mcp import ch
 from apex_mcp.ch import ApexStoreError, ReadStore
-from apex_mcp.server import create_server
+from apex_mcp.api_client import ApiClient
+from apex_mcp.models import RunList
+from apex_mcp.server import create_api_server, create_server
 
 TOKEN = "test-token-p75"
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
@@ -127,6 +133,46 @@ def test_mcp_tool_defaults():
     payload = payload[1] if isinstance(payload, tuple) else payload
     _, params = client.listing()
     assert {k: params[k] for k in DEFAULTS} == DEFAULTS
+    assert (payload["limit"], payload["since_hours"], payload["offset"]) == (50, 168, 0)
+
+
+@pytest.mark.parametrize("backend", ["direct", "api-in-process"])
+def test_real_runs_resource_echoes_defaults_and_passes_them_to_store(monkeypatch, backend):
+    client = _ListClient()
+    store = ReadStore(client)
+    runs = Mock(wraps=store.runs)
+    monkeypatch.setattr(store, "runs", runs)
+    with TestClient(create_app(store=store, settings=Settings(tokens=frozenset({TOKEN})))) as http:
+        server = create_server(store) if backend == "direct" else create_api_server(
+            ApiClient("http://testserver", TOKEN, http=http))
+        contents = list(asyncio.run(server.read_resource("apex://runs")))
+    assert len(contents) == 1
+    payload = json.loads(contents[0].content)
+    assert (payload["limit"], payload["since_hours"], payload["offset"]) == (50, 168, 0)
+    assert payload["returned"] == 0 and payload["runs"] == []
+    assert runs.call_count == 1
+    assert {key: runs.call_args.kwargs[key] for key in ("limit", "since_hours", "offset")} == {
+        "limit": 50, "since_hours": 168, "offset": 0,
+    }
+    _, bound = client.listing()
+    assert (bound["limit"], bound["since_hours"], bound["offset"]) == (50, 168, 0)
+
+
+def test_api_runs_resource_keeps_effective_defaults_from_fake_transport():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json=RunList(
+            runs=[], returned=0, limit=50, since_hours=168, offset=0,
+        ).model_dump(mode="json"))
+
+    with httpx.Client(base_url="http://offline.test", transport=httpx.MockTransport(handler)) as http:
+        server = create_api_server(ApiClient("http://offline.test", TOKEN, http=http))
+        contents = list(asyncio.run(server.read_resource("apex://runs")))
+    assert len(seen) == 1
+    assert seen[0].url.path == "/v1/diagnostics/runs"
+    payload = json.loads(contents[0].content)
     assert (payload["limit"], payload["since_hours"], payload["offset"]) == (50, 168, 0)
 
 
@@ -246,6 +292,62 @@ def test_oversized_filter_is_refused_before_any_query(method, field, size):
 def test_fingerprint_is_compared_as_the_column_is_stored():
     """FixedString(64), the house way: capped before toFixedString, which throws."""
     assert "toFixedString(substring({plan_fingerprint:String}, 1, 64), 64)" in ch.RUN_SHAPE_FILTER
+
+
+def _offline_shape_rows(sql, fingerprint):
+    """Execute the shipped predicate, translating only CH dialect mechanics.
+
+    SQLite supplies boolean/subquery semantics; the UDF supplies FixedString
+    padding. ASCII hex fixtures avoid character/byte length differences. This
+    does not claim to verify ClickHouse parsing, FINAL or query optimization.
+    """
+    match = re.search(r" AND \(\{plan_fingerprint:String\} = ''.*?\)\)\)", sql, re.S)
+    assert match, "the supplied production statement must contain the shape predicate"
+    predicate = match[0].replace("{plan_fingerprint:String}", ":plan_fingerprint")
+    predicate = predicate.replace(" AS o FINAL", " AS o")
+    with sqlite3.connect(":memory:") as db:
+        db.create_function("toFixedString", 2, lambda value, size: value.encode().ljust(size, b"\0"))
+        db.execute("CREATE TABLE candidates (job_id TEXT)")
+        db.execute("CREATE TABLE run_outcomes (job_id TEXT, plan_fingerprint BLOB)")
+        db.execute("INSERT INTO candidates VALUES ('matching-prefix')")
+        db.execute("INSERT INTO run_outcomes VALUES (?, ?)", ("matching-prefix", FP.encode()))
+        return [row[0] for row in db.execute(
+            "SELECT job_id FROM candidates WHERE 1" + predicate,
+            {"plan_fingerprint": fingerprint},
+        )]
+
+
+@pytest.mark.parametrize("sql", [ch.RUNS_BY_SHAPE_SQL, ch.RUN_LIST_SQL], ids=["mcp", "console-projection"])
+@pytest.mark.parametrize(("fingerprint", "expected"), [
+    ("", ["matching-prefix"]),
+    (FP, ["matching-prefix"]),
+    ("d" * 64, []),
+    (FP[:-1], []),
+    (FP + "d", []),
+    (FP + "d" * 64, []),
+])
+def test_actual_sql_shape_predicate_rejects_long_values_with_matching_prefix(sql, fingerprint, expected):
+    # Deliberately enter below ReadStore's pre-query input refusal: that refusal
+    # cannot establish that the actual SQL guard works. Record the raw binding.
+    seen = []
+
+    class OfflinePredicateClient:
+        def query(self, query, parameters):
+            seen.append((query, dict(parameters)))
+            rows = [{"job_id": job} for job in _offline_shape_rows(query, parameters["plan_fingerprint"])]
+            return type("Result", (), {"named_results": lambda self: rows})()
+
+    rows = ReadStore(OfflinePredicateClient())._query(sql, {"plan_fingerprint": fingerprint})
+    assert seen == [(sql, {"plan_fingerprint": fingerprint})]
+    assert [row["job_id"] for row in rows] == expected
+
+
+@pytest.mark.parametrize("sql", [ch.RUNS_BY_SHAPE_SQL, ch.RUN_LIST_SQL])
+def test_sql_fixture_reproduces_truncated_prefix_match_without_length_guard(sql):
+    # Negative control: the old predicate really matches the 65-character input.
+    old_sql = sql.replace("length({plan_fingerprint:String}) <= 64 AND ", "")
+    assert old_sql != sql
+    assert _offline_shape_rows(old_sql, FP + "d") == ["matching-prefix"]
 
 
 def test_mcp_fingerprint_filter_needs_run_outcomes_only():

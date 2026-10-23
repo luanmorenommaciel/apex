@@ -6,6 +6,7 @@
  * test_run_list_alignment.py proves RUN_LIST is serve's RUN_LIST_SQL.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { execFileSync } from "node:child_process";
 
 vi.mock("./runtimeConfig", () => ({
   runtimeConfig: {
@@ -35,6 +36,36 @@ beforeEach(() => {
 
 const params = (s: Sent) =>
   Object.fromEntries([...s.url.searchParams].filter(([k]) => k.startsWith("param_")));
+
+/**
+ * Execute the actual sent shape predicate in stdlib SQLite, without a service.
+ * Only parameter syntax, FINAL and FixedString padding need dialect adapters;
+ * SQL boolean/subquery evaluation is SQLite's. Hex fixtures are ASCII so byte
+ * and character lengths agree. This is not a live ClickHouse parser check.
+ */
+function offlineShapeRows(statement: Sent): { rows: string[]; unguarded: string[] } {
+  return JSON.parse(execFileSync("python3", ["-c", `
+import json, re, sqlite3, sys
+request = json.load(sys.stdin)
+match = re.search(r" AND \\(\\{plan_fingerprint:String\\} = ''.*?\\)\\)\\)", request["sql"], re.S)
+assert match, "actual sent SQL must contain the shape predicate"
+predicate = match[0].replace("{plan_fingerprint:String}", ":fingerprint").replace(" AS o FINAL", " AS o")
+with sqlite3.connect(":memory:") as db:
+    db.create_function("toFixedString", 2, lambda value, size: value.encode().ljust(size, b"\\0"))
+    db.execute("CREATE TABLE candidates (job_id TEXT)")
+    db.execute("CREATE TABLE run_outcomes (job_id TEXT, plan_fingerprint BLOB)")
+    db.execute("INSERT INTO candidates VALUES ('matching-prefix')")
+    db.execute("INSERT INTO run_outcomes VALUES (?, ?)", ("matching-prefix", b"c" * 64))
+    def evaluate(clause):
+        return [r[0] for r in db.execute("SELECT job_id FROM candidates WHERE 1" + clause,
+                                       {"fingerprint": request["fingerprint"]})]
+    print(json.dumps({"rows": evaluate(predicate),
+                      "unguarded": evaluate(predicate.replace("length(:fingerprint) <= 64 AND ", ""))}))
+`], {
+    encoding: "utf8",
+    input: JSON.stringify({ sql: statement.body, fingerprint: params(statement).param_plan_fingerprint }),
+  }));
+}
 
 describe("ClickHouseRepository.listRuns", () => {
   it("binds every placeholder RUN_LIST names, at the shared defaults", async () => {
@@ -66,6 +97,26 @@ describe("ClickHouseRepository.listRuns", () => {
       param_job_id_prefix: hostile, param_plan_fingerprint: hostile, param_app_name: hostile,
       param_has_findings: "0", param_offset: "30", param_since_hours: "2", param_limit: "10",
     });
+  });
+
+  it.each([
+    { fingerprint: "", expected: ["matching-prefix"] },
+    { fingerprint: "c".repeat(64), expected: ["matching-prefix"] },
+    { fingerprint: "d".repeat(64), expected: [] },
+    { fingerprint: "c".repeat(63), expected: [] },
+    { fingerprint: "c".repeat(64) + "d", expected: [] },
+    { fingerprint: "c".repeat(64) + "d".repeat(64), expected: [] },
+  ])("executes the sent SQL shape predicate for $fingerprint", async ({ fingerprint, expected }) => {
+    await new ClickHouseRepository().listRuns(50, { planFingerprint: fingerprint });
+    expect(sent).toHaveLength(1);
+    expect(sent[0].body).toBe(RUN_LIST);
+    expect(params(sent[0]).param_plan_fingerprint).toBe(fingerprint);
+    const actual = offlineShapeRows(sent[0]);
+    expect(actual.rows).toEqual(expected);
+    if (fingerprint.length > 64) {
+      // Negative control: the same valid prefix matches under the old predicate.
+      expect(actual.unguarded).toEqual(["matching-prefix"]);
+    }
   });
 });
 
