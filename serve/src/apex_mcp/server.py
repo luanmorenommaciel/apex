@@ -750,7 +750,11 @@ def _build_server(tools: ToolBackend) -> FastMCP:
         a client can populate a picker before the user has asked anything.
         """
         try:
-            return tools.runs_resource().model_dump_json(indent=2)
+            limit, since_hours, offset = ch.effective_run_list_args(50, 168, 0)
+            # Keep the backend's validated echoes and paging notes intact.
+            return tools.list_runs(
+                limit=limit, since_hours=since_hours, app_name="", offset=offset,
+            ).model_dump_json(indent=2)
         except Exception as exc:  # noqa: BLE001
             raise _fail(exc) from None
 
