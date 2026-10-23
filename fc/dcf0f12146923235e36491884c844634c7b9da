@@ -1,0 +1,19 @@
+serve/src/apex_mcp/server.py
+  s_c748ae018bfaad::t_f062c329edd354 753-757
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fcdcf0f12146923235e36491884c844634c7b9da",
+  "prompts": {},
+  "sessions": {
+    "s_c748ae018bfaad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a168f2-ea16-7bd2-b998-4dbc4ec61d84",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
