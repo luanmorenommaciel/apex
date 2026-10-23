@@ -106,6 +106,21 @@ async def main() -> int:
                 job_id = discovered[0]["job_id"]
                 baseline_id = baseline_id or discovered[-1]["job_id"]
 
+            # P7.5 — the filters reach the store and come back echoed: the
+            # subject itself, by its full job_id as a prefix, on page one.
+            narrowed = _payload(await session.call_tool(
+                "list_runs", {"limit": 5, "offset": 0, "job_id_prefix": job_id,
+                              # widest window: APEX_GATE_JOB_ID may be older
+                              # than the default week
+                              "since_hours": 87_600}
+            ))
+            assert narrowed["job_id_prefix_filter"] == job_id, narrowed
+            narrowed_ids = [r["job_id"] for r in narrowed["runs"]]
+            # The subject must be IN the result: all() over an empty list
+            # would pass a filter that matched nothing.
+            assert job_id in narrowed_ids, narrowed
+            assert all(j.startswith(job_id) for j in narrowed_ids), narrowed
+
             # The lane's first resource. Orientation must not cost a tool call,
             # and a resource must never inflate the tool surface a model sees.
             resources = await session.list_resources()

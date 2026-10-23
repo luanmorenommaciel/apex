@@ -222,9 +222,15 @@ def main() -> int:
     assert by_job[AFTER_JOB_ID]["stage_count"] >= 1
     assert by_job[AFTER_JOB_ID]["app_name"]
 
-    # newest-first, so the caller can trust the order without re-sorting
-    timestamps = [r["last_ts"] for r in listed]
-    assert timestamps == sorted(timestamps, reverse=True), "runs are not newest-first"
+    # Newest started first, with a stable job_id tie-break for paging.
+    assert all(
+        previous["first_ts"] > current["first_ts"]
+        or (
+            previous["first_ts"] == current["first_ts"]
+            and previous["job_id"] <= current["job_id"]
+        )
+        for previous, current in zip(listed, listed[1:])
+    ), "runs are not ordered by first_ts DESC, job_id ASC"
 
     # app_name is observed data and reaches a WHERE clause: it must BIND.
     hostile = store.runs(app_name="' OR 1=1 --")

@@ -45,8 +45,14 @@ def test_statements_are_read_from_the_console_as_written():
     # The two rollups are BUILT in the TypeScript; the gate builds them the same way.
     assert "WHERE job_id = {job:String}" in statements["RUN_ONE"]
     assert statements["RUN_ONE"].rstrip().endswith("LIMIT 1")
-    assert "ORDER BY b.started_at DESC LIMIT {limit:UInt32}" in statements["RUN_LIST"]
-    assert "WHERE job_id" not in statements["RUN_LIST"].split("shapes AS")[0].split("f AS")[0]
+    assert (
+        "ORDER BY b.started_at DESC, b.job_id ASC LIMIT {limit:UInt32} OFFSET {offset:UInt32}"
+        in statements["RUN_LIST"]
+    )
+    # P7.5: the list is windowed by run membership, not by a job_id equality.
+    base = statements["RUN_LIST"].split("shapes AS")[0].split("f AS")[0]
+    assert "WHERE job_id IN (SELECT w.job_id FROM spark_events AS w" in base
+    assert "WHERE job_id =" not in base
     for sql in statements.values():
         assert "${" not in sql, "a template placeholder reached the statement"
         # The console's parameter names, not serve's.
@@ -176,3 +182,65 @@ def test_a_route_that_dropped_a_column_is_reported_not_raised(monkeypatch):
     )
     finding_line = next(line for line in report.lines if line[1] == "findings ordered by confidence_score")
     assert finding_line[0] == gate.FAIL and "no ts" in finding_line[2]
+
+
+# -- P7.5: the run list's filters and the cross-door order -------------------
+def test_run_list_cases_bind_every_placeholder_and_map_to_the_routes():
+    statements = gate.console_statements(gate.QUERIES_TS.read_text())
+    placeholders = set(re.findall(r"\{(\w+):", statements["RUN_LIST"]))
+    for _name, params in gate.run_list_cases("parity-gate-", "f" * 64):
+        assert set(params) == placeholders
+    assert gate.run_list_query(gate.run_list_params()) == (
+        "limit=50&since_hours=168&offset=0&app_name=&job_id_prefix=&plan_fingerprint="
+    )
+    assert "has_findings=true" in gate.run_list_query(gate.run_list_params(has_findings=1))
+    assert "has_findings=false" in gate.run_list_query(gate.run_list_params(has_findings=0))
+    hostile = gate.run_list_query(gate.run_list_params(job_id_prefix="' OR 1=1 --&x=1"))
+    assert "x=1" not in hostile.split("&")
+
+
+def _order_api(mcp_ids, console_ids, status=200):
+    def get(path):
+        if path.startswith("/v1/diagnostics/runs"):
+            return status, {"runs": [{"job_id": j} for j in mcp_ids]}
+        return status, [{"job_id": j} for j in console_ids]
+    return gate.Api(get=get, label="fake")
+
+
+def test_cross_door_order_passes_on_the_same_order_and_fails_on_a_swap():
+    report = gate.Report()
+    gate.cross_door_order(report, _order_api(["a", "b"], ["a", "b"]), prefix="p", fingerprint="")
+    assert not report.failed and report.count(gate.PASS) == 5
+    report = gate.Report()
+    gate.cross_door_order(report, _order_api(["a", "b"], ["b", "a"]), prefix="p", fingerprint="")
+    assert report.failed
+
+
+def test_cross_door_order_on_nothing_is_not_a_pass():
+    report = gate.Report()
+    gate.cross_door_order(report, _order_api([], []), prefix="p", fingerprint="")
+    assert report.count(gate.SKIP) == 5 and report.count(gate.PASS) == 0
+
+
+def test_the_cross_door_order_holds_through_the_real_app():
+    """In process, over one store: the two routes reach one membership/order."""
+    token = "gate-test-token"
+    rows = [{"job_id": "b", "started_at": "2026-09-20 10:00:00"},
+            {"job_id": "a", "started_at": "2026-09-20 09:00:00"}]
+
+    class Client:
+        def query(self, query, parameters=None):
+            out = rows if "since_hours" in (parameters or {}) else []
+            if "shaped_stage_count" not in query:
+                out = [{"job_id": r["job_id"], "first_ts": r["started_at"]} for r in out]
+            return type("R", (), {"named_results": lambda _s: list(out)})()
+
+    app = create_app(store=ReadStore(Client()), settings=Settings(tokens=frozenset({token})))
+
+    def get(path):
+        status, body = asyncio.run(gate._asgi_get(app, path, {"authorization": f"Bearer {token}"}))
+        return status, json.loads(body)
+
+    report = gate.Report()
+    gate.cross_door_order(report, gate.Api(get=get, label="in-process"), prefix="", fingerprint="")
+    assert not report.failed and report.count(gate.PASS) == 5

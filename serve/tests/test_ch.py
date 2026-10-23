@@ -221,7 +221,7 @@ def test_runs_aggregates_one_row_per_job():
     assert runs[0]["stage_count"] == 4
     sql, _ = client.calls[0]
     assert "GROUP BY job_id" in sql
-    assert "ORDER BY last_ts DESC" in sql
+    assert "ORDER BY first_ts DESC, job_id ASC" in sql
 
 
 def test_runs_filters_by_app_name():
@@ -259,8 +259,10 @@ def test_runs_bounds_the_scan_on_ts():
     store.runs(since_hours=24)
 
     sql, parameters = client.calls[0]
-    assert "ts >= {since:DateTime}" in sql
-    assert parameters["since"]
+    # Hours, not a client-computed timestamp: ClickHouse evaluates now(), so
+    # the browser door and the API door cannot disagree about the window.
+    assert "w.ts >= now() - toIntervalHour({since_hours:UInt32})" in sql
+    assert parameters["since_hours"] == 24
 
 
 def test_runs_clamps_a_caller_supplied_limit():

@@ -22,7 +22,6 @@ import logging
 import os
 import re
 from collections.abc import Iterable
-from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
 log = logging.getLogger("apex_mcp.ch")
@@ -95,17 +94,109 @@ _FINDINGS_ADDITIVE = {
     ),
 }
 
-# The one read not keyed by job_id: a new user has no job_id yet, and a
-# reachable-but-empty store must be distinguishable from a broken one.
-# Run discovery. spark_events is ORDER BY (job_id, stage_id, stage_attempt)
-# PARTITION BY toYYYYMM(ts), so a newest-first listing is a full scan unless it
-# is bounded on ts — the `since` predicate is what lets partitions prune.
-# The table alias `e` is load-bearing: the SELECT projects `argMax(app_name, ts)
-# AS app_name`, and an unqualified `app_name` in WHERE resolves to that alias,
-# which ClickHouse rejects as an aggregate in WHERE (ILLEGAL_AGGREGATION).
-# app_name is set by the observed Spark job, so it BINDS; the empty-string test
-# expresses "no filter" without building two different statements.
-RUNS_SQL = """
+# --------------------------------------------------------------------------
+# Run listing — ONE membership and ONE order for every door (P7.5).
+#
+# Three doors list runs: the MCP tool ``list_runs`` (RUNS_SQL, the RunSummary
+# projection), the console's ``GET /v1/runs`` (RUN_LIST_SQL, the rollup
+# projection) and the browser's RUN_LIST in front/src/data/queries.ts. They
+# project different columns, but for the same arguments they must name the
+# same runs in the same order, so membership and order are these literals.
+#
+# * Membership: a run is in the window when at least one of its spark_events
+#   rows has ``ts >= now() - since_hours``. That predicate lives in the inner
+#   SELECT, on ``ts``, which is what lets the toYYYYMM(ts) partitions prune —
+#   spark_events is ORDER BY job_id, so a newest-first listing without it reads
+#   every partition. ``now()`` is evaluated by ClickHouse, so the browser and
+#   the API, which both send the HOURS rather than a timestamp, cannot
+#   disagree about where the window starts.
+# * Aggregates are computed over ALL of a member's events (the outer query
+#   reads ``job_id IN (...)``, which uses the job_id primary key), so a run
+#   straddling the window boundary is not truncated to its in-window stages.
+# * Order: ``started_at DESC, job_id ASC``. The tie-break is load-bearing:
+#   without it two runs starting in the same millisecond swap between calls
+#   and offset paging repeats or skips one.
+#
+# Every filter is a BOUND parameter with an "empty means no filter" test, like
+# the app_name filter before it — one statement text, nothing caller-supplied
+# formatted into SQL. Inner columns are qualified (``w.``, ``o.``): the outer
+# SELECTs alias ``argMax(app_name, ts) AS app_name``, and an unqualified
+# app_name would resolve to that aggregate (ILLEGAL_AGGREGATION).
+#
+# The fingerprint is compared the house way (see SIMILAR_PLANS_SQL): capped
+# with substring() before toFixedString(), which THROWS past 64. The length
+# guard makes an over-long value match nothing without a conversion error.
+# A value from the browser door always binds as data. ReadStore
+# refuses anything longer than 64 outright (plan_fingerprint_too_long).
+#
+# The plan_fingerprint filter reads apex.run_outcomes, a v0.3 ADDITIVE table.
+# The console's rollup joins that table anyway, so RUN_LIST_SQL always carries
+# it. The MCP's RUNS_SQL must keep working on a v0.2 deployment, so it carries
+# the clause only in RUNS_BY_SHAPE_SQL, chosen when a fingerprint is passed —
+# a choice between two module literals, never text built from the value.
+# --------------------------------------------------------------------------
+RUN_MEMBERSHIP = (
+    "job_id IN (SELECT w.job_id FROM spark_events AS w"
+    " WHERE w.ts >= now() - toIntervalHour({since_hours:UInt32})"
+    " AND ({app_name:String} = '' OR w.app_name = {app_name:String})"
+    " AND startsWith(w.job_id, {job_id_prefix:String}))"
+    " AND ({has_findings:Int8} = -1"
+    " OR (job_id IN (SELECT job_id FROM findings)) = {has_findings:Int8})"
+)
+RUN_SHAPE_FILTER = (
+    " AND ({plan_fingerprint:String} = ''"
+    " OR job_id IN (SELECT o.job_id FROM run_outcomes AS o FINAL"
+    " WHERE length({plan_fingerprint:String}) <= 64 AND o.plan_fingerprint"
+    " = toFixedString(substring({plan_fingerprint:String}, 1, 64), 64)))"
+)
+RUN_PAGE = "LIMIT {limit:UInt32} OFFSET {offset:UInt32}"
+
+# Paging bounds, shared by ReadStore, the MCP tool's API client and the HTTP
+# routes. limit and since_hours CLAMP (a page smaller than asked is still a
+# true page); offset is REFUSED outside its range, because a clamped offset
+# silently returns a different page than the one asked for.
+MAX_RUNS = 200
+MAX_RUNS_OFFSET = 10_000
+# Ten years. Keeps the value inside UInt32; the tables' own TTL is far shorter.
+MAX_SINCE_HOURS = 87_600
+# A plan_fingerprint is a 64-char hex digest stored as FixedString(64).
+MAX_FINGERPRINT_CHARS = 64
+
+
+def require_run_offset(offset: int) -> int:
+    """The offset, or ``offset_out_of_range`` — never a silently clamped page."""
+    offset = int(offset)
+    if not 0 <= offset <= MAX_RUNS_OFFSET:
+        raise ApexStoreError(
+            f"offset_out_of_range: offset must be between 0 and {MAX_RUNS_OFFSET}."
+        )
+    return offset
+
+
+def effective_run_list_args(
+    limit: int, since_hours: int, offset: int
+) -> tuple[int, int, int]:
+    """(limit, since_hours, offset) exactly as the store will bind them.
+
+    list_runs echoes these, so a caller reads the page it GOT, not the one it
+    asked for.
+    """
+    return (
+        max(1, min(int(limit), MAX_RUNS)),
+        max(1, min(int(since_hours), MAX_SINCE_HOURS)),
+        require_run_offset(offset),
+    )
+
+
+def _runs_sql(where: str) -> str:
+    """The MCP's RunSummary projection over one run membership.
+
+    The table alias ``e`` is kept from the original statement; the WHERE now
+    names no column the SELECT aliases. ``first_ts`` is min(ts) over all of a
+    run's events — the console's ``started_at`` — so ordering on it is the
+    console's order.
+    """
+    return f"""
 SELECT
   job_id,
   argMax(app_id, ts)             AS app_id,
@@ -116,12 +207,15 @@ SELECT
   sum(spill_disk_bytes)          AS spill_disk_bytes,
   max(task_duration_p99_ms)      AS worst_p99_ms
 FROM spark_events AS e
-WHERE e.ts >= {since:DateTime}
-  AND ({app_name:String} = '' OR e.app_name = {app_name:String})
+WHERE {where}
 GROUP BY job_id
-ORDER BY last_ts DESC
-LIMIT {limit:UInt32}
+ORDER BY first_ts DESC, job_id ASC
+{RUN_PAGE}
 """
+
+
+RUNS_SQL = _runs_sql(RUN_MEMBERSHIP)
+RUNS_BY_SHAPE_SQL = _runs_sql(RUN_MEMBERSHIP + RUN_SHAPE_FILTER)
 
 HEALTH_SQL = """
 SELECT
@@ -399,7 +493,8 @@ RUN_ONE_SQL = _run_rollup_sql(
     "WHERE job_id = {job_id:String}", "LIMIT 1"
 )
 RUN_LIST_SQL = _run_rollup_sql(
-    "", "ORDER BY b.started_at DESC LIMIT {limit:UInt32}"
+    "WHERE " + RUN_MEMBERSHIP + RUN_SHAPE_FILTER,
+    "ORDER BY b.started_at DESC, b.job_id ASC " + RUN_PAGE,
 )
 
 # Rule 2 lives in this projection, not in the table. A delta inside the
@@ -738,15 +833,30 @@ class ReadStore:
         job_id = _require_job_id(job_id)
         return self._query(_findings_sql(self.findings_columns()), {"job_id": job_id})
 
-    MAX_RUNS = 200
+    # Shared by runs() and run_list(), and by every door above them: the MCP
+    # tool, GET /v1/diagnostics/runs and GET /v1/runs all default to these, so
+    # the same call with no arguments lists the same runs everywhere.
+    MAX_RUNS = MAX_RUNS
+    DEFAULT_RUNS_LIMIT = 50
+    DEFAULT_SINCE_HOURS = 168
+    # Paging is offset-based over a deterministic order. The cap keeps a
+    # caller from asking ClickHouse to sort and discard an unbounded prefix;
+    # 10 000 is 50 pages of the maximum page, far past any console use.
+    MAX_RUNS_OFFSET = MAX_RUNS_OFFSET
+    MAX_SINCE_HOURS = MAX_SINCE_HOURS
 
     def runs(
         self,
-        limit: int = 20,
-        since_hours: int = 168,
+        limit: int = DEFAULT_RUNS_LIMIT,
+        since_hours: int = DEFAULT_SINCE_HOURS,
         app_name: str = "",
+        *,
+        offset: int = 0,
+        job_id_prefix: str = "",
+        plan_fingerprint: str = "",
+        has_findings: bool | None = None,
     ) -> list[dict[str, Any]]:
-        """Recent runs, one row per job_id, newest first.
+        """Recent runs, one row per job_id, newest-STARTED first.
 
         The read the lane was missing: every other method needs a ``job_id``
         the user has no way to obtain from Apex.
@@ -755,18 +865,62 @@ class ReadStore:
         bound. Without a ``ts`` predicate this degrades to a full scan on a
         table sorted by ``job_id``. ``limit`` is clamped so a caller-supplied
         value cannot ask for the whole table.
+
+        P7.5 aligned this with the console's run_list(): same membership (a
+        run with any event in the window, aggregated over ALL its events),
+        same order (``first_ts DESC, job_id ASC`` — it was ``last_ts DESC``),
+        same filters and same defaults (limit 50 — it was 20). See
+        RUN_MEMBERSHIP.
+
+        ``plan_fingerprint`` reads the v0.3 run_outcomes table — and only that
+        one, so only its presence is required — and passing one on a
+        deployment without it raises ``memory_unavailable`` rather than
+        answering "no runs of that shape". ``offset`` outside 0..10 000 raises
+        ``offset_out_of_range``.
         """
-        limit = max(1, min(int(limit), self.MAX_RUNS))
-        hours = max(1, int(since_hours))
-        since = datetime.now(timezone.utc) - timedelta(hours=hours)
-        return self._query(
-            RUNS_SQL,
-            {
-                "since": since.strftime("%Y-%m-%d %H:%M:%S"),
-                "app_name": app_name or "",
-                "limit": limit,
-            },
+        parameters = self._run_list_parameters(
+            limit, since_hours, app_name, offset, job_id_prefix, has_findings
         )
+        plan_fingerprint = _require_fingerprint(plan_fingerprint)
+        if not plan_fingerprint:
+            return self._query(RUNS_SQL, parameters)
+        if not self.table_exists("run_outcomes"):
+            raise ApexStoreError(
+                f"memory_unavailable: {self._database}.run_outcomes is not "
+                "present on this deployment, and filtering runs by "
+                "plan_fingerprint reads it. This is not an empty result. Apply "
+                "the v0.3 DDL via the infra lane."
+            )
+        return self._query(
+            RUNS_BY_SHAPE_SQL, {**parameters, "plan_fingerprint": plan_fingerprint}
+        )
+
+    def _run_list_parameters(
+        self,
+        limit: int,
+        since_hours: int,
+        app_name: str,
+        offset: int,
+        job_id_prefix: str,
+        has_findings: bool | None,
+    ) -> dict[str, Any]:
+        """The bound values RUN_MEMBERSHIP and RUN_PAGE read.
+
+        limit and since_hours are clamped; offset is refused out of range (see
+        effective_run_list_args). Every caller-supplied string is
+        length-guarded and then BOUND; the guard is a resource limit, not the
+        injection defense.
+        """
+        limit, since_hours, offset = effective_run_list_args(limit, since_hours, offset)
+        return {
+            "since_hours": since_hours,
+            "app_name": _require_optional_id(app_name, "app_name"),
+            "job_id_prefix": _require_optional_id(job_id_prefix, "job_id_prefix"),
+            # Tri-state as Int8: -1 is "no filter", 1 "has findings", 0 "none".
+            "has_findings": -1 if has_findings is None else int(bool(has_findings)),
+            "limit": limit,
+            "offset": offset,
+        }
 
     def store_health(self) -> dict[str, Any]:
         """Row count, distinct jobs and newest ts across apex.spark_events.
@@ -1018,20 +1172,38 @@ class ReadStore:
             iter(self._query(RUN_ONE_SQL, {"job_id": _require_job_id(job_id)})), None
         )
 
-    def run_list(self, limit: int = 50) -> list[dict[str, Any]]:
+    def run_list(
+        self,
+        limit: int = DEFAULT_RUNS_LIMIT,
+        since_hours: int = DEFAULT_SINCE_HOURS,
+        app_name: str = "",
+        *,
+        offset: int = 0,
+        job_id_prefix: str = "",
+        plan_fingerprint: str = "",
+        has_findings: bool | None = None,
+    ) -> list[dict[str, Any]]:
         """Recent runs in the CONSOLE's rollup shape, newest first.
 
         Not ``runs()``. That one projects app_id, first_ts, last_ts,
         spill_disk_bytes and worst_p99_ms for the MCP's RunSummary; the console
         needs task_time_ms, finding_count and the shape columns, which runs()
-        does not carry. Same name, different question.
+        does not carry. Same name, different question — but, since P7.5, the
+        same RUNS: one membership, one order and one set of filters, so for
+        the same arguments both name the same job_ids in the same order.
+
+        P7.5 also gave this list a window: by default only runs with an event
+        in the last 168 hours are listed (it had no time predicate at all, and
+        read every partition of spark_events).
 
         The limit is clamped rather than trusted, and the caller is told when
         the clamp bit so a truncated page is never read as a complete one.
         """
-        return self._query(
-            RUN_LIST_SQL, {"limit": max(1, min(int(limit), self.MAX_RUNS))}
+        parameters = self._run_list_parameters(
+            limit, since_hours, app_name, offset, job_id_prefix, has_findings
         )
+        parameters["plan_fingerprint"] = _require_fingerprint(plan_fingerprint)
+        return self._query(RUN_LIST_SQL, parameters)
 
     def fix_verification(self, finding_id: str) -> dict[str, Any] | None:
         """The verify lane's row for ONE finding, keyed on the finding alone.
@@ -1188,6 +1360,20 @@ def _require_optional_id(value: str, name: str) -> str:
     value = value or ""
     if len(value) > 512:
         raise ApexStoreError(f"{name}_too_long: {name} exceeds 512 characters.")
+    return value
+
+
+def _require_fingerprint(value: str) -> str:
+    """An optional plan_fingerprint: empty is "no filter"; past 64 is refused.
+
+    64 is the column's width (FixedString(64)), so a longer value cannot name
+    a stored shape and is an error, not a non-match.
+    """
+    value = value or ""
+    if len(value) > MAX_FINGERPRINT_CHARS:
+        raise ApexStoreError(
+            "plan_fingerprint_too_long: plan_fingerprint exceeds 64 characters."
+        )
     return value
 
 

@@ -23,11 +23,11 @@ what the driver happened to hand back.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 
-from apex_mcp.ch import ReadStore
+from apex_mcp.ch import MAX_RUNS_OFFSET, ReadStore
 
 from ..wire import wire
 
@@ -69,12 +69,33 @@ def _report_truncation(response: Response, rows: list[Any], cap: int) -> None:
 
 @router.get(RESOURCE_ROUTES["listRuns"][1])
 async def list_runs(
-    request: Request, response: Response, limit: int = 50
+    request: Request,
+    response: Response,
+    limit: int = ReadStore.DEFAULT_RUNS_LIMIT,
+    since_hours: int = ReadStore.DEFAULT_SINCE_HOURS,
+    offset: Annotated[int, Query(ge=0, le=MAX_RUNS_OFFSET)] = 0,
+    app_name: str = "",
+    job_id_prefix: str = "",
+    plan_fingerprint: str = "",
+    has_findings: bool | None = None,
 ) -> list[dict[str, Any]]:
-    """Recent runs in the console's rollup shape, newest first."""
+    """Recent runs in the console's rollup shape, newest-started first.
+
+    P7.5: the same defaults, membership, order and filters as the MCP's
+    list_runs (GET /v1/diagnostics/runs), so for the same arguments the two
+    list the same job_ids in the same order. A run is listed when it has an
+    event in the last ``since_hours`` (default 168) — runs idle for longer
+    than that drop out of the default list, which previously had no window.
+    ``offset`` pages over ``started_at DESC, job_id ASC``. Every filter is
+    bound server-side; empty (or absent, for ``has_findings``) means none.
+    """
     store = _store(request)
     cap = max(1, min(int(limit), store.MAX_RUNS))
-    rows = store.run_list(limit=cap)
+    rows = store.run_list(
+        limit=cap, since_hours=since_hours, app_name=app_name, offset=offset,
+        job_id_prefix=job_id_prefix, plan_fingerprint=plan_fingerprint,
+        has_findings=has_findings,
+    )
     _report_truncation(response, rows, cap)
     return wire(rows)
 

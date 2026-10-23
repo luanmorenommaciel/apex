@@ -102,6 +102,9 @@ class _WorldClient:
                 "stage_count": 2, "spill_disk_bytes": 0, "worst_p99_ms": 100,
             },
         ]
+        # Which listed run executed which shape, for list_runs' plan filter.
+        # Kept apart from self.outcomes so recall's fixtures are unchanged.
+        self.run_shapes = {"j": FP}
         self.plans = [
             {"plan_fingerprint": FP_NEAR, "similarity": 0.91, "node_count": 12,
              "join_count": 2, "agg_count": 1, "exchange_count": 3,
@@ -135,6 +138,11 @@ class _WorldClient:
                 rows = [{"name": name} for name in FINDINGS_COLUMNS]
         elif "system.tables" in query:
             rows = [{"name": "plan_memory"}, {"name": "run_outcomes"}]
+        elif "since_hours" in parameters:
+            # Run listing — recognised FIRST, because its membership reads
+            # findings and run_outcomes in sub-selects. Applies the filters,
+            # order and page the way RUN_MEMBERSHIP / RUN_PAGE do.
+            rows = self._listed(parameters)
         elif "positionCaseInsensitive" in query:
             rows = list(self.search)
         elif reads(query, "plan_memory"):
@@ -151,13 +159,27 @@ class _WorldClient:
             rows = list(self.transitions.get(job_id, []))
         elif reads(query, "findings"):
             rows = list(self.findings.get(job_id, []))
-        elif "since" in parameters:
-            rows = [r for r in self.runs
-                    if not parameters.get("app_name")
-                    or r["app_name"] == parameters["app_name"]]
         else:
             rows = list(self.stages.get(job_id, []))
         return type("R", (), {"named_results": lambda _self: list(rows)})()
+
+
+    def _listed(self, parameters: dict) -> list[dict]:
+        shaped = {job for job, fp in self.run_shapes.items()
+                  if fp == parameters.get("plan_fingerprint")}
+        with_findings = {job for job, rows in self.findings.items() if rows}
+        has = parameters["has_findings"]
+        rows = [
+            r for r in self.runs
+            if (not parameters["app_name"] or r["app_name"] == parameters["app_name"])
+            and r["job_id"].startswith(parameters["job_id_prefix"])
+            and (has == -1 or (r["job_id"] in with_findings) == bool(has))
+            and (not parameters.get("plan_fingerprint") or r["job_id"] in shaped)
+        ]
+        rows.sort(key=lambda r: r["job_id"])
+        rows.sort(key=lambda r: r["first_ts"], reverse=True)
+        start = parameters["offset"]
+        return rows[start:start + parameters["limit"]]
 
 
 def _settings() -> Settings:
@@ -212,6 +234,14 @@ CASES = [
     ("compare_runs", {"current_job_id": "j"}),  # auto-baseline
     ("list_runs", {}),
     ("list_runs", {"limit": 1, "since_hours": 24, "app_name": "test-app"}),
+    # P7.5 — paging and the filters, each through both backends.
+    ("list_runs", {"limit": 1, "offset": 1}),
+    ("list_runs", {"job_id_prefix": "ba"}),
+    ("list_runs", {"has_findings": True}),
+    ("list_runs", {"has_findings": False}),
+    ("list_runs", {"plan_fingerprint": FP}),
+    ("list_runs", {"job_id_prefix": "' OR 1=1 --", "plan_fingerprint": "' OR 1=1 --",
+                   "app_name": "' OR 1=1 --"}),
     ("search_kb", {"query": "skew tail", "top_k": 3}),
     ("search_kb", {"query": ""}),
     ("recall_similar_runs", {"job_id": "job-current"}),
@@ -257,6 +287,39 @@ def test_parity_cases_take_substantive_paths():
     assert _call(mcp, "list_runs", {})["returned"] == 2
     assert _call(mcp, "search_kb", {"query": "skew"})["hits"]
     assert _call(mcp, "compare_runs", {"current_job_id": "j"})["baseline_job_id"] == "base"
+
+
+LIST_RUNS_FILTERS = [
+    ({}, ["j", "base"]),
+    ({"limit": 1, "offset": 1}, ["base"]),
+    ({"job_id_prefix": "ba"}, ["base"]),
+    ({"has_findings": True}, ["j"]),
+    ({"has_findings": False}, ["base"]),
+    ({"plan_fingerprint": FP}, ["j"]),
+    ({"app_name": "test-app", "job_id_prefix": "j", "has_findings": True,
+      "plan_fingerprint": FP, "since_hours": 24}, ["j"]),
+]
+
+
+@pytest.mark.parametrize(("arguments", "expected"), LIST_RUNS_FILTERS)
+def test_list_runs_filters_are_identical_on_both_backends(arguments, expected):
+    """P7.5 — same arguments, same job_ids, same order, same bound values.
+
+    Not only the payloads: the ReadStore under the API must receive exactly
+    the parameters the direct backend binds, so the two cannot agree by
+    accident on a fixture too small to tell them apart.
+    """
+    direct_client, api_client_ = _WorldClient(), _WorldClient()
+    direct = _call(_direct_server(direct_client), "list_runs", arguments)
+    over_http = _call(_api_server(api_client_), "list_runs", arguments)
+    assert over_http == direct
+    assert [run["job_id"] for run in direct["runs"]] == expected
+
+    def bound(client: _WorldClient) -> list[dict]:
+        return [params for _, params in client.calls if "since_hours" in params]
+
+    assert bound(api_client_) == bound(direct_client)
+    assert len(bound(direct_client)) == 1
 
 
 def test_runs_resource_is_byte_identical_over_the_api():
@@ -490,11 +553,76 @@ def test_every_code_the_api_can_raise_is_on_the_allowlist():
     for path in [SRC / "apex_mcp" / "ch.py", SRC / "apex_mcp" / "server.py",
                  *(SRC / "apex_api").rglob("*.py")]:
         found |= set(pattern.findall(path.read_text()))
-    # ch._require_optional_id builds "{name}_too_long"; finding_id is the
-    # only name a TOOL passes it.
-    found.add("finding_id_too_long")
+    # ch._require_optional_id builds "{name}_too_long" from the name it is
+    # given, which the scan cannot read. These are the names a TOOL passes:
+    # verify_fix/suggest_fix's finding_id and list_runs' two string filters
+    # (plan_fingerprint has its own literal in ch._require_fingerprint).
+    found |= {"finding_id_too_long", "app_name_too_long", "job_id_prefix_too_long"}
+    assert {"plan_fingerprint_too_long", "offset_out_of_range"} <= found
     assert {"clickhouse_unavailable", "apex_tool_result_unreadable"} <= found
     assert found - set(api_client.STORE_ERRORS) == set()
+
+
+# -- P7.5: list_runs refusals and an older API -------------------------------
+REFUSED_LISTINGS = [
+    ({"app_name": "x" * 513}, "app_name_too_long"),
+    ({"job_id_prefix": "x" * 513}, "job_id_prefix_too_long"),
+    ({"plan_fingerprint": "x" * 65}, "plan_fingerprint_too_long"),
+    ({"offset": -1}, "offset_out_of_range"),
+    ({"offset": 10_001}, "offset_out_of_range"),
+]
+
+
+@pytest.mark.parametrize(("arguments", "code"), REFUSED_LISTINGS)
+def test_list_runs_refusals_are_identical_on_both_backends(arguments, code):
+    direct = _error(_direct_server(), "list_runs", arguments)
+    over_http = _error(_api_server(), "list_runs", arguments)
+    assert over_http == direct
+    assert direct.endswith(api_client.STORE_ERRORS[code])
+
+
+def _pre_p75_api(seen: list[str]):
+    """An API from before P7.5: list_runs answers without the echo fields."""
+    payload = {
+        "runs": [{"job_id": "j", "app_id": "app-j", "app_name": "test-app",
+                  "first_ts": "2026-08-19T09:00:00", "last_ts": "2026-08-19T09:12:00",
+                  "stage_count": 2, "spill_disk_bytes": 0, "worst_p99_ms": 1}],
+        "returned": 1, "limit": 50, "since_hours": 168, "app_name_filter": None,
+        "notes": [], "untrusted_fields": ["runs[].app_name"],
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(200, json=payload)
+
+    return _mock_server(handler)
+
+
+def test_a_new_mcp_still_lists_runs_through_an_older_api():
+    seen: list[str] = []
+    listed = _call(_pre_p75_api(seen), "list_runs", {})
+    assert [r["job_id"] for r in listed["runs"]] == ["j"]
+    # The echoes an old API cannot send take their defaults.
+    assert listed["offset"] == 0 and listed["has_findings_filter"] is None
+    assert json.loads(asyncio.run(_pre_p75_api(seen).read_resource("apex://runs"))[0]
+                      .content)["returned"] == 1
+
+
+@pytest.mark.parametrize("arguments", [
+    {"offset": 50}, {"job_id_prefix": "app-"}, {"plan_fingerprint": FP},
+    {"has_findings": True}, {"has_findings": False},
+])
+def test_an_older_api_cannot_pass_off_an_unfiltered_page_as_filtered(arguments):
+    message = _error(_pre_p75_api([]), "list_runs", arguments)
+    assert message.endswith(api_client.OUTDATED)
+    for leak in LEAKS:
+        assert leak not in message
+
+
+def test_a_payload_missing_a_contracted_field_is_still_refused():
+    """Only the P7.5 echoes are optional on the wire; the rest stay required."""
+    handler = _responds(200, body={"runs": [], "returned": 0})
+    assert _error(_mock_server(handler), "list_runs", {}).endswith(api_client.BAD_RESPONSE)
 
 
 def _free_port() -> int:

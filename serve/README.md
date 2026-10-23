@@ -12,7 +12,7 @@ confidence-gated proposal tool that **never applies anything** — and one **res
 
 | Tool | Input | Returns | MCP annotation |
 |---|---|---|---|
-| `list_runs` | `limit=20`, `since_hours=168`, `app_name?` | `RunList` — recent runs newest-first; **this is where a `job_id` comes from** | `readOnlyHint=true` |
+| `list_runs` | `limit=50`, `since_hours=168`, `offset=0`, `app_name?`, `job_id_prefix?`, `plan_fingerprint?`, `has_findings?` | `RunList` — runs active in the window, newest-started first (`started_at DESC, job_id ASC`, the console's `/v1/runs` order and defaults); **this is where a `job_id` comes from** | `readOnlyHint=true` |
 | `analyze_run` | `job_id`, `detail="summary"` | `Diagnosis` — bottleneck stage, symptom, AQE ground truth | `readOnlyHint=true` |
 | `explain_stage` | `job_id`, `stage_id` | `Diagnosis` narrowed to one stage — its metrics, symptoms and findings | `readOnlyHint=true` |
 | `compare_runs` | `current_job_id`, `baseline_job_id?` | `RunComparison` — regressions, plan changes, finding deltas. Omit the baseline and Apex picks the newest prior run with an identical plan shape | `readOnlyHint=true` |
@@ -20,6 +20,14 @@ confidence-gated proposal tool that **never applies anything** — and one **res
 | `recall_similar_runs` | `job_id`, `top_k=5`, `noise_floor_pct?` | `RecallResult` — prior runs of the same plan shape, with the config each ran under and how it went | `readOnlyHint=true` |
 | `verify_fix` | `job_id`, `finding_id?` | `FixVerdict` — what the **verify lane** predicted, measured and allowed for this run's fixes | `readOnlyHint=true` |
 | `suggest_fix` | `job_id`, `finding_id?`, `min_confidence=0.75` | `FixSuggestion` — unified diff + PR body, **`applied=False`** | `readOnlyHint=false`, `destructiveHint=false` |
+
+`list_runs` paging and filters (P7.5): `offset` must be 0–10000 (the call fails
+with `offset_out_of_range` otherwise; `limit` clamps to 1–200), and the response
+echoes the limit, offset and since_hours actually used. **Deploy apex-api before
+apex-mcp.** A new apex-mcp in API mode still lists runs through an older API for
+unfiltered first-page calls, but refuses a filtered or paged call with
+`apex_api_outdated` rather than returning an older API's unfiltered page as the
+filtered answer.
 
 ## Reading a diagnosis
 

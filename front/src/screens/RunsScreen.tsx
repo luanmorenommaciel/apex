@@ -1,36 +1,69 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mono, Pill, StatusPill } from "@/components/atoms";
 import { DataTable, KpiCard, ScreenHeader, type Column, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import { fmt } from "@/contract/rules";
+import { RUN_LIST_DEFAULTS, RUN_LIST_MAX_OFFSET, type RunListFilters } from "@/data/repository";
 import { useAsync, useRepository } from "@/data/useRepository";
 import type { RunSummary } from "@/contract/types";
 
 type Row = RunSummary & { age?: string };
 type Filter = "findings" | "all";
 
+/** One page of the list. The store's default, so page 1 is what every door lists. */
+export const RUNS_PAGE_SIZE = RUN_LIST_DEFAULTS.limit;
+/** Typing settles for this long before the store is asked again. */
+export const RUNS_FILTER_DEBOUNCE_MS = 300;
+
+/** `value`, once it has stopped changing for `ms`. */
+function useDebounced<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+}
+
 export function RunsScreen() {
   const repo = useRepository();
   const navigate = useNavigate();
-  const [q, setQ] = useState("");
+  const [prefix, setPrefix] = useState("");
+  const [fingerprint, setFingerprint] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  // The page belongs to the filters it was turned under: when they change,
+  // the key no longer matches and the list starts again from its first page —
+  // derived here rather than reset in an effect, which would fetch twice.
+  const [page, setPage] = useState({ key: "", offset: 0 });
 
-  const { data, loading, error } = useAsync(() => repo.listRuns(50), [repo]);
+  // Filtering is SERVER-side (P7.5): the store applies job_id prefix, plan
+  // fingerprint and "has findings" before the page is cut, so a match on page
+  // 3 is found from page 1. Filtering the 50 returned rows in the browser
+  // answered "which of the newest 50 match", which reads as "which runs match".
+  const jobIdPrefix = useDebounced(prefix.trim(), RUNS_FILTER_DEBOUNCE_MS);
+  const planFingerprint = useDebounced(fingerprint.trim(), RUNS_FILTER_DEBOUNCE_MS);
+  const hasFindings = filter === "findings" ? true : undefined;
+
+  const filterKey = JSON.stringify([jobIdPrefix, planFingerprint, hasFindings ?? null]);
+  const offset = page.key === filterKey ? page.offset : 0;
+  const turn = (to: number) => setPage({ key: filterKey, offset: Math.max(0, to) });
+
+  const filters: RunListFilters = {
+    offset,
+    jobIdPrefix: jobIdPrefix || undefined,
+    planFingerprint: planFingerprint || undefined,
+    hasFindings,
+  };
+  const { data, loading, error } = useAsync(
+    () => repo.listRuns(RUNS_PAGE_SIZE, filters),
+    [repo, offset, jobIdPrefix, planFingerprint, hasFindings],
+  );
   const runs = useMemo(() => data ?? [], [data]);
-
-  const shown = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return runs.filter((r) => {
-      if (filter === "findings" && r.finding_count === 0) return false;
-      if (!needle) return true;
-      return (
-        r.job_id.toLowerCase().includes(needle) ||
-        r.app_name.toLowerCase().includes(needle) ||
-        r.plan_fingerprint.toLowerCase().includes(needle)
-      );
-    });
-  }, [runs, q, filter]);
+  const filtered = jobIdPrefix !== "" || planFingerprint !== "" || hasFindings !== undefined;
+  // A full page may have a successor; a short one is the last. The store
+  // refuses an offset past its cap, so "next" stops where paging can go.
+  const hasNext = runs.length >= RUNS_PAGE_SIZE && offset + RUNS_PAGE_SIZE <= RUN_LIST_MAX_OFFSET;
 
   /**
    * Each total is summed ONLY over the runs that carry the field, and reports
@@ -84,6 +117,75 @@ export function RunsScreen() {
     { key: "age", header: "AGE", width: "96px", align: "right", render: (r) => <span className="text-dim">{r.age ?? ""}</span> },
   ];
 
+  // The filters stay on screen in every state, including a failure: a
+  // rejected value (an over-long fingerprint, say) must be correctable where
+  // it was typed, not on a screen that has replaced the inputs.
+  const controls = (
+    <div className="flex gap-2 font-mono text-xs">
+      <input
+        aria-label="job_id prefix"
+        value={prefix}
+        onChange={(e) => setPrefix(e.target.value)}
+        placeholder="job_id prefix"
+        className="w-[200px] bg-raised border border-edge rounded-sm px-2.5 py-[7px] text-body2 placeholder:text-dim outline-none focus:border-spark"
+      />
+      <input
+        aria-label="plan fingerprint"
+        value={fingerprint}
+        onChange={(e) => setFingerprint(e.target.value)}
+        placeholder="plan fingerprint (exact)"
+        maxLength={64}
+        className="w-[220px] bg-raised border border-edge rounded-sm px-2.5 py-[7px] text-body2 placeholder:text-dim outline-none focus:border-spark"
+      />
+      {(["findings", "all"] as Filter[]).map((f) => (
+        <button
+          key={f}
+          type="button"
+          onClick={() => setFilter(f)}
+          className={`px-2.5 py-[7px] bg-raised border rounded-sm transition-colors ${
+            filter === f ? "border-edge2 text-bright" : "border-edge text-sub hover:text-body2"
+          }`}
+        >
+          {f === "findings" ? "findings only" : "all"}
+        </button>
+      ))}
+    </div>
+  );
+
+  // Only stores that apply the window may claim it. The recording is a fixed
+  // past snapshot and is listed whole (FixtureRepository.listRuns).
+  const windowLabel = repo.kind === "fixtures" ? "from the recording" : "active in the last 7 days";
+  const pageLabel = runs.length === 0
+    ? (offset === 0 ? "no runs" : `no runs past ${offset}`)
+    : `${runs.length} runs · ${offset + 1}–${offset + runs.length}`;
+
+  const pager = (
+    <div className="flex items-center gap-2 font-mono text-xs">
+      <button
+        type="button"
+        disabled={loading || offset === 0}
+        onClick={() => turn(offset - RUNS_PAGE_SIZE)}
+        className="px-2.5 py-[7px] bg-raised border border-edge rounded-sm text-sub hover:text-body2 disabled:opacity-40"
+      >
+        ← prev
+      </button>
+      <button
+        type="button"
+        disabled={loading || !hasNext}
+        onClick={() => turn(offset + RUNS_PAGE_SIZE)}
+        className="px-2.5 py-[7px] bg-raised border border-edge rounded-sm text-sub hover:text-body2 disabled:opacity-40"
+      >
+        next →
+      </button>
+      {!error && filtered && (
+        <>
+          <Pill tone="spark">{runs.length} on this page</Pill>
+          <span className="text-dim">matching the filters, applied by the store</span>
+        </>
+      )}
+    </div>
+  );
+
   // A rejected query is not a store with no runs. This screen used to keep
   // rendering around the error — "0 most recent applications", KPIs at 0,
   // "No rows match this filter" — every one of them a measured-zero claim
@@ -91,8 +193,9 @@ export function RunsScreen() {
   if (error) {
     return (
       <Page>
-        <ScreenHeader title="Runs" subtitle="query failed" />
+        <ScreenHeader title="Runs" subtitle="query failed" right={controls} />
         <QueryFailure error={error} source={repo.kind} what="runs" />
+        {pager}
       </Page>
     );
   }
@@ -104,33 +207,11 @@ export function RunsScreen() {
         subtitle={
           loading
             ? "querying…"
-            // NOT "last 24 h": RUN_LIST carries no time filter at all — it is
-            // ORDER BY started_at DESC LIMIT 50. The window was a label over a
-            // query that never had one.
-            : `${runs.length} most recent applications · ${totals.affected} carrying an open finding`
+            // The window is real now: RUN_LIST lists runs with an event in the
+            // last 168 hours (P7.5). Totals below are over THIS page.
+            : `${pageLabel}, newest started first, ${windowLabel} · ${totals.affected} carrying an open finding`
         }
-        right={
-          <div className="flex gap-2 font-mono text-xs">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="job_id, app_name, or plan fingerprint"
-              className="w-[300px] bg-raised border border-edge rounded-sm px-2.5 py-[7px] text-body2 placeholder:text-dim outline-none focus:border-spark"
-            />
-            {(["findings", "all"] as Filter[]).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={`px-2.5 py-[7px] bg-raised border rounded-sm transition-colors ${
-                  filter === f ? "border-edge2 text-bright" : "border-edge text-sub hover:text-body2"
-                }`}
-              >
-                {f === "findings" ? "findings only" : "all"}
-              </button>
-            ))}
-          </div>
-        }
+        right={controls}
       />
 
 
@@ -176,10 +257,10 @@ export function RunsScreen() {
 
       <DataTable
         columns={columns}
-        rows={shown}
+        rows={runs}
         rowKey={(r) => r.job_id}
         onRowClick={(r) => navigate(`/runs/${r.job_id}`)}
-        isHighlighted={(r) => r === shown[0] && filter === "all" && q === ""}
+        isHighlighted={(r) => r === runs[0] && !filtered && offset === 0}
         footer={
           <div className="flex items-center gap-2.5">
             <Mono className="text-sub">REFUSED</Mono>
@@ -191,12 +272,7 @@ export function RunsScreen() {
         }
       />
 
-      {q !== "" && (
-        <div className="flex items-center gap-2">
-          <Pill tone="spark">{shown.length} of {runs.length}</Pill>
-          <span className="text-xs text-dim">matching “{q}”</span>
-        </div>
-      )}
+      {pager}
     </Page>
   );
 }

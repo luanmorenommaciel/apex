@@ -656,6 +656,12 @@ class RunList(BaseModel):
     limit: int = 0
     since_hours: int = 0
     app_name_filter: str | None = None
+    # P7.5 — additive echoes of the paging offset and the filters applied, so
+    # a caller can tell "no runs" from "no runs matching what I asked".
+    offset: int = 0
+    job_id_prefix_filter: str | None = None
+    plan_fingerprint_filter: str | None = None
+    has_findings_filter: bool | None = None
     notes: list[str] = Field(default_factory=list)
     untrusted_fields: list[str] = Field(
         default_factory=lambda: list(RUN_UNTRUSTED_FIELDS),

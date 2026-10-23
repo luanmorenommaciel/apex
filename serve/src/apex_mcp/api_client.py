@@ -34,7 +34,7 @@ from urllib.parse import quote, urlsplit
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from .ch import ApexStoreError, _require_job_id
+from .ch import MAX_RUNS_OFFSET, ApexStoreError, _require_job_id, require_run_offset
 from .models import (
     Diagnosis,
     FixSuggestion,
@@ -102,6 +102,11 @@ FAILED = (
     "apex_api_failed: the Apex API could not complete the request. See the "
     "server's stderr log for details."
 )
+OUTDATED = (
+    "apex_api_outdated: the Apex API predates list_runs filters and paging "
+    "and would have ignored them. Upgrade apex-api (deploy it before "
+    "apex-mcp), or call list_runs without filters or offset."
+)
 
 # The API's 502 handler forwards ``str(ApexStoreError)``. Its TEXT is never
 # forwarded: only its leading code is read, and only a code on this allowlist
@@ -143,6 +148,18 @@ STORE_ERRORS: dict[str, str] = {
     "finding_id_required": "finding_id_required: pass a non-empty finding_id.",
     "finding_id_too_long": (
         "finding_id_too_long: finding_id exceeds 512 characters."
+    ),
+    # list_runs' filters (P7.5), refused by the API's ReadStore exactly as by
+    # a direct one, so both backends report the same text.
+    "app_name_too_long": "app_name_too_long: app_name exceeds 512 characters.",
+    "job_id_prefix_too_long": (
+        "job_id_prefix_too_long: job_id_prefix exceeds 512 characters."
+    ),
+    "plan_fingerprint_too_long": (
+        "plan_fingerprint_too_long: plan_fingerprint exceeds 64 characters."
+    ),
+    "offset_out_of_range": (
+        f"offset_out_of_range: offset must be between 0 and {MAX_RUNS_OFFSET}."
     ),
     "apex_tool_failed": (
         "apex_tool_failed: the Apex API could not complete the request. See the "
@@ -406,6 +423,17 @@ def _swap(notes: list[str], old: str, new: str) -> list[str]:
     return [new if note == old else note for note in notes]
 
 
+# Fields added to a model AFTER its first release. An older API omits them,
+# and that is not a malformed answer: they take their model defaults. A caller
+# whose meaning depends on one must check model_fields_set itself, as
+# ApiTools.list_runs does — a missing echo there means the filters were
+# ignored, and that is refused rather than returned as a filtered page.
+RUN_LIST_ECHO_FIELDS = frozenset(
+    {"offset", "job_id_prefix_filter", "plan_fingerprint_filter", "has_findings_filter"}
+)
+_ADDITIVE_FIELDS: dict[type[BaseModel], frozenset[str]] = {RunList: RUN_LIST_ECHO_FIELDS}
+
+
 def _validated(model: type[M], payload: Any) -> M:
     """The payload as the tool's own model, or a sanitized failure.
 
@@ -418,7 +446,7 @@ def _validated(model: type[M], payload: Any) -> M:
     field does not break an older MCP server.
     """
     missing = (
-        set(model.model_fields) - set(payload)
+        set(model.model_fields) - set(payload) - _ADDITIVE_FIELDS.get(model, set())
         if isinstance(payload, dict)
         else {"<not an object>"}
     )
@@ -474,12 +502,35 @@ class ApiTools:
                 comparison.notes, COMPARE_NO_FLOOR_NOTE, COMPARE_INVALID_FLOOR_NOTE)})
         return comparison
 
-    def list_runs(self, limit: int, since_hours: int, app_name: str) -> RunList:
-        return self._call(
+    def list_runs(
+        self, limit: int, since_hours: int, app_name: str,
+        offset: int = 0, job_id_prefix: str = "", plan_fingerprint: str = "",
+        has_findings: bool | None = None,
+    ) -> RunList:
+        # Refused HERE, with the direct backend's own error: the route answers
+        # an out-of-range offset with a 422, which would read as
+        # apex_api_invalid_request and make the two backends disagree.
+        offset = require_run_offset(offset)
+        # has_findings None is dropped by get_json, which is the route's own
+        # "no filter" default; the strings travel as query parameters and are
+        # bound again by the API's ReadStore.
+        listed = self._call(
             "list_runs",
             RunList,
-            {"limit": limit, "since_hours": since_hours, "app_name": app_name},
+            {
+                "limit": limit, "since_hours": since_hours, "app_name": app_name,
+                "offset": offset, "job_id_prefix": job_id_prefix,
+                "plan_fingerprint": plan_fingerprint, "has_findings": has_findings,
+            },
         )
+        narrowed = bool(offset or job_id_prefix or plan_fingerprint) or has_findings is not None
+        if narrowed and not RUN_LIST_ECHO_FIELDS <= listed.model_fields_set:
+            # A pre-P7.5 API ignores offset and the new filters and answers
+            # with an unfiltered first page. Returned as-is, that page would
+            # read as the filtered answer.
+            log.error("apex api predates list_runs filters; refusing its page")
+            raise ApexStoreError(OUTDATED)
+        return listed
 
     def search_kb(self, query: str, top_k: int) -> KbHits:
         return self._call("search_kb", KbHits, {"q": query, "top_k": top_k})
