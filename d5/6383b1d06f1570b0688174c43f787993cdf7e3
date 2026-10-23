@@ -1,0 +1,27 @@
+front/src/data/queries.ts
+  s_d60b81d439d7c9::t_e7123ad40c95bc 168-169,173
+front/src/screens/RunsScreen.tsx
+  s_d60b81d439d7c9::t_dc66da4dc97c6a 162-188,198,275
+serve/src/apex_mcp/ch.py
+  s_d60b81d439d7c9::t_83093644fab252 127-129,149
+serve/src/apex_mcp/server.py
+  s_d60b81d439d7c9::t_3385bad91abdf0 444-445,449
+serve/tools/read_only_gate.py
+  s_d60b81d439d7c9::t_f81356120d31fa 225-233
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d56383b1d06f1570b0688174c43f787993cdf7e3",
+  "prompts": {},
+  "sessions": {
+    "s_d60b81d439d7c9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a168eb-9f71-7e83-ba6a-8e67367f4b80",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
