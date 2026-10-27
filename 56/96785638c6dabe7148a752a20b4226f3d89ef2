@@ -1,0 +1,19 @@
+CHANGELOG.md
+  s_0842955ea9e615::t_476cf7b6589fc2 22-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5696785638c6dabe7148a752a20b4226f3d89ef2",
+  "prompts": {},
+  "sessions": {
+    "s_0842955ea9e615": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "439d6f82-606f-42ec-be35-5d580bfba98e",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
