@@ -346,7 +346,7 @@ Sizes follow the taskspec scale. "Owner" is a suggestion from the 09-15 sync.
 |---|---|---|---|---|
 | P7.1 | **MCP over HTTP.** Add an API-backed read path to `apex-mcp` (`APEX_API_URL` + token) so every tool reads through FastAPI; keep direct ClickHouse only as an explicit opt-in for local dev. Errors keep `_sanitize()` discipline — no token or URL reaches the model. | M | — | Sidymar |
 | P7.2 | **One verdict engine.** Make the console call the diagnostic routes (`/diagnosis`, `/comparison`, `/recall`, `/verification`) instead of re-deriving verdicts from raw rows, or — if `rules.ts` must stay client-side — add a gate that runs both on the same seeded runs and fails on any difference. | L | P7.1 | Agmar + Sidymar |
-| P7.3 | **Cross-door parity gate.** Extend `console_parity_gate.py` (or a sibling) with one check per pairing-map row, in three kinds: *job-scoped* rows compare both doors' answers for the same `job_id`; *unscoped* rows (health, run list) compare them under the same normalized parameters; *n/a* rows (copy diff) are listed as excluded, with the reason. P7.3 ships the gate and the rows already paired once P7.2 lands. Each later pairing task adds its own row as part of its done criteria, so the gate never waits on unrelated work and never silently skips a row. | M | P7.2 | — |
+| P7.3 | **Cross-door parity gate.** Extend `serve/tools/console_parity_gate.py` (or a sibling) with one check per pairing-map row, in three kinds: *job-scoped* rows compare both doors' answers for the same `job_id`; *unscoped* rows (health, run list) compare them under the same normalized parameters; *n/a* rows (copy diff) are listed as excluded, with the reason. P7.3 ships the gate and the rows already paired once P7.2 lands. Each later pairing task adds its own row as part of its done criteria, so the gate never waits on unrelated work and never silently skips a row. | M | P7.2 | — |
 | P7.4 | **Finish L1 `apex_status`** and make `GET /v1/health` return the same `ServerStatus` model. | S | L1 tasks | — |
 | P7.5 | **Align the run list.** Give `list_runs` and `GET /runs` the same default limit, time window and paging (today 20 rows / 168 h vs 50 rows / no window). Then add `job_id` prefix, `plan_fingerprint` and `has_findings` filters to both, so the console stops filtering client-side. | S | — | — |
 | P7.6 | **Expose job_conf + plan sample** to the MCP by extending `analyze_run(detail="full")` rather than adding tools (keeps the tool surface flat, per the L2 rule). Unblocks F4.3. | S | — | — |
@@ -357,7 +357,7 @@ Sizes follow the taskspec scale. "Owner" is a suggestion from the 09-15 sync.
 | P7.11 | **Wire Ask.** Replace the script with calls to the diagnostic routes. Open question first: does Ask put an LLM in the loop (`llm_calls` > 0), or is it a structured router over the tools? | M | P7.1, P7.2 | Agmar |
 | P7.12 | **MCP prompts** `/apex:diagnose` and `/apex:fix` — the agent-side twins of "ask about this run" and "propose fix". Closes F5.4. | S | — | — |
 | P7.13 | **`search_kb` in the console** — a search box on Ask or Runs over `/diagnostics/search`. | XS | — | — |
-| P7.14 | **Retire `apex-mcp-http`.** FastAPI now owns the HTTP path, so the prototype has nothing left to serve; delete it or record why it stays. | XS | P7.1 | Agmar |
+| P7.14 | **Retire `apex-mcp-http`.** Agmar's prototype that gave the console an HTTP path into the MCP, raised at the 2026-09-15 sync. It was never merged, so there is no such path on `main`. FastAPI now owns the HTTP path and the prototype has nothing left to serve: delete it where it lives, or record why it stays. | XS | P7.1 | Agmar |
 
 **Order:** P7.1 → P7.2 → P7.3 is the spine — until the MCP reads through the API and
 both doors share one verdict engine, every other pairing can drift silently. The S/XS
@@ -378,7 +378,7 @@ Tracked in Linear (project **Apex**, `SRP-*`). Nothing in L7 is merged yet.
 | P7.13 | in review | #192 | SRP-24 | Search KB screen; CI green (route registered against the existing search route). |
 | P7.2 | **needs a decision** | — | SRP-25 | Console calls the diagnostic routes, or `rules.ts` stays behind a parity gate? Blocks P7.3, P7.8. |
 | P7.11 | **needs a decision** | — | SRP-29 | Does Ask put an LLM in the loop? |
-| P7.14 | **needs a decision** | — | SRP-26 | Retire `apex-mcp-http`? |
+| P7.14 | **needs a decision** | — | SRP-26 | Retire `apex-mcp-http` (Agmar's unmerged HTTP prototype; not on `main`)? |
 | P7.3, P7.8 | blocked | — | SRP-27, SRP-28 | Wait on P7.2. |
 | P7.5 | in review — stacked on #195 | #200 | SRP-18 | Same defaults on both doors (50 rows, 7 days, offset paging) + server-side filters; 826 passed; live parity 28/0. CI runs once retargeted to main. |
 | P7.6, P7.7, P7.9 | next | — | SRP-19, -20, -21 | Follow P7.5 on the same stack. |
