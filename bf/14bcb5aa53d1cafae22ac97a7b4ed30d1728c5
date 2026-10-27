@@ -1,0 +1,19 @@
+docs/lanes/SERVE-LEGS.md
+  s_0842955ea9e615::t_2eeb627f43f8da 349,360,381
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bf14bcb5aa53d1cafae22ac97a7b4ed30d1728c5",
+  "prompts": {},
+  "sessions": {
+    "s_0842955ea9e615": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "439d6f82-606f-42ec-be35-5d580bfba98e",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
