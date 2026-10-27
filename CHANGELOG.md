@@ -19,6 +19,13 @@ are corrections to Apex's own earlier claims.
 - `apex-mcp` now exposes eight tools: `list_runs`, `analyze_run`,
   `explain_stage`, `compare_runs`, `search_kb`, `recall_similar_runs`,
   `verify_fix`, and `suggest_fix`.
+- The `dev` lane's local S3 store is now **RustFS 1.0.3** (pinned by digest), because
+  the pinned `minio/minio` and `minio/mc` images can no longer be pulled and a clean
+  clone could not start the cluster. The service keeps the name `minio` and the
+  `MINIO_*` variables, so Spark's S3A endpoint and the package launcher are unchanged.
+  **Upgrading:** a volume written by MinIO is not readable by RustFS — run
+  `make -C dev clean` (or `docker volume rm apex-dev_minio-data`) once before
+  `make -C dev up`; buckets are recreated and `make gen-data` rebuilds the tables.
 
 ### Fixed — the console reads the same rows through either door
 
