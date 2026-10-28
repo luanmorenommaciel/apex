@@ -127,9 +127,10 @@ First complete release. Eight lanes, one frozen contract, 400 tests.
   DDL, `Finding` schema, `job_id` threading, and a host-port map so lanes cannot collide.
   Reached **v0.4** (`spark_events`, `plan_transitions`, `findings`, `job_conf`, `plan_memory`,
   `run_outcomes`, `fix_verifications`).
-- **`dev/`** — Spark/Delta pathology lab. Reproducible `skew_join`, `spill`, `bad_shuffle`,
-  and `driver_oom` jobs, plus a **balanced control** so a detector can be shown *not* to fire.
-  Spark 3.5 and 4.1.2 environments.
+- **`dev/`** — Spark/Delta pathology lab. Reproducible `skew_join`, `tail_outlier`, `spill`,
+  `bad_shuffle` and `driver_oom` jobs, plus a **balanced control** so a detector can be shown
+  *not* to fire. Spark 4.0.1 (default) and 4.1.2 (additive cell) environments; the jar also
+  cross-builds Spark 3.5 cells, but the dev image does not build them.
 - **`jar/`** — Scala Spark plugin. Per-stage `TaskMetrics`, a literal-normalized logical-plan
   fingerprint, AQE runtime decisions, and a resolved-config snapshot, shipped as OTLP spans
   through a bounded `BatchSpanProcessor`. Cross-builds four `(Spark, Scala)` cells:

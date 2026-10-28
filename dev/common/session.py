@@ -7,24 +7,29 @@ contract trace key `job_id`, and stashes it in `spark.apex.job_id` for downstrea
 """
 from __future__ import annotations
 
-import os
 import time
 from typing import Optional
 from pyspark.sql import SparkSession
 
-JOB_ID_KEY = "spark.apex.job_id"
+from common.drain import drain_seconds
 
-# Measured 2026-07-28: without a pre-stop drain, fast lab apps (~20 s) lose their
-# whole OTLP export ~2/3 of the time (zero spark_events rows in ClickHouse,
-# collector error-free) — the plugin's bounded queue is still draining when the
-# driver JVM exits. A short sleep before spark.stop() makes delivery reliable.
-# Root fix belongs to the jar lane's shutdown flush; this keeps the lab honest.
-OTLP_DRAIN_SECONDS = float(os.environ.get("APEX_OTLP_DRAIN_SECONDS", "5"))
+JOB_ID_KEY = "spark.apex.job_id"
 
 
 def stop_session(spark: SparkSession) -> None:
-    """spark.stop() with a pre-stop OTLP drain window (see OTLP_DRAIN_SECONDS)."""
-    time.sleep(OTLP_DRAIN_SECONDS)
+    """spark.stop() with a pre-stop OTLP drain window when the plugin is attached.
+
+    Measured 2026-07-28: without a pre-stop drain, fast lab apps (~20 s) lose
+    their whole OTLP export ~2/3 of the time — the plugin's bounded queue is
+    still draining when the driver JVM exits. The wait is skipped entirely when
+    `spark.plugins` does not name apex.ApexPlugin (no telemetry to drain), and
+    APEX_OTLP_DRAIN_SECONDS overrides the five-second default otherwise. See
+    common/drain.py.
+    """
+    plugins = spark.conf.get("spark.plugins", None)
+    seconds = drain_seconds(plugins)
+    if seconds > 0:
+        time.sleep(seconds)
     spark.stop()
 
 

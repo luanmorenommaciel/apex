@@ -6,10 +6,12 @@ Proves the dev Python fingerprint:
   2. same query / different literals (AQE on) -> IDENTICAL fingerprint;
   3. structurally different query -> DIFFERENT fingerprint;
   4. raw canonicalized (literals kept) DIFFERS on literals — justifying normalization;
-  5. (integration, best-effort) equals the jar's apex.ApexPlanFingerprint when that
-     class is on the classpath.
+  5. (integration) equals the jar's apex.ApexPlanFingerprint when that class is on
+     the classpath. Best-effort by default (SKIP when absent); APEX_FP_REQUIRE_JAR=1
+     (make fp-crosscheck) makes a missing or disagreeing jar class a FAILURE.
 """
 import hashlib
+import os
 import sys
 
 from pyspark.sql import SparkSession
@@ -68,16 +70,21 @@ def main() -> int:
     print(f"  fp3={fp3}", flush=True)
     print(f"  raw1={raw1[:16]}…  raw2={raw2[:16]}…  (== : {raw1 == raw2})", flush=True)
 
-    # ── best-effort integration cross-check vs the jar's real Scala class ──
+    # ── integration cross-check vs the jar's real Scala class ──
+    require_jar = os.environ.get("APEX_FP_REQUIRE_JAR", "0") == "1"
     try:
         jar_fp1 = jvm.apex.ApexPlanFingerprint.fingerprint(
             opt_plan("select segment, count(*) c from t where id > 100 group by segment"))
         check("dev fp == jar apex.ApexPlanFingerprint fp (cross-language match)", jar_fp1 == fp1)
         print(f"  jar_fp1={jar_fp1}", flush=True)
     except Exception as ex:
-        print(f"  [SKIP] jar cross-check — apex.ApexPlanFingerprint not on classpath "
-              f"({type(ex).__name__}). Algorithm is identical by construction; run "
-              f"`make fp-crosscheck` to prove against the jar's compiled class.", flush=True)
+        if require_jar:
+            check(f"jar apex.ApexPlanFingerprint reachable on the driver classpath "
+                  f"({type(ex).__name__})", False)
+        else:
+            print(f"  [SKIP] jar cross-check — apex.ApexPlanFingerprint not on classpath "
+                  f"({type(ex).__name__}). Run `make fp-crosscheck` (APEX_FP_REQUIRE_JAR=1) "
+                  f"to prove it against the jar baked into the image.", flush=True)
 
     spark.stop()
     if failures:

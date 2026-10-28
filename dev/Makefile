@@ -12,6 +12,21 @@ COMPOSE := docker compose
 endif
 C3_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.c3-otlp.yml
 
+# On the C3 overlay the master has TWO networks. Spark advertises the driver by
+# the container's hostname, which Docker DNS resolves to whichever network's
+# address it likes, while the driver's RPC binds to the first interface — so an
+# executor connecting to the advertised address can be refused, and the job
+# spins "Initial job has not accepted any resources" forever. Which run hits it
+# depends on interface order, so it looks intermittent. Advertise the service
+# name and bind everywhere, as scripts/e2e_canonical.sh already does. Every
+# cluster submit (run-pathology, gen-data, c3-*, c4-*) carries it; `fp-test`
+# runs in local[2] mode with no master to advertise, so it is exempt.
+C3_DRIVER_CONF := --conf spark.driver.host=spark-master --conf spark.driver.bindAddress=0.0.0.0
+# Every spark-submit runs through scripts/with-s3-credentials.sh, which exports
+# AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY from the compose file secrets
+# mounted at /run/secrets. That is the only credential path once
+# conf/spark-defaults.conf stops carrying literals.
+
 .DEFAULT_GOAL := help
 .PHONY: help env env-spark41 build up down clean ps verify doctor gen-data run-pathology scale calibrate c3-up c3-plugin-skew c4-aqe-skew c4-aqe-skewsplit c4-aqe-probe e2e e2e-canonical
 
@@ -46,29 +61,29 @@ verify: env ## PROVE fresh-clone reproducibility end-to-end (build→up→smoke�
 doctor: verify ## Alias for `verify`
 
 fp-test: ## T7: prove the plan_fingerprint normalizes literals (same query/diff literals -> same hash)
-	$(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
+	$(COMPOSE) exec -T spark-master /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit \
 	  --master 'local[2]' --conf spark.eventLog.enabled=false /opt/apex/tests/prove_fingerprint.py
 
 # Integration proof: dev apexdev.PlanFingerprint == jar apex.ApexPlanFingerprint for
-# the same query. Mounts the jar lane's compiled Scala class (read-only) onto the
-# classpath. Requires the jar built at ../jar/target/spark40-jvm-2.13/classes.
-JAR_CLASSES ?= ../jar/target/spark40-jvm-2.13/classes
-fp-crosscheck: ## T7 integration: dev fingerprint == jar's Scala fingerprint (cross-language)
-	@test -d "$(JAR_CLASSES)" || { echo "jar classes not found at $(JAR_CLASSES) — build the jar lane first"; exit 1; }
+# the same query. The image already ships the real plugin jar at
+# /opt/apex/lib/apex-plugin.jar on the driver classpath (conf/spark-defaults.conf),
+# so no host-side sbt build is needed: APEX_FP_REQUIRE_JAR=1 turns the probe's
+# best-effort cross-check into a hard failure when the jar class is missing or
+# disagrees. APEX_IMAGE follows .env when present (the Spark 4.1.2 cell tags the
+# image apex-spark:4.1.2-local).
+APEX_IMAGE ?= $(or $(shell sed -n 's/^APEX_IMAGE=//p' .env 2>/dev/null),apex-spark:local)
+fp-crosscheck: ## T7 integration: dev fingerprint == jar's Scala fingerprint (cross-language, image jar)
 	docker run --rm --entrypoint /opt/spark/bin/spark-submit \
 	  -v "$(CURDIR)/common:/opt/apex/common:ro" \
 	  -v "$(CURDIR)/tests:/opt/apex/tests:ro" \
 	  -v "$(CURDIR)/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro" \
-	  -v "$(abspath $(JAR_CLASSES)):/opt/jarlane/classes:ro" \
-	  -e PYTHONHASHSEED=0 -e TZ=UTC \
+	  -e PYTHONHASHSEED=0 -e TZ=UTC -e APEX_FP_REQUIRE_JAR=1 \
 	  $(APEX_IMAGE) --master 'local[2]' \
-	  --driver-class-path '/opt/apex/lib/apex-devfp.jar:/opt/jarlane/classes' \
 	  --conf spark.eventLog.enabled=false /opt/apex/tests/prove_fingerprint.py
 
-APEX_IMAGE ?= apex-spark:local
 gen-data: up ## Generate deterministic ~50% hot-key Delta tables (T8)
-	$(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
-	  --master spark://spark-master:7077 /opt/apex/jobs/generate_data.py
+	$(COMPOSE) exec -T spark-master /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit \
+	  --master spark://spark-master:7077 $(C3_DRIVER_CONF) /opt/apex/jobs/generate_data.py
 
 JOB ?= skew_join
 AQE ?= off
@@ -78,24 +93,15 @@ DRIVER_MEM ?=
 run-pathology: up ## Run a pathology: JOB=skew_join|spill|bad_shuffle|driver_oom [AQE=on] [FIX=on] [SAFE=on]
 	@dm="$(DRIVER_MEM)"; [ "$(JOB)" = "driver_oom" ] && dm="$${dm:-512m}"; \
 	$(COMPOSE) exec -T -e APEX_AQE=$(AQE) -e APEX_FIX=$(FIX) -e APEX_SAFE=$(SAFE) spark-master \
-	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
+	  /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
 	  $${dm:+--driver-memory $$dm} /opt/apex/jobs/$(JOB).py
-
-# On the C3 overlay the master has TWO networks. Spark advertises the driver by
-# the container's hostname, which Docker DNS resolves to whichever network's
-# address it likes, while the driver's RPC binds to the first interface — so an
-# executor connecting to the advertised address can be refused, and the job
-# spins "Initial job has not accepted any resources" forever. Which run hits it
-# depends on interface order, so it looks intermittent. Advertise the service
-# name and bind everywhere, as scripts/e2e_canonical.sh already does.
-C3_DRIVER_CONF := --conf spark.driver.host=spark-master --conf spark.driver.bindAddress=0.0.0.0
 
 c3-up: env ## Join infra's OTLP network and wait for the Spark driver service
 	$(C3_COMPOSE) up -d --wait
 
 c3-plugin-skew: c3-up ## C3: ApexPlugin -> infra OTLP collector
 	$(C3_COMPOSE) exec -T -e APEX_AQE=off -e APEX_FIX=off -e APEX_SAFE=off spark-master \
-	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
+	  /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
 	  --conf spark.plugins=apex.ApexPlugin \
 	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
 	  --conf spark.apex.aqe.enabled=false \
@@ -103,7 +109,7 @@ c3-plugin-skew: c3-up ## C3: ApexPlugin -> infra OTLP collector
 
 c4-aqe-skew: c3-up ## C4: AQE skew split + ApexPlugin plan_transition -> infra OTLP collector
 	$(C3_COMPOSE) exec -T -e APEX_AQE=on -e APEX_FIX=off -e APEX_SAFE=off spark-master \
-	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
+	  /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
 	  --conf spark.plugins=apex.ApexPlugin \
 	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
 	  --conf spark.apex.aqe.enabled=true \
@@ -114,7 +120,7 @@ c4-aqe-skewsplit: c3-up ## C4 calibration: force a real AQE skew_split without c
 	  -e APEX_AQE_SKEW_THRESHOLD=1m -e APEX_AQE_ADVISORY_PARTITION=512k \
 	  -e APEX_AQE_SKEW_FACTOR=2 -e APEX_AQE_COALESCE=false \
 	  -e APEX_AQE_FORCE_OPTIMIZE_SKEW=true spark-master \
-	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
+	  /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
 	  --conf spark.plugins=apex.ApexPlugin \
 	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
 	  --conf spark.apex.aqe.enabled=true \
@@ -122,7 +128,7 @@ c4-aqe-skewsplit: c3-up ## C4 calibration: force a real AQE skew_split without c
 
 c4-aqe-probe: c3-up ## C4 calibration probe: mirror the JAR AQE transition test at runtime
 	$(C3_COMPOSE) exec -T spark-master \
-	  /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
+	  /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit --master spark://spark-master:7077 $(C3_DRIVER_CONF) \
 	  --conf spark.plugins=apex.ApexPlugin \
 	  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
 	  --conf spark.apex.aqe.enabled=true \
