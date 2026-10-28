@@ -23,13 +23,14 @@ export function DataTable<T>({
     a === "right" ? "text-right" : a === "center" ? "text-center" : "";
 
   return (
-    <div className="bg-raised border border-edge rounded-sm overflow-hidden flex flex-col min-h-0">
+    <div role="table" className="bg-raised border border-edge rounded-sm overflow-hidden flex flex-col min-h-0">
       <div
+        role="row"
         className="grid px-4 py-2.5 bg-surface border-b border-edge font-mono text-[10px] tracking-[.14em] text-dim"
         style={{ gridTemplateColumns: template }}
       >
         {columns.map((c) => (
-          <span key={c.key} className={align(c.align)}>
+          <span key={c.key} role="columnheader" className={align(c.align)}>
             {c.header}
           </span>
         ))}
@@ -41,17 +42,33 @@ export function DataTable<T>({
             No rows match this filter.
           </div>
         )}
+        {/* A clickable row is reachable by Tab and opened by Enter or Space -
+            it used to be a div with only onClick, which a keyboard never
+            reaches. The grid is a table to assistive tech, so a screen reader
+            announces the column a cell belongs to. */}
         {rows.map((row) => (
           <div
             key={rowKey(row)}
-            onClick={() => onRowClick?.(row)}
+            role="row"
+            tabIndex={onRowClick ? 0 : undefined}
+            onClick={onRowClick ? () => onRowClick(row) : undefined}
+            onKeyDown={
+              onRowClick
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onRowClick(row);
+                    }
+                  }
+                : undefined
+            }
             className={`grid px-4 py-3 border-b border-edge last:border-b-0 items-center font-mono text-xs text-body2 ${
-              onRowClick ? "cursor-pointer hover:bg-edge/40" : ""
+              onRowClick ? "cursor-pointer hover:bg-edge/40 focus-visible:outline focus-visible:outline-1 focus-visible:outline-spark" : ""
             } ${isHighlighted?.(row) ? "bg-spark/[0.06] shadow-[inset_2px_0_0_#e25a1c] text-bright" : ""}`}
             style={{ gridTemplateColumns: template }}
           >
             {columns.map((c) => (
-              <span key={c.key} className={`${align(c.align)} truncate`}>
+              <span key={c.key} role="cell" data-column={c.key} className={`${align(c.align)} truncate`}>
                 {c.render(row)}
               </span>
             ))}

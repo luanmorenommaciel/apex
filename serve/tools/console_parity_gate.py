@@ -1,10 +1,14 @@
 """Live gate: the console's rows, the same through both doors.
 
-Every statement the console issues is run TWICE against a real ClickHouse — as
-the browser does, over the HTTP interface as the read-only user, and through
-the Apex API — and the two must return the same rows. A status code cannot
-satisfy this: status codes are what passed while three routes returned the
-wrong projection.
+Every statement the API serves the console is run TWICE against a real
+ClickHouse — as raw SQL over the HTTP interface as a read-only user, the way
+the console's browser door once sent it, and through the Apex API — and the
+two must return the same rows. A status code cannot satisfy this: status
+codes are what passed while three routes returned the wrong projection.
+
+The statements are ch.py's own (D-api-only, 2026-10-19: the console carries
+no SQL and reads through the API alone), so the raw door proves what
+ClickHouse returns for them and the API door proves what the API makes of it.
 
 It also proves the behaviours only a live store can show, because the fill,
 the type check and the ordering are ClickHouse's and no fake has them:
@@ -52,47 +56,43 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
+# The wire timestamp format is the console's contract with the API and stays
+# in the console; the SQL does not.
 FRONT_DATA = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "data"
-QUERIES_TS = FRONT_DATA / "queries.ts"
 TIMESTAMP_TS = FRONT_DATA / "timestamp.ts"
 
-# clickhouse.ts converts by DECLARED type, because ClickHouse quotes 64-bit
-# integers in JSON and apex_ro may not switch that off. Same pattern, so the
-# gate sees the rows the console's screens see.
+# ClickHouse quotes 64-bit integers in JSON and a readonly user may not switch
+# that off, so the raw door converts by DECLARED type - what the console's
+# browser client did - and the gate compares numbers with numbers.
 _NUMERIC = re.compile(r"^(Nullable\()?(U?Int(8|16|32|64|128|256)|Float(32|64)|Decimal)")
 
 PASS, FAIL, SKIP = "PASS", "FAIL", "NOT EXERCISED"
 
 
 # --------------------------------------------------------------------------
-# The console's own statements, read from its source
+# The statements the API serves the console, from their one home
 # --------------------------------------------------------------------------
-def console_statements(source: str) -> dict[str, str]:
-    """Every exported statement in queries.ts, as the browser sends it.
+def serve_statements(findings_columns: set[str]) -> dict[str, str]:
+    """ch.py's console statements, keyed by the names this gate reports.
 
-    Read, not restated: a copy kept here would compare the API against the
-    gate's idea of the console rather than against the console.
+    ``findings_columns`` is what apex.findings actually has on this store,
+    so the findings statement is the one the API would pick there.
     """
+    from apex_mcp import ch
 
-    def unescape(text: str) -> str:
-        return text.replace("\\`", "`")
-
-    statements = {
-        match.group(1): unescape(match.group(2))
-        for match in re.finditer(r"export const (\w+) = `(.*?)`;", source, re.S)
+    return {
+        "RUN_LIST": ch.RUN_LIST_SQL,
+        "RUN_ONE": ch.RUN_ONE_SQL,
+        "LATEST_STAGES": ch.CONSOLE_STAGES_SQL,
+        "JOB_CONF": ch.JOB_CONF_SQL,
+        "FINDINGS": ch._console_findings_sql(findings_columns),
+        "PLAN_TRANSITIONS": ch.CONSOLE_PLAN_TRANSITIONS_SQL,
+        "RUNS_SHARING_SHAPE": ch.BASELINE_CANDIDATES_SQL,
+        "PLAN_SHAPES": ch.PLAN_SHAPES_SQL,
+        "SHAPE_RUNS": ch.SHAPE_RUNS_SQL,
+        "PLAN_SAMPLE": ch.PLAN_SAMPLE_SQL,
+        "FIX_VERIFICATIONS": ch.FIX_VERIFICATION_SQL,
     }
-    rollup = re.search(
-        r"const runRollup = \(where: string, tail: string\) => `(.*?)\n`;", source, re.S
-    )
-    if rollup:
-        body = unescape(rollup.group(1))
-        for match in re.finditer(
-            r'export const (\w+) = runRollup\(\s*"([^"]*)",\s*"([^"]*)"\s*\);', source
-        ):
-            statements[match.group(1)] = body.replace("${where}", match.group(2)).replace(
-                "${tail}", match.group(3)
-            )
-    return statements
 
 
 def wire_pattern(source: str) -> re.Pattern[str]:
@@ -188,7 +188,11 @@ class DoorError(RuntimeError):
 
 
 def browser_query(store: Store, sql: str, params: dict[str, Any]) -> list[dict[str, Any]]:
-    """One statement, sent the way clickhouse.ts sends it."""
+    """One statement as raw SQL over ClickHouse HTTP, as a readonly user.
+
+    Named for the door it replaces: this is how the console's browser client
+    sent SQL before the console read through the API alone.
+    """
     query = {
         "database": store.database,
         "default_format": "JSON",
@@ -505,19 +509,22 @@ def compare_doors(
     the same check apart in the report.
     """
     from apex_api.wire import wire
+    from apex_mcp.ch import ReadStore
 
     enc = urllib.parse.quote
     plan: list[tuple[str, str, dict[str, Any], str, str | None]] = [
-        # name, console statement, its parameters, the API path, tie-break key
+        # name, statement, its bindings (serve's names, and the limits the
+        # API itself applies), the API path, tie-break key
         ("runs", "RUN_LIST", {"limit": 50}, "/v1/runs?limit=50", "job_id"),
-        ("run", "RUN_ONE", {"job": job}, f"/v1/runs/{enc(job)}", None),
-        ("stages", "LATEST_STAGES", {"job": job}, f"/v1/runs/{enc(job)}/stages", None),
-        ("conf", "JOB_CONF", {"job": job}, f"/v1/runs/{enc(job)}/conf", None),
-        ("findings", "FINDINGS", {"job": job}, f"/v1/runs/{enc(job)}/findings", None),
-        ("transitions", "PLAN_TRANSITIONS", {"job": job}, f"/v1/runs/{enc(job)}/transitions", None),
-        ("baseline-candidates", "RUNS_SHARING_SHAPE", {"job": job},
+        ("run", "RUN_ONE", {"job_id": job}, f"/v1/runs/{enc(job)}", None),
+        ("stages", "LATEST_STAGES", {"job_id": job}, f"/v1/runs/{enc(job)}/stages", None),
+        ("conf", "JOB_CONF", {"job_id": job}, f"/v1/runs/{enc(job)}/conf", None),
+        ("findings", "FINDINGS", {"job_id": job}, f"/v1/runs/{enc(job)}/findings", None),
+        ("transitions", "PLAN_TRANSITIONS", {"job_id": job}, f"/v1/runs/{enc(job)}/transitions", None),
+        ("baseline-candidates", "RUNS_SHARING_SHAPE",
+         {"job_id": job, "limit": ReadStore.MAX_BASELINE_CANDIDATES},
          f"/v1/runs/{enc(job)}/baseline-candidates", "job_id"),
-        ("plans", "PLAN_SHAPES", {}, "/v1/plans", "plan_fingerprint"),
+        ("plans", "PLAN_SHAPES", {"limit": ReadStore.MAX_SHAPES}, "/v1/plans", "plan_fingerprint"),
     ]
     if fingerprint:
         plan += [
@@ -527,7 +534,7 @@ def compare_doors(
              f"/v1/plans/{enc(fingerprint)}/sample", None),
         ]
     if finding:
-        plan.append(("verification", "FIX_VERIFICATIONS", {"finding": finding},
+        plan.append(("verification", "FIX_VERIFICATIONS", {"finding_id": finding},
                      f"/v1/findings/{enc(finding)}/verification", None))
 
     seen: dict[str, Any] = {}
@@ -537,7 +544,7 @@ def compare_doors(
         label = f"{name}{suffix}  [{statement}]"
         sql = statements.get(statement)
         if sql is None:
-            report.add(FAIL, label, "the console no longer exports this statement")
+            report.add(FAIL, label, "ch.py no longer carries this statement")
             continue
         try:
             browser = browser_query(store, sql, params)
@@ -600,7 +607,7 @@ def live_only(
         want = {"task_time_ms": -1, "shaped_stage_count": -1, "plan_fingerprint": "",
                 "config_source": "unknown", "shape_count": 0}
         status, via_api = api.get(f"/v1/runs/{urllib.parse.quote(candidate)}")
-        via_browser = browser_query(store, statements["RUN_ONE"], {"job": candidate})
+        via_browser = browser_query(store, statements["RUN_ONE"], {"job_id": candidate})
         problems = []
         for door, row in (("api", via_api if status == 200 else None),
                           ("browser", via_browser[0] if via_browser else None)):
@@ -697,14 +704,23 @@ def main(argv: list[str] | None = None) -> int:
         console_password=os.getenv("APEX_CONSOLE_PASSWORD", ""),
         secure=os.getenv("CLICKHOUSE_SECURE", "").lower() in {"1", "true", "yes"},
     )
-    statements = console_statements(QUERIES_TS.read_text())
     pattern = wire_pattern(TIMESTAMP_TS.read_text())
     api = remote_api(args.api_url, args.api_token) if args.api_url else in_process_api(store)
     report = Report()
 
     print(f"store    {store.http_url}  database {store.database}")
-    print(f"browser  ClickHouse HTTP as {store.console_user}, the way front/src/data/clickhouse.ts sends it")
+    print(f"raw sql  ClickHouse HTTP as {store.console_user} (readonly), ch.py's own statements")
     print(f"api      {api.label}")
+    # The findings statement depends on which additive columns this store has;
+    # ask the store, as the API's ReadStore does.
+    present = {
+        str(row["name"]) for row in browser_query(
+            store,
+            "SELECT name FROM system.columns WHERE database = {database:String} AND table = 'findings'",
+            {"database": store.database},
+        )
+    }
+    statements = serve_statements(present)
 
     fixture: Fixture | None = None
     admin = None

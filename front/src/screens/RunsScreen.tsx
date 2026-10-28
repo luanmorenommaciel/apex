@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Mono, Pill, StatusPill } from "@/components/atoms";
 import { DataTable, KpiCard, ScreenHeader, type Column, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
-import { fmt } from "@/contract/rules";
-import { useAsync, useRepository } from "@/data/useRepository";
+import { fmt, TAIL_SAMPLE } from "@/contract/rules";
+import { useRead, useRepository } from "@/data/useRepository";
 import type { RunSummary } from "@/contract/types";
 
 type Row = RunSummary & { age?: string };
@@ -16,7 +16,7 @@ export function RunsScreen() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
-  const { data, loading, error } = useAsync(() => repo.listRuns(50), [repo]);
+  const { data, loading, error } = useRead(repo, ["listRuns", 50]);
   const runs = useMemo(() => data ?? [], [data]);
 
   const shown = useMemo(() => {
@@ -112,6 +112,8 @@ export function RunsScreen() {
         right={
           <div className="flex gap-2 font-mono text-xs">
             <input
+              type="search"
+              aria-label="Search runs by job_id, app_name or plan fingerprint"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="job_id, app_name, or plan fingerprint"
@@ -121,6 +123,7 @@ export function RunsScreen() {
               <button
                 key={f}
                 type="button"
+                aria-pressed={filter === f}
                 onClick={() => setFilter(f)}
                 className={`px-2.5 py-[7px] bg-raised border rounded-sm transition-colors ${
                   filter === f ? "border-edge2 text-bright" : "border-edge text-sub hover:text-body2"
@@ -141,7 +144,7 @@ export function RunsScreen() {
           value={fmt.countOrDash(totals.refused)}
           note={
             totals.refused === null
-              ? "not derivable list-wide — open a run"
+              ? "not computed by this door — open a run"
               : `stages with a tail, no claim · ${totals.refusedRuns} of ${runs.length} runs`
           }
           accent="edge"
@@ -184,8 +187,8 @@ export function RunsScreen() {
           <div className="flex items-center gap-2.5">
             <Mono className="text-sub">REFUSED</Mono>
             <span>
-              counts stages that carried a p99/p50 tail and produced no finding. A rising number is
-              the system working, not failing.
+              counts, among the {TAIL_SAMPLE} loudest p99/p50 ratios of each run, the stages evaluated
+              for a tail claim and refused. A rising number is the system working, not failing.
             </span>
           </div>
         }

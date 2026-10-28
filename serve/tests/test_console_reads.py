@@ -9,14 +9,13 @@ Three regressions the resource tier shipped with, pinned here:
 * Every statement hardcoded an ``apex.`` prefix, so CLICKHOUSE_DATABASE moved
   the session and the probes but not the queries.
 
-The front's own SQL (``front/src/data/queries.ts``) is the contract for the
-first two, so it is READ here rather than restated: a hand-kept copy would let
-the two sides drift while every assertion still passed.
+ch.py is the only home of the console's SQL (D-api-only, 2026-10-19), so the
+first two are pinned on its own text and on the row fields the console's
+types declare.
 """
 
 from __future__ import annotations
 
-import pathlib
 import re
 import sys
 import types
@@ -34,19 +33,6 @@ from tests.conftest import FakeClient, finding_row, reads, transition_row
 TOKEN = "test-token-6c1f9a"
 SETTINGS = Settings(tokens=frozenset({TOKEN}))
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
-
-QUERIES_TS = (
-    pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "data" / "queries.ts"
-)
-
-
-def front_query(name: str) -> str:
-    """The text of one ``export const NAME = `...`;`` in front's queries.ts."""
-    source = QUERIES_TS.read_text()
-    match = re.search(rf"export const {name} = `(.*?)`;", source, flags=re.DOTALL)
-    assert match, f"front/src/data/queries.ts no longer exports {name}"
-    return match.group(1)
-
 
 def normalise(sql: str) -> str:
     """Comments and whitespace are not part of the contract; the text is."""
@@ -83,11 +69,19 @@ def build(client: Any) -> TestClient:
 # -- transitions ------------------------------------------------------------
 
 
-def test_console_transitions_sql_is_the_fronts_query():
-    """Same statement, same latest-per-execution semantics — only the binding name differs."""
-    mine = normalise(ch.CONSOLE_PLAN_TRANSITIONS_SQL)
-    theirs = normalise(front_query("PLAN_TRANSITIONS")).replace("{job:String}", "{job_id:String}")
-    assert mine == theirs
+TRANSITION_ROW_FIELDS = [
+    "job_id", "execution_id", "update_seq", "transition_type", "detail",
+    "before", "after", "confidence", "plan_fingerprint", "ts",
+]
+
+
+def test_console_transitions_project_the_consoles_transition_row():
+    """The regression: the MCP's list lacked job_id, plan_fingerprint and ts."""
+    # select_names() reads the first SELECT; the statement opens with the
+    # fingerprint CTE, so the outer projection starts after it.
+    outer = ch.CONSOLE_PLAN_TRANSITIONS_SQL.split(")\nSELECT", 1)[1]
+    assert select_names("SELECT" + outer) == TRANSITION_ROW_FIELDS
+    assert "{job_id:String}" in ch.CONSOLE_PLAN_TRANSITIONS_SQL
 
 
 def test_console_transitions_take_the_latest_update_per_execution():
@@ -152,9 +146,10 @@ FINDING_ROW_FIELDS = [
 ]
 
 
-def test_console_findings_project_the_fronts_findingrow_fields():
-    assert select_names(front_query("FINDINGS")) == FINDING_ROW_FIELDS
+def test_console_findings_project_the_consoles_findingrow_fields():
+    """Both projections, additive and legacy, carry the console's FindingRow."""
     assert select_names(ch._console_findings_sql(set(ch._FINDINGS_ADDITIVE))) == FINDING_ROW_FIELDS
+    assert select_names(ch._console_findings_sql(set())) == FINDING_ROW_FIELDS
 
 
 @pytest.mark.parametrize("present", [set(ch._FINDINGS_ADDITIVE), set()], ids=["additive", "legacy"])
