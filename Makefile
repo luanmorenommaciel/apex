@@ -132,13 +132,21 @@ $(addprefix test-,$(PY_LANES)): test-%:
 verify-ddl: ## Assert every ClickHouse table matches its contract DDL (needs infra up)
 	@$(MAKE) -C infra verify-ddl
 
+# The gate runs in serve's env, not engine's: it imports clickhouse_connect and
+# mcp (serve core deps; engine has neither — clickhouse is only an engine extra)
+# and launches the MCP server with its own interpreter. apex_engine is imported
+# from engine/src by the script's sys.path insert; on the gate's path (crew off,
+# ClickHouse client injected) it needs only pydantic, which serve already has.
+# serve pins clickhouse-connect 1.x while engine's optional extra pins <1; the
+# query/insert surface the gate uses is the same. --python 3.11 honours engine's
+# requires-python >=3.11 and matches scripts/apex.ps1's six-lane gate call.
 verify-e2e: ## Live six-lane gate against a real submitted job. Usage: make verify-e2e JOB=<app-id>
 	@test -n "$(JOB)" || { echo "usage: make verify-e2e JOB=<spark-app-id>"; exit 2; }
 	@echo "NOTE: use a job_id with no pre-existing apex.findings rows, OR hold"
 	@echo "      \$$APEX_CLUSTER_SLOTS constant across everything that persists"
 	@echo "      for this job — severity is width-dependent, so env drift alone"
 	@echo "      produces persisted_finding_mismatch."
-	@cd engine && $(UV) run --extra dev python ../scripts/e2e_six_lanes.py --job-id $(JOB)
+	@cd serve && $(UV) run --python 3.11 --extra dev python ../scripts/e2e_six_lanes.py --job-id $(JOB)
 
 lanes: ## Show tracked file count per lane
 	@for d in dev jar collect infra engine serve memory verify contract docs; do \
