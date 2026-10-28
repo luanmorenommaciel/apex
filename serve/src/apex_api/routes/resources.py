@@ -1,7 +1,7 @@
 """The resource tier: the console's rows, over HTTP.
 
-These twelve endpoints exist so ``front/`` can stop querying ClickHouse from
-the browser. ``front/src/data/repository.ts`` is the contract — eleven methods
+These endpoints exist so ``front/`` can stop querying ClickHouse from the
+browser. ``front/src/data/repository.ts`` is the contract — twelve methods
 plus a ``kind`` property — and the acceptance criterion on the other side is
 that NO SCREEN CHANGES. So the response shapes match the declared return types
 rather than inventing a tidier envelope the console would have to adapt to.
@@ -30,6 +30,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from apex_mcp.ch import ReadStore
 
 from ..wire import wire
+from .diagnostics import TOOL_ROUTES
 
 router = APIRouter(tags=["resources"])
 
@@ -48,6 +49,11 @@ RESOURCE_ROUTES: dict[str, tuple[str, str]] = {
     "shapeRuns": ("GET", "/plans/{fingerprint}/runs"),
     "planSample": ("GET", "/plans/{fingerprint}/sample"),
     "fixVerification": ("GET", "/findings/{finding_id}/verification"),
+    # Served by the verdict tier, not here: ``searchKb`` IS the MCP
+    # ``search_kb`` tool, and a second resource handler would be a second path
+    # to the same answer. Mapped by reference so the two tables cannot drift;
+    # the parity test still asserts the route is actually served.
+    "searchKb": TOOL_ROUTES["search_kb"],
 }
 
 # Set when a listing came back at its cap, so a partial page is never read as

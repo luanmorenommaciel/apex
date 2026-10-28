@@ -1,9 +1,9 @@
 /**
  * The http data source.
  *
- * The claim under test is that implementing Repository is the WHOLE change —
- * so these tests exercise the interface, not the screens, and a sibling eval
- * asserts `src/screens` has no diff at all.
+ * These tests exercise the Repository interface, not the screens: what each
+ * method requests and how it maps the answer. (Adding the http source changed
+ * no screen; later features, such as knowledge-base search, did add screens.)
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -371,5 +371,108 @@ describe("wire timestamp", () => {
     }
     expect(ages[0]).toBeTruthy();
     expect(ages[0]).toBe(ages[1]);
+  });
+});
+
+describe("searchKb", () => {
+  const payload = {
+    query: "spill partitions",
+    tokens: ["spill", "partitions"],
+    total: 1,
+    hits: [{
+      source: "findings", job_id: "app-1", stage_id: 25, finding_id: "f-1", type: "SPILL",
+      severity: "critical", score: 0.82, matched_tokens: ["spill"], snippet: "<b>raw</b>",
+    }],
+    notes: ["Snippets are text from the observed Spark job."],
+    untrusted_fields: ["hits[].snippet"],
+  };
+
+  it("calls /v1/diagnostics/search with a trimmed q and top_k, and parses KbHits", async () => {
+    stubFetch(() => respond(payload));
+    const out = await new HttpRepository().searchKb("  spill partitions & co ", 7);
+    expect(calls).toHaveLength(1);
+    const u = new URL(calls[0].url);
+    expect(u.origin + u.pathname).toBe("http://api.test/v1/diagnostics/search");
+    expect(u.searchParams.get("q")).toBe("spill partitions & co");
+    expect(u.searchParams.get("top_k")).toBe("7");
+    // Encoded, so the ampersand cannot start a new parameter.
+    expect(calls[0].url).toContain("q=spill+partitions+%26+co");
+    expect((calls[0].init?.headers as Record<string, string>).Authorization).toBe("Bearer tok-123");
+    expect(out).toEqual({ state: "ok", result: payload });
+  });
+
+  it.each([[0, "1"], [-3, "1"], [500, "50"], [12.9, "12"], [Number.NaN, "5"], [undefined, "5"]])(
+    "clamps top_k %s to %s",
+    async (topK, sent) => {
+      stubFetch(() => respond(payload));
+      await new HttpRepository().searchKb("spill", topK);
+      expect(new URL(calls[0].url).searchParams.get("top_k")).toBe(sent);
+    },
+  );
+
+  it("never sends an empty query", async () => {
+    stubFetch(() => respond(payload));
+    await expect(new HttpRepository().searchKb("   ")).rejects.toBeInstanceOf(RangeError);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("coerces non-text fields so nothing but text reaches a React child", async () => {
+    stubFetch(() => respond({
+      query: "q", tokens: ["q"], total: 1,
+      hits: [{ source: "plan_json", job_id: "j", stage_id: null, finding_id: null, snippet: { x: 1 }, matched_tokens: "q" }],
+    }));
+    const out = await new HttpRepository().searchKb("q");
+    expect(out.state).toBe("ok");
+    if (out.state !== "ok") return;
+    const hit = out.result.hits[0];
+    expect(hit).toMatchObject({ source: "plan_json", stage_id: null, finding_id: null, type: "", severity: "", score: 0, matched_tokens: [] });
+    expect(typeof hit.snippet).toBe("string");
+    expect(out.result.notes).toEqual([]);
+  });
+
+  it.each([["abc"], [{}], [Number.POSITIVE_INFINITY], [true]])(
+    "maps a non-numeric stage_id %j to null, never NaN",
+    async (stage) => {
+      stubFetch(() => respond({ ...payload, hits: [{ ...payload.hits[0], stage_id: stage }] }));
+      const out = await new HttpRepository().searchKb("spill");
+      expect(out.state === "ok" && out.result.hits[0].stage_id).toBeNull();
+    },
+  );
+
+  it("keeps a numeric stage_id, including one sent as text", async () => {
+    stubFetch(() => respond({ ...payload, hits: [{ ...payload.hits[0], stage_id: "7" }] }));
+    const out = await new HttpRepository().searchKb("spill");
+    expect(out.state === "ok" && out.result.hits[0].stage_id).toBe(7);
+  });
+
+  it("keeps an unrecognised source as sent instead of coercing it to findings", async () => {
+    stubFetch(() => respond({ ...payload, hits: [{ ...payload.hits[0], source: "mystery" }] }));
+    const out = await new HttpRepository().searchKb("spill");
+    expect(out.state === "ok" && out.result.hits[0].source).toBe("mystery");
+  });
+
+  it("reports a missing route as a failure, not as zero hits", async () => {
+    stubFetch(() => respond({ detail: "Not Found" }, { status: 404 }));
+    await expect(new HttpRepository().searchKb("spill")).rejects.toMatchObject({ name: "ApiError", status: 404 });
+  });
+
+  it("surfaces a store error and a rejected token", async () => {
+    stubFetch(() => respond({ detail: "apex_store_unavailable" }, { status: 502 }));
+    await expect(new HttpRepository().searchKb("spill")).rejects.toThrow("apex_store_unavailable");
+    stubFetch(() => respond({ detail: "unauthorized" }, { status: 401 }));
+    await expect(new HttpRepository().searchKb("spill")).rejects.toBeInstanceOf(ApiAuthError);
+  });
+
+  it.each<[string, () => Repository]>([
+    ["fixtures", () => new FixtureRepository()],
+    ["clickhouse", () => new ClickHouseRepository()],
+  ])("is unavailable on %s, with no request and no fabricated hits", async (_kind, make) => {
+    vi.stubGlobal("window", { location: { origin: "http://console.test" } });
+    stubFetch(() => respond(payload));
+    const out = await make().searchKb("spill", 5);
+    expect(out.state).toBe("unavailable");
+    expect(out).not.toHaveProperty("result");
+    if (out.state === "unavailable") expect(out.reason).toContain("only via the Apex API");
+    expect(calls).toHaveLength(0);
   });
 });
