@@ -8,6 +8,7 @@ The enforceable half of [../CONTRACT.md](../CONTRACT.md). Every stage builds aga
 | `spark_events.ddl.sql` | Canonical `CREATE TABLE apex.spark_events` | `infra/` applies it (+ partitioning/TTL/rollups); `engine/`/`serve/` read it |
 | `findings.ddl.sql` | Canonical `CREATE TABLE apex.findings` | `engine/` writes; `serve/` reads |
 | `plan_transitions.ddl.sql` | Canonical `CREATE TABLE apex.plan_transitions` (v0.2) | AQE-decision rows; `engine/`/`serve/` may read |
+| `fixtures/proposal_parity.json` | Shared parse cases for `apex.fix_verifications.proposed_config` (whitespace, empty `{}`, key order, numbers) — a test fixture, not a schema change | `front/` (`proposalParity.test.ts`) and `serve/` (`test_proposal_parity.py`) assert the same expected reading |
 
 **Status:** all artifacts are populated and verified against real `jar`/`dev`/`collect` implementations.
 

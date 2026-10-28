@@ -161,6 +161,23 @@ describe("Verify source states (mounted, real async hooks)", () => {
     expect(text()).not.toContain("no-op gate · keep");
   });
 
+  it("an empty {} overlay proposes nothing: no key list, no gate, nothing held", async () => {
+    const original = " {} ";
+    vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: original });
+    await mount();
+    expect(text()).toContain("proposed_config · empty overlay — nothing proposed");
+    expect(text()).toContain("0 conf keys");
+    expect(text()).not.toContain("valid JSON overlay");
+    expect(text()).not.toContain("no-op gate · ");
+    expect(guard("no-op gate")).toContain("empty overlay — nothing proposed, nothing to gate");
+    expect(guard("no-op gate")).not.toContain("✓");
+    expect(guard("safety")).toContain("empty overlay — nothing proposed");
+    expect(guard("safety")).not.toContain("local namespace check");
+    expect(guard("safety")).not.toContain("✓");
+    expect(text()).toContain("nothing is proposed, so there is nothing to apply");
+    expect(host.querySelector('pre[aria-label="Original proposal"]')?.textContent).toBe(original);
+  });
+
   it("does not give a local namespace pass to an overlay with __proto__", async () => {
     const original = '{"spark.sql.shuffle.partitions":800,"__proto__":"outside namespace"}';
     vi.spyOn(repo, "fixVerification").mockResolvedValue({ ...row, proposed_diff: original });
