@@ -434,6 +434,34 @@ the class of thing a fake cannot catch, one paragraph before it shipped.
 
 ---
 
+## Findings tie-break extension — offline evidence, 2026-10-07
+
+The extension tracked in [issue #156](https://github.com/luanmorenommaciel/apex/issues/156)
+was tested at code commit `1f5c302e3fee9e435a7f8b84a0e1c98b252a02d4`,
+based on `c4541a59d8e9ad4ff6cbcca67a606ad21247eb9c`. The focused gate suite
+passed **20 tests** and the Serve suite passed **467 tests**, with no skips.
+Those are offline tests; no new ClickHouse or running-API result is claimed.
+
+| New guard | Offline evidence |
+|---|---|
+| Each door must order ties by finding ID | A pair with equal `confidence_score` and `ts`, inserted in reverse ID order, exercises the canonical `confidence_score DESC, finding_id ASC` requirement independently on the browser and API outputs |
+| Missing seeded tie cannot certify ordering | Seeded data with no exercisable tie reports `FAIL`; existing-job mode retains `NOT EXERCISED` |
+| The run count agrees with the fixture | The indexed fixture count is derived from its four findings; the unindexed count is zero |
+| Invalid scores do not escape as a sort exception | A number/string mixture with reversed timestamps reports a diagnostic failure instead of a `TypeError` |
+
+The corrected candidate was also combined locally with the transport parity
+and SQL order regression tests at `209b4c4c9aad8b8759815bfb37f871d421558f38`:
+**513 tests passed**, with no failures, errors or skips. That combined result
+does not imply remote CI or runtime validation. Adding this documentation does
+not change the tested Python or SQL files.
+
+**Remaining proof:** exercise the extension against a live ClickHouse and a
+running API, demonstrate rejection when either door returns the wrong tied
+order, and verify removal of seeded rows. The existing primary-order check can
+still raise on mixed timestamp types (`None` and text); that separate edge case
+was not corrected or certified by this extension. The dated runtime records
+below remain historical evidence for the gate before these new checks.
+
 ## API — console parity, recorded 2026-09-29
 
 Branch `fix/apex-api-review-sweep`, on top of `feat/add_apex_api` (PR #129) at
@@ -621,3 +649,57 @@ be introduced as what it is.
 - The live console test reads text, not pixels: it proves what a screen says,
   not how it looks.
 
+
+## Console gate follow-up — local evidence, 2026-10-07
+
+The earlier offline extension section records code `1f5c302`; its pending
+runtime and mixed-timestamp notes are historical. This follow-up records the
+subsequent evidence and corrections under
+[issue #156](https://github.com/luanmorenommaciel/apex/issues/156), without
+rewriting the older records.
+
+The final tested combination is local commit
+`41ba605e403f7774a3309b6d502d35110604d5d0`, based on
+`c4541a59d8e9ad4ff6cbcca67a606ad21247eb9c`. One complete Serve run passed
+**519 tests**, with no failures, errors or skips; one unchanged dependency
+emitted a Starlette/httpx deprecation warning. This combines the transport
+parity and findings-order tests with the gate corrections. Documentation-only
+changes after this checkpoint preserve all Python and test blobs; they do not
+trigger another run of the same suite.
+
+| Evidence boundary | Observed result |
+|---|---|
+| Original live ordering extension | ClickHouse 24.8.14.39 and a separate HTTP API: positive 19 PASS; each door wrong, both doors wrong, missing seeded tie and non-numeric score controls fail with RC1. Both doors wrong still pass parity but fail their individual tie-breaks. These six cases predate the cleanup correction. |
+| Optional rollup cleanup correction | Code `b9acd70`: baseline 20 tests; corrected 23; three new tests fail on the original. Real target/control fixtures reproduce the original rollup leak, then the correction empties the target's eight tables while preserving control rows/digests. Removing the control leaves eight tables empty. A store without the MV/rollup cleans seven tables. |
+| Timestamp diagnosis correction | Code `93569a6`: baseline 20 tests; corrected 23; three new tests fail on the original. Null/int/list/dict timestamps, malformed strings and a single invalid timestamp report named FAILs without coercion. Existing valid cases remain green. This part is unit evidence, not a malformed-timestamp live API run. |
+| Existing-job mode, HTTP API | Combined gate code `82d6f9c`: with ties, 17 PASS / 0 FAIL / 1 NOT EXERCISED; without ties, 15 PASS / 0 FAIL / 3 NOT EXERCISED. Eight-table row counts, values and canonical hashes remain equal before/after each gate invocation. The controller prepares and cleans the fixtures; the gate does neither in this mode. |
+| Read-only configuration | Gate and HTTP API used the newly provisioned `apex_ro` account with readonly=1. A valid INSERT accepted by the admin was denied to that account with Code497; no row was created. Unauthenticated API request returned 401. |
+
+The original ordering proof removed rows from the seven contract tables but
+left derived `spark_jobs_1m` rows. That was a real cleanup gap, not a globally
+clean result. The later target/control proof checks the corrected `remove()`;
+the six old ordering controls were not rerun just to retest cleanup.
+
+These are local macOS arm64 proofs using the already-present ClickHouse image
+`sha256:1ffa82edee000a42c09313bd9f1293d94c570aee74babc1b3ca9983a35fa597b`.
+Runtime containers used disposable tmpfs, loopback-only ports and bounded
+resources, with `background_schedule_pool_size=16` in the proof environment.
+API processes stopped and the owned containers were removed. Existing services
+were not changed. Rollup AggregateFunction states were compared as finalized
+values, not serialized storage bytes. No Spark job, browser UI, Ubuntu CI or
+other ClickHouse version was exercised by this follow-up. A store outage or
+permission error can still prevent cleanup and is not hidden.
+
+The permission proof's initial INSERT named an absent column and was invalid;
+a supplemental attempt without a current timestamp was also unsuitable for
+counting because of the table's TTL. Both attempts remain preserved as invalid
+controls. The accepted supplemental probe uses the same valid, current-timestamp
+statement for the admin and read-only account. No green parity gate was repeated
+for those probe corrections.
+
+Evidence is retained in the local packages `apex-156-live-proof-20261007`
+(authoritative `capture-correction/`) and `apex-autonomous-6h-20261007`
+(U1–U4 outputs), each with explicit identities, RCs and SHA256 manifests.
+These packages are not product-source files. Internal review, local commits and
+these proofs do not imply formal Task-Spec acceptance, remote CI, publication,
+merge or release certification.
