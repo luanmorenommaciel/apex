@@ -16,10 +16,11 @@ which is **exactly zero whenever W/slots ≥ p99**. That is the work-bound regim
 and it is the single most useful thing this module computes: it says "even a
 perfect fix returns nothing" from two order statistics and a core count.
 
-`W` is not measured. `executor_run_time_ms` exists in engine's in-memory
-`StageEvent` but is NOT a column in `apex.spark_events` (verified against
-`system.columns`), so W is BRACKETED between two task-distribution models and the
-prediction is reported as an interval. When both ends of the bracket agree, the
+`W` is estimated from stage quantiles and task count. Migration 039 adds
+`executor_run_time_ms` to `apex.spark_events`, but the current StageObservation
+and predictor do not consume that field. Its availability does not establish a
+validated measured W. W stays BRACKETED between two task-distribution models and
+the prediction is reported as an interval. When both ends of the bracket agree, the
 conclusion is robust *despite* the estimate being loose — which is why a
 work-bound verdict can be trusted more than its inputs suggest.
 
@@ -155,7 +156,7 @@ def bound_analysis(
         f"Stage {stage.stage_id}: {stage.task_count} tasks, p50={stage.effective_task_duration_p50_ms:.0f}ms, "
         f"p99={stage.effective_task_duration_p99_ms:.0f}ms on {slots} task slot(s). "
         f"Estimated total task-time W is bracketed {w_lo:,.0f}–{w_hi:,.0f}ms "
-        f"(W is not measured: executor_run_time_ms is not a spark_events column). "
+        f"(W is estimated from task quantiles; this predictor does not consume executor_run_time_ms). "
         f"Throughput floor W/slots = {throughput_lo:,.0f}ms vs tail p99 = "
         f"{stage.effective_task_duration_p99_ms:.0f}ms -> {regime_lo.upper()}. "
     )
