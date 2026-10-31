@@ -1,0 +1,27 @@
+{
+  "job_id": "app-20261028201044-0002",
+  "candidate_commit": "e800f6195760ecafa79ec40165e4f55cf8468a58",
+  "diagnosis_canonical_sha256": "79129da6c1671b15a7e2de9431642e62e547afa6378786ebdb2336473b5b8360",
+  "checks": {
+    "same_real_job_id": true,
+    "api_mcp_api_full_equal": true,
+    "mcp_api_direct_full_equal": true,
+    "twenty_stages_both": true,
+    "four_findings_both": true,
+    "config_width_eight": true,
+    "chrome_all_routes_200": true,
+    "chrome_api_requests_200": true,
+    "chrome_no_page_or_console_errors": true,
+    "chrome_interactive_no_page_errors": true,
+    "chrome_clicked_run_stage_finding_compare_ask_verify": true,
+    "chrome_job_and_stage_count_visible": true,
+    "chrome_diagnosis_status_after_engine": true,
+    "chrome_stage21_task_count": true,
+    "chrome_stage21_spill_mem": true,
+    "chrome_stage21_spill_disk": true,
+    "chrome_stage21_p99_p50_ratio": true,
+    "api_outage_explicit_no_fallback": true
+  },
+  "passed": 18,
+  "total": 18
+}
