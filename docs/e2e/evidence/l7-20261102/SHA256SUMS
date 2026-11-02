@@ -1,0 +1,6 @@
+64bd4e1d3e918f4320767bcbc4f9df1741cbb1d2b5cb32eeb01d96086d0f54b6  ../../L7-REVIEW-CLARIFICATIONS-20261102.md
+9ffa57a25cd982005ea737812042297c6e52d19ca12aea851fe9c0946883f0e5  jvm/build.sbt
+84d1a08240c782d6691e9829ec54530a45d10809b0e5200db4035723d852928c  jvm/project/build.properties
+76de6344b076b752f61ceae7e1fe741d6892d4bf4033f4eb346f1ccf6d8b75b1  jvm/src/main/scala/ApexPlanFingerprint.scala
+73711771b9640d4fd89d083346257c56f28c436363cc3b1190ecc8fcc1645831  jvm/src/main/scala/FingerprintProbe.scala
+39a3558771cb36f88ca0917a5e9c9bfa969016f5dc784aebadf09164b46d8466  results-summary.json

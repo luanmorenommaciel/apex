@@ -1,0 +1,159 @@
+{
+  "prepared_at": "2026-10-31T05:11:57.003287+00:00",
+  "publication_status": "documentary supplement for review in PR #207",
+  "scope": "selected local follow-up; not final official SHA acceptance",
+  "main_sha": "0e84c10b0a950e5b59421fbf768e8352c7ee6b52",
+  "pr_inputs": [
+    {
+      "number": 182,
+      "head_sha": "74fdb0791825aa89c419694ec71f2aa3e6ea4d74"
+    },
+    {
+      "number": 194,
+      "head_sha": "a477c80d4f2a86462547f3af042267b6fd8088f9"
+    },
+    {
+      "number": 195,
+      "head_sha": "333d1164f8e58d61196abf08e1ec7757cdd011e4"
+    },
+    {
+      "number": 197,
+      "head_sha": "5696785638c6dabe7148a752a20b4226f3d89ef2"
+    }
+  ],
+  "local_commit": "dbb9b94e9bd75e50d1e820abfbdd4c446f2ef4ff",
+  "tree": "0683db0f637dfc2efb647fe353e15e82de6d48bd",
+  "console_image_id": "sha256:b82fc2fc768064a8b457253b534d8eb7dc75039f557f2f5a382f3e07e9a83c8d",
+  "jobs": [
+    {
+      "role": "baseline",
+      "job_id": "app-20261030225102-0001",
+      "aqe": "False",
+      "joined_rows": 10000000,
+      "grand_total": "4999507894.6"
+    },
+    {
+      "role": "current",
+      "job_id": "app-20261030225144-0002",
+      "aqe": "False",
+      "joined_rows": 10000000,
+      "grand_total": "4999507894.6"
+    }
+  ],
+  "transport_cases": [
+    {
+      "case": "analysis-baseline",
+      "canonical_sha256": {
+        "http": "5566567ab5f40ff5d0698779609d9d0aacfe13d342b870eeca8574d60689266e",
+        "api": "5566567ab5f40ff5d0698779609d9d0aacfe13d342b870eeca8574d60689266e",
+        "clickhouse": "5566567ab5f40ff5d0698779609d9d0aacfe13d342b870eeca8574d60689266e"
+      },
+      "equal": true,
+      "response_status": "degraded"
+    },
+    {
+      "case": "analysis-current",
+      "canonical_sha256": {
+        "http": "3b32ffaaaf2281f4c4b78e16e83115d0b945b51d56aa49a342331cf817926685",
+        "api": "3b32ffaaaf2281f4c4b78e16e83115d0b945b51d56aa49a342331cf817926685",
+        "clickhouse": "3b32ffaaaf2281f4c4b78e16e83115d0b945b51d56aa49a342331cf817926685"
+      },
+      "equal": true,
+      "response_status": "degraded"
+    },
+    {
+      "case": "comparison",
+      "canonical_sha256": {
+        "http": "71c65fdc9ac5ad97e0b24565e704989fe6139e59890717650821c5404b6c26f1",
+        "api": "71c65fdc9ac5ad97e0b24565e704989fe6139e59890717650821c5404b6c26f1",
+        "clickhouse": "71c65fdc9ac5ad97e0b24565e704989fe6139e59890717650821c5404b6c26f1"
+      },
+      "equal": true,
+      "response_status": "regressed"
+    },
+    {
+      "case": "comparison-reverse",
+      "canonical_sha256": {
+        "http": "0b3c4aafe1fea3706797e6fbd81f99aa7185411cde58652404305c7f344256c3",
+        "api": "0b3c4aafe1fea3706797e6fbd81f99aa7185411cde58652404305c7f344256c3",
+        "clickhouse": "0b3c4aafe1fea3706797e6fbd81f99aa7185411cde58652404305c7f344256c3"
+      },
+      "equal": true,
+      "response_status": "regressed"
+    },
+    {
+      "case": "comparison-missing",
+      "canonical_sha256": {
+        "http": "91767b0534cf504017a07ff85617964082a38306e240e1c7fa1c68a1d1f4a425",
+        "api": "91767b0534cf504017a07ff85617964082a38306e240e1c7fa1c68a1d1f4a425",
+        "clickhouse": "91767b0534cf504017a07ff85617964082a38306e240e1c7fa1c68a1d1f4a425"
+      },
+      "equal": true,
+      "response_status": "not_comparable"
+    },
+    {
+      "case": "recall",
+      "canonical_sha256": {
+        "http": "edbd898d9beb7af5b6c8ee7322e58ee8b9291bc219bbba53980e811a622d8a58",
+        "api": "edbd898d9beb7af5b6c8ee7322e58ee8b9291bc219bbba53980e811a622d8a58",
+        "clickhouse": "edbd898d9beb7af5b6c8ee7322e58ee8b9291bc219bbba53980e811a622d8a58"
+      },
+      "equal": true,
+      "response_status": "recalled"
+    },
+    {
+      "case": "verify-empty",
+      "canonical_sha256": {
+        "http": "870d348ff7cb70b953eb4286feb81790dabf6d36d5a1b6b37c04ba6402d0096b",
+        "api": "870d348ff7cb70b953eb4286feb81790dabf6d36d5a1b6b37c04ba6402d0096b",
+        "clickhouse": "870d348ff7cb70b953eb4286feb81790dabf6d36d5a1b6b37c04ba6402d0096b"
+      },
+      "equal": true,
+      "response_status": "not_assessed"
+    }
+  ],
+  "canonical_json": "Python json.dumps(value, sort_keys=True, separators=(',', ':')), default ensure_ascii=True; SHA-256 of UTF-8",
+  "browser_numeric_assertions": "selected KPI cards and 20 stage rows matched the offline oracle",
+  "memory_counts": {
+    "plan_memory_rows": 15,
+    "run_outcomes_rows": 16,
+    "api_listed_shapes": 8,
+    "api_visible_outcomes": 14,
+    "one_node_shape_outcomes_not_listed": 2
+  },
+  "verification_origin": "one synthetic DB row; no real Verify execution",
+  "timeout_final": {
+    "browser_failure_elapsed_s": 60.13,
+    "nginx_internal_504": true,
+    "browser_body_named_504": true,
+    "recovery_fresh_http_status": 200,
+    "same_session_recovered": true
+  },
+  "initial_timeout_observation": {
+    "seconds": 32.34,
+    "nginx_status": 499,
+    "browser": "Failed to fetch, no HTTP status",
+    "cause": "not established"
+  },
+  "offline_checks": {
+    "passed": 19,
+    "total": 19,
+    "denominator": "selected assertions over saved files, not end-to-end scenarios"
+  },
+  "scope_limits": [
+    "four MCP tools / seven argument sets",
+    "SDK stdio client, not desktop onboarding",
+    "local combined tree",
+    "no measured noise floor or tuning benefit",
+    "Verify seed proves projection only",
+    "executor memory missing in API config capture",
+    "fingerprint string difference does not establish semantic equivalence"
+  ],
+  "full_material": "available privately on request after sensitivity check",
+  "transport_path_labels": {
+    "http": "FastAPI HTTP request",
+    "api": "MCP SDK stdio session with API backend",
+    "clickhouse": "MCP SDK stdio session with direct ClickHouse backend"
+  },
+  "response_status_definition": "diagnostic result status in the JSON body, not an HTTP status code"
+}

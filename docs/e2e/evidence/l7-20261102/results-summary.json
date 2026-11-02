@@ -1,0 +1,523 @@
+{
+  "date": "2026-11-02",
+  "purpose": "Characterization, evidence clarification and one new minimal JVM experiment; not product acceptance",
+  "tested_candidate": {
+    "commit": "dbb9b94e9bd75e50d1e820abfbdd4c446f2ef4ff",
+    "tree": "0683db0f637dfc2efb647fe353e15e82de6d48bd",
+    "official_pr_head": false,
+    "includes_pr185": false
+  },
+  "python": {
+    "total": 23,
+    "checks": [
+      {
+        "name": "historical-manifest",
+        "passed": true,
+        "evidence_type": "integrity"
+      },
+      {
+        "name": "transport-analysis-baseline",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "transport-analysis-current",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "transport-comparison",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "transport-comparison-reverse",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "transport-comparison-missing",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "transport-recall",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "transport-verify-empty",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "negative-control-identical-wrong-job",
+        "passed": true,
+        "evidence_type": "constructed illustration; invalid as an executed negative control",
+        "negative_control_claim_valid": false
+      },
+      {
+        "name": "product-function-replay-comparison",
+        "passed": true,
+        "evidence_type": "actual product function, recorded inputs"
+      },
+      {
+        "name": "product-function-replay-comparison-reverse",
+        "passed": true,
+        "evidence_type": "actual product function, recorded inputs"
+      },
+      {
+        "name": "reverse-has-skew-confidence-regression",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "sentinel-characterization",
+        "passed": true,
+        "evidence_type": "actual product function, synthetic inputs"
+      },
+      {
+        "name": "metric-label-without-run-regression",
+        "passed": true,
+        "evidence_type": "actual product function, synthetic inputs"
+      },
+      {
+        "name": "finding-id-shift-characterization",
+        "passed": true,
+        "evidence_type": "actual product function, synthetic inputs"
+      },
+      {
+        "name": "stage16-hashes-from-actual-text",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "stage16-text-permutation",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "stage16-udf-metadata",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "memory16-formula-application",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "memory-population",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "stage0-actual-api-projections",
+        "passed": true,
+        "evidence_type": "recomputed"
+      },
+      {
+        "name": "first-timeout-wait-is75s",
+        "passed": true,
+        "evidence_type": "source inspection"
+      },
+      {
+        "name": "old19-composition",
+        "passed": true,
+        "evidence_type": "source inspection"
+      }
+    ],
+    "reported_passed": 23,
+    "review_correction": "Original 23/23 receipt retained; negative-control-identical-wrong-job did not execute the validator. Its negative-control evidentiary claim is withdrawn and replaced by the focused follow-up."
+  },
+  "front": {
+    "passed": 10,
+    "total": 10,
+    "scope": "actual extracted source functions + historical text replay + source inspection; no browser, API or DB",
+    "checks": [
+      {
+        "name": "actual-compare-code-pairing",
+        "passed": true,
+        "scope": "actual extracted TypeScript, retained resource rows; not new browser"
+      },
+      {
+        "name": "browser-capture-agrees-with-code",
+        "passed": true,
+        "scope": "checks existing DOM-text capture only"
+      },
+      {
+        "name": "negative-control-baseline-surplus-is-omitted",
+        "passed": true,
+        "scope": "Actual extracted TypeScript with synthetic surplus baseline; no browser"
+      },
+      {
+        "name": "historical-verify-predicate-reproduces-failure",
+        "passed": true,
+        "scope": "Actual live-test text predicate evaluated against retained 27 October screen text; no live rerun"
+      },
+      {
+        "name": "same-predicate-limited-on-new-populated-capture",
+        "passed": true,
+        "scope": "new replay over prior captured text, not a live rerun"
+      },
+      {
+        "name": "predicate-positive-control",
+        "passed": true,
+        "scope": "original exact casing/spacing acceptance controls"
+      },
+      {
+        "name": "verify-constant-labels",
+        "passed": true,
+        "scope": "Static inspection of JSX and SQL: fixed labels versus row-dependent projections"
+      },
+      {
+        "name": "rule7-has-no-aqe-input",
+        "passed": true,
+        "scope": "synthetic source function execution"
+      },
+      {
+        "name": "equal-shuffle-wording",
+        "passed": true,
+        "scope": "Evaluation of the extracted >= expression over equal recorded shuffle values"
+      },
+      {
+        "name": "live-test-optin-and-no-workflow-input",
+        "passed": true,
+        "scope": "Source inspection of opt-in variables and the checked workflow only; not every historical/external CI run"
+      }
+    ]
+  },
+  "jvm": {
+    "spark_version": "4.0.1",
+    "scope": "Single JVM, synthetic Catalyst logical plans; no SparkSession or job; no cross-JVM test",
+    "attempts": 128,
+    "fixed_object_hashes": 1,
+    "new_function_object_hashes": 19,
+    "sha_recomputation_matches": true,
+    "fixed_object_attempts": 32,
+    "historical_cause_proven": false,
+    "source_is_exact_copy": true,
+    "construction_max_operand_orders_with_three_fixed_relative_order": 20,
+    "sha_recomputation_scope": "same-string hashing sanity check, not independent semantics",
+    "built_by_product_ci": false
+  },
+  "historical_files_unchanged": {
+    "matched": 191,
+    "total": 191
+  },
+  "selected_observations": {
+    "reverse_comparison_regression_reasons": [
+      "plan_fingerprint_changed: stage16",
+      "finding_confidence_up: SKEW_ON_JOIN stage21, 0.69 to 0.85"
+    ],
+    "console_current_rows": 20,
+    "console_unmatched_current_stages": [
+      0,
+      16
+    ],
+    "console_omitted_baseline_stages": [
+      0,
+      16
+    ],
+    "actual_stage0_fingerprint_in_both_captures": "empty string",
+    "memory": {
+      "stored_plan_rows": 15,
+      "api_shapes": 8,
+      "stored_outcomes": 16,
+      "api_outcomes": 14,
+      "task_time_formula": "sum(task_count * p50)",
+      "independent_task_duration_sum_available": false
+    },
+    "first_timeout_wait_ms": 75000,
+    "first_499_cause": "unresolved"
+  },
+  "limitations": [
+    "No new Spark job or browser session",
+    "No attribution of historical fingerprint cause",
+    "No independent diagnostic correctness oracle",
+    "No measured noise floor or tuning benefit",
+    "No official integration acceptance",
+    "No external LLM runtime execution credited to this round"
+  ],
+  "public_source_hashes": {
+    "jar/src/main/scala/apex/ApexPlanFingerprint.scala": "76de6344b076b752f61ceae7e1fe741d6892d4bf4033f4eb346f1ccf6d8b75b1",
+    "front/src/screens/CompareScreen.tsx": "69c5a997c50cc0c7ba71f358df19c2f8aa3420864e4fbaca1ded40145313e2c5",
+    "front/src/screens/VerifyScreen.tsx": "f456829a99e408331be90abf9635e52e5efa1db7f42915abdcfdd4197be84251",
+    "front/src/contract/rules.ts": "aac4cfa3ace1c141fa14abcfd69320b7c1fc98bedb94d9712958e8d4a8de6b85",
+    "front/src/data/repository.ts": "dc09478cbd3b557ee8d3a6e3ca577851702b5a4646a26ea3dea7402449b6a99f",
+    "front/src/e2e/console.live.test.tsx": "f243598e049156d8569d5904508c21c4fbcab3a336fda07576fb0e024294c064",
+    "serve/src/apex_mcp/diagnose.py": "6981282b73fe0ce1b9e336971b0656b468e10c8ec1d84d621447cb9bf4861254",
+    "serve/src/apex_mcp/ch.py": "8adddd62e617cbbef4646d213111a2dad42ca03620a51b6186647dd1357050ca",
+    "serve/tools/console_parity_gate.py": "7bb1d89832b8eae44ed1951b37c4b7ad78e9779692003270ed4cb908660e1d47",
+    "memory/src/apex_memory/clickhouse.py": "4c61d89180c34257cb5dec22dee2ab7453c015b8f539fa19de3b64e0cd2cc5be",
+    "memory/src/apex_memory/indexer.py": "b3fd3200586e22a35b376d00c9f876b0e038373d80936c4ade1228cfc2063e4c",
+    ".github/workflows/ci.yml": "973078319c2516931604a40f2e58814a818e599076d08541c75db52fdd9d46d7"
+  },
+  "focused_reconciliation": {
+    "started_at": "2026-11-02T23:23:13.150599+00:00",
+    "finished_at": "2026-11-02T23:23:13.332787+00:00",
+    "source_head": "dbb9b94e9bd75e50d1e820abfbdd4c446f2ef4ff",
+    "python": "3.11.15",
+    "architecture": "arm64",
+    "product_source_sha256": "6981282b73fe0ce1b9e336971b0656b468e10c8ec1d84d621447cb9bf4861254",
+    "checks": [
+      {
+        "name": "recorded-analysis-baseline",
+        "passed": true,
+        "evidence_type": "retained payloads through shared validator",
+        "detail": {
+          "accepted": true,
+          "errors": [],
+          "payloads": 3
+        }
+      },
+      {
+        "name": "recorded-analysis-current",
+        "passed": true,
+        "evidence_type": "retained payloads through shared validator",
+        "detail": {
+          "accepted": true,
+          "errors": [],
+          "payloads": 3
+        }
+      },
+      {
+        "name": "recorded-comparison",
+        "passed": true,
+        "evidence_type": "retained payloads through shared validator",
+        "detail": {
+          "accepted": true,
+          "errors": [],
+          "payloads": 3
+        }
+      },
+      {
+        "name": "recorded-comparison-reverse",
+        "passed": true,
+        "evidence_type": "retained payloads through shared validator",
+        "detail": {
+          "accepted": true,
+          "errors": [],
+          "payloads": 3
+        }
+      },
+      {
+        "name": "recorded-comparison-missing",
+        "passed": true,
+        "evidence_type": "retained payloads through shared validator",
+        "detail": {
+          "accepted": true,
+          "errors": [],
+          "payloads": 3
+        }
+      },
+      {
+        "name": "recorded-recall",
+        "passed": true,
+        "evidence_type": "retained payloads through shared validator",
+        "detail": {
+          "accepted": true,
+          "errors": [],
+          "payloads": 3
+        }
+      },
+      {
+        "name": "recorded-verify-empty",
+        "passed": true,
+        "evidence_type": "retained payloads through shared validator",
+        "detail": {
+          "accepted": true,
+          "errors": [],
+          "payloads": 3
+        }
+      },
+      {
+        "name": "negative-all-three-wrong-job",
+        "passed": true,
+        "evidence_type": "synthetic mutation through shared validator",
+        "detail": {
+          "accepted": false,
+          "errors": [
+            "http:identity:job_id",
+            "api:identity:job_id",
+            "clickhouse:identity:job_id"
+          ],
+          "equal_payloads": true
+        }
+      },
+      {
+        "name": "negative-one-wrong-job",
+        "passed": true,
+        "evidence_type": "synthetic mutation through shared validator",
+        "detail": {
+          "accepted": false,
+          "errors": [
+            "payload_equality",
+            "api:identity:job_id"
+          ],
+          "equal_payloads": false
+        }
+      },
+      {
+        "name": "negative-missing-job-id",
+        "passed": true,
+        "evidence_type": "synthetic mutation through shared validator",
+        "detail": {
+          "accepted": false,
+          "errors": [
+            "http:identity:job_id",
+            "api:identity:job_id",
+            "clickhouse:identity:job_id"
+          ],
+          "equal_payloads": true
+        }
+      },
+      {
+        "name": "negative-swapped-comparison-identities",
+        "passed": true,
+        "evidence_type": "synthetic mutation through shared validator",
+        "detail": {
+          "accepted": false,
+          "errors": [
+            "http:identity:baseline_job_id",
+            "http:identity:current_job_id",
+            "api:identity:baseline_job_id",
+            "api:identity:current_job_id",
+            "clickhouse:identity:baseline_job_id",
+            "clickhouse:identity:current_job_id"
+          ],
+          "equal_payloads": true
+        }
+      },
+      {
+        "name": "negative-missing-all-paths",
+        "passed": true,
+        "evidence_type": "synthetic mutation through shared validator",
+        "detail": {
+          "accepted": false,
+          "errors": [
+            "required_transport_paths",
+            "payload_equality"
+          ],
+          "equal_payloads": false
+        }
+      },
+      {
+        "name": "stage16-operand-structure",
+        "passed": true,
+        "evidence_type": "retained text parsing, not runtime",
+        "detail": {
+          "top_level_items": [
+            5,
+            5
+          ],
+          "operand_counts": [
+            3,
+            3
+          ],
+          "metadata_suffix": [
+            "class org.apache.spark.sql.catalyst.expressions.And",
+            "None"
+          ],
+          "operand_order": [
+            [
+              "A",
+              "B",
+              "A"
+            ],
+            [
+              "A",
+              "A",
+              "B"
+            ]
+          ],
+          "operand_sha256": {
+            "A": "11c2e9b2f142114a7ee083f21cd9374ee5efd03959661e822cc5470ca0f9b027",
+            "B": "90bd686d4d46a33affa29906232a1fceed8ff4736b5c6782e9a8227be5a93c09"
+          },
+          "udf_present_per_operand": [
+            [
+              true,
+              true,
+              true
+            ],
+            [
+              true,
+              true,
+              true
+            ]
+          ],
+          "non_udf_operand_counts": [
+            0,
+            0
+          ],
+          "suggested_delta_markers": [
+            {
+              ".path": false,
+              ".dataChange": false,
+              ".deletionVector": false,
+              "SerializeFromObject": false,
+              "MapPartitions": false,
+              "DeserializeToObject": false
+            },
+            {
+              ".path": false,
+              ".dataChange": false,
+              ".deletionVector": false,
+              "SerializeFromObject": false,
+              "MapPartitions": false,
+              "DeserializeToObject": false
+            }
+          ],
+          "interpretation": "Three operands, two text-identical; all contain UDF. No non-UDF control exists. Printed tokens do not prove object identity, function class, state or cause. Suggested Delta markers absent; other statistics fields are not attribution proof."
+        }
+      },
+      {
+        "name": "counterfactual-fingerprint-only-forward",
+        "passed": true,
+        "evidence_type": "actual compare function, synthetic edit of retained inputs",
+        "detail": {
+          "status": "regressed",
+          "regressions": [
+            "finding_introduced: MEMORY on stage 16 (confidence 0.62, warning)",
+            "finding_confidence_up: MEMORY on stage 18 confidence 0.62 -> 0.85"
+          ],
+          "changed_variable": "stage 16 current-side fingerprint only",
+          "new_runtime": false
+        }
+      },
+      {
+        "name": "counterfactual-fingerprint-only-reverse",
+        "passed": true,
+        "evidence_type": "actual compare function, synthetic edit of retained inputs",
+        "detail": {
+          "status": "regressed",
+          "regressions": [
+            "finding_confidence_up: SKEW_ON_JOIN on stage 21 confidence 0.69 -> 0.85"
+          ],
+          "changed_variable": "stage 16 current-side fingerprint only",
+          "new_runtime": false
+        }
+      },
+      {
+        "name": "historical-integrity-after",
+        "passed": true,
+        "evidence_type": "byte integrity",
+        "detail": {
+          "files": 191,
+          "mismatches": []
+        }
+      }
+    ],
+    "passed": 16,
+    "total": 16,
+    "external_llm_called_by_this_script": false,
+    "external_review_input": "Claude Opus 5.5 Max; analysis only",
+    "mode": "offline capture verification and pure-function characterization; no new Spark, JVM, DB, API or browser run",
+    "raw_payloads_in_output": false,
+    "github_writes": false,
+    "historical_files_written": false,
+    "script_sha256": "472f9cd2281a028fcdcfba77e9a0e36005d2083a845b43e27899db0ca2640cfb"
+  },
+  "denominator_limit": "Groups overlap; do not add counts as unique scenario coverage."
+}

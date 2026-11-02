@@ -1,0 +1,46 @@
+{
+  "job_id": "app-20261028201044-0002",
+  "browser": "Google Chrome (headless)",
+  "routes": [
+    {
+      "route": "/runs",
+      "http_status": 200
+    },
+    {
+      "route": "/runs/app-20261028201044-0002",
+      "http_status": 200
+    },
+    {
+      "route": "/compare",
+      "http_status": 200
+    },
+    {
+      "route": "/memory",
+      "http_status": 200
+    },
+    {
+      "route": "/verify",
+      "http_status": 200
+    },
+    {
+      "route": "/ask",
+      "http_status": 200
+    }
+  ],
+  "api_response_count": 28,
+  "all_api_responses_200": true,
+  "page_error_count": 0,
+  "console_error_count": 0,
+  "interactive_actions": [
+    "click run row",
+    "select stage 21",
+    "open finding evidence",
+    "compare from run",
+    "ask from run",
+    "verify from finding"
+  ],
+  "interactive_page_error_count": 0,
+  "api_down_health_status": 502,
+  "api_down_label": "NO STORE ANSWERED",
+  "api_down_no_fallback": true
+}
