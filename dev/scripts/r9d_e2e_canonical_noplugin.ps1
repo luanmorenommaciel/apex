@@ -130,7 +130,7 @@ if (-not $SkipGenerate) {
     $generateWatch.Stop()
     $generateSubmitToExitMs = [int][Math]::Round($generateWatch.Elapsed.TotalMilliseconds)
     Write-Host "APEX_SUBMIT_RESULT name=generate_data exit=$generateExitCode submit_to_exit_ms=$generateSubmitToExitMs"
-    if ($generateExitCode -ne 0 -or -not (Select-String -Quiet -Path $generateLog -Pattern 'hot_key_~50pct=PASS')) {
+    if ($generateExitCode -ne 0 -or -not (Select-String -Quiet -Path $generateLog -Pattern 'hot_keys_~50pct=PASS')) {
         throw "Deterministic hot-key generation failed (see $generateLog)."
     }
 }

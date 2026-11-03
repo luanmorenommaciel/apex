@@ -19,6 +19,27 @@ are corrections to Apex's own earlier claims.
 - `apex-mcp` now exposes eight tools: `list_runs`, `analyze_run`,
   `explain_stage`, `compare_runs`, `search_kb`, `recall_similar_runs`,
   `verify_fix`, and `suggest_fix`.
+- **`dev/` standalone lane now requires `dev/secrets/`.** `conf/spark-defaults.conf`
+  no longer carries the `minioadmin` literals; it selects the S3A
+  `EnvironmentVariableCredentialsProvider` and master, worker, history and every
+  `spark-submit` start through `scripts/with-s3-credentials.sh`, which exports
+  `dev/secrets/apex_s3_access_key` and `dev/secrets/apex_s3_secret_key`. A clone
+  without those two files does not start the lane (`dev/secrets/README.md`,
+  quickstart updated). The package overlay path is unchanged.
+- **`APEX_OTLP_ENDPOINT` removed from `dev/`.** Nothing ever read it: compose passed
+  it into the container and the plugin reads the Spark conf
+  `spark.apex.otlp.endpoint` (`conf/spark-defaults.conf`, or `--conf` at submit
+  time). Forwarding an explicit endpoint through `run-pathology` and the c3/c4
+  targets remains #178.
+- **`plan_fingerprint` hashing recipe (jar + dev twin).** JVM lambda/object
+  identities are scrubbed, and when Spark 4.1 `canonicalized` throws
+  `UnresolvedException` (Delta "Cache Delta Table State" executions) the
+  fingerprint falls back to the literal-normalized plan text with ExprIds
+  scrubbed instead of shipping an empty string. Typed Dataset pipelines go from
+  unstable to stable; 4.1 Delta state executions go from empty to a value; every
+  other fingerprint is byte-identical. Not a contract bump; the precise
+  blast radius and the cross-version caveat are recorded under **Plan** in
+  `CONTRACT.md`.
 
 ### Fixed — the console reads the same rows through either door
 
@@ -127,9 +148,10 @@ First complete release. Eight lanes, one frozen contract, 400 tests.
   DDL, `Finding` schema, `job_id` threading, and a host-port map so lanes cannot collide.
   Reached **v0.4** (`spark_events`, `plan_transitions`, `findings`, `job_conf`, `plan_memory`,
   `run_outcomes`, `fix_verifications`).
-- **`dev/`** — Spark/Delta pathology lab. Reproducible `skew_join`, `spill`, `bad_shuffle`,
-  and `driver_oom` jobs, plus a **balanced control** so a detector can be shown *not* to fire.
-  Spark 3.5 and 4.1.2 environments.
+- **`dev/`** — Spark/Delta pathology lab. Reproducible `skew_join`, `tail_outlier`, `spill`,
+  `bad_shuffle` and `driver_oom` jobs, plus a **balanced control** so a detector can be shown
+  *not* to fire. Spark 4.0.1 (default) and 4.1.2 (additive cell) environments; the jar also
+  cross-builds Spark 3.5 cells, but the dev image does not build them.
 - **`jar/`** — Scala Spark plugin. Per-stage `TaskMetrics`, a literal-normalized logical-plan
   fingerprint, AQE runtime decisions, and a resolved-config snapshot, shipped as OTLP spans
   through a bounded `BatchSpanProcessor`. Cross-builds four `(Spark, Scala)` cells:

@@ -29,11 +29,18 @@ table existed, so a stale table generated at a different row count silently
 poisoned every later run. A marker dataset (s3a://warehouse/_gen_meta) now
 records (version, rows, seed, keys, partitions); any mismatch forces a full
 deterministic regeneration.
+
+Dataset location: FACT_PATH / DIM_PATH / META_PATH come from
+`common.paths.resolve_dataset_paths`, so an orchestrator can isolate a run by
+exporting APEX_FACT_PATH and APEX_DIM_PATH (the marker follows the fact table).
+The jobs keep importing the module constants unchanged.
 """
 from __future__ import annotations
 
 import os
 import pyspark.sql.functions as F
+
+from common.paths import resolve_dataset_paths
 
 HOT_KEYS = (7, 8)            # two heavy keys ~25% each (~50% combined) — see header
 HOT_FRAC = 0.25
@@ -42,9 +49,10 @@ NUM_KEYS = 10_000
 SEED = 42
 GEN_PARTITIONS = 16          # pinned → reproducible across 2-core or N-core clusters
 GEN_VERSION = 4              # bump when generation logic changes → forces regen
-FACT_PATH = "s3a://warehouse/fact"
-DIM_PATH = "s3a://warehouse/dim"
-META_PATH = "s3a://warehouse/_gen_meta"   # one-row JSON dataset written by Spark
+_PATHS = resolve_dataset_paths()
+FACT_PATH = _PATHS.fact
+DIM_PATH = _PATHS.dim
+META_PATH = _PATHS.meta      # one-row JSON dataset written by Spark
 
 
 def default_rows() -> int:

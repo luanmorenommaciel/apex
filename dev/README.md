@@ -29,7 +29,7 @@ calibration, `make c4-aqe-probe` mirrors the JAR AQE test and must persist a
 `skew_split` row in the canonical ClickHouse store. The 4.1.2 proof recorded
 that transition with `app-20260722225707-0002`.
 
-Layout: `docker-compose.yml` · `Dockerfile` · `conf/` · `jobs/` (generate_data + 4 pathologies) · `common/` (session, fingerprint, data) · `jvm/` (test-only `PlanFingerprint`) · `scripts/` (smoke · verify · canonical E2E) · `Makefile`.
+Layout: `docker-compose.yml` · `Dockerfile` · `conf/` · `jobs/` (ten files: `generate_data`; the five canonical pathologies `skew_join`, `tail_outlier`, `spill`, `bad_shuffle`, `driver_oom`, each with a `FIX=on`/`SAFE=on` control arm; the probes `aqe_skew_split_probe`, `fetch_failed_probe`, `retry_speculation`, `listener_soak`) · `common/` (session, drain, paths, fingerprint, data) · `jvm/` (test-only `PlanFingerprint`) · `scripts/` (smoke · verify · canonical E2E · calibration · r9d A/B · soak) · `secrets/` (gitignored S3 credential files) · `Makefile`.
 
 ## Quickstart (fresh clone)
 
@@ -47,11 +47,20 @@ switching between the default and Spark 4.1.2 cells.
 
 ```bash
 cd dev
-cp .env.example .env         # pinned version quartet + image digests
-make verify                  # proves the platform end-to-end, then tears down
+cp .env.example .env         # pinned version quartet + image digests (or: make env-spark41)
+printf 'minioadmin' > secrets/apex_s3_access_key    # S3 credentials live ONLY here
+printf 'minioadmin' > secrets/apex_s3_secret_key    # (see secrets/README.md)
+make verify                  # proves the platform end-to-end; keeps the MinIO volume
+VERIFY_FRESH=1 make verify   # true fresh-clone proof: drops the volume before and after
 # with collect + infra already running and APEX_CANONICAL_CH_PASSWORD set:
-make e2e                     # canonical ClickHouse gate for all four pathologies
+make e2e                     # canonical ClickHouse gate for the four default pathologies (tail_outlier opt-in)
 ```
+
+The image is built once, from `spark-master`'s `build:`; `spark-worker` and
+`spark-history` reuse the tag with `pull_policy: never`. The plugin build stage
+runs the jar cell's test suite before `assembly` (`--build-arg APEX_JAR_SKIP_TESTS=1`
+skips it for inner-loop rebuilds). The canonical runners never rebuild implicitly
+(`E2E_CANONICAL_BUILD=1` / `-Build`).
 
 Interactive:
 ```bash
@@ -171,7 +180,8 @@ regardless.
 
 ## Determinism & reproducibility
 
-- **Pinned everything:** the default quartet (Spark 4.0.1 · Hadoop/hadoop-aws 3.4.1 · Delta 4.0.0/Scala 2.13 · AWS SDK v2 bundle 2.24.6) lives in `.env`; the additive validated 4.1.2 cell is `./.env.spark41.example` (Hadoop 3.4.2, Delta 4.1.0, `apex_41`). MinIO + mc are pinned by **image digest**.
+- **Pinned everything:** the default quartet (Spark 4.0.1 · Hadoop/hadoop-aws 3.4.1 · Delta 4.0.0/Scala 2.13 · AWS SDK v2 bundle 2.24.6) lives in `.env`; the additive validated 4.1.2 cell is `./.env.spark41.example` (Hadoop 3.4.2, Delta 4.1.0, `apex_41`), merged key-by-key by `make env-spark41`. MinIO + mc are pinned by **image digest** — since Oct 2026 the `bitnamilegacy` builds, because the upstream MinIO images left Docker Hub (decision D-1 in `tasks/.plans/dev-lane-hardening.intake.md`). The sbt launcher image matches `jar/project/build.properties`.
+- **No credential literals:** `conf/spark-defaults.conf` selects the S3A `EnvironmentVariableCredentialsProvider`; master, worker, history and every `spark-submit` start through `scripts/with-s3-credentials.sh`, which exports the compose file secrets from `secrets/`. Executors inherit the worker's environment.
 - **Readiness-gated startup:** every service has a healthcheck; `docker compose up --wait` comes up green in dependency order. MinIO uses `mc ready local`.
 - **Seeded data:** `common/data.py` seeds every `rand()` and **pins `numPartitions=16`**, so the fact table is byte-identical across runs *and* across different cluster core counts (`rand(seed)` depends on partition layout). Proven: two runs → identical `hot_rows` and identical `grand_total`.
 - **Staleness-safe:** a `_gen_meta` marker (generator version, rows, seed, partitions) is written with the data; `ensure_data` regenerates deterministically on any mismatch, so stale wrong-scale tables can never silently persist.
@@ -179,7 +189,7 @@ regardless.
 
 ## The telemetry: plan_fingerprint
 
-`common/fingerprint.py` computes the contract `plan_fingerprint` (normalized **logical** plan → SHA-256) via the JVM helper `apexdev.PlanFingerprint`, which runs the **identical Catalyst operations as the jar's `apex.ApexPlanFingerprint`** (literal-null + canonicalized). Same query → byte-identical hash across the dev (Python) and jar (Scala) listeners — proven by `make fp-crosscheck` against the jar's compiled class. `make fp-test` proves the literal-normalization invariant (`id>100` and `id>900` → same hash).
+`common/fingerprint.py` computes the contract `plan_fingerprint` (normalized **logical** plan → SHA-256) via the JVM helper `apexdev.PlanFingerprint`, which runs the **identical Catalyst operations as the jar's `apex.ApexPlanFingerprint`** (literal-null + canonicalized). Same query → byte-identical hash across the dev (Python) and jar (Scala) listeners — proven by `make fp-crosscheck` against the plugin jar baked into the image (`APEX_FP_REQUIRE_JAR=1`, no host sbt build). `make fp-test` proves the literal-normalization invariant (`id>100` and `id>900` → same hash). On Spark 4.1 both implementations fall back to a scrubbed literal-normalized text when `canonicalized` throws `UnresolvedException` (Delta's object-typed state-reconstruction plans), so every stage keeps a 64-hex fingerprint.
 
 ## Telemetry path
 
@@ -192,4 +202,4 @@ API remains in the runtime path.
 
 ## Future option (considered, not built): Spark Connect
 
-Spark Connect (`sc://…`, `:15002`) would give a faster inner loop for iterating on job code. Deliberately not used: this lab's purpose is running full pathology jobs on the real 2-worker cluster where the SparkListener sees genuine stage metrics.
+Spark Connect (`sc://…`, `:15002`) would give a faster inner loop for iterating on job code. Deliberately not used: this lab's purpose is running full pathology jobs on a real standalone cluster (one 8-slot worker by default, `make scale WORKERS=N`) where the SparkListener sees genuine stage metrics.
