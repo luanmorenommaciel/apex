@@ -44,7 +44,7 @@ ENGINE = MergeTree
 PARTITION BY toDate(Timestamp)
 ORDER BY (ServiceName, SpanName, toDateTime(Timestamp))
 TTL toDateTime(Timestamp) + INTERVAL 90 DAY
-SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
+SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1, non_replicated_deduplication_window = 100;
 
 -- Auxiliary trace-id -> time-window index (exporter-owned; MV below auto-populates it).
 CREATE TABLE IF NOT EXISTS apex.otel_traces_trace_id_ts

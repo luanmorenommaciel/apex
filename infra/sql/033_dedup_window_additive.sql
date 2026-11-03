@@ -9,8 +9,10 @@
 -- source and target keeps a retried block from landing twice; genuinely
 -- distinct blocks are unaffected (block hash, not row content).
 --
--- Existing-volume migration. Fresh volumes should carry this setting in
--- their canonical DDL going forward.
+-- Existing-volume migration ONLY. Fresh volumes already carry this setting in their
+-- canonical DDL (002, 004, 010, 011 — and the contract/collect copies of plan_transitions),
+-- so on a fresh initdb every statement below is a no-op. tests/infra/test_dedup_window_base_ddl.py
+-- proves both paths.
 
 ALTER TABLE apex.otel_traces
     MODIFY SETTING non_replicated_deduplication_window = 100;

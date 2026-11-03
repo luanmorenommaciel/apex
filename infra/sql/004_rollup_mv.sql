@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS apex.spark_jobs_1m (
 ENGINE = AggregatingMergeTree
 PARTITION BY toYYYYMM(bucket)
 ORDER BY (bucket, job_id, app_id)
-TTL bucket + INTERVAL 90 DAY;
+TTL bucket + INTERVAL 90 DAY
+SETTINGS non_replicated_deduplication_window = 100;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS apex.spark_jobs_1m_mv TO apex.spark_jobs_1m AS
 SELECT
