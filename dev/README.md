@@ -122,7 +122,9 @@ Fixes applied here:
    `--alias apex-otel-collector` on `apex-collect-net`, so DNS round-robined
    between the collect collector and infra's — and infra's exporter resolved
    `clickhouse` to collect's *throwaway* ClickHouse (no reshape MVs). Removed
-   the alias at runtime (2026-07-28); a file-level fix belongs to infra/.
+   the alias at runtime (2026-07-28); `tests/e2e/run.sh` no longer sets it —
+   it joins infra's collector under its own container name and targets
+   whichever collector is running (infra/docker-compose.yml alias rule 3).
    (b) `make run-pathology`'s plain `up` recreated containers OFF the C3
    overlay; the Makefile now composes with the overlay whenever
    `apex-collect-net` exists. Plus a 5 s pre-stop OTLP drain in

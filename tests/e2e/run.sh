@@ -5,13 +5,15 @@
 #
 # Integration-only glue — it does NOT modify any lane. What it does:
 #   1. Brings up infra's canonical ClickStack (ClickHouse + HyperDX + Mongo + collector).
-#   2. Network glue: publishes infra's collector under the contracted DNS name
-#      `apex-otel-collector` on the external `apex-collect-net`, so dev's C3/C4
-#      overlay targets it verbatim. (If collect's real collector is already running,
-#      the glue is skipped and collect's collector is used instead — same contract.)
+#   2. Network glue: joins infra's collector to the external `apex-collect-net` under
+#      its OWN container name only (apex-infra-otel-collector) — never under collect's
+#      `apex-otel-collector` alias, which infra/docker-compose.yml rule 3 forbids because
+#      that alias once made infra's collector an impostor for collect's. The OTLP host
+#      the job targets is resolved once: collect's collector when it is running,
+#      infra's otherwise.
 #   3. Builds/starts the dev lane (plugin jar is baked from ../jar by dev's Dockerfile).
 #   4. Runs the instrumented skew pathology: spark.plugins=apex.ApexPlugin,
-#      spark.apex.otlp.endpoint=http://apex-otel-collector:4318, AQE on (CONTRACT §Activation).
+#      spark.apex.otlp.endpoint=<the resolved collector>, AQE on (CONTRACT §Activation).
 #   5. Asserts in infra's ClickHouse, threaded by ONE job_id:
 #        spark_events rows landed · plan_transitions has the AQE decision ·
 #        sql/005 skew query flags the run · plan_json carries no literals/PII.
@@ -52,19 +54,24 @@ done
 curl -sf -m 5 http://localhost:13133/ >/dev/null && ok "collector health :13133" || bad "collector health"
 curl -sf -m 5 -o /dev/null http://localhost:8090/ && ok "HyperDX UI :8090" || bad "HyperDX UI :8090"
 
-step "2/6 network glue: apex-otel-collector alias on apex-collect-net"
+step "2/6 network glue: infra collector on apex-collect-net (own name only, no alias)"
 docker network create apex-collect-net >/dev/null 2>&1 || true
 if [ "$(docker inspect -f '{{.State.Running}}' apex-otel-collector 2>/dev/null)" = "true" ]; then
-  ok "collect's own collector is running — using it (no alias needed)"
+  OTLP_HOST=apex-otel-collector
+  ok "collect's own collector is running — the job targets $OTLP_HOST"
 else
+  OTLP_HOST=apex-infra-otel-collector
   if docker network inspect apex-collect-net -f '{{range .Containers}}{{.Name}} {{end}}' | grep -q apex-infra-otel-collector; then
-    ok "infra collector already aliased on apex-collect-net"
+    ok "infra collector already on apex-collect-net"
   else
-    docker network connect --alias apex-otel-collector apex-collect-net apex-infra-otel-collector \
-      && ok "infra collector joined apex-collect-net as apex-otel-collector" \
-      || die "could not alias infra collector onto apex-collect-net"
+    # No --alias: the container name is the only name infra's collector may answer to
+    # on a foreign network (infra/docker-compose.yml, shared-network alias rule 3).
+    docker network connect apex-collect-net apex-infra-otel-collector \
+      && ok "infra collector joined apex-collect-net as $OTLP_HOST" \
+      || die "could not join infra collector to apex-collect-net"
   fi
 fi
+OTLP_ENDPOINT="http://${OTLP_HOST}:4318"
 
 step "3/6 dev lane up (plugin baked from ../jar)"
 [ -f "$DEV/.env" ] || (cd "$DEV" && python3 scripts/ensure_env.py .env.example .env) || die "could not create dev/.env"
@@ -73,8 +80,8 @@ if [ "${SKIP_BUILD:-0}" != "1" ]; then
 fi
 "${DEV_COMPOSE[@]}" up -d --wait || die "dev cluster failed to come up healthy"
 "${DEV_COMPOSE[@]}" exec -T spark-master sh -c \
-  'curl -s -m 5 -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{}" http://apex-otel-collector:4318/v1/traces' \
-  | grep -q 200 && ok "dev → apex-otel-collector:4318 reachable" || bad "dev cannot reach the collector"
+  "curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' ${OTLP_ENDPOINT}/v1/traces" \
+  | grep -q 200 && ok "dev → ${OTLP_HOST}:4318 reachable" || bad "dev cannot reach the collector at ${OTLP_HOST}"
 
 step "4/6 run instrumented pathology: skew_join, ApexPlugin, AQE on (CONTRACT §Activation)"
 LOG=$(mktemp)
@@ -86,7 +93,7 @@ LOG=$(mktemp)
   /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
   --conf spark.driver.host=spark-master --conf spark.driver.bindAddress=0.0.0.0 \
   --conf spark.plugins=apex.ApexPlugin \
-  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
+  --conf spark.apex.otlp.endpoint="${OTLP_ENDPOINT}" \
   --conf spark.apex.aqe.enabled=true \
   /opt/apex/jobs/skew_join.py >"$LOG" 2>&1
 RC=$?
