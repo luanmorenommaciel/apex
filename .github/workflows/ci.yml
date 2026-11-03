@@ -4,11 +4,15 @@ name: CI
 # Tests that need live ClickHouse skip themselves, which keeps this workflow
 # fast and service-free; live end-to-end paths are not covered here.
 #
-#   pull_request -> main, push -> main : front + python lanes + repo checks
+#   pull_request -> main, push -> main : front + python lanes + repo checks + infra
 #   (ubuntu only). Feature-branch pushes no longer run CI on their own; the PR
 #   run covers them, so each change is checked once, not twice.
 #   The Scala jar lives in jar.yml (path-scoped; full JDK matrix weekly/manual).
 #   Docs/markdown-only changes skip CI.
+#   The infra job is the one place a live ClickHouse runs: every tests/infra live test
+#   boots its own disposable clickhouse-server:24.8 from infra/sql (fresh initdb), so a
+#   DDL that fails at init, a drifted mirror, a stale MV or a broken migration path is
+#   caught here instead of on an operator's volume.
 
 on:
   push:
@@ -121,3 +125,37 @@ jobs:
             -e CLICKHOUSE_PASSWORD=ci_placeholder \
             -v "$PWD/config.yaml:/c.yaml:ro" \
             otel/opentelemetry-collector-contrib:0.156.0 validate --config /c.yaml
+
+  infra:
+    name: infra (fresh ClickHouse store)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      # Driven from engine's environment like the root gate. APEX_INFRA_LIVE=1 turns the
+      # live tests on; each starts a throwaway clickhouse-server:24.8 on a random port
+      # (tests/infra/_live.py), applies infra/sql as initdb, and removes it afterwards.
+      - name: infra tests, live (disposable ClickHouse per test)
+        working-directory: engine
+        run: APEX_INFRA_LIVE=1 uv run --extra dev pytest ../tests/infra -q -p no:warnings
+      # The collector reads the password from a compose secret FILE; validate with one mounted.
+      - name: infra collector config validates
+        working-directory: infra
+        run: |
+          printf 'ci-placeholder' > "$RUNNER_TEMP/clickhouse_password"
+          chmod 644 "$RUNNER_TEMP/clickhouse_password"
+          docker run --rm \
+            -e CLICKHOUSE_USER=apex \
+            -v "$PWD/otel-collector-config.yaml:/c.yaml:ro" \
+            -v "$RUNNER_TEMP/clickhouse_password:/run/secrets/clickhouse_password:ro" \
+            otel/opentelemetry-collector-contrib:0.156.0 validate --config /c.yaml
+      # The compose refuses to render without credentials; these are render-only values.
+      - name: infra compose renders
+        working-directory: infra
+        env:
+          CLICKHOUSE_PASSWORD: ci-placeholder-not-a-real-password
+          HYPERDX_API_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+        run: docker compose -f docker-compose.yml --env-file .env.example config --quiet
