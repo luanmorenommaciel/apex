@@ -1,16 +1,21 @@
 /**
- * Row shapes for the frozen Apex contract, v0.5.
+ * Row shapes for the frozen Apex contract, v0.6.
+ *
+ * v0.6 is additive over v0.5: an optional execution_id on the apex.stage
+ * payload that no ClickHouse schema and no console read consumes
+ * (CONTRACT.md changelog), so the row shapes below are v0.5's unchanged.
+ * CONTRACT_VERSION is pinned to CONTRACT.md by version.test.ts.
  *
  * SparkEventContractV05 mirrors the canonical DDL field for field. SparkEventRow
  * is the console's intentionally narrower projection: additive fields are
  * optional there until a query selects them, so absence remains observable.
  */
-export const CONTRACT_VERSION = "0.5" as const;
+export const CONTRACT_VERSION = "0.6" as const;
 
 /**
  * A point in time, as every Repository returns it: ISO 8601 with a `T`, UTC,
  * millisecond precision, no offset — `2026-09-20T10:00:00.123`. It is the Apex
- * API's format; the ClickHouse and fixture paths are normalised to it in
+ * API's format; the fixture path is normalised to it in
  * src/data/repository.ts, so a screen cannot tell which source a timestamp
  * came from. See src/data/timestamp.ts.
  *

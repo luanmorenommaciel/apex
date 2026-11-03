@@ -2,7 +2,7 @@
  * The recorded six-lane gate run, embellished to a richer job so every screen
  * has something to show. Shapes match src/contract/types.ts exactly.
  *
- * These are FIXTURES, not defaults: when ClickHouse answers, nothing here is
+ * These are FIXTURES, not defaults: against the API, nothing here is
  * read. `make up-fixtures` runs the console against this file alone.
  */
 import type {
