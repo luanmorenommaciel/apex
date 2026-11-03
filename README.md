@@ -67,9 +67,10 @@ git clone https://github.com/luanmorenommaciel/apex && cd apex
 
 # 1 — stand up the store you own (ClickHouse + HyperDX)
 cd infra
-cp .env.example .env            # then set HYPERDX_API_KEY=$(openssl rand -hex 32)
+cp .env.example .env            # then set CLICKHOUSE_PASSWORD, HYPERDX_API_KEY, HYPERDX_ADMIN_EMAIL/PASSWORD
+                                # (the stack refuses to start with any of them empty or default)
 # if 8123/9000/4318 are taken on your host, uncomment the shifted band in .env
-docker compose up -d --wait && make apply-ddl
+make up                         # preflight -> compose up --wait (migrates sql/) -> registers HyperDX's first user
 
 # 2 — build the capture plugin
 cd ../jar && sbt -java-home "$(../scripts/find-jdk.sh 17)" assembly
@@ -100,14 +101,17 @@ To watch a pathology's telemetry actually land in the canonical ClickHouse from 
 ```bash
 # infra/ already up from step 1. Connect collect/'s collector to it
 # (instead of collect's own throwaway ClickHouse):
+# The overlay REQUIRES infra's password (no default): a wrong one would make the
+# collector authenticate against the wrong store and drop every span silently.
 cd collect
+APEX_INFRA_CLICKHOUSE_PASSWORD="$(cat ../infra/secrets/clickhouse_password)" \
 docker compose -f docker-compose.yml -f docker-compose.c3-infra.yml \
   --env-file .env.example --env-file .env.c3-infra.example up -d
 
 # dev/'s pathology lab, wired to that same collector:
 cd ../dev
 cp .env.example .env
-export APEX_CANONICAL_CH_PASSWORD=apex_local_dev   # matches infra/.env's CLICKHOUSE_PASSWORD
+export APEX_CANONICAL_CH_PASSWORD="$(cat ../infra/secrets/clickhouse_password)"   # rendered by infra's preflight
 make e2e
 ```
 

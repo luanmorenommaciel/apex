@@ -107,10 +107,18 @@ its own smoke test but start the collector with the explicit C3 overlay. It
 attaches the collector to `apex-infra-net` and changes only its exporter
 endpoint to `apex-infra-clickhouse:9000`:
 
-```powershell
-docker compose -f docker-compose.yml -f docker-compose.c3-infra.yml `
+```bash
+APEX_INFRA_CLICKHOUSE_PASSWORD="$(cat ../infra/secrets/clickhouse_password)" \
+docker compose -f docker-compose.yml -f docker-compose.c3-infra.yml \
   --env-file .env.example --env-file .env.c3-infra.example up -d
 ```
+
+The overlay **requires** `APEX_INFRA_CLICKHOUSE_PASSWORD` — infra's password, rendered by
+`infra/scripts/preflight.sh` into `infra/secrets/clickhouse_password` — and
+refuses to start without it (a variable only you set, so `.env.example`'s
+`CLICKHOUSE_PASSWORD` default cannot satisfy it). That default only fits the throwaway
+store; against the canonical store a wrong password makes the collector drop
+every span silently.
 
 `infra/sql/012_otel_logs.sql` must be present before this overlay starts. The
 sample C3 secret is intentionally a local smoke-only value; a real deployment

@@ -206,6 +206,7 @@ function Initialize-RuntimeConfiguration {
         -Example (Join-Path $script:Root 'collect/.env.example') `
         -Values @{
             CLICKHOUSE_PASSWORD = $clickHousePassword
+            APEX_INFRA_CLICKHOUSE_PASSWORD = $clickHousePassword   # the C3 overlay refuses collect's default
             REDACTION_SECRET_KEY = New-SecureHex
         }
 

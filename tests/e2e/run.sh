@@ -55,7 +55,9 @@ skew_query_a() {
 
 # ClickHouse creds come from infra's env (defaults mirror the compose defaults).
 CH_USER=$(grep -E '^CLICKHOUSE_USER='     "$INFRA/.env" | tail -1 | cut -d= -f2); CH_USER=${CH_USER:-apex}
-CH_PASS=$(grep -E '^CLICKHOUSE_PASSWORD=' "$INFRA/.env" | tail -1 | cut -d= -f2); CH_PASS=${CH_PASS:-apex_local_dev}
+CH_PASS=$(grep -E '^CLICKHOUSE_PASSWORD=' "$INFRA/.env" | tail -1 | cut -d= -f2)
+[ -n "$CH_PASS" ] || CH_PASS=$(cat "$INFRA/secrets/clickhouse_password" 2>/dev/null || true)
+[ -n "$CH_PASS" ] || die "CLICKHOUSE_PASSWORD is empty in infra/.env and infra/secrets/ is not rendered — run 'make -C infra up'"
 ch() { docker exec apex-infra-clickhouse clickhouse-client --user "$CH_USER" --password "$CH_PASS" -q "$1"; }
 
 step "1/6 infra up (canonical ClickStack)"
