@@ -17,7 +17,7 @@ flowchart TD
     subgraph STACK["docker-compose (4 services)"]
       CH[("ClickHouse :8123/:9000")]:::amber
       MON[("MongoDB :27017<br/>HyperDX app state — REQUIRED")]:::amber
-      APP["HyperDX app :8080<br/>+ OpAMP :4320"]:::store
+      APP["HyperDX app :8090<br/>+ OpAMP :4320"]:::store
       COL["OTel Collector :4317/:4318"]:::store
     end
     subgraph DB["apex database"]
@@ -44,7 +44,7 @@ flowchart TD
 | Decision | Choice | Why |
 |---|---|---|
 | **Topology** | **docker-compose** (ClickHouse + HyperDX app + OTel Collector + MongoDB) as the buildable target; all-in-one only for smoke tests. | All-in-one bundles everything in ONE container (dev only) and **loses state on restart**. HyperDX **requires MongoDB** to persist dashboards/alerts/sources/users. |
-| **Images** | `clickhouse/clickstack-*` (all-in-one, collector) + `clickhouse/hdx-oss-v2`. | Renamed in 2025 from `docker.hyperdx.io/hyperdx/*` — old names pull stale builds. |
+| **Images** | `clickhouse/clickhouse-server` + `hyperdx/hyperdx` (the v2 app; `clickhouse/hdx-oss-v2` is not a real repo) + `otel/opentelemetry-collector-contrib` + `mongo`, all pinned by digest in `infra/docker-compose.yml`. | A floating tag changes under you; the digest is the build that was tested. |
 | **`attributes` type** | `Map(String, String)` — **NOT** the beta JSON type. | ClickStack docs: JSON "not recommended for observability"; it's gated behind feature flags. `Map` is the proven type the OTel exporter uses. |
 | **Rollup engine** | `AggregatingMergeTree` target + incremental MV using `*State`/`*Merge`; store **quantile sketches** (`quantilesState`), not final values. | Lets you query *any* percentile later (p50 + p99 from one sketch) and lets HyperDX auto-accelerate. |
 | **HyperDX → custom table** | Create a **custom Source** (Team Settings → Sources), manually mapping `Timestamp=ts`, `Service=app_id`, `attributes=attributes`, `Trace Id=job_id`. | HyperDX auto-infers only the *default* OTel schema. `spark_events` is custom → every expression must be set explicitly or the source returns nothing. |
@@ -54,7 +54,7 @@ flowchart TD
 ## Build steps (with verify gates)
 
 1. **Scaffold** (`clickstack/` with compose, `.env`, `otel-collector-config.yaml`, `sql/001..005`). → *Verify:* `docker compose config` parses; `ls sql/` shows 5 files.
-2. **Smoke-test all-in-one** (confirm images pull + ports bind). → *Verify:* `:8080` shows HyperDX login; `curl :8123/ping` → `Ok.`
+2. **Smoke-test all-in-one** (confirm images pull + ports bind). → *Verify:* `:8090` shows HyperDX login; `curl :8123/ping` → `Ok.`
 3. **Bring up compose** (ClickHouse, MongoDB, HyperDX app, collector; volumes). → *Verify:* all 4 healthy; login loads; collector logs OpAMP connection.
 4. **Apply `apex` DDL** (001–004). → *Verify:* `system.tables WHERE database='apex'` lists `spark_events`, `findings`, `spark_jobs_1m`, `spark_jobs_1m_mv`.
 5. **Collector routing to `apex`.** → *Verify:* POST a sample OTLP/HTTP to `:4318` → `count() FROM apex.spark_events` increments.
@@ -65,7 +65,7 @@ flowchart TD
 
 ## Task checklist (branch work items)
 
-- [ ] **T1** — `docker-compose.yml` (4 services, volumes, OpAMP 4320, OTLP 4317/4318). *Accept:* all 4 healthy; login at `:8080`; `:8123/ping` → `Ok`.
+- [ ] **T1** — `docker-compose.yml` (4 services, volumes, OpAMP 4320, OTLP 4317/4318). *Accept:* all 4 healthy; login at `:8090`; `:8123/ping` → `Ok`.
 - [ ] **T2** — `.env` (`HYPERDX_API_KEY`, DB `apex`, log level). *Accept:* no hardcoded secrets; `compose config` resolves.
 - [ ] **T3** — `sql/002` `spark_events` MergeTree DDL (contract cols, `Map` attrs, `PARTITION toYYYYMM`, `ORDER BY (job_id, stage_id)`, TTL 90d, `plan_fingerprint FixedString(64)`). *Accept:* `DESCRIBE` shows every field; partition + TTL in `SHOW CREATE`.
 - [ ] **T4** — `sql/003` `findings` DDL. *Accept:* `SHOW CREATE` includes partition + TTL; sample INSERT succeeds.
@@ -162,7 +162,7 @@ services:
   app:                                  # HyperDX UI + API
     image: clickhouse/hdx-oss-v2:latest
     depends_on: [db, clickhouse]
-    ports: ["8080:8080", "4320:4320"]   # 4320 = OpAMP
+    ports: ["8090:8090", "4320:4320"]   # 4320 = OpAMP (8090: 8080 belongs to dev's Spark master)
     environment:
       MONGO_URI: mongodb://db:27017/hyperdx
       HYPERDX_API_KEY: ${HYPERDX_API_KEY}
@@ -175,7 +175,7 @@ services:
       HYPERDX_OTEL_EXPORTER_CLICKHOUSE_DATABASE: apex
       OPAMP_SERVER_URL: http://app:4320
 # all-in-one (dev/smoke only):
-#   docker run -p 8123:8123 -p 8080:8080 -p 4318:4318 clickhouse/clickstack-all-in-one:latest
+#   docker run -p 8123:8123 -p 8090:8080 -p 4318:4318 clickhouse/clickstack-all-in-one:latest
 ```
 
 ## Pitfalls (verified — read before building)

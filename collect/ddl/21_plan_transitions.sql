@@ -18,4 +18,4 @@ ENGINE = MergeTree
 PARTITION BY toYYYYMM(ts)
 ORDER BY (job_id, execution_id, update_seq)
 TTL toDateTime(ts) + INTERVAL 90 DAY DELETE
-SETTINGS ttl_only_drop_parts = 1;
+SETTINGS ttl_only_drop_parts = 1, non_replicated_deduplication_window = 100;

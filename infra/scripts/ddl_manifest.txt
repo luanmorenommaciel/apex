@@ -1,0 +1,25 @@
+# Apex infra · every object the canonical store must carry, with where its truth lives.
+#
+#   object                         kind   lane source (columns/engine/keys)        infra copy (+ TTL/SETTINGS)
+#
+# Columns, engine, PARTITION BY and ORDER BY (and an MV's query) are owned by the lane
+# source; TTL and SETTINGS are owned by the infra copy, because infra adds retention on
+# top of the frozen contract DDL. verify_ddl.py builds both sides in scratch databases and
+# compares them clause by clause against the live store. verify.sh, tests/e2e/run.sh and
+# scripts/apex.ps1 read this file for their expected object list (--list-tables).
+apex.spark_events                table  contract/spark_events.ddl.sql            infra/sql/002_spark_events.sql
+apex.findings                    table  contract/findings.ddl.sql                infra/sql/003_findings.sql
+apex.spark_jobs_1m               table  infra/sql/004_rollup_mv.sql              infra/sql/004_rollup_mv.sql
+apex.otel_traces                 table  collect/ddl/10_otel_traces.sql           infra/sql/010_otel_traces.sql
+apex.otel_traces_trace_id_ts     table  collect/ddl/10_otel_traces.sql           infra/sql/010_otel_traces.sql
+apex.plan_transitions            table  contract/plan_transitions.ddl.sql        infra/sql/011_plan_transitions.sql
+apex.otel_logs                   table  collect/ddl/11_otel_logs.sql             infra/sql/012_otel_logs.sql
+apex.job_conf                    table  contract/job_conf.ddl.sql                infra/sql/013_job_conf.sql
+apex.plan_memory                 table  memory/sql/030_plan_memory.sql           infra/sql/030_plan_memory.sql
+apex.run_outcomes                table  memory/sql/031_run_outcomes.sql          infra/sql/031_run_outcomes.sql
+apex.fix_verifications           table  verify/ddl/fix_verifications.ddl.sql     infra/sql/032_fix_verifications.sql
+apex.spark_jobs_1m_mv            mv     infra/sql/004_rollup_mv.sql              infra/sql/004_rollup_mv.sql
+apex.otel_traces_trace_id_ts_mv  mv     collect/ddl/10_otel_traces.sql           infra/sql/010_otel_traces.sql
+apex.mv_spark_events             mv     collect/ddl/30_mv_spark_events.sql       infra/sql/020_mv_reshape.sql
+apex.mv_plan_transitions         mv     collect/ddl/31_mv_plan_transitions.sql   infra/sql/020_mv_reshape.sql
+apex.mv_job_conf                 mv     collect/ddl/32_mv_job_conf.sql           infra/sql/021_mv_job_conf.sql

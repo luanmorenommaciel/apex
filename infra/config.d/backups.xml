@@ -1,0 +1,18 @@
+<!-- Apex infra · ClickHouse backups disk. BACKUP ... TO Disk('backups', ...) needs a disk
+     declared here AND listed under <backups>; scripts/backup.sh writes to it and copies the
+     archive to the host, scripts/restore.sh does the reverse. Mounted read-only into
+     /etc/clickhouse-server/config.d/ by docker-compose.yml; the path is the ch-backups volume. -->
+<clickhouse>
+  <storage_configuration>
+    <disks>
+      <backups>
+        <type>local</type>
+        <path>/var/lib/clickhouse/backups/</path>
+      </backups>
+    </disks>
+  </storage_configuration>
+  <backups>
+    <allowed_disk>backups</allowed_disk>
+    <allowed_path>/var/lib/clickhouse/backups/</allowed_path>
+  </backups>
+</clickhouse>

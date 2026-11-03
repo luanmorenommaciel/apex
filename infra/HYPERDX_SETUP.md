@@ -15,10 +15,11 @@ fallback / for understanding.
 applies them **once, when the first team is created** (i.e. at first user registration), then
 persists them in MongoDB. So:
 
-1. `docker compose up -d`
-2. Open **http://localhost:8090** and **register the first user** (any email/password). This
-   creates the team → HyperDX seeds:
-   - Connection **“Apex ClickHouse”** → `http://clickhouse:8123`, user `apex`.
+1. `make up` — after `docker compose up -d --wait` it runs `scripts/hyperdx_bootstrap.sh`, which
+   registers the first user (`HYPERDX_ADMIN_EMAIL` / `HYPERDX_ADMIN_PASSWORD` from `.env`) through
+   `POST /register/password`. Creating the team is what makes HyperDX seed:
+   - Connection **“Apex ClickHouse”** → `http://apex-infra-clickhouse:8123`, user **`apex_hdx`**
+     (read-only; declared by `scripts/preflight.sh` in `.local/users.d/`, never the admin password).
    - Source **“Spark Events”** → `apex.spark_events` with the mapping below.
 3. Go to **Search**, pick the **Spark Events** source → your rows appear. Filter by `job_id`.
 
@@ -28,9 +29,9 @@ docker exec apex-infra-mongodb mongosh --quiet hyperdx \
   --eval 'db.sources.find({},{name:1,"from":1,timestampValueExpression:1,serviceNameExpression:1,eventAttributesExpression:1,traceIdExpression:1}).forEach(printjson)'
 ```
 
-> Registration is required because the seed is attached to the **team**, which doesn't exist until
-> someone signs up. Until then `GET :8000/installation` returns `{"isTeamExisting":false}` and
-> `db.sources` is empty — that's expected, not a failure.
+> The seed is attached to the **team**, which doesn't exist until the first user is registered —
+> `GET :8000/installation` answers `{"isTeamExisting":false}` and `db.sources` is empty until then.
+> `make bootstrap` is idempotent (a 409 `teamAlreadyExists` counts as done).
 
 ---
 
@@ -41,7 +42,8 @@ If you'd rather create it by hand (or the seed was cleared):
 1. **http://localhost:8090** → register/login.
 2. **Team Settings → Connections → Add Connection**
    - Name: `Apex ClickHouse`
-   - Host: `http://clickhouse:8123`  ·  Username: `apex`  ·  Password: (`CLICKHOUSE_PASSWORD` from `.env`)
+   - Host: `http://apex-infra-clickhouse:8123`  ·  Username: `apex_hdx`  ·  Password: `secrets/hyperdx_clickhouse_password`
+     (the short `clickhouse` alias is never used — see the shared-network alias rule in README.md)
    - Save. (HyperDX will “test” it — it should succeed.)
 3. **Team Settings → Sources → Add Source** → kind **Log**. Set **every** field:
 
@@ -94,6 +96,7 @@ columns follow `<aggFn>__<sourceColumn>` (they do: `sum__shuffle_read_bytes`,
 ## Skew dashboard
 
 See [`dashboards/skew_dashboard.json`](dashboards/skew_dashboard.json) — a per-tile build spec
-(source + query + viz). Each tile's query matches `sql/005` for the same job/window, so a tile and
-the raw SQL agree. Create **Dashboards → New**, add one tile per entry against the **Spark Events**
+(source + query + viz). Each tile's query mirrors `sql/050` (A)/(B) verbatim for the same job/window,
+so a tile and the raw SQL agree; a tile cannot carry an operator width, so its verdict column is
+NULL unless `job_conf` knows the cluster width (CONTRACT.md rule 1). Create **Dashboards → New**, add one tile per entry against the **Spark Events**
 source (use the rollup source for the accelerated time tiles).

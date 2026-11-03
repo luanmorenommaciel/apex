@@ -1,6 +1,7 @@
 -- Apex infra · exporter-owned OTLP logs schema for collect interoperability.
 -- The collector declares a logs pipeline alongside traces; pre-create its
 -- ClickHouse target in the canonical infra database.
+-- 14-day TTL: a raw landing table like otel_traces (the reshaped contract tables keep 90).
 
 CREATE TABLE IF NOT EXISTS apex.otel_logs
 (
@@ -40,5 +41,5 @@ CREATE TABLE IF NOT EXISTS apex.otel_logs
 ENGINE = MergeTree
 PARTITION BY toDate(Timestamp)
 ORDER BY (toStartOfFiveMinutes(Timestamp), ServiceName, Timestamp)
-TTL toDateTime(Timestamp) + INTERVAL 90 DAY
+TTL toDateTime(Timestamp) + INTERVAL 14 DAY
 SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
