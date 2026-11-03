@@ -9,6 +9,11 @@
 # MongoDB is REQUIRED: HyperDX stores dashboards/sources/connections/users in Mongo, NOT in
 # ClickHouse. The all-in-one image loses that on restart — this compose stack persists it.
 #
+# IMAGES ARE PINNED BY DIGEST (tag@sha256). A tag is a moving pointer; the digest is the
+# build that was tested. Bump = change the tag AND the digest together (.env.example says how).
+# Every long-running service restarts unless-stopped and carries a memory limit, so the
+# OOM killer the root README warns about hits the one container that overgrew, not all four.
+#
 # Host ports are parametrized via .env (CONTRACT Port Map defaults live in .env.example).
 # On the shared dev host the stray oteru-collector squats 8123/9000/4318, so the local .env
 # shifts ClickHouse->28123/29000 and the collector->24318/24317; HyperDX stays on 8090 (Port Map).
@@ -36,8 +41,13 @@ name: apex-infra
 services:
   # ── ClickHouse: canonical store (contract schema applied on first init from ./sql) ──
   clickhouse:
-    image: clickhouse/clickhouse-server:24.8
+    image: clickhouse/clickhouse-server:24.8.14.39@sha256:1ffa82edee000a42c09313bd9f1293d94c570aee74babc1b3ca9983a35fa597b
     container_name: apex-infra-clickhouse
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${CLICKHOUSE_MEM_LIMIT:-4g}
     environment:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-apex_local_dev}
@@ -68,14 +78,23 @@ services:
 
   # ── MongoDB: HyperDX application state (dashboards/sources/connections/users) ──
   mongodb:
-    image: mongo:5.0.14-focal
+    # 5.0 line: what HyperDX's own compose ships (mongo:5.0.32-focal as of 2.43). A major
+    # upgrade on a live volume is a separate decision, not a pin bump.
+    image: mongo:5.0.32-focal@sha256:3b6c281e1c0825d34b28e503b0bc97174132a283eeb79d402bd3893944cf9fd7
     container_name: apex-infra-mongodb
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${MONGO_MEM_LIMIT:-1g}
     ports:
       - "${MONGO_HOST_PORT:-27017}:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      # mongosh exits 0 whatever ping printed; grep for a lone `1` is what makes a false
+      # ping, a hung server or a connection error fail the check instead of passing it.
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\" | grep -qx 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -94,13 +113,18 @@ services:
     # HyperDX v2 app image (the one the official v2 compose uses, supports MONGO_URI +
     # DEFAULT_CONNECTIONS/DEFAULT_SOURCES) is docker.hyperdx.io/hyperdx/hyperdx, mirrored on
     # Docker Hub as hyperdx/hyperdx. Override via HDX_IMAGE / HDX_IMAGE_VERSION in .env.
-    image: ${HDX_IMAGE:-hyperdx/hyperdx}:${HDX_IMAGE_VERSION:-2}
+    # Tag and digest move together: override HDX_IMAGE_VERSION only with HDX_IMAGE_DIGEST.
+    image: ${HDX_IMAGE:-hyperdx/hyperdx}:${HDX_IMAGE_VERSION:-2.43.1}@${HDX_IMAGE_DIGEST:-sha256:a9db02b18730846726979a8a948f8439b21988f46a319a9114eae62e136414d9}
     container_name: apex-infra-hyperdx
+    deploy:
+      resources:
+        limits:
+          memory: ${HYPERDX_MEM_LIMIT:-2g}
     depends_on:
       clickhouse:
         condition: service_healthy
       mongodb:
-        condition: service_started
+        condition: service_healthy   # it stores every dashboard/source/user there; started != answering
     ports:
       - "${HYPERDX_APP_HOST_PORT:-8090}:${HYPERDX_APP_PORT:-8090}"     # UI  (Port Map: 8090, NOT 8080)
       - "${HYPERDX_API_HOST_PORT:-8000}:${HYPERDX_API_PORT:-8000}"     # API (browser -> NEXT_PUBLIC_SERVER_URL)
@@ -128,8 +152,13 @@ services:
   # and must write the file_storage queue. Chown once, then the collector starts non-root
   # (same pattern as collect/docker-compose.yml).
   queue-init:
-    image: busybox:1.36
+    image: busybox:1.36@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
     container_name: apex-infra-queue-init
+    restart: "no"   # one-shot: otel-collector waits for service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 64m
     command: ["sh", "-c", "mkdir -p /var/lib/otelcol/queue && chown -R 10001:10001 /var/lib/otelcol"]
     volumes:
       - otel-queue:/var/lib/otelcol/queue
@@ -139,8 +168,12 @@ services:
 
   # ── OTel Collector: OTLP ingestion -> apex.otel_traces (contrib; interop-identical to collect) ──
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.156.0
+    image: otel/opentelemetry-collector-contrib:0.156.0@sha256:125bdbeb7590cc1952c5b3430ecf14063568980c2c93d5b38676cc0446ed8108
     container_name: apex-infra-otel-collector
+    deploy:
+      resources:
+        limits:
+          memory: ${COLLECTOR_MEM_LIMIT:-2560m}   # memory_limiter caps the pipeline at 2048 MiB (+spike 512)
     command: ["--config", "/etc/otelcol-contrib/config.yaml"]
     environment:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
