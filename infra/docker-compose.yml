@@ -1,10 +1,11 @@
 # Apex infra · the REAL, persistent ClickStack — the canonical data platform the whole
-# pipeline stores into and visualizes from. Four services:
+# pipeline stores into and visualizes from. Four long-running services and two one-shots:
 #
 #   otel-collector ──native:9000──> clickhouse <──HTTP:8123── hyperdx(app) ──state──> mongodb
 #        ▲ OTLP :4318                (apex DB, contract schema + rollups + reshape MVs)
-#        │
+#        │                                ▲ ddl-migrate (re-applies sql/ on every up)
 #   jar / collect  (a POSTed apex.stage span -> otel_traces -> MV -> spark_events)
+#   queue-init (chowns the collector's persistent queue volume once)
 #
 # MongoDB is REQUIRED: HyperDX stores dashboards/sources/connections/users in Mongo, NOT in
 # ClickHouse. The all-in-one image loses that on restart — this compose stack persists it.

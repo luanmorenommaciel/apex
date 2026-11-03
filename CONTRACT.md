@@ -8,6 +8,12 @@
 **Artifacts:** [`contract/sample_event.json`](contract/) · [`spark_events`](contract/spark_events.ddl.sql) · [`findings`](contract/findings.ddl.sql) · [`plan_transitions`](contract/plan_transitions.ddl.sql) · [`job_conf`](contract/job_conf.ddl.sql) · `memory/sql/030_plan_memory.sql` · `memory/sql/031_run_outcomes.sql` · `verify/ddl/fix_verifications.ddl.sql`
 
 **Changelog:**
+- **Storage note (2026-11-03, no contract version change)** — `plan_transitions` DDL carries
+  `SETTINGS non_replicated_deduplication_window = 100` (a storage setting, as `spark_events` has
+  since v0.5): the collector's retry path relies on block deduplication on every table its MVs
+  write. Retention is infra's (not the contract's): raw landing tables (`otel_traces`, `otel_logs`)
+  keep 14 days, the contract tables 90, `findings`/`fix_verifications`/memory 365 — see
+  `infra/README.md` § Retention. Emitted values unchanged.
 - **v0.6** — ADDITIVE: `apex.stage` may carry optional `execution_id` as an
   OTLP Int64 when Spark supplied `spark.sql.execution.id` for that completed
   SQL stage. Pure-RDD and historical events omit the key; producers must not
@@ -97,7 +103,7 @@ The canonical values live in [`contract/sample_event.json`](contract/) — build
 ## The store (infra owns application, contract owns the schema)
 
 Database `apex`. Canonical DDL in [`contract/`](contract/):
-- **`spark_events`** — MergeTree, `PARTITION BY toYYYYMM(ts)`, `ORDER BY (job_id, stage_id)`, one row per stage.
+- **`spark_events`** — MergeTree, `PARTITION BY toYYYYMM(ts)`, `ORDER BY (job_id, stage_id, stage_attempt)`, one row per stage (attempt).
 - **`findings`** — one row per detected issue (`engine/` writes, `serve/` reads).
 - **`plan_transitions`** *(v0.2, optional)* — one row per AQE runtime re-plan (see below).
 

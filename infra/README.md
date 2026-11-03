@@ -3,9 +3,9 @@
 The **real, persistent ClickStack** the whole Apex pipeline stores into and visualizes from:
 **ClickHouse + HyperDX + MongoDB + OTel Collector**. infra owns the ClickHouse *application*;
 [`../contract/`](../contract/) owns the *schema*. This lane applies the frozen contract DDL and
-adds partitioning/TTL, a job-level rollup, the reshape MVs, and skew detection.
+adds partitioning/retention, a job-level rollup, the reshape MVs, and the canonical skew SQL.
 
-**Obeys:** [../CONTRACT.md](../CONTRACT.md) (v0.5 + Port Map + TTL note) · **Full brief:** [../docs/lanes/INFRA.md](../docs/lanes/INFRA.md)
+**Obeys:** [../CONTRACT.md](../CONTRACT.md) (v0.6 + Port Map + rule 1) · **Full brief:** [../docs/lanes/INFRA.md](../docs/lanes/INFRA.md)
 
 **Exit criterion (proven):** a `curl`'d OTLP/HTTP span → `apex.spark_events` (via MV) → a HyperDX
 tile **and** the skew query both return it, all threaded by `job_id`.
@@ -16,62 +16,70 @@ Os gates locais desta branch e a referência da evidência integrada estão em
 ```
   jar / collect ──OTLP:4318──▶ otel-collector ──native:9000──▶ ClickHouse ◀──HTTP:8123── HyperDX ──state──▶ MongoDB
                                                               apex.otel_traces                (UI :8090)      (:27017)
-                                                                    │ mv_spark_events / mv_plan_transitions
+                                                                    │ mv_spark_events / mv_plan_transitions / mv_job_conf
                                                                     ▼
                                                      apex.spark_events ──spark_jobs_1m_mv──▶ apex.spark_jobs_1m (rollup)
-                                                     apex.plan_transitions                    apex.findings (engine writes)
+                                                     apex.plan_transitions · apex.job_conf   apex.findings (engine writes)
 ```
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `docker-compose.yml` | 4 services (clickhouse, mongodb, hyperdx, otel-collector) |
-| `.env.example` / `.env` | host ports + creds (`.env` is gitignored; canonical Port Map in `.env.example`) |
-| `otel-collector-config.yaml` | contrib collector → `apex.otel_traces` (interop-identical to collect) |
-| `sql/001..032` | DDL, auto-applied on first ClickHouse init (see below) |
-| `Makefile` | `make apply-ddl` / `make verify-ddl` — schema guardrails (see below) |
-| `scripts/apply_ddl.sh` | idempotently applies every `sql/*.sql` to the RUNNING ClickHouse |
-| `scripts/verify_ddl.py` | DESCRIBEs each contract table and diffs it against its DDL source of truth |
+| `docker-compose.yml` | 6 services: clickhouse, **ddl-migrate** (one-shot, every `up`), mongodb, hyperdx, **queue-init** (one-shot), otel-collector — every image pinned `tag@sha256` |
+| `.env.example` / `.env` | host ports, bind address, memory limits, credentials (`.env` is gitignored; all credentials REQUIRED, none defaulted) |
+| `config.d/backups.xml` | ClickHouse backups disk for `make backup` / `make restore` |
+| `otel-collector-config.yaml` | contrib collector → `apex.otel_traces` (interop-identical to collect); password from the compose secret file; persistent `file_storage` queue |
+| `sql/001..050` | DDL, auto-applied on first ClickHouse init and re-applied by `ddl-migrate` on every `up` (see below) |
+| `Makefile` | `make up` (preflight → compose → bootstrap) · `apply-ddl` · `verify-ddl` · `backup` / `restore` |
+| `scripts/preflight.sh` | refuses missing/default credentials; renders the gitignored `secrets/` + `.local/` runtime files |
+| `scripts/apply_ddl.sh` | idempotently applies every `sql/*.sql` (host mode, or container mode inside `ddl-migrate`) |
+| `scripts/verify_ddl.py` | compares every object in `scripts/ddl_manifest.txt` — tables **and** MVs — clause by clause against its DDL sources |
+| `scripts/ddl_manifest.txt` | the ONE list of store objects; `verify.sh`, `tests/e2e/run.sh` and `scripts/apex.ps1` read it too |
+| `scripts/hyperdx_bootstrap.sh` | registers HyperDX's first user through the API (idempotent) — that is what seeds the connection + source |
 | `scripts/seed.sh` | ~50 stage spans via the real OTLP path (ts=now, TTL-safe) + stand-in findings |
-| `scripts/verify.sh` | exit-criterion healthcheck; exits 0 when a job_id threads all 3 tables |
-| `dashboards/skew_dashboard.json` | per-tile skew dashboard build-spec |
+| `scripts/verify.sh` | exit-criterion healthcheck; exits 0 when a job_id threads all 3 tables and a stage is tail-bound |
+| `scripts/backup.sh` / `restore.sh` | `BACKUP DATABASE apex` + `mongodump`, and the reverse (beside the live data, or over it with `--force`) |
+| `dashboards/skew_dashboard.json` | per-tile skew dashboard build-spec, tiles mirror `sql/050` verbatim |
 | `HYPERDX_SETUP.md` | **exact** custom-Source + rollup-registration steps (scripted + manual) |
 
-### `sql/` — applied in filename order on first boot
-`001` db · `002` spark_events *(contract)* · `003` findings *(contract, incl. idempotent
-ALTERs for pre-existing volumes)* · `004` rollup + incremental MV · `005` skew queries ·
-`010` otel_traces landing table · `011` plan_transitions *(contract v0.2)* ·
-`013` job_conf *(contract v0.4)* · `020`/`021` reshape MVs (`mv_spark_events`,
-`mv_plan_transitions`, `mv_job_conf`) · `030`/`031` plan_memory + run_outcomes
-*(ratified v0.3, mirror of `memory/sql/`)* · `032` fix_verifications *(ratified v0.3,
-mirror of `verify/ddl/`)*.
+### `sql/` — applied in filename order on first boot, re-applied on every `up`
+`001` db · `002` spark_events *(contract v0.5)* · `003` findings *(contract, + 365-day TTL)* ·
+`004` rollup + incremental MV *(every v0.5 column)* · `010` otel_traces landing table *(14-day TTL)* ·
+`011` plan_transitions *(contract v0.2)* · `012` otel_logs *(14-day TTL)* · `013` job_conf *(contract v0.4)* ·
+`020`/`021` reshape MVs (`mv_spark_events`, `mv_plan_transitions`, `mv_job_conf`) ·
+`030`/`031` plan_memory + run_outcomes *(ratified v0.3, mirror of `memory/sql/`)* ·
+`032` fix_verifications *(ratified v0.3, mirror of `verify/ddl/`, + 365-day TTL)* ·
+`033` dedup window *(existing volumes; fresh ones carry it in the base DDL)* ·
+`034`–`039` v0.5 `ADD COLUMN`s *(existing volumes)* · `040` the ONE `mv_spark_events` resync *(existing volumes)* ·
+`041` rollup v0.5 columns *(existing volumes)* · `042` retention *(existing volumes)* ·
+`050` canonical skew queries *(SELECT-only; after every DDL because (A) joins `job_conf`)*.
 
-> **⚠️ First-boot-only gotcha:** ClickHouse runs `/docker-entrypoint-initdb.d` ONLY on a
-> fresh volume. On a pre-existing volume, any `sql/` file added later is **silently
-> skipped** — the schema looks applied while it lags the contract. The guardrails:
+> **First-boot-only gotcha, closed:** ClickHouse runs `/docker-entrypoint-initdb.d` ONLY on a
+> fresh volume. The `ddl-migrate` one-shot service therefore re-applies `sql/` on **every**
+> `docker compose up`, after clickhouse is healthy and before hyperdx/otel-collector start.
+> The guardrails stay available by hand:
 >
 > ```bash
 > make apply-ddl   # idempotently apply every sql/*.sql, in order, to the RUNNING instance
-> make verify-ddl  # DESCRIBE each contract table; exit 1 on ANY drift vs its DDL source
+> make verify-ddl  # every object in ddl_manifest.txt vs its sources: columns, engine, keys, TTL, settings, MV query
 > ```
 >
-> Idempotency lives in the files: `CREATE ... IF NOT EXISTS` everywhere, plus
-> `ALTER ... ADD COLUMN IF NOT EXISTS` for columns added to tables that predate them.
-> Run both after pulling new DDL; CI/lanes can treat `verify-ddl`'s exit code as schema truth.
+> Idempotency lives in the files: `CREATE ... IF NOT EXISTS` everywhere, `ALTER ... ADD COLUMN IF
+> NOT EXISTS` / `MODIFY QUERY` / `MODIFY TTL` for volumes that predate a change. The `infra` CI job
+> boots a fresh store from `sql/` and runs every live test on it (`tests/infra/`).
 
-`012_otel_logs.sql` is the exporter-owned OTLP logs landing table. It is needed
-when the canonical `collect/` pipeline is connected to infra, because that
-pipeline declares both trace and log exporters even though the current Spark
-plugin emits spans only.
-
-> **Schema authority:** `002/003/011/013` are the contract tables applied **verbatim** — never
-> rename/repurpose a column. `030/031/032` **mirror `memory/sql/` + `verify/ddl/`** (the lanes own
-> the DDL; infra owns applying it). `010` + `020`/`021` **mirror `collect/ddl/`** so a span landing in
-> `otel_traces` reshapes identically whether it came via infra's collector or collect's. If infra
-> and a lane ever differ on a table, **the lane's source of truth wins and infra re-mirrors.**
+> **Schema authority:** `002/003/011/013` are the contract tables applied **verbatim**; `030/031/032`
+> mirror `memory/sql/` + `verify/ddl/`; `010/012` + `020`/`021` mirror `collect/ddl/` so a span landing
+> in `otel_traces` reshapes identically whether it came via infra's collector or collect's. Columns,
+> engine and keys are the lane's; **TTL and SETTINGS are infra's** (retention is a storage policy).
+> `verify-ddl` enforces exactly that split, and `tests/infra/test_mv_single_query.py` keeps the three
+> copies of the reshape MV query (`020`, `040`, `collect/ddl/30`) byte-equal.
 
 ## Ports (CONTRACT.md Port Map — infra's band)
+
+Every host port binds to **`127.0.0.1`** by default (`BIND_HOST` in `.env`). Other lanes reach
+infra over the Docker network by container name (`apex-infra-clickhouse`, …), never via a host port.
 
 | Service | Container | Host (default) | Host (this dev box) |
 |---|---|---|---|
@@ -93,16 +101,48 @@ plugin emits spans only.
 
 ```bash
 cd infra
-cp .env.example .env            # then set HYPERDX_API_KEY=$(openssl rand -hex 32)
+cp .env.example .env
+# set the four REQUIRED values (the stack refuses empty or default ones):
+#   CLICKHOUSE_PASSWORD=$(openssl rand -hex 24)   HYPERDX_API_KEY=$(openssl rand -hex 32)
+#   HYPERDX_ADMIN_EMAIL=you@example.com           HYPERDX_ADMIN_PASSWORD=<12+ chars>
 # if 8123/9000/4318 are taken on your host, uncomment the shifted band in .env
-docker compose up -d            # 4 services; clickhouse applies sql/ on first init
-./scripts/seed.sh               # ~50 spans via OTLP (ts=now) + stand-in findings
-./scripts/verify.sh             # exit 0 = store proven end-to-end
+make up                                   # preflight → compose up --wait (ddl-migrate runs) → HyperDX first user
+./scripts/seed.sh                         # ~50 spans via OTLP (ts=now) + stand-in findings
+APEX_CLUSTER_SLOTS=8 ./scripts/verify.sh  # exit 0 = store proven end-to-end (seed data is tail-bound at 8)
+make verify-ddl                           # every object matches its DDL sources
 ```
 
-Then open **http://localhost:8090**, register the first user (seeds the ClickHouse connection +
-the **Spark Events** custom Source automatically), and Search the source. See
-[`HYPERDX_SETUP.md`](HYPERDX_SETUP.md).
+Then open **http://localhost:8090** and log in as `HYPERDX_ADMIN_EMAIL` — the connection
+(**as the read-only `apex_hdx` user**) and the **Spark Events** custom Source were seeded when the
+bootstrap created the team. See [`HYPERDX_SETUP.md`](HYPERDX_SETUP.md).
+
+## Security model (what `preflight.sh` enforces)
+
+- **No default credentials.** `CLICKHOUSE_PASSWORD`, `HYPERDX_API_KEY` (64 hex) and the HyperDX
+  admin pair are required; `apex_local_dev` / `change-me*` are refused; `docker compose config`
+  itself fails without a password.
+- **The admin password is a file, not an environment variable.** preflight renders it to
+  `secrets/clickhouse_password` (gitignored); ClickHouse reads `CLICKHOUSE_PASSWORD_FILE`, the
+  collector `${file:...}`, both as a compose secret. `docker inspect` of no `apex-infra-*`
+  container shows it.
+- **HyperDX connects as `apex_hdx`**, a read-only user (`readonly=2`, SELECT on the tables its
+  source reads) declared in `.local/users.d/apex-hyperdx.xml` with a **sha256 hash**, never the
+  admin password.
+- **The console's browser-shipped user `apex_ro`** (front/contract/01-readonly-user.sql) is granted
+  the seven tables it queries, not `apex.*` — the raw `otel_*` landing tables are refused.
+- **Loopback by default**, see Ports.
+
+## Retention (decision D-8 in `tasks/.plans/infra-hardening.intent.md`)
+
+| Tables | TTL | Why |
+|---|---|---|
+| `otel_traces`, `otel_traces_trace_id_ts`, `otel_logs` | **14 days** | raw landing only — every span is reshaped into the contract tables |
+| `spark_events`, `plan_transitions`, `job_conf`, `spark_jobs_1m` | 90 days | the contract tables |
+| `findings`, `fix_verifications`, `plan_memory`, `run_outcomes` | 365 days | derived knowledge outlives the raw events |
+
+`make backup` snapshots ClickHouse (`BACKUP DATABASE apex` to the backups disk, copied to
+`./backups/`) and Mongo (`mongodump`); `make restore FILE=... INTO=<db>` restores beside the live
+data, `FORCE=1` over it. Replica is out of scope: a single node by design.
 
 ## Point collect/ at this ClickHouse (the integration path)
 
@@ -110,9 +150,16 @@ infra's own collector is the self-contained one. In the full pipeline, **collect
 the OTLP receiver and writes into **this** ClickHouse (both write the identical `apex.otel_traces`,
 so the reshape MVs fire either way). To wire collect → infra:
 
-- Attach collect's `otel-collector` to network `apex-infra-net` (or set its clickhouse exporter
-  endpoint to `tcp://host.docker.internal:29000`), with `CLICKHOUSE_USER/PASSWORD` = `apex` /
-  `.env` value. A POSTed `apex.stage` span then lands in **this** `apex.spark_events` via the MV.
+```bash
+cd collect
+APEX_INFRA_CLICKHOUSE_PASSWORD="$(cat ../infra/secrets/clickhouse_password)" \
+docker compose -f docker-compose.yml -f docker-compose.c3-infra.yml \
+  --env-file .env.example --env-file .env.c3-infra.example up -d
+```
+
+The overlay **refuses** to start without `APEX_INFRA_CLICKHOUSE_PASSWORD`: a collector that
+authenticates with the wrong password drops every span silently, which is exactly how 50–70% of
+telemetry once vanished.
 
 ### Shared-network alias rule (hard-won; breaking it cost us 50–70% of telemetry)
 
@@ -127,28 +174,35 @@ collect's container. Rules:
    (`apex-infra-clickhouse`, `apex-infra-otel-collector`, …) — container names are unique per
    Docker daemon, so these can never collide. Infra declares them explicitly in
    `docker-compose.yml` and uses them for every internal hop (collector exporter, HyperDX
-   `DEFAULT_CONNECTIONS`, `MONGO_URI`). Never use the short service name on a shared network.
+   connection, `MONGO_URI`). Never use the short service name on a shared network.
 2. **Never `docker network connect --alias` a foreign name onto a container.** If a container
-   must join another lane's network, join it with no alias or with its own `apex-<lane>-*` name.
-   Check for squatters with `docker network inspect <net> | grep -A2 Aliases`.
+   must join another lane's network, join it with no alias or with its own `apex-<lane>-*` name
+   (`tests/e2e/run.sh` does exactly that). Check for squatters with `docker network inspect <net> | grep -A2 Aliases`.
 
 ## Teardown
 
 ```bash
-docker compose down            # stop; KEEP volumes (Mongo state + CH data persist)
-docker compose down -v         # also wipe volumes (fresh DB; re-register + re-seed next up)
+make down                      # stop; KEEP volumes (Mongo state + CH data + backups persist)
+docker compose down -v         # also wipe volumes (fresh DB; `make up` re-migrates, re-registers; re-seed)
 ```
 
 ## Notes / gotchas (verified)
 
 - **MongoDB is required** — HyperDX stores dashboards/sources/connections/users there, not in
-  ClickHouse. Verified: after `down`+`up` the team/source/connection survive.
-- **TTL gotcha** — 90-day TTL on `ts`; the June-2024 fixture ts TTL-expires on merge. Seed with
+  ClickHouse. Verified: after `down`+`up` the team/source/connection survive. `hyperdx` waits for
+  it to be **healthy** (the healthcheck greps for a lone `1`, so a false ping fails).
+- **TTL gotcha** — retention is on `ts`; the June-2024 fixture ts TTL-expires on merge. Seed with
   `ts=now()` (seed.sh does).
 - **`attributes` is `Map(String,String)`**, not the beta JSON type.
 - **HyperDX custom Source** — set every expression or it returns nothing (Timestamp=`ts`,
   Service=`app_id`, attributes=`attributes`, Trace Id=`job_id`). Scripted here via `DEFAULT_SOURCES`.
 - **Rollup** — `AggregatingMergeTree` + incremental MV, quantile **states** (not final values),
-  1-min buckets, `<aggFn>__<col>` naming for HyperDX acceleration. MV is BETA/not backfilled.
-- **HyperDX image** — the brief's `clickhouse/hdx-oss-v2` isn't a real repo; use
-  `hyperdx/hyperdx:2` (= `docker.hyperdx.io/hyperdx/hyperdx`). Override via `HDX_IMAGE` in `.env`.
+  1-min buckets, `<aggFn>__<col>` naming for HyperDX acceleration (`quantilesIf__` for the
+  successful-sample sketches). MV is BETA/not backfilled.
+- **Skew** — `sql/050` (A) judges a stage by CONTRACT rule 1, `p99/p50 > (n_tasks−1)/(slots−1)`,
+  on the successful-task population; `slots` comes from `job_conf` or `APEX_CLUSTER_SLOTS`, never a
+  guess; unknown width ⇒ NULL verdict + `min_slots_for_tail_bound`. There is no 5× anywhere.
+- **Images** — pinned by digest; Mongo stays on the 5.0 line HyperDX itself ships (D-7). Bump a tag
+  and its digest together (`.env.example` says how).
+- **Collector restarts** — the sending queue is on a named volume (`file_storage`), so a restart
+  during a ClickHouse outage loses nothing.

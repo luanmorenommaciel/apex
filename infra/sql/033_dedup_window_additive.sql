@@ -5,7 +5,7 @@
 -- rejects that combination when async_insert=1, and without a dedup
 -- window a retry_on_failure resend duplicates the row in otel_traces and
 -- inflates every downstream non-argMax aggregate (spark_jobs_1m rollup,
--- sql/005 skew query, run_outcomes, memory lane). Applying the window to
+-- sql/050 skew query, run_outcomes, memory lane). Applying the window to
 -- source and target keeps a retried block from landing twice; genuinely
 -- distinct blocks are unaffected (block hash, not row content).
 --
