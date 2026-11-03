@@ -12,6 +12,8 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -38,11 +40,16 @@ def test_collector_config_validates():
     assert re.search(r"^  file_storage:\n    directory: /var/lib/otelcol/queue\n    create_directory: true$", text, re.M)
     assert re.search(r"^    sending_queue:\n(?:      .*\n)*?      storage: file_storage$", text, re.M)
     assert re.search(r"^  extensions: \[health_check, file_storage\]$", text, re.M)
-    proc = subprocess.run(
-        ["docker", "run", "--rm", "-e", "CLICKHOUSE_USER=apex", "-e", "CLICKHOUSE_PASSWORD=ci_placeholder",
-         "-v", f"{INFRA / 'otel-collector-config.yaml'}:/c.yaml:ro", COLLECTOR_IMAGE, "validate", "--config", "/c.yaml"],
-        capture_output=True, text=True,
-    )
+    with tempfile.TemporaryDirectory() as tmp:   # the config reads the password from a compose secret file
+        secret = Path(tmp) / "clickhouse_password"
+        secret.write_text("validate-only-password")
+        secret.chmod(0o644)
+        proc = subprocess.run(
+            ["docker", "run", "--rm", "-e", "CLICKHOUSE_USER=apex",
+             "-v", f"{INFRA / 'otel-collector-config.yaml'}:/c.yaml:ro",
+             "-v", f"{secret}:/run/secrets/clickhouse_password:ro", COLLECTOR_IMAGE, "validate", "--config", "/c.yaml"],
+            capture_output=True, text=True,
+        )
     assert proc.returncode == 0, proc.stderr[-2000:]
 
 

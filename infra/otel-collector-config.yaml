@@ -58,7 +58,7 @@ exporters:
     endpoint: tcp://apex-infra-clickhouse:9000?compress=lz4&async_insert=0&deduplicate_blocks_in_dependent_materialized_views=1
     database: apex
     username: ${env:CLICKHOUSE_USER}
-    password: ${env:CLICKHOUSE_PASSWORD}
+    password: ${file:/run/secrets/clickhouse_password}   # compose secret; a missing file is a hard config error, never an empty password
     ttl: 720h                            # cosmetic under create_schema:false — real TTL is in the DDL
     create_schema: false                 # infra owns partitioning/TTL; no collector races DDL
     traces_table_name: otel_traces       # reshape MVs read this table

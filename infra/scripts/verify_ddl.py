@@ -55,7 +55,10 @@ def load_creds():
     user = os.environ.get("CLICKHOUSE_USER", env.get("CLICKHOUSE_USER", "apex"))
     password = os.environ.get("CLICKHOUSE_PASSWORD") or env.get("CLICKHOUSE_PASSWORD") or ""
     if not password:
-        print("❌ CLICKHOUSE_PASSWORD is required (set it in infra/.env; there is no default)")
+        secret = Path(os.environ.get("INFRA_SECRETS_DIR") or (INFRA_DIR / "secrets")) / "clickhouse_password"
+        password = secret.read_text().strip() if secret.exists() else ""
+    if not password:
+        print("❌ CLICKHOUSE_PASSWORD is required (set it in infra/.env and run scripts/preflight.sh; there is no default)")
         sys.exit(2)
     return user, password
 

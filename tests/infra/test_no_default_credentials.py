@@ -44,16 +44,21 @@ def preflight(env_text: str | None) -> subprocess.CompletedProcess:
         if env_text is not None:
             env_file.write_text(env_text)
         clean = {k: v for k, v in os.environ.items() if k not in ("CLICKHOUSE_PASSWORD", "HYPERDX_API_KEY")}
-        return subprocess.run([str(INFRA / "scripts" / "preflight.sh")], env=dict(clean, INFRA_ENV_FILE=str(env_file)),
-                              capture_output=True, text=True)
+        # preflight also renders runtime files: keep them in the temp dir, never in infra/
+        env = dict(clean, INFRA_ENV_FILE=str(env_file), INFRA_SECRETS_DIR=f"{tmp}/secrets", INFRA_LOCAL_DIR=f"{tmp}/local")
+        return subprocess.run([str(INFRA / "scripts" / "preflight.sh")], env=env, capture_output=True, text=True)
 
 
 @needs_docker
 def test_compose_refuses_missing_password():
-    proc = compose_config(drop=("CLICKHOUSE_PASSWORD",))
-    assert proc.returncode != 0
-    assert "CLICKHOUSE_PASSWORD" in proc.stderr
+    """Since the secrets leaf the compose never interpolates the password: it reaches the
+    containers only as a file preflight renders, so the refusal lives in preflight (below)
+    and the compose must carry no CLICKHOUSE_PASSWORD variable at all."""
+    text = "\n".join(l for l in (INFRA / "docker-compose.yml").read_text().splitlines() if not l.lstrip().startswith("#"))
+    assert "${CLICKHOUSE_PASSWORD" not in text
+    assert "apex_local_dev" not in text
     assert compose_config().returncode == 0, compose_config().stderr[-500:]
+    assert preflight(f"CLICKHOUSE_PASSWORD=\nHYPERDX_API_KEY={GOOD_KEY}\n").returncode == 1
 
 
 @needs_docker
@@ -95,6 +100,7 @@ def test_preflight_accepts_generated():
 def test_scripts_have_no_default_password():
     clean = {k: v for k, v in os.environ.items() if k != "CLICKHOUSE_PASSWORD"}
     clean["INFRA_ENV_FILE"] = "/nonexistent/apex-infra.env"
+    clean["INFRA_SECRETS_DIR"] = "/nonexistent/apex-secrets"   # no rendered secret file either
     for script in SCRIPTS:
         assert "apex_local_dev" not in script.read_text(), script.name
         cmd = ["python3", str(script)] if script.suffix == ".py" else [str(script)]

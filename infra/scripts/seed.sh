@@ -19,7 +19,8 @@ set -a; [ -f "$ENV_FILE" ] && . "$ENV_FILE"; set +a
 OTLP_PORT="${OTLP_HTTP_HOST_PORT:-4318}"
 CH_PORT="${CLICKHOUSE_HTTP_HOST_PORT:-8123}"
 CH_USER="${CLICKHOUSE_USER:-apex}"
-CH_PASS="${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (set it in infra/.env; there is no default)}"
+CH_PASS="${CLICKHOUSE_PASSWORD:-$(cat "${INFRA_SECRETS_DIR:-secrets}/clickhouse_password" 2>/dev/null || true)}"
+[ -n "$CH_PASS" ] || { echo "❌ CLICKHOUSE_PASSWORD is required (set it in infra/.env and run scripts/preflight.sh; there is no default)"; exit 1; }
 OTLP_URL="http://localhost:${OTLP_PORT}/v1/traces"
 CH_URL="http://localhost:${CH_PORT}/"
 

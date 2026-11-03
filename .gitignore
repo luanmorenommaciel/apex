@@ -2,6 +2,9 @@
 .env
 *.env
 !.env.example
+# infra runtime files rendered by infra/scripts/preflight.sh (passwords, users.d, hyperdx env)
+infra/secrets/
+infra/.local/
 
 # --- generated runtime config (scripts/apex.ps1 / apex.sh) ---
 .apex/

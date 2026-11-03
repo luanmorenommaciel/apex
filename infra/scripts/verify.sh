@@ -17,7 +17,8 @@ set -a; [ -f "$ENV_FILE" ] && . "$ENV_FILE"; set +a
 resolve_creds() {
   CH_PORT="${CLICKHOUSE_HTTP_HOST_PORT:-8123}"
   CH_USER="${CLICKHOUSE_USER:-apex}"
-  CH_PASS="${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (set it in infra/.env; there is no default)}"
+  CH_PASS="${CLICKHOUSE_PASSWORD:-$(cat "${INFRA_SECRETS_DIR:-secrets}/clickhouse_password" 2>/dev/null || true)}"
+  [ -n "$CH_PASS" ] || fail "CLICKHOUSE_PASSWORD is required (set it in infra/.env and run scripts/preflight.sh; there is no default)"
   CH_URL="http://localhost:${CH_PORT}/"
 }
 CH() { curl -s -u "${CH_USER}:${CH_PASS}" "${CH_URL}" --data-binary "$1"; }
