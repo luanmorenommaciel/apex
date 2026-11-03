@@ -10,12 +10,16 @@
 #   seed.sh's skewed stages are tail-bound at 8.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-set -a; [ -f .env ] && . ./.env; set +a
+ENV_FILE="${INFRA_ENV_FILE:-.env}"
+set -a; [ -f "$ENV_FILE" ] && . "$ENV_FILE"; set +a
 
-CH_PORT="${CLICKHOUSE_HTTP_HOST_PORT:-8123}"
-CH_USER="${CLICKHOUSE_USER:-apex}"
-CH_PASS="${CLICKHOUSE_PASSWORD:-apex_local_dev}"
-CH_URL="http://localhost:${CH_PORT}/"
+# Credentials resolve lazily (inside main) so `source verify.sh` for skew_query_a needs none.
+resolve_creds() {
+  CH_PORT="${CLICKHOUSE_HTTP_HOST_PORT:-8123}"
+  CH_USER="${CLICKHOUSE_USER:-apex}"
+  CH_PASS="${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (set it in infra/.env; there is no default)}"
+  CH_URL="http://localhost:${CH_PORT}/"
+}
 CH() { curl -s -u "${CH_USER}:${CH_PASS}" "${CH_URL}" --data-binary "$1"; }
 
 fail() { echo "❌ $1"; exit 1; }
@@ -32,6 +36,7 @@ skew_query_a() {
 }
 
 main() {
+  resolve_creds
   echo "── 1. stack health ─────────────────────────────────────────"
   for c in apex-infra-clickhouse apex-infra-mongodb apex-infra-hyperdx apex-infra-otel-collector; do
     st=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo missing)

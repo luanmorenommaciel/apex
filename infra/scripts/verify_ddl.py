@@ -42,8 +42,10 @@ CONTAINER = os.environ.get("INFRA_CLICKHOUSE_CONTAINER", "apex-infra-clickhouse"
 
 
 def load_creds():
+    """CLICKHOUSE_USER/PASSWORD from the environment or infra/.env. No default password:
+    a missing one is reported by name and the script exits 2 before touching the server."""
     env = {}
-    env_file = INFRA_DIR / ".env"
+    env_file = Path(os.environ.get("INFRA_ENV_FILE") or (INFRA_DIR / ".env"))
     if env_file.exists():
         for ln in env_file.read_text().splitlines():
             ln = ln.strip()
@@ -51,7 +53,10 @@ def load_creds():
                 k, v = ln.split("=", 1)
                 env[k.strip()] = v.strip().strip('"').strip("'")
     user = os.environ.get("CLICKHOUSE_USER", env.get("CLICKHOUSE_USER", "apex"))
-    password = os.environ.get("CLICKHOUSE_PASSWORD", env.get("CLICKHOUSE_PASSWORD", "apex_local_dev"))
+    password = os.environ.get("CLICKHOUSE_PASSWORD") or env.get("CLICKHOUSE_PASSWORD") or ""
+    if not password:
+        print("❌ CLICKHOUSE_PASSWORD is required (set it in infra/.env; there is no default)")
+        sys.exit(2)
     return user, password
 
 

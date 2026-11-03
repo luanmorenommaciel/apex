@@ -8,6 +8,7 @@ and skip without it.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -17,6 +18,8 @@ import pytest
 from _live import REPO
 
 INFRA = REPO / "infra"
+# the compose refuses to render without credentials; these are render-only values
+RENDER_ENV = dict(os.environ, CLICKHOUSE_PASSWORD="render-only-not-a-real-password", HYPERDX_API_KEY="0" * 64)
 COLLECTOR_IMAGE = "otel/opentelemetry-collector-contrib:0.156.0"
 needs_docker = pytest.mark.skipif(shutil.which("docker") is None, reason="docker CLI required")
 
@@ -24,7 +27,7 @@ needs_docker = pytest.mark.skipif(shutil.which("docker") is None, reason="docker
 def rendered_compose() -> dict:
     out = subprocess.run(
         ["docker", "compose", "-f", "docker-compose.yml", "--env-file", ".env.example", "config", "--format", "json"],
-        cwd=INFRA, capture_output=True, text=True, check=True,
+        cwd=INFRA, capture_output=True, text=True, check=True, env=RENDER_ENV,
     ).stdout
     return json.loads(out)
 

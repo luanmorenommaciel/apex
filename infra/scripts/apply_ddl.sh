@@ -14,11 +14,12 @@
 # Usage:  make apply-ddl   (or ./scripts/apply_ddl.sh)
 set -euo pipefail
 cd "$(dirname "$0")/.."
-set -a; [ -f .env ] && . ./.env; set +a
+ENV_FILE="${INFRA_ENV_FILE:-.env}"
+set -a; [ -f "$ENV_FILE" ] && . "$ENV_FILE"; set +a
 
 CONTAINER="${INFRA_CLICKHOUSE_CONTAINER:-apex-infra-clickhouse}"
 CH_USER="${CLICKHOUSE_USER:-apex}"
-CH_PASS="${CLICKHOUSE_PASSWORD:-apex_local_dev}"
+CH_PASS="${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (set it in infra/.env; there is no default)}"
 
 st=$(docker inspect -f '{{.State.Status}}' "$CONTAINER" 2>/dev/null || echo missing)
 [ "$st" = "running" ] || { echo "❌ $CONTAINER is not running — 'docker compose up -d' first"; exit 1; }

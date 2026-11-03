@@ -22,6 +22,8 @@ import pytest
 from _live import REPO
 
 INFRA = REPO / "infra"
+# the compose refuses to render without credentials; these are render-only values
+RENDER_ENV = dict(os.environ, CLICKHOUSE_PASSWORD="render-only-not-a-real-password", HYPERDX_API_KEY="0" * 64)
 needs_docker = pytest.mark.skipif(shutil.which("docker") is None, reason="docker CLI required")
 PINNED = re.compile(r"^(?P<repo>[\w./-]+):(?P<tag>[\w.-]+)@(?P<digest>sha256:[0-9a-f]{64})$")
 EXPECTED_TAGS = {
@@ -36,7 +38,7 @@ EXPECTED_TAGS = {
 def rendered_compose() -> dict:
     out = subprocess.run(
         ["docker", "compose", "-f", "docker-compose.yml", "--env-file", ".env.example", "config", "--format", "json"],
-        cwd=INFRA, capture_output=True, text=True, check=True,
+        cwd=INFRA, capture_output=True, text=True, check=True, env=RENDER_ENV,
     ).stdout
     return json.loads(out)
 

@@ -13,12 +13,13 @@
 # Usage:  ./scripts/seed.sh            (reads ports from ../.env)
 set -euo pipefail
 cd "$(dirname "$0")/.."
-set -a; [ -f .env ] && . ./.env; set +a
+ENV_FILE="${INFRA_ENV_FILE:-.env}"
+set -a; [ -f "$ENV_FILE" ] && . "$ENV_FILE"; set +a
 
 OTLP_PORT="${OTLP_HTTP_HOST_PORT:-4318}"
 CH_PORT="${CLICKHOUSE_HTTP_HOST_PORT:-8123}"
 CH_USER="${CLICKHOUSE_USER:-apex}"
-CH_PASS="${CLICKHOUSE_PASSWORD:-apex_local_dev}"
+CH_PASS="${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (set it in infra/.env; there is no default)}"
 OTLP_URL="http://localhost:${OTLP_PORT}/v1/traces"
 CH_URL="http://localhost:${CH_PORT}/"
 
