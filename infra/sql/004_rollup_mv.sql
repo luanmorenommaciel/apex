@@ -13,6 +13,9 @@
 -- ⚠️ Incremental MVs are BETA and NOT backfilled: spark_jobs_1m only contains rows inserted
 --    into spark_events AFTER this MV exists. No POPULATE (can miss rows). When registering in
 --    HyperDX set the source "min date" = min(ts). Backfill manually if needed (see README).
+--
+-- Existing volumes get the v0.5 columns + the replaced MV query from 041_rollup_v05_additive.sql;
+-- the SELECT below and the one in 041 must stay identical (tests/infra/test_rollup_v05_columns.py).
 
 CREATE TABLE IF NOT EXISTS apex.spark_jobs_1m (
   bucket                          DateTime,
@@ -28,7 +31,25 @@ CREATE TABLE IF NOT EXISTS apex.spark_jobs_1m (
   max__gc_time_ms                 SimpleAggregateFunction(max, Int64),
   max__peak_execution_mem_bytes   SimpleAggregateFunction(max, Int64),
   quantiles__task_duration_p50_ms AggregateFunction(quantiles(0.5, 0.99), Int64),
-  quantiles__task_duration_p99_ms AggregateFunction(quantiles(0.5, 0.99), Int64)
+  quantiles__task_duration_p99_ms AggregateFunction(quantiles(0.5, 0.99), Int64),
+  -- contract v0.5 (retry-safe task analysis). quantilesIf__ sketches take only rows
+  -- that carry a successful sample, so a legacy row's zeros never enter the sketch.
+  sum__task_count                                      SimpleAggregateFunction(sum, Int64),
+  sum__executor_run_time_ms                            SimpleAggregateFunction(sum, Int64),
+  max__task_duration_max_ms                            SimpleAggregateFunction(max, Int64),
+  sum__task_duration_sample_count                      SimpleAggregateFunction(sum, Int64),
+  quantilesIf__successful_task_duration_p50_ms         AggregateFunction(quantilesIf(0.5, 0.99), Int64, UInt8),
+  quantilesIf__successful_task_duration_p99_ms         AggregateFunction(quantilesIf(0.5, 0.99), Int64, UInt8),
+  max__successful_task_duration_max_ms                 SimpleAggregateFunction(max, Int64),
+  sum__successful_task_sample_count                    SimpleAggregateFunction(sum, Int64),
+  quantilesIf__successful_task_shuffle_read_bytes_p50  AggregateFunction(quantilesIf(0.5, 0.99), Int64, UInt8),
+  max__successful_task_shuffle_read_bytes_max          SimpleAggregateFunction(max, Int64),
+  sum__successful_task_shuffle_read_bytes_sample_count SimpleAggregateFunction(sum, Int64),
+  sum__task_attempt_count                              SimpleAggregateFunction(sum, Int64),
+  sum__task_failed_attempt_count                       SimpleAggregateFunction(sum, Int64),
+  sum__task_counted_failure_attempt_count              SimpleAggregateFunction(sum, Int64),
+  sum__task_killed_attempt_count                       SimpleAggregateFunction(sum, Int64),
+  sum__task_speculative_attempt_count                  SimpleAggregateFunction(sum, Int64)
 )
 ENGINE = AggregatingMergeTree
 PARTITION BY toYYYYMM(bucket)
@@ -51,6 +72,22 @@ SELECT
   maxSimpleState(gc_time_ms)                       AS max__gc_time_ms,
   maxSimpleState(peak_execution_mem_bytes)         AS max__peak_execution_mem_bytes,
   quantilesState(0.5, 0.99)(task_duration_p50_ms)  AS quantiles__task_duration_p50_ms,
-  quantilesState(0.5, 0.99)(task_duration_p99_ms)  AS quantiles__task_duration_p99_ms
+  quantilesState(0.5, 0.99)(task_duration_p99_ms)  AS quantiles__task_duration_p99_ms,
+  sumSimpleState(toInt64(task_count))                                                                                      AS sum__task_count,
+  sumSimpleState(executor_run_time_ms)                                                                                     AS sum__executor_run_time_ms,
+  maxSimpleState(task_duration_max_ms)                                                                                     AS max__task_duration_max_ms,
+  sumSimpleState(toInt64(task_duration_sample_count))                                                                      AS sum__task_duration_sample_count,
+  quantilesIfState(0.5, 0.99)(successful_task_duration_p50_ms, successful_task_sample_count > 0)                           AS quantilesIf__successful_task_duration_p50_ms,
+  quantilesIfState(0.5, 0.99)(successful_task_duration_p99_ms, successful_task_sample_count > 0)                           AS quantilesIf__successful_task_duration_p99_ms,
+  maxSimpleState(successful_task_duration_max_ms)                                                                          AS max__successful_task_duration_max_ms,
+  sumSimpleState(toInt64(successful_task_sample_count))                                                                    AS sum__successful_task_sample_count,
+  quantilesIfState(0.5, 0.99)(successful_task_shuffle_read_bytes_p50, successful_task_shuffle_read_bytes_sample_count > 0) AS quantilesIf__successful_task_shuffle_read_bytes_p50,
+  maxSimpleState(successful_task_shuffle_read_bytes_max)                                                                   AS max__successful_task_shuffle_read_bytes_max,
+  sumSimpleState(toInt64(successful_task_shuffle_read_bytes_sample_count))                                                 AS sum__successful_task_shuffle_read_bytes_sample_count,
+  sumSimpleState(toInt64(task_attempt_count))                                                                              AS sum__task_attempt_count,
+  sumSimpleState(toInt64(task_failed_attempt_count))                                                                       AS sum__task_failed_attempt_count,
+  sumSimpleState(toInt64(task_counted_failure_attempt_count))                                                              AS sum__task_counted_failure_attempt_count,
+  sumSimpleState(toInt64(task_killed_attempt_count))                                                                       AS sum__task_killed_attempt_count,
+  sumSimpleState(toInt64(task_speculative_attempt_count))                                                                  AS sum__task_speculative_attempt_count
 FROM apex.spark_events
 GROUP BY bucket, job_id, app_id;
