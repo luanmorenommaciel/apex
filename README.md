@@ -67,7 +67,7 @@ git clone https://github.com/luanmorenommaciel/apex && cd apex
 
 # 1 — stand up the store you own (ClickHouse + HyperDX)
 cd infra
-cp .env.example .env            # then set CLICKHOUSE_PASSWORD, HYPERDX_API_KEY, HYPERDX_ADMIN_EMAIL/PASSWORD
+cp .env.example .env            # then set CLICKHOUSE_PASSWORD, HYPERDX_API_KEY, HYPERDX_ADMIN_EMAIL/PASSWORD (12+ chars, Aa + special)
                                 # (the stack refuses to start with any of them empty or default)
 # if 8123/9000/4318 are taken on your host, uncomment the shifted band in .env
 make up                         # preflight -> compose up --wait (migrates sql/) -> registers HyperDX's first user

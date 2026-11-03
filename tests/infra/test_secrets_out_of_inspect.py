@@ -83,7 +83,11 @@ def test_collector_reads_secret_file():
 @needs_docker
 def test_hyperdx_uses_readonly_user():
     hyperdx = rendered_compose()["services"]["hyperdx"]
-    assert "DEFAULT_CONNECTIONS" not in (hyperdx.get("environment") or {})
+    # `config` folds env_file into environment when infra/.local/hyperdx.env exists on this
+    # checkout (preflight ran); then the connection must be the read-only user, never admin.
+    folded = (hyperdx.get("environment") or {}).get("DEFAULT_CONNECTIONS")
+    if folded is not None:
+        assert '"username":"apex_hdx"' in folded and ADMIN_PW not in folded, folded[:120]
     # `config` folds env_file into environment (and drops an absent required:false file),
     # so the declaration is checked in the source compose.
     source = (INFRA / "docker-compose.yml").read_text()

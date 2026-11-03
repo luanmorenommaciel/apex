@@ -10,7 +10,9 @@
 # (hyperdxio/hyperdx packages/api/src/routers/api/root.ts, verified 2026-11-03)
 #
 # Usage:  make bootstrap   (or ./scripts/hyperdx_bootstrap.sh)
-#   HYPERDX_ADMIN_EMAIL / HYPERDX_ADMIN_PASSWORD  from infra/.env (required; no default)
+#   HYPERDX_ADMIN_EMAIL / HYPERDX_ADMIN_PASSWORD  from infra/.env (required; no default).
+#   HyperDX's policy (2.43): 12+ characters with lower AND upper case and at least one of
+#   !@#$%^&*(),.?":{}|<>;-+=  — a hex string is refused with HTTP 400.
 #   HYPERDX_API_URL                               default http://127.0.0.1:${HYPERDX_API_HOST_PORT:-8000}
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -22,7 +24,7 @@ fail() { echo "❌ hyperdx-bootstrap: $1"; exit 1; }
 EMAIL="${HYPERDX_ADMIN_EMAIL:-}"
 PASSWORD="${HYPERDX_ADMIN_PASSWORD:-}"
 [ -n "$EMAIL" ]    || fail "HYPERDX_ADMIN_EMAIL is required (set it in infra/.env)"
-[ -n "$PASSWORD" ] || fail "HYPERDX_ADMIN_PASSWORD is required (set it in infra/.env; 12+ characters)"
+[ -n "$PASSWORD" ] || fail "HYPERDX_ADMIN_PASSWORD is required (set it in infra/.env; 12+ chars, upper+lower case, a special character)"
 API="${HYPERDX_API_URL:-http://127.0.0.1:${HYPERDX_API_HOST_PORT:-8000}}"
 
 installation=$(curl -sf -m 10 "$API/installation") || fail "HyperDX API at $API is not answering"

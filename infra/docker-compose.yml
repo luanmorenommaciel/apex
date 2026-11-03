@@ -188,7 +188,7 @@ services:
       HYPERDX_APP_URL: http://localhost
       HYPERDX_LOG_LEVEL: ${HYPERDX_LOG_LEVEL:-info}
       MONGO_URI: mongodb://apex-infra-mongodb:27017/hyperdx
-      NEXT_PUBLIC_SERVER_URL: http://127.0.0.1:${HYPERDX_API_PORT:-8000}
+      NEXT_PUBLIC_SERVER_URL: http://127.0.0.1:${HYPERDX_API_HOST_PORT:-8000}   # what the BROWSER dials: the host port
       OPAMP_PORT: ${HYPERDX_OPAMP_PORT:-4320}
       OTEL_SERVICE_NAME: hdx-oss-api
       USAGE_STATS_ENABLED: ${USAGE_STATS_ENABLED:-false}

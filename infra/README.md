@@ -104,7 +104,7 @@ cd infra
 cp .env.example .env
 # set the four REQUIRED values (the stack refuses empty or default ones):
 #   CLICKHOUSE_PASSWORD=$(openssl rand -hex 24)   HYPERDX_API_KEY=$(openssl rand -hex 32)
-#   HYPERDX_ADMIN_EMAIL=you@example.com           HYPERDX_ADMIN_PASSWORD=<12+ chars>
+#   HYPERDX_ADMIN_EMAIL=you@example.com           HYPERDX_ADMIN_PASSWORD=<12+ chars, upper+lower+special>
 # if 8123/9000/4318 are taken on your host, uncomment the shifted band in .env
 make up                                   # preflight → compose up --wait (ddl-migrate runs) → HyperDX first user
 ./scripts/seed.sh                         # ~50 spans via OTLP (ts=now) + stand-in findings
@@ -119,7 +119,7 @@ bootstrap created the team. See [`HYPERDX_SETUP.md`](HYPERDX_SETUP.md).
 ## Security model (what `preflight.sh` enforces)
 
 - **No default credentials.** `CLICKHOUSE_PASSWORD`, `HYPERDX_API_KEY` (64 hex) and the HyperDX
-  admin pair are required; `apex_local_dev` / `change-me*` are refused; `docker compose config`
+  admin pair are required; the old shipped default and `change-me*` are refused; `docker compose config`
   itself fails without a password.
 - **The admin password is a file, not an environment variable.** preflight renders it to
   `secrets/clickhouse_password` (gitignored); ClickHouse reads `CLICKHOUSE_PASSWORD_FILE`, the

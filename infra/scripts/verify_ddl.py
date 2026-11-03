@@ -169,6 +169,11 @@ def clauses(create: str) -> dict[str, str]:
     for idx, (start, key, kw) in enumerate(positions):
         end = positions[idx + 1][0] if idx + 1 < len(positions) else len(tail)
         out[key] = tail[start + len(kw):end].strip()
+    # SETTINGS is a set: ClickHouse lists a setting added by ALTER ... MODIFY SETTING after the
+    # implicit index_granularity, while a CREATE lists it where the DDL put it. Same settings,
+    # different order, no drift.
+    if out["settings"]:
+        out["settings"] = ", ".join(sorted(s.strip() for s in out["settings"].split(",")))
     return out
 
 

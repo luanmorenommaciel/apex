@@ -197,7 +197,7 @@ function Initialize-RuntimeConfiguration {
             CLICKHOUSE_PASSWORD = $clickHousePassword
             HYPERDX_API_KEY = New-SecureHex
             HYPERDX_ADMIN_EMAIL = 'apex-admin@localhost.invalid'
-            HYPERDX_ADMIN_PASSWORD = New-SecureHex
+            HYPERDX_ADMIN_PASSWORD = "Apex-$(New-SecureHex -Bytes 8)-Ok!"   # HyperDX policy: upper+lower+special
         }
 
     $clickHousePassword = Get-EnvValue -Path $script:InfraEnv -Name 'CLICKHOUSE_PASSWORD'

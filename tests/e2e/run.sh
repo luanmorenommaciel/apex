@@ -24,12 +24,17 @@
 # Usage:  APEX_CLUSTER_SLOTS=8 tests/e2e/run.sh   # leaves stacks up so you can open HyperDX :8090
 #         TEARDOWN=1 tests/e2e/run.sh # tear both stacks down at the end (keeps volumes)
 #         SKIP_BUILD=1 tests/e2e/run.sh  # reuse the existing apex-spark:local image
+#         DEV_EXTRA_COMPOSE_FILES="/abs/path/overlay.yml" tests/e2e/run.sh   # host-local dev overlays
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INFRA="$ROOT/infra"
 DEV="$ROOT/dev"
-DEV_COMPOSE=(docker compose -f "$DEV/docker-compose.yml" -f "$DEV/docker-compose.c3-otlp.yml" --project-directory "$DEV")
+DEV_COMPOSE=(docker compose -f "$DEV/docker-compose.yml" -f "$DEV/docker-compose.c3-otlp.yml")
+# Host-local overlays (space-separated), e.g. a gitignored .apex/dev-minio-fallback.yml when
+# the pinned MinIO images no longer pull on this machine. Never a lane file.
+for extra in ${DEV_EXTRA_COMPOSE_FILES:-}; do DEV_COMPOSE+=(-f "$extra"); done
+DEV_COMPOSE+=(--project-directory "$DEV")
 
 FAIL=0
 ok()   { printf '  \033[32mPASS\033[0m %s\n' "$1"; }
@@ -59,6 +64,11 @@ CH_PASS=$(grep -E '^CLICKHOUSE_PASSWORD=' "$INFRA/.env" | tail -1 | cut -d= -f2)
 [ -n "$CH_PASS" ] || CH_PASS=$(cat "$INFRA/secrets/clickhouse_password" 2>/dev/null || true)
 [ -n "$CH_PASS" ] || die "CLICKHOUSE_PASSWORD is empty in infra/.env and infra/secrets/ is not rendered — run 'make -C infra up'"
 ch() { docker exec apex-infra-clickhouse clickhouse-client --user "$CH_USER" --password "$CH_PASS" -q "$1"; }
+# Host ports come from infra/.env too (a dev host may shift them off the canonical band).
+infra_port() { local v; v=$(grep -E "^$1=" "$INFRA/.env" | tail -1 | cut -d= -f2); echo "${v:-$2}"; }
+COLLECTOR_HEALTH_PORT=$(infra_port COLLECTOR_HEALTH_HOST_PORT 13133)
+HDX_UI_PORT=$(infra_port HYPERDX_APP_HOST_PORT 8090)
+HDX_API_PORT=$(infra_port HYPERDX_API_HOST_PORT 8000)
 
 step "1/6 infra up (canonical ClickStack)"
 (cd "$INFRA" && docker compose up -d --wait) || die "infra stack failed to come up healthy"
@@ -67,8 +77,8 @@ step "1/6 infra up (canonical ClickStack)"
 for t in $(awk '!/^#/ && NF { sub(/^apex\./, "", $1); print $1 }' "$INFRA/scripts/ddl_manifest.txt"); do
   ch "EXISTS TABLE apex.$t" | grep -q 1 && ok "apex.$t exists" || bad "apex.$t missing"
 done
-curl -sf -m 5 http://localhost:13133/ >/dev/null && ok "collector health :13133" || bad "collector health"
-curl -sf -m 5 -o /dev/null http://localhost:8090/ && ok "HyperDX UI :8090" || bad "HyperDX UI :8090"
+curl -sf -m 5 "http://localhost:${COLLECTOR_HEALTH_PORT}/" >/dev/null && ok "collector health :${COLLECTOR_HEALTH_PORT}" || bad "collector health :${COLLECTOR_HEALTH_PORT}"
+curl -sf -m 5 -o /dev/null "http://localhost:${HDX_UI_PORT}/" && ok "HyperDX UI :${HDX_UI_PORT}" || bad "HyperDX UI :${HDX_UI_PORT}"
 
 step "2/6 network glue: infra collector on apex-collect-net (own name only, no alias)"
 docker network create apex-collect-net >/dev/null 2>&1 || true
@@ -91,6 +101,15 @@ OTLP_ENDPOINT="http://${OTLP_HOST}:4318"
 
 step "3/6 dev lane up (plugin baked from ../jar)"
 [ -f "$DEV/.env" ] || (cd "$DEV" && python3 scripts/ensure_env.py .env.example .env) || die "could not create dev/.env"
+# dev's Spark services read the MinIO credentials from compose secret FILES (dev/secrets/,
+# gitignored); scripts/apex.ps1 writes them from dev/.env, so the runner does the same.
+if [ ! -s "$DEV/secrets/apex_s3_access_key" ] || [ ! -s "$DEV/secrets/apex_s3_secret_key" ]; then
+  mkdir -p "$DEV/secrets"
+  grep -E '^MINIO_ROOT_USER=' "$DEV/.env" | tail -1 | cut -d= -f2- | tr -d '\n' > "$DEV/secrets/apex_s3_access_key"
+  grep -E '^MINIO_ROOT_PASSWORD=' "$DEV/.env" | tail -1 | cut -d= -f2- | tr -d '\n' > "$DEV/secrets/apex_s3_secret_key"
+  [ -s "$DEV/secrets/apex_s3_access_key" ] && [ -s "$DEV/secrets/apex_s3_secret_key" ] || die "could not derive dev/secrets/ from dev/.env (MINIO_ROOT_USER/PASSWORD)"
+  ok "dev/secrets/ written from dev/.env"
+fi
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
   (cd "$DEV" && docker compose build) || die "dev image build failed"
 fi
@@ -150,7 +169,7 @@ SRC=$(docker exec apex-infra-mongodb mongosh --quiet hyperdx --eval 'print(db.so
 if [ -n "$UKEY" ] && [ -n "$SRC" ]; then
   NOW=$(python3 -c 'import time; print(int(time.time()*1000))')
   HDX=$(curl -s -m 20 -X POST -H "Authorization: Bearer $UKEY" -H "Content-Type: application/json" \
-    http://localhost:8000/api/v2/charts/series \
+    "http://localhost:${HDX_API_PORT}/api/v2/charts/series" \
     -d '{"startTime":'$((NOW-6*3600*1000))',"endTime":'$NOW',"series":[{"type":"table","sourceId":"'$SRC'","aggFn":"max","field":"task_duration_p99_ms","where":"","groupBy":["job_id"]}]}')
   echo "$HDX" | grep -q "$JOB_ID" && ok "HyperDX charts/series returns $JOB_ID" || bad "HyperDX charts/series missing $JOB_ID: $(echo "$HDX" | head -c 200)"
 else
@@ -166,7 +185,7 @@ fi
 printf '\n'
 if [ $FAIL -eq 0 ]; then
   printf '\033[32m✔ P0 E2E GREEN\033[0m — job_id %s threaded dev → jar → collector → ClickHouse → HyperDX\n' "$JOB_ID"
-  printf '  Inspect: http://localhost:8090 (HyperDX) · clickhouse-client on :9000 · job logs in dev/out/\n'
+  printf '  Inspect: http://localhost:%s (HyperDX) · clickhouse-client on :9000 · job logs in dev/out/\n' "$HDX_UI_PORT"
 else
   printf '\033[31m✘ P0 E2E FAILED\033[0m — see FAIL lines above (job_id %s)\n' "${JOB_ID:-unknown}"
 fi

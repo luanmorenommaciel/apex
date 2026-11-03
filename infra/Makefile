@@ -2,7 +2,7 @@
 SHELL   := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
-.PHONY: help preflight up bootstrap down apply-ddl verify-ddl backup restore
+.PHONY: help preflight up bootstrap down apply-ddl verify-ddl backup restore gate
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -33,3 +33,7 @@ backup: ## Snapshot ClickHouse (BACKUP DATABASE apex) + Mongo (mongodump) into .
 restore: ## Restore a snapshot: make restore FILE=backups/<stamp>-clickhouse.zip INTO=<db> [MONGO=... FORCE=1]
 	@test -n "$(FILE)" || { echo "usage: make restore FILE=backups/<stamp>-clickhouse.zip [INTO=<database>] [MONGO=backups/<stamp>-mongo.archive] [FORCE=1]"; exit 2; }
 	@./scripts/restore.sh "$(FILE)" $(if $(INTO),--into $(INTO)) $(if $(MONGO),--mongo $(MONGO)) $(if $(FORCE),--force)
+
+gate: ## Integration proof on THIS host: make gate WIPE=1|0 APEX_CLUSTER_SLOTS=8 [SKIP_E2E=1] (see scripts/gate.sh)
+	@test -n "$(WIPE)" || { echo "usage: make gate WIPE=1 (fresh, deletes the store) or WIPE=0 (converge) APEX_CLUSTER_SLOTS=<width> [SKIP_E2E=1]"; exit 2; }
+	@WIPE="$(WIPE)" ./scripts/gate.sh
