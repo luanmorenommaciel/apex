@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS apex.findings (
 )
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(ts)
-ORDER BY (job_id, severity, ts);
+ORDER BY (job_id, severity, ts)
+TTL toDateTime(ts) + INTERVAL 365 DAY;   -- infra-owned retention (contract/ carries no TTL): findings outlive the 90-day raw events
 
 -- Pre-existing volumes: CREATE ... IF NOT EXISTS above is a no-op on a table created
 -- before app_id/confidence_score existed (initdb only runs on FIRST boot — the silent-miss

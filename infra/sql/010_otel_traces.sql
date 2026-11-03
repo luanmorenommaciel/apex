@@ -7,7 +7,10 @@
 -- so it matches the exporter INSERT byte-for-byte. Our collector runs create_schema:false, so
 -- this table MUST pre-exist with exactly these columns. Both infra's own collector AND collect's
 -- collector write the identical standard OTel schema here, so the reshape MVs work for either.
--- We own the schema, so we add the 90-day TTL here; ttl_only_drop_parts=1 drops whole day-parts.
+-- We own the schema, so we set the TTL here; ttl_only_drop_parts=1 drops whole day-parts.
+-- 14 DAYS, not 90: every span is reshaped into spark_events / plan_transitions / job_conf
+-- (which keep 90 days), so raw spans only serve debugging of the reshape and a longer TTL
+-- stored the busiest table twice. 042_retention_additive.sql applies this to existing volumes.
 
 CREATE TABLE IF NOT EXISTS apex.otel_traces
 (
@@ -43,7 +46,7 @@ CREATE TABLE IF NOT EXISTS apex.otel_traces
 ENGINE = MergeTree
 PARTITION BY toDate(Timestamp)
 ORDER BY (ServiceName, SpanName, toDateTime(Timestamp))
-TTL toDateTime(Timestamp) + INTERVAL 90 DAY
+TTL toDateTime(Timestamp) + INTERVAL 14 DAY
 SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1, non_replicated_deduplication_window = 100;
 
 -- Auxiliary trace-id -> time-window index (exporter-owned; MV below auto-populates it).
@@ -57,7 +60,7 @@ CREATE TABLE IF NOT EXISTS apex.otel_traces_trace_id_ts
 ENGINE = MergeTree
 PARTITION BY toDate(Start)
 ORDER BY (TraceId, Start)
-TTL Start + INTERVAL 90 DAY
+TTL Start + INTERVAL 14 DAY
 SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS apex.otel_traces_trace_id_ts_mv
