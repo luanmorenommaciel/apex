@@ -101,6 +101,7 @@ class DisposableClickHouse:
             "-e", f"CLICKHOUSE_USER={self.user}",
             "-e", f"CLICKHOUSE_PASSWORD={self.password}",
             "-e", "CLICKHOUSE_DB=apex",
+            "-e", "CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1",  # as infra/docker-compose.yml: apex may CREATE USER
             "-v", f"{initdb}:/docker-entrypoint-initdb.d:ro",
         ]
         if self.config_d is not None:
