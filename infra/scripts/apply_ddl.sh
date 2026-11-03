@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 # Apex infra · apply-ddl — apply every file in sql/, in filename order, against the
-# RUNNING ClickHouse container.
+# RUNNING ClickHouse.
 #
 # Why this exists: ClickHouse only runs /docker-entrypoint-initdb.d on FIRST boot. On a
 # pre-existing volume, any DDL file added to sql/ later is SILENTLY skipped — the database
 # looks "applied" while new columns/tables are missing (the spark-conf lane hit exactly
 # this with 013_/021_). This script closes the gap without a volume wipe.
+#
+# Two modes, same logic:
+#   host (default)       docker exec into $INFRA_CLICKHOUSE_CONTAINER — `make apply-ddl`
+#   container            APPLY_DDL_MODE=container: run clickhouse-client directly against
+#                        $CLICKHOUSE_HOST. This is what the compose `ddl-migrate` one-shot
+#                        service does on EVERY `docker compose up`, after clickhouse is
+#                        healthy and before hyperdx/otel-collector start, so a running
+#                        store converges on sql/ without anyone remembering to.
 #
 # Idempotency lives in the SQL files themselves: CREATE ... IF NOT EXISTS for new objects,
 # ALTER ... ADD COLUMN IF NOT EXISTS for columns added to pre-existing tables. Re-running
@@ -17,18 +25,28 @@ cd "$(dirname "$0")/.."
 ENV_FILE="${INFRA_ENV_FILE:-.env}"
 set -a; [ -f "$ENV_FILE" ] && . "$ENV_FILE"; set +a
 
+MODE="${APPLY_DDL_MODE:-host}"
+SQL_DIR="${SQL_DIR:-sql}"
 CONTAINER="${INFRA_CLICKHOUSE_CONTAINER:-apex-infra-clickhouse}"
+CH_HOST="${CLICKHOUSE_HOST:-apex-infra-clickhouse}"
 CH_USER="${CLICKHOUSE_USER:-apex}"
 CH_PASS="${CLICKHOUSE_PASSWORD:-$(cat "${INFRA_SECRETS_DIR:-secrets}/clickhouse_password" 2>/dev/null || true)}"
 [ -n "$CH_PASS" ] || { echo "❌ CLICKHOUSE_PASSWORD is required (set it in infra/.env and run scripts/preflight.sh; there is no default)"; exit 1; }
 
-st=$(docker inspect -f '{{.State.Status}}' "$CONTAINER" 2>/dev/null || echo missing)
-[ "$st" = "running" ] || { echo "❌ $CONTAINER is not running — 'docker compose up -d' first"; exit 1; }
+# chq [client args...] — clickhouse-client in whichever mode, stdin passed through.
+if [ "$MODE" = "container" ]; then
+  chq() { clickhouse-client --host "$CH_HOST" --user "$CH_USER" --password "$CH_PASS" "$@"; }
+  for _ in $(seq 1 30); do chq --query "SELECT 1" >/dev/null 2>&1 && break; sleep 2; done
+  chq --query "SELECT 1" >/dev/null || { echo "❌ ClickHouse at $CH_HOST is not answering"; exit 1; }
+else
+  chq() { docker exec -i "$CONTAINER" clickhouse-client --user "$CH_USER" --password "$CH_PASS" "$@"; }
+  st=$(docker inspect -f '{{.State.Status}}' "$CONTAINER" 2>/dev/null || echo missing)
+  [ "$st" = "running" ] || { echo "❌ $CONTAINER is not running — 'docker compose up -d' first"; exit 1; }
+fi
 
-for f in sql/*.sql; do
+for f in "$SQL_DIR"/*.sql; do
   printf '   applying %-32s' "$(basename "$f")"
-  if docker exec -i "$CONTAINER" clickhouse-client \
-      --user "$CH_USER" --password "$CH_PASS" --multiquery < "$f" >/dev/null; then
+  if chq --multiquery < "$f" >/dev/null; then
     echo "ok"
   else
     echo "FAILED"
@@ -47,9 +65,7 @@ for f in sql/*.sql; do
   for target in $(sed 's/--.*$//' "$f" | tr '\n' ' ' \
                     | grep -oiE 'MATERIALIZED[[:space:]]+VIEW[[:space:]]+(IF[[:space:]]+NOT[[:space:]]+EXISTS[[:space:]]+)?[A-Za-z0-9_.]+[[:space:]]+TO[[:space:]]+[A-Za-z0-9_.]+' \
                     | grep -oE '[A-Za-z0-9_.]+$'); do
-    exists=$(docker exec -i "$CONTAINER" clickhouse-client \
-        --user "$CH_USER" --password "$CH_PASS" \
-        --query "EXISTS TABLE $target" 2>/dev/null | tr -d '[:space:]')
+    exists=$(chq --query "EXISTS TABLE $target" 2>/dev/null </dev/null | tr -d '[:space:]')
     if [ "$exists" != "1" ]; then
       echo "❌ apply-ddl: $f creates a MATERIALIZED VIEW targeting '$target', but that table does not exist"
       echo "   Every insert into the view's source table will now fail until '$target' exists."
@@ -58,4 +74,4 @@ for f in sql/*.sql; do
     fi
   done
 done
-echo "✅ apply-ddl complete — sql/ fully applied to $CONTAINER"
+echo "✅ apply-ddl complete — $SQL_DIR/ fully applied ($MODE mode)"

@@ -73,8 +73,7 @@ services:
       nofile: { soft: 262144, hard: 262144 }
     volumes:
       - ch-data:/var/lib/clickhouse
-      # Contract DDL auto-applied on first boot in filename order: db, contract tables,
-      # rollup+MV, skew, otel landing table, plan_transitions, reshape MVs.
+      # sql/ auto-applied on FIRST boot only (filename order); ddl-migrate re-applies it on every up.
       - ./sql:/docker-entrypoint-initdb.d:ro
       # apex_hdx (HyperDX's read-only user), rendered by scripts/preflight.sh with a sha256 hash
       - ./.local/users.d/apex-hyperdx.xml:/etc/clickhouse-server/users.d/apex-hyperdx.xml:ro
@@ -90,6 +89,37 @@ services:
         # The short `clickhouse` alias still exists (compose adds it); infra simply
         # never uses it — see the shared-network alias rule at the top of this file.
         aliases: [apex-infra-clickhouse]
+
+  # ── DDL migrate: one-shot, EVERY `up`. initdb.d only runs on a fresh volume; this applies
+  # sql/ (idempotent) after clickhouse is healthy and before the consumers start, so a
+  # running store converges on the repo's DDL without a volume wipe or a remembered command.
+  ddl-migrate:
+    image: clickhouse/clickhouse-server:24.8.14.39@sha256:1ffa82edee000a42c09313bd9f1293d94c570aee74babc1b3ca9983a35fa597b   # same image: ships clickhouse-client
+    container_name: apex-infra-ddl-migrate
+    restart: "no"   # one-shot: hyperdx and otel-collector wait for service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    entrypoint: ["/bin/bash", "/apply_ddl.sh"]
+    environment:
+      APPLY_DDL_MODE: container
+      CLICKHOUSE_HOST: apex-infra-clickhouse
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
+      INFRA_SECRETS_DIR: /run/secrets
+      INFRA_ENV_FILE: /nonexistent
+      SQL_DIR: /sql
+    secrets:
+      - clickhouse_password
+    volumes:
+      - ./sql:/sql:ro
+      - ./scripts/apply_ddl.sh:/apply_ddl.sh:ro
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      apex:
+        aliases: [apex-infra-ddl-migrate]
 
   # ── MongoDB: HyperDX application state (dashboards/sources/connections/users) ──
   mongodb:
@@ -138,6 +168,8 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+      ddl-migrate:
+        condition: service_completed_successfully   # the schema is current before the UI reads it
       mongodb:
         condition: service_healthy   # it stores every dashboard/source/user there; started != answering
     ports:
@@ -210,6 +242,8 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+      ddl-migrate:
+        condition: service_completed_successfully   # never insert before the MVs and their targets exist
       queue-init:
         condition: service_completed_successfully
     restart: unless-stopped
