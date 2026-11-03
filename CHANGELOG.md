@@ -19,6 +19,27 @@ are corrections to Apex's own earlier claims.
 - `apex-mcp` now exposes eight tools: `list_runs`, `analyze_run`,
   `explain_stage`, `compare_runs`, `search_kb`, `recall_similar_runs`,
   `verify_fix`, and `suggest_fix`.
+- **`dev/` standalone lane now requires `dev/secrets/`.** `conf/spark-defaults.conf`
+  no longer carries the `minioadmin` literals; it selects the S3A
+  `EnvironmentVariableCredentialsProvider` and master, worker, history and every
+  `spark-submit` start through `scripts/with-s3-credentials.sh`, which exports
+  `dev/secrets/apex_s3_access_key` and `dev/secrets/apex_s3_secret_key`. A clone
+  without those two files does not start the lane (`dev/secrets/README.md`,
+  quickstart updated). The package overlay path is unchanged.
+- **`APEX_OTLP_ENDPOINT` removed from `dev/`.** Nothing ever read it: compose passed
+  it into the container and the plugin reads the Spark conf
+  `spark.apex.otlp.endpoint` (`conf/spark-defaults.conf`, or `--conf` at submit
+  time). Forwarding an explicit endpoint through `run-pathology` and the c3/c4
+  targets remains #178.
+- **`plan_fingerprint` hashing recipe (jar + dev twin).** JVM lambda/object
+  identities are scrubbed, and when Spark 4.1 `canonicalized` throws
+  `UnresolvedException` (Delta "Cache Delta Table State" executions) the
+  fingerprint falls back to the literal-normalized plan text with ExprIds
+  scrubbed instead of shipping an empty string. Typed Dataset pipelines go from
+  unstable to stable; 4.1 Delta state executions go from empty to a value; every
+  other fingerprint is byte-identical. Not a contract bump; the precise
+  blast radius and the cross-version caveat are recorded under **Plan** in
+  `CONTRACT.md`.
 
 ### Fixed — the console reads the same rows through either door
 
