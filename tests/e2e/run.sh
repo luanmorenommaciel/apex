@@ -18,8 +18,8 @@
 #        spark_events rows landed · plan_transitions has the AQE decision ·
 #        sql/050 skew query judges a stage tail-bound at APEX_CLUSTER_SLOTS · plan_json
 #        carries no literals/PII.
-#   6. Best-effort: proves HyperDX's chart engine returns the job (needs the first
-#      user registered; skipped otherwise).
+#   6. Registers HyperDX's first user through the API (infra/scripts/hyperdx_bootstrap.sh)
+#      and proves HyperDX's chart engine returns the job.
 #
 # Usage:  APEX_CLUSTER_SLOTS=8 tests/e2e/run.sh   # leaves stacks up so you can open HyperDX :8090
 #         TEARDOWN=1 tests/e2e/run.sh # tear both stacks down at the end (keeps volumes)
@@ -136,22 +136,21 @@ FP=$(ch "SELECT countDistinct(plan_fingerprint) FROM apex.spark_events WHERE job
 PII=$(ch "SELECT countIf(match(plan_json, '= [0-9]{2,}|@|/opt/|hot_key')) FROM apex.spark_events WHERE job_id='$JOB_ID'")
 [ "${PII:-1}" -eq 0 ] && ok "redaction: plan_json carries no literals/paths/emails" || bad "plan_json redaction leak in $PII row(s)"
 
-step "6/6 HyperDX query engine sees the job (best-effort — needs registered first user)"
-if [ "$(curl -sf -m 5 http://localhost:8000/installation)" = '{"isTeamExisting":true}' ] \
-   && docker exec apex-infra-mongodb mongosh --quiet --eval 'quit(0)' >/dev/null 2>&1; then
-  UKEY=$(docker exec apex-infra-mongodb mongosh --quiet hyperdx --eval 'print(db.users.findOne({}).accessKey)' 2>/dev/null)
-  SRC=$(docker exec apex-infra-mongodb mongosh --quiet hyperdx --eval 'print(db.sources.findOne({name:"Spark Events"})._id.toString())' 2>/dev/null)
-  if [ -n "$UKEY" ] && [ -n "$SRC" ]; then
-    NOW=$(python3 -c 'import time; print(int(time.time()*1000))')
-    HDX=$(curl -s -m 20 -X POST -H "Authorization: Bearer $UKEY" -H "Content-Type: application/json" \
-      http://localhost:8000/api/v2/charts/series \
-      -d '{"startTime":'$((NOW-6*3600*1000))',"endTime":'$NOW',"series":[{"type":"table","sourceId":"'$SRC'","aggFn":"max","field":"task_duration_p99_ms","where":"","groupBy":["job_id"]}]}')
-    echo "$HDX" | grep -q "$JOB_ID" && ok "HyperDX charts/series returns $JOB_ID" || bad "HyperDX charts/series missing $JOB_ID: $(echo "$HDX" | head -c 200)"
-  else
-    echo "  SKIP — could not read accessKey/source from Mongo"
-  fi
+step "6/6 HyperDX query engine sees the job"
+# The first user is registered through the API (infra/scripts/hyperdx_bootstrap.sh reads
+# HYPERDX_ADMIN_EMAIL/PASSWORD from infra/.env); creating the team seeds the connection and
+# the Spark Events source, so this step asserts instead of skipping.
+"$INFRA/scripts/hyperdx_bootstrap.sh" && ok "HyperDX first user registered (or already present)" || bad "HyperDX bootstrap failed (set HYPERDX_ADMIN_EMAIL/HYPERDX_ADMIN_PASSWORD in infra/.env)"
+UKEY=$(docker exec apex-infra-mongodb mongosh --quiet hyperdx --eval 'print(db.users.findOne({}).accessKey)' 2>/dev/null)
+SRC=$(docker exec apex-infra-mongodb mongosh --quiet hyperdx --eval 'print(db.sources.findOne({name:"Spark Events"})._id.toString())' 2>/dev/null)
+if [ -n "$UKEY" ] && [ -n "$SRC" ]; then
+  NOW=$(python3 -c 'import time; print(int(time.time()*1000))')
+  HDX=$(curl -s -m 20 -X POST -H "Authorization: Bearer $UKEY" -H "Content-Type: application/json" \
+    http://localhost:8000/api/v2/charts/series \
+    -d '{"startTime":'$((NOW-6*3600*1000))',"endTime":'$NOW',"series":[{"type":"table","sourceId":"'$SRC'","aggFn":"max","field":"task_duration_p99_ms","where":"","groupBy":["job_id"]}]}')
+  echo "$HDX" | grep -q "$JOB_ID" && ok "HyperDX charts/series returns $JOB_ID" || bad "HyperDX charts/series missing $JOB_ID: $(echo "$HDX" | head -c 200)"
 else
-  echo "  SKIP — no team registered yet: open http://localhost:8090, register, re-run"
+  bad "could not read the access key or the Spark Events source from Mongo after bootstrap"
 fi
 
 if [ "${TEARDOWN:-0}" = "1" ]; then

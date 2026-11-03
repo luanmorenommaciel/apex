@@ -2,7 +2,7 @@
 SHELL   := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
-.PHONY: help preflight up down apply-ddl verify-ddl
+.PHONY: help preflight up bootstrap down apply-ddl verify-ddl
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -11,8 +11,12 @@ help: ## List available targets
 preflight: ## Refuse to start with a missing or default CLICKHOUSE_PASSWORD / HYPERDX_API_KEY
 	@./scripts/preflight.sh
 
-up: preflight ## preflight, then bring the stack up and wait for every healthcheck
+up: preflight ## preflight, bring the stack up (waits for every healthcheck), register HyperDX's first user
 	@docker compose up -d --wait
+	@./scripts/hyperdx_bootstrap.sh
+
+bootstrap: ## Register HyperDX's first user through the API (idempotent; seeds connection + source)
+	@./scripts/hyperdx_bootstrap.sh
 
 down: ## Stop the stack; volumes (ClickHouse data, Mongo state) are kept
 	@docker compose down
