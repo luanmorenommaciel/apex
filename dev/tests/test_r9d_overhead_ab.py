@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 from pathlib import Path
 
 import pytest
@@ -86,3 +87,61 @@ def test_parse_soak_without_result_line_returns_empty(tmp_path: Path) -> None:
     unit_log = tmp_path / "unit.log"
     unit_log.write_text("nothing here\n", encoding="utf-8")
     assert MODULE.parse_soak(unit_log) == {}
+
+
+# ── #167: every argument the harness sends must exist on the runner it targets ──
+
+_PARAM_BLOCK = re.compile(r"^param\((.*?)^\)", re.DOTALL | re.MULTILINE)
+_PARAM_NAME = re.compile(r"\$(\w+)\s*(?:=|,|\s*$)", re.MULTILINE)
+
+
+def declared_parameters(ps1_source: str) -> set[str]:
+    """Names declared in the leading `param(...)` block of a PowerShell script."""
+    block = _PARAM_BLOCK.search(ps1_source)
+    assert block, "runner has no param( ... ) block"
+    return set(_PARAM_NAME.findall(block.group(1)))
+
+
+def sent_flags(command: list[str]) -> list[str]:
+    """`-Flag` tokens the harness passes after `-File <script>`."""
+    tail = command[command.index("-File") + 2:]
+    return [tok[1:] for tok in tail if tok.startswith("-")]
+
+
+def _runner_for(arm: str) -> Path:
+    command = MODULE.e2e_command(arm)
+    return Path(command[command.index("-File") + 1])
+
+
+@pytest.mark.parametrize("arm", ["on", "off"])
+def test_every_flag_the_harness_sends_is_declared_by_that_arm_runner(arm: str) -> None:
+    runner = _runner_for(arm)
+    declared = declared_parameters(runner.read_text(encoding="utf-8"))
+    for flag in sent_flags(MODULE.e2e_command(arm)):
+        assert flag in declared, f"{runner.name} does not declare -{flag}"
+
+
+def test_both_arms_receive_the_same_environment_and_overlay_arguments() -> None:
+    on, off = MODULE.e2e_command("on"), MODULE.e2e_command("off")
+    assert sent_flags(on) == sent_flags(off) == ["EnvFile", "AdditionalComposeFile"]
+    assert on[on.index("-EnvFile") + 1] == off[off.index("-EnvFile") + 1]
+    assert (
+        on[on.index("-AdditionalComposeFile") + 1]
+        == off[off.index("-AdditionalComposeFile") + 1]
+    )
+
+
+def test_arm_runners_differ_only_where_the_plugin_switches_are() -> None:
+    # Intentional asymmetry: the ON runner carries the inner-loop knobs the
+    # control arm never needs; the control arm never grows a plugin endpoint.
+    on = declared_parameters(_runner_for("on").read_text(encoding="utf-8"))
+    off = declared_parameters(_runner_for("off").read_text(encoding="utf-8"))
+    assert off <= on
+    assert on - off == {"ReuseDev", "Build", "DriverHost"}
+
+
+def test_negative_control_a_removed_runner_parameter_is_detected() -> None:
+    source = _runner_for("on").read_text(encoding="utf-8")
+    without_env_file = source.replace("[string]$EnvFile = '.env',\n", "")
+    assert "EnvFile" in declared_parameters(source)
+    assert "EnvFile" not in declared_parameters(without_env_file)
