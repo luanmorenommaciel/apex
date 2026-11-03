@@ -96,7 +96,7 @@ class DisposableClickHouse:
             else:
                 (initdb / src.name).write_text(text)
         cmd = [
-            "docker", "run", "-d", "--rm", "--name", self.name,
+            "docker", "run", "-d", "--name", self.name,
             "-p", f"127.0.0.1:{self.port}:8123",
             "-e", f"CLICKHOUSE_USER={self.user}",
             "-e", f"CLICKHOUSE_PASSWORD={self.password}",
@@ -120,7 +120,7 @@ class DisposableClickHouse:
             )
             if state.stdout.strip() != "true":
                 logs = subprocess.run(["docker", "logs", self.name], capture_output=True, text=True)
-                self.stop()
+                self.stop()  # no --rm on docker run, so the logs above are still readable
                 raise RuntimeError(
                     f"{self.name} exited during initdb (bad DDL?):\n{(logs.stdout + logs.stderr)[-4000:]}"
                 )

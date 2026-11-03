@@ -1,38 +1,57 @@
 {
-  "_comment": "Apex infra · Skew dashboard build-spec. HyperDX v2 stores dashboards in MongoDB with an internal shape, so this is a REPRODUCIBLE SPEC (source + query + viz per tile), not a raw import blob. Recreate in HyperDX: Dashboards -> New, add one tile per entry below against the 'Spark Events' source. Every tile's query matches sql/005 for the same job_id/window, so a tile and the raw SQL agree. See HYPERDX_SETUP.md.",
+  "_comment": "Apex infra · Skew dashboard build-spec. HyperDX v2 stores dashboards in MongoDB with an internal shape, so this is a REPRODUCIBLE SPEC (source + query + viz per tile), not a raw import blob. Recreate in HyperDX: Dashboards -> New, add one tile per entry below against the 'Spark Events' source. Every tile's query matches sql/050 for the same job_id/window, so a tile and the raw SQL agree. See HYPERDX_SETUP.md.",
   "name": "Apex — Spark Skew",
   "source": "Spark Events",
   "time_default": "Last 6 hours",
   "tiles": [
     {
-      "title": "Skewed stages (p99/p50 > 5)",
+      "title": "Skew per stage (retry-safe ratio; tail-bound verdict when the width is known)",
       "viz": "table",
-      "description": "The core skew signal — mirrors sql/005 query (A).",
-      "sql": "SELECT job_id, stage_id, argMax(task_duration_p50_ms, ts) AS p50_ms, argMax(task_duration_p99_ms, ts) AS p99_ms, round(argMax(task_duration_p99_ms, ts)/nullIf(argMax(task_duration_p50_ms, ts),0),2) AS skew_ratio, sum(spill_disk_bytes) AS spill_disk_bytes FROM apex.spark_events WHERE ts >= now() - INTERVAL 6 HOUR GROUP BY job_id, stage_id HAVING skew_ratio > 5 ORDER BY skew_ratio DESC LIMIT 50"
+      "description": "The core skew signal — mirrors sql/050 query (A) verbatim: successful-task population when sampled, closed-form verdict (n_tasks-1)/(slots-1) from job_conf width; NULL verdict + min_slots_for_tail_bound when the width is unknown (CONTRACT.md rule 1). A tile cannot carry an operator width, so operator_slots stays NULL here.",
+      "sql": "Per-stage skew from raw events (last 6h). For each (job_id, stage_id) take the latest WITH NULL AS operator_slots SELECT job_id, stage_id, max(stage_attempt) AS attempt, argMax(if(successful_task_sample_count > 0, 'successful', 'all_attempts'), ts) AS population, argMax(if(successful_task_sample_count > 0, successful_task_sample_count, task_count), ts) AS n_tasks, argMax(if(successful_task_sample_count > 0, successful_task_duration_p50_ms, task_duration_p50_ms), ts) AS p50_ms, argMax(if(successful_task_sample_count > 0, successful_task_duration_p99_ms, task_duration_p99_ms), ts) AS p99_ms, round(p99_ms / nullIf(p50_ms, 0), 2) AS skew_ratio, sum(spill_disk_bytes) AS spill_disk_bytes, coalesce(nullIf(any(conf_slots), 0), operator_slots) AS slots, n_tasks <= slots AS single_wave, if(slots > 1 AND n_tasks > slots, round((n_tasks - 1) / (slots - 1), 2), NULL) AS tail_bound_threshold, if(tail_bound_threshold IS NULL, NULL, skew_ratio > tail_bound_threshold) AS tail_bound, if(skew_ratio > 0 AND n_tasks >= 2, round(1 + (n_tasks - 1) / skew_ratio, 2), NULL) AS min_slots_for_tail_bound FROM apex.spark_events LEFT JOIN ( SELECT job_id, toUInt32OrZero(conf['spark.executor.instances']) * toUInt32OrZero(conf['spark.executor.cores']) AS conf_slots FROM apex.job_conf ) AS c USING (job_id) WHERE ts >= now() - INTERVAL 6 HOUR GROUP BY job_id, stage_id HAVING p50_ms > 0 ORDER BY tail_bound DESC NULLS LAST, skew_ratio DESC"
     },
     {
       "title": "Max skew ratio over time (per job)",
       "viz": "line",
       "description": "Time series; group by job_id. Uses the rollup for auto-acceleration (register spark_jobs_1m, 1-min granularity).",
-      "series": {"aggFn": "max", "field": "task_duration_p99_ms", "groupBy": ["job_id"], "granularity": "1 minute"},
-      "sql_equivalent": "SELECT toStartOfMinute(ts) AS t, job_id, max(task_duration_p99_ms/nullIf(task_duration_p50_ms,0)) AS max_skew FROM apex.spark_events GROUP BY t, job_id"
+      "series": {
+        "aggFn": "max",
+        "field": "task_duration_p99_ms",
+        "groupBy": [
+          "job_id"
+        ],
+        "granularity": "1 minute"
+      },
+      "sql_equivalent": "SELECT toStartOfMinute(ts) AS t, job_id, max(if(successful_task_sample_count > 0, successful_task_duration_p99_ms, task_duration_p99_ms) / nullIf(if(successful_task_sample_count > 0, successful_task_duration_p50_ms, task_duration_p50_ms), 0)) AS max_skew FROM apex.spark_events GROUP BY t, job_id"
     },
     {
       "title": "Disk spill by job (bytes)",
       "viz": "bar",
       "description": "Skew's downstream symptom. sum__spill_disk_bytes accelerates off spark_jobs_1m.",
-      "series": {"aggFn": "sum", "field": "spill_disk_bytes", "groupBy": ["job_id"]}
+      "series": {
+        "aggFn": "sum",
+        "field": "spill_disk_bytes",
+        "groupBy": [
+          "job_id"
+        ]
+      }
     },
     {
       "title": "Shuffle read by job (bytes)",
       "viz": "bar",
-      "series": {"aggFn": "sum", "field": "shuffle_read_bytes", "groupBy": ["job_id"]}
+      "series": {
+        "aggFn": "sum",
+        "field": "shuffle_read_bytes",
+        "groupBy": [
+          "job_id"
+        ]
+      }
     },
     {
-      "title": "Rollup skew (p99/p50 from stored sketch)",
+      "title": "Rollup skew (p99/p50 of per-stage p99, successful sample preferred)",
       "viz": "table",
-      "description": "Mirrors sql/005 query (B) — recomputes percentiles from the quantile STATE in spark_jobs_1m.",
-      "sql": "SELECT bucket, job_id, quantilesMerge(0.5, 0.99)(quantiles__task_duration_p99_ms) AS q, round(q[2] / nullIf(q[1], 0), 2) AS p99_over_p50 FROM apex.spark_jobs_1m WHERE bucket >= now() - INTERVAL 24 HOUR GROUP BY bucket, job_id HAVING p99_over_p50 > 4 ORDER BY p99_over_p50 DESC"
+      "description": "Mirrors sql/050 query (B) verbatim — recomputes percentiles from the quantile STATE in spark_jobs_1m (quantilesIf__successful_* when the bucket carries a successful sample). Ranks only; the per-stage verdict is tile 1.",
+      "sql": "From the rollup sketch — p50/p99 of the per-stage p99 distribution per bucket, from the SELECT bucket, job_id, sum(sum__successful_task_sample_count) AS successful_samples, if(successful_samples > 0, 'successful', 'all_attempts') AS population, if(successful_samples > 0, quantilesIfMerge(0.5, 0.99)(quantilesIf__successful_task_duration_p99_ms), quantilesMerge(0.5, 0.99)(quantiles__task_duration_p99_ms)) AS q, round(q[2] / nullIf(q[1], 0), 2) AS p99_over_p50 FROM apex.spark_jobs_1m WHERE bucket >= now() - INTERVAL 24 HOUR GROUP BY bucket, job_id HAVING q[1] > 0 ORDER BY p99_over_p50 DESC"
     }
   ]
 }

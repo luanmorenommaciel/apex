@@ -16,11 +16,12 @@
 #      spark.apex.otlp.endpoint=<the resolved collector>, AQE on (CONTRACT §Activation).
 #   5. Asserts in infra's ClickHouse, threaded by ONE job_id:
 #        spark_events rows landed · plan_transitions has the AQE decision ·
-#        sql/005 skew query flags the run · plan_json carries no literals/PII.
+#        sql/050 skew query judges a stage tail-bound at APEX_CLUSTER_SLOTS · plan_json
+#        carries no literals/PII.
 #   6. Best-effort: proves HyperDX's chart engine returns the job (needs the first
 #      user registered; skipped otherwise).
 #
-# Usage:  tests/e2e/run.sh            # leaves stacks up so you can open HyperDX :8090
+# Usage:  APEX_CLUSTER_SLOTS=8 tests/e2e/run.sh   # leaves stacks up so you can open HyperDX :8090
 #         TEARDOWN=1 tests/e2e/run.sh # tear both stacks down at the end (keeps volumes)
 #         SKIP_BUILD=1 tests/e2e/run.sh  # reuse the existing apex-spark:local image
 set -uo pipefail
@@ -40,6 +41,17 @@ command -v docker  >/dev/null || die "docker is required"
 command -v curl    >/dev/null || die "curl is required"
 command -v python3 >/dev/null || die "python3 is required"
 [ -f "$INFRA/.env" ] || die "infra/.env missing — copy infra/.env.example and set HYPERDX_API_KEY"
+[ -n "${APEX_CLUSTER_SLOTS:-}" ] || die "APEX_CLUSTER_SLOTS is required: the closed-form skew verdict (CONTRACT.md rule 1) needs the cluster width and never guesses it (dev lab = 8 worker cores, dev/README.md)"
+
+# Skew query (A) exactly as infra/sql/050_skew.sql states it, with APEX_CLUSTER_SLOTS
+# written into the marker line (same extraction as infra/scripts/verify.sh).
+skew_query_a() {
+  sed -n '/^-- (A)/,/^-- (B)/p' "$INFRA/sql/050_skew.sql" \
+    | sed '/^-- (B)/d' \
+    | sed "s/^WITH NULL AS operator_slots/WITH ${APEX_CLUSTER_SLOTS} AS operator_slots/" \
+    | sed 's/--.*$//' \
+    | sed 's/;[[:space:]]*$//'
+}
 
 # ClickHouse creds come from infra's env (defaults mirror the compose defaults).
 CH_USER=$(grep -E '^CLICKHOUSE_USER='     "$INFRA/.env" | tail -1 | cut -d= -f2); CH_USER=${CH_USER:-apex}
@@ -115,8 +127,8 @@ TRANS=$(ch "SELECT count() FROM apex.plan_transitions WHERE job_id='$JOB_ID'")
   && ok "plan_transitions: $TRANS AQE decision(s): $(ch "SELECT groupArray(concat(transition_type,'/',confidence)) FROM apex.plan_transitions WHERE job_id='$JOB_ID'")" \
   || bad "no plan_transitions for $JOB_ID (AQE fired nothing — see dev's c4-aqe-skewsplit calibration)"
 
-SKEW=$(ch "SELECT count() FROM (SELECT stage_id FROM apex.spark_events WHERE job_id='$JOB_ID' GROUP BY stage_id HAVING argMax(task_duration_p99_ms,ts)/nullIf(argMax(task_duration_p50_ms,ts),0) > 5)")
-[ "${SKEW:-0}" -gt 0 ] && ok "skew watcher (sql/005 A): $SKEW stage(s) flagged > 5x" || bad "skew query flags nothing for $JOB_ID"
+SKEW=$(ch "SELECT count() FROM ($(skew_query_a)) WHERE job_id='$JOB_ID' AND tail_bound = 1")
+[ "${SKEW:-0}" -gt 0 ] && ok "skew watcher (sql/050 A): $SKEW tail-bound stage(s) at ${APEX_CLUSTER_SLOTS} slots" || bad "skew query finds no tail-bound stage for $JOB_ID at ${APEX_CLUSTER_SLOTS} slots"
 
 FP=$(ch "SELECT countDistinct(plan_fingerprint) FROM apex.spark_events WHERE job_id='$JOB_ID' AND plan_fingerprint != ''")
 [ "${FP:-0}" -gt 0 ] && ok "plan_fingerprint present ($FP distinct plans)" || bad "no plan_fingerprint captured"
