@@ -77,6 +77,9 @@ services:
       - ./sql:/docker-entrypoint-initdb.d:ro
       # apex_hdx (HyperDX's read-only user), rendered by scripts/preflight.sh with a sha256 hash
       - ./.local/users.d/apex-hyperdx.xml:/etc/clickhouse-server/users.d/apex-hyperdx.xml:ro
+      # backups disk for BACKUP/RESTORE (scripts/backup.sh, scripts/restore.sh)
+      - ./config.d/backups.xml:/etc/clickhouse-server/config.d/backups.xml:ro
+      - ch-backups:/var/lib/clickhouse/backups
     healthcheck:
       test: ["CMD-SHELL", "clickhouse-client --user \"${CLICKHOUSE_USER:-apex}\" --password \"$$(cat /run/secrets/clickhouse_password)\" --query 'SELECT 1'"]
       interval: 5s
@@ -257,6 +260,7 @@ networks:
 
 volumes:
   ch-data:
+  ch-backups:
   mongo-data:
   otel-queue:
 

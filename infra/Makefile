@@ -2,7 +2,7 @@
 SHELL   := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
-.PHONY: help preflight up bootstrap down apply-ddl verify-ddl
+.PHONY: help preflight up bootstrap down apply-ddl verify-ddl backup restore
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -26,3 +26,10 @@ apply-ddl: ## Idempotently apply every sql/*.sql (filename order) to the RUNNING
 
 verify-ddl: ## DESCRIBE each contract table and diff it against its DDL source of truth
 	@python3 scripts/verify_ddl.py
+
+backup: ## Snapshot ClickHouse (BACKUP DATABASE apex) + Mongo (mongodump) into ./backups/
+	@./scripts/backup.sh
+
+restore: ## Restore a snapshot: make restore FILE=backups/<stamp>-clickhouse.zip INTO=<db> [MONGO=... FORCE=1]
+	@test -n "$(FILE)" || { echo "usage: make restore FILE=backups/<stamp>-clickhouse.zip [INTO=<database>] [MONGO=backups/<stamp>-mongo.archive] [FORCE=1]"; exit 2; }
+	@./scripts/restore.sh "$(FILE)" $(if $(INTO),--into $(INTO)) $(if $(MONGO),--mongo $(MONGO)) $(if $(FORCE),--force)

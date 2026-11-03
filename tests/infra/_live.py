@@ -104,8 +104,9 @@ class DisposableClickHouse:
             "-e", "CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1",  # as infra/docker-compose.yml: apex may CREATE USER
             "-v", f"{initdb}:/docker-entrypoint-initdb.d:ro",
         ]
-        if self.config_d is not None:
-            cmd += ["-v", f"{self.config_d.resolve()}:/etc/clickhouse-server/config.d/apex:ro"]
+        if self.config_d is not None:   # config.d is read flat, so mount file by file
+            for cfg in sorted(self.config_d.resolve().glob("*.xml")):
+                cmd += ["-v", f"{cfg}:/etc/clickhouse-server/config.d/{cfg.name}:ro"]
         cmd.append(IMAGE)
         subprocess.run(cmd, check=True, capture_output=True, text=True)
         self._wait_ready()

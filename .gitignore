@@ -5,6 +5,8 @@
 # infra runtime files rendered by infra/scripts/preflight.sh (passwords, users.d, hyperdx env)
 infra/secrets/
 infra/.local/
+# local snapshots from infra/scripts/backup.sh
+infra/backups/
 
 # --- generated runtime config (scripts/apex.ps1 / apex.sh) ---
 .apex/
