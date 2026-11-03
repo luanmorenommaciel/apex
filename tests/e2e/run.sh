@@ -60,7 +60,9 @@ ch() { docker exec apex-infra-clickhouse clickhouse-client --user "$CH_USER" --p
 
 step "1/6 infra up (canonical ClickStack)"
 (cd "$INFRA" && docker compose up -d --wait) || die "infra stack failed to come up healthy"
-for t in spark_events plan_transitions findings otel_traces; do
+# Every object infra/scripts/ddl_manifest.txt names (tables AND materialized views) —
+# the same list verify.sh, verify_ddl.py and scripts/apex.ps1 use; never a literal here.
+for t in $(awk '!/^#/ && NF { sub(/^apex\./, "", $1); print $1 }' "$INFRA/scripts/ddl_manifest.txt"); do
   ch "EXISTS TABLE apex.$t" | grep -q 1 && ok "apex.$t exists" || bad "apex.$t missing"
 done
 curl -sf -m 5 http://localhost:13133/ >/dev/null && ok "collector health :13133" || bad "collector health"

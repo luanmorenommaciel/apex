@@ -23,6 +23,21 @@ resolve_creds() {
 }
 CH() { curl -s -u "${CH_USER}:${CH_PASS}" "${CH_URL}" --data-binary "$1"; }
 
+# Every object the store must carry, from the ONE manifest verify_ddl.py, run.sh and
+# scripts/apex.ps1 also read (scripts/ddl_manifest.txt). Never a literal list here.
+MANIFEST="${INFRA_DDL_MANIFEST:-scripts/ddl_manifest.txt}"
+expected_objects() { awk '!/^#/ && NF { sub(/^apex\./, "", $1); print $1 }' "$MANIFEST"; }
+
+# Step 2: count the manifest's objects on the live server; exit 1 unless all are present.
+check_schema() {
+  local names n present
+  names=$(expected_objects | sed "s/.*/'&'/" | paste -sd, -)
+  n=$(expected_objects | wc -l | tr -d ' ')
+  present=$(CH "SELECT count() FROM system.tables WHERE database='apex' AND name IN (${names})")
+  echo "   objects present (tables + MVs, per ddl_manifest.txt): ${present}/${n}"
+  [ "$present" = "$n" ] || { echo "   missing: $(CH "SELECT arrayStringConcat(arrayFilter(x -> x NOT IN (SELECT name FROM system.tables WHERE database='apex'), [${names}]), ' ')")"; fail "missing schema objects — run 'make apply-ddl' (or 'docker compose up', which migrates)"; }
+}
+
 fail() { echo "❌ $1"; exit 1; }
 
 # Skew query (A) exactly as sql/050_skew.sql states it, with the operator width written
@@ -47,9 +62,7 @@ main() {
   [ "$(CH 'SELECT 1')" = "1" ] || fail "ClickHouse not answering"
 
   echo "── 2. schema present ───────────────────────────────────────"
-  tables=$(CH "SELECT count() FROM system.tables WHERE database='apex' AND name IN ('spark_events','findings','plan_transitions','spark_jobs_1m','spark_jobs_1m_mv','mv_spark_events','otel_traces')")
-  echo "   contract+rollup+reshape objects present: ${tables}/7"
-  [ "$tables" = "7" ] || fail "missing schema objects"
+  check_schema
 
   echo "── 3. data ingested ────────────────────────────────────────"
   rows=$(CH "SELECT count() FROM apex.spark_events")
@@ -98,5 +111,5 @@ main() {
   echo "✅ VERIFY PASSED — job_id ${JOB} threads spark_events → spark_jobs_1m → findings; skew query flags it."
 }
 
-# Sourced by tests to reach skew_query_a without running the checks.
+# Sourced by tests to reach skew_query_a / check_schema without running every check.
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi
