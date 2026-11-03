@@ -59,6 +59,41 @@ describe("refused_count arithmetic", () => {
     }
   });
 
+  /**
+   * The SAME six stages serve's parity gate seeds (REFUSED_STAGES in
+   * serve/tools/console_parity_gate.py), held here to assessStage(). The gate
+   * holds the CTE's answer, through both doors, to the same expected count;
+   * a change to a rule that one side does not follow fails on one of the two.
+   * p50 is 100 ms, so p99 is the ratio x100; 8 x 4 = 32 slots, bar 6.42.
+   */
+  it("counts 3 refusals on the six-stage fixture serve's gate seeds", () => {
+    const template = fx.stagesByJob[fx.CURRENT_JOB][0];
+    const stage = (stage_id: number, task_count: number, shuffle_read_bytes: number, p99: number): SparkEventRow => ({
+      ...template, job_id: "gate", stage_id, stage_attempt: 0, task_count, shuffle_read_bytes,
+      shuffle_write_bytes: 0, input_bytes: 0, task_duration_p50_ms: 100, task_duration_p99_ms: p99,
+    });
+    const stages = [
+      stage(1, 200, 4_000_000_000, 1500), // 15x, 20 MiB/task, over the bar -> reportable
+      stage(2, 200, 4_000_000_000, 120),  // 1.2x, not among the five loudest
+      stage(3, 2, 4_000_000, 900),        // 9x, two tasks -> rule 6, refused
+      stage(4, 200, 1_000, 800),          // 8x, 5 B/task -> under the floor, refused
+      stage(5, 200, 4_000_000_000, 700),  // 7x, over the 6.42 bar -> reportable
+      stage(6, 200, 4_000_000_000, 600),  // 6x, under the bar -> rule 1 work-bound, refused
+    ];
+    const conf: JobConfRow[] = [
+      { job_id: "gate", key: "spark.executor.instances", value: "8", ts: template.ts },
+      { job_id: "gate", key: "spark.executor.cores", value: "4", ts: template.ts },
+      { job_id: "gate", key: "spark.sql.shuffle.partitions", value: "200", ts: template.ts },
+    ];
+    expect(refusedInSample(stages, conf)).toBe(3);
+    expect(cteRefusedCount(stages, conf)).toBe(3);
+    // Stage 2 is work-bound on its own (1.2x under the bar) but is not among
+    // the five loudest, so it never enters the count either way.
+    expect(stages.map((s) => assessStage(s, conf).refusal?.code ?? "reportable")).toEqual([
+      "reportable", "work_bound", "not_a_distribution", "below_volume_floor", "reportable", "work_bound",
+    ]);
+  });
+
   it("treats an unknown cluster width as a refusal, never an assumed width", () => {
     const stages = fx.stagesByJob[fx.CURRENT_JOB];
     expect(cteRefusedCount(stages, [])).toBe(refusedInSample(stages, []));

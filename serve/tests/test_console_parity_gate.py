@@ -146,7 +146,9 @@ def test_a_check_the_data_cannot_exercise_is_not_a_pass(monkeypatch):
     assert verdicts["one transition per execution"] == gate.SKIP
     assert verdicts["statements run as a read-only user"] == gate.PASS
     assert verdicts["timestamps in the wire format"] == gate.PASS
-    assert report.count(gate.SKIP) == 3 and not report.failed
+    # No seeded run: check 6 has nothing to count and says so.
+    assert verdicts["refused_count on a seeded six-stage run"] == gate.SKIP
+    assert report.count(gate.SKIP) == 4 and not report.failed
 
 
 def test_a_privileged_browser_user_voids_the_readonly_proof(monkeypatch):
@@ -182,3 +184,50 @@ def test_a_route_that_dropped_a_column_is_reported_not_raised(monkeypatch):
     )
     finding_line = next(line for line in report.lines if line[1] == "findings ordered by confidence_score")
     assert finding_line[0] == gate.FAIL and "no ts" in finding_line[2]
+
+
+def test_refused_count_check_holds_both_doors_to_the_fixed_expectation(monkeypatch):
+    """Check 6: the seeded six-stage run must read REFUSED_EXPECTED on both
+    doors; a door that disagrees fails by name, and no seeded run is a SKIP."""
+    pattern = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$")
+    store = gate.Store("h", 1, "apex", "apex", "", "apex_ro", "")
+
+    def run(browser_value, api_value, refused_job="parity-gate-refused-x"):
+        def browser(_store, sql, params):
+            if "getSetting" in sql:
+                return [{"readonly": 1}]
+            if "FROM run_outcomes" in sql or "FROM plan_transitions" in sql or "uniqExact" in sql:
+                return [{"n": 1}]
+            assert params == {"job_id": refused_job}
+            return [{"job_id": refused_job, "refused_count": browser_value}]
+        monkeypatch.setattr(gate, "browser_query", browser)
+        api = gate.Api(get=lambda path: (200, {"job_id": refused_job, "refused_count": api_value}), label="fake")
+        report = gate.Report()
+        gate.live_only(report, store, api, {"RUN_ONE": "RUN_ONE"}, pattern, {}, job="j",
+                       unindexed_job=None, refused_job=refused_job)
+        return next((v, d) for v, n, d in report.lines if n == "refused_count on a seeded six-stage run")
+
+    assert gate.REFUSED_EXPECTED == 3
+    assert run(3, 3)[0] == gate.PASS
+    verdict, detail = run(3, 2)
+    assert verdict == gate.FAIL and "api=2" in detail
+    verdict, detail = run(-1, 3)
+    assert verdict == gate.FAIL and "browser=-1" in detail
+
+    monkeypatch.setattr(gate, "browser_query", lambda *_: [{"n": 1}])
+    report = gate.Report()
+    gate.live_only(report, store, gate.Api(get=lambda path: (200, {}), label="fake"),
+                   {"RUN_ONE": ""}, pattern, {}, job="j", unindexed_job=None, refused_job=None)
+    assert any(v == gate.SKIP and n == "refused_count on a seeded six-stage run" for v, n, _ in report.lines)
+
+
+def test_refused_fixture_is_the_documented_six_stages():
+    """The rows behind check 6 are versioned here; the derivation beside them
+    and the console's refusedCount.test.ts both depend on these numbers."""
+    stages = {stage: (tasks, read, p99) for stage, tasks, read, p99 in gate.REFUSED_STAGES}
+    assert sorted(stages) == [1, 2, 3, 4, 5, 6]
+    assert stages[3][0] == 2, "rule 6: two tasks are not a distribution"
+    assert stages[4][1] / stages[4][0] < 1_048_576, "under the 1 MiB/task floor"
+    slots = int(gate.REFUSED_CONF["spark.executor.instances"]) * int(gate.REFUSED_CONF["spark.executor.cores"])
+    bar = (200 - 1) / (slots - 1)
+    assert stages[6][2] / 100 < bar < stages[5][2] / 100, "stage 6 under the bar, stage 5 over it"

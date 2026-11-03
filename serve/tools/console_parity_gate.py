@@ -19,7 +19,10 @@ the type check and the ordering are ClickHouse's and no fake has them:
    and ``if()`` found a common type for every branch;
 3. findings come back ``confidence_score DESC`` when that differs from ts ASC;
 4. an execution re-planned three times is ONE transition, carrying the last;
-5. every timestamp leaves the API in the wire format the console declares.
+5. every timestamp leaves the API in the wire format the console declares;
+6. ``refused_count`` over a seeded six-stage run equals the count rules 1, 6
+   and 7 refuse, through both doors - the expected value is fixed here and in
+   front/src/contract/refusedCount.test.ts against ``assessStage()``.
 
 It seeds its own disposable rows, under job ids carrying a random suffix, and
 removes exactly those rows — the same arrangement as ``read_only_gate.py``.
@@ -325,6 +328,7 @@ class Fixture:
     other_fingerprint: str
     finding_high: str
     finding_low: str
+    refused: str = ""
     job_ids: list[str] = field(default_factory=list)
 
 
@@ -340,13 +344,40 @@ def new_fixture() -> Fixture:
         other_fingerprint=digest(f"parity-gate-other-{run}"),
         finding_high=f"parity-gate-hi-{run}",
         finding_low=f"parity-gate-lo-{run}",
+        refused=f"parity-gate-refused-{run}",
     )
-    fixture.job_ids = [fixture.indexed, fixture.baseline, fixture.unindexed]
+    fixture.job_ids = [fixture.indexed, fixture.baseline, fixture.unindexed, fixture.refused]
     return fixture
 
 
+# The seeded run behind check 6, and why its refused_count is REFUSED_EXPECTED.
+# p50 is 100 ms on every stage, so p99 is the ratio x100; job_conf gives
+# 8 instances x 4 cores = 32 slots, so rule 1's bar for 200 tasks is
+# (200 - 1) / (32 - 1) = 6.42. The five loudest ratios are stages 1, 3, 4, 5, 6
+# (stage 2 at 1.2x is not sampled):
+#   stage 1  15.0x  4 GB / 200 tasks = 20 MiB/task, above the floor, 15 > 6.42 -> reportable
+#   stage 3   9.0x  2 tasks                                    -> refused, rule 6 (not a distribution)
+#   stage 4   8.0x  1000 B / 200 tasks = 5 B/task             -> refused, under the 1 MiB floor
+#   stage 5   7.0x  20 MiB/task, 7 > 6.42                       -> reportable
+#   stage 6   6.0x  20 MiB/task, 6 < 6.42                       -> refused, rule 1 (work-bound)
+# front/src/contract/refusedCount.test.ts holds the same six rows to
+# assessStage(); this gate holds the CTE's answer, through both doors, to it.
+REFUSED_STAGES: list[tuple[int, int, int, int]] = [
+    # stage_id, task_count, shuffle_read_bytes, task_duration_p99_ms
+    (1, 200, 4_000_000_000, 1500),
+    (2, 200, 4_000_000_000, 120),
+    (3, 2, 4_000_000, 900),
+    (4, 200, 1_000, 800),
+    (5, 200, 4_000_000_000, 700),
+    (6, 200, 4_000_000_000, 600),
+]
+REFUSED_CONF = {"spark.executor.instances": "8", "spark.executor.cores": "4",
+                "spark.sql.shuffle.partitions": "200"}
+REFUSED_EXPECTED = 3
+
+
 def seed(client: Any, fx: Fixture) -> None:
-    """Rows that exercise all five live-only behaviours. Recent, because the
+    """Rows that exercise all six live-only behaviours. Recent, because the
     contract tables carry a 90-day TTL on ts."""
     # .123 so a millisecond survives both doors; one row at .000 so the fixed
     # width is exercised too — isoformat() wrote no fraction at all for that.
@@ -369,6 +400,14 @@ def seed(client: Any, fx: Fixture) -> None:
             event(fx.indexed, 2, 1, base + timedelta(seconds=90), fx.fingerprint, p99=450),
             event(fx.baseline, 1, 0, whole - timedelta(hours=1), fx.fingerprint),
             event(fx.unindexed, 1, 0, base + timedelta(minutes=10), fx.other_fingerprint),
+            # Check 6: the six stages above, one row each, no shape (the rollup
+            # must still count refusals for a run the memory lane never saw).
+            *[
+                [fx.refused, f"app-{fx.refused}", "parity-gate", stage, 0,
+                 base + timedelta(minutes=15, seconds=stage),
+                 read, 0, 0, 0, 0, 0, 0, 0, tasks, 100, p99, "0" * 64, "", {}]
+                for stage, tasks, read, p99 in REFUSED_STAGES
+            ],
         ],
         column_names=[
             "job_id", "app_id", "app_name", "stage_id", "stage_attempt", "ts",
@@ -412,7 +451,9 @@ def seed(client: Any, fx: Fixture) -> None:
         "job_conf",
         [[fx.indexed, f"app-{fx.indexed}", "parity-gate",
           {"spark.executor.cores": "4", "spark.executor.instances": "8",
-           "spark.sql.shuffle.partitions": "200"}, base]],
+           "spark.sql.shuffle.partitions": "200"}, base],
+         [fx.refused, f"app-{fx.refused}", "parity-gate", dict(REFUSED_CONF),
+          base + timedelta(minutes=15)]],
         column_names=["job_id", "app_id", "app_name", "conf", "ts"],
     )
     outcome_columns = [
@@ -589,6 +630,7 @@ def compare_doors(
 def live_only(
     report: Report, store: Store, api: Api, statements: dict[str, str],
     pattern: re.Pattern[str], seen: dict[str, Any], *, job: str, unindexed_job: str | None,
+    refused_job: str | None = None,
 ) -> None:
     """What only a live store can show. Each check says what it proves."""
     from apex_api.wire import TIMESTAMP_FIELDS
@@ -684,6 +726,27 @@ def live_only(
         report.add(FAIL if bad else PASS, "timestamps in the wire format",
                    "; ".join(bad[:4]) or f"{checked} timestamps match {pattern.pattern}")
 
+    # 6 · refused_count ------------------------------------------------------
+    # The rollup's refused CTE is rules 1, 6 and 7 in SQL. Both doors run it;
+    # the expected count is fixed with its derivation beside REFUSED_STAGES,
+    # and the console's test holds the same rows to assessStage().
+    if not refused_job:
+        report.add(SKIP, "refused_count on a seeded six-stage run",
+                   "needs the seeded run; --job-id compares an existing run and seeds nothing")
+    else:
+        status, via_api = api.get(f"/v1/runs/{urllib.parse.quote(refused_job)}")
+        via_browser = browser_query(store, statements["RUN_ONE"], {"job_id": refused_job})
+        got = {
+            "api": (via_api or {}).get("refused_count") if status == 200 else None,
+            "browser": via_browser[0].get("refused_count") if via_browser else None,
+        }
+        wrong = {door: value for door, value in got.items() if value != REFUSED_EXPECTED}
+        report.add(FAIL if wrong else PASS, "refused_count on a seeded six-stage run",
+                   f"{REFUSED_EXPECTED} through both doors — a 2-task stage, an under-floor stage "
+                   "and a work-bound stage refused; two reportable"
+                   if not wrong else
+                   f"expected {REFUSED_EXPECTED}, got " + ", ".join(f"{d}={v!r}" for d, v in wrong.items()))
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
@@ -754,7 +817,8 @@ def main(argv: list[str] | None = None) -> int:
             compare_doors(report, store, api, statements, unindexed, "", "",
                           only={"run"}, suffix=" (unindexed)")
         print()
-        live_only(report, store, api, statements, pattern, seen, job=job, unindexed_job=unindexed)
+        live_only(report, store, api, statements, pattern, seen, job=job, unindexed_job=unindexed,
+                  refused_job=fixture.refused if fixture is not None else None)
     finally:
         if fixture is not None and admin is not None:
             remove(admin, fixture)

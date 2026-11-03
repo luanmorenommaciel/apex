@@ -11,6 +11,29 @@ are corrections to Apex's own earlier claims.
 
 ## [Unreleased]
 
+### Changed — the console reads only through the Apex API (PR #182)
+
+Operator-facing, for anyone who deploys `front/`:
+
+- `DATA_SOURCE` accepts `http` (the default) and `fixtures` only. `clickhouse`
+  and `auto` are refused at container start, by name. The browser carries an
+  API token and no database user, and sends no SQL.
+- The `CLICKHOUSE_UPSTREAM`, `CLICKHOUSE_DB`, `CLICKHOUSE_USER` and
+  `CLICKHOUSE_PASSWORD` variables are gone from the image, compose and the
+  Makefile; nginx proxies `/v1` only. `/config.js` carries `dataSource`,
+  `apiUrl` and `apiToken` and nothing else.
+- The read-only ClickHouse user `apex_ro` is no longer a console concern.
+  Its DDL moved to `serve/tools/sql/01-parity-readonly-user.sql`, where the
+  parity gate's raw-SQL door needs it; `make ch-user` is gone, apply the file
+  with `clickhouse-client --multiquery` (serve/RUNBOOK.md §3.1).
+- `ch.py` is the only home of the console's SQL; serve's tests no longer read
+  `front/src/data/queries.ts`. The run rollup carries a `refused` CTE, so
+  `/v1/runs` returns `refused_count` and the runs list shows it; the parity
+  gate seeds a six-stage run whose expected count (3) is fixed on both lanes.
+- TLS terminates in front of the image (relative redirects, no HSTS from the
+  image); the image sends a same-origin CSP and the usual hardening headers.
+  Node 22 is required to build (`engines`, `.nvmrc`, `node:22-alpine`).
+
 ### Changed
 
 - The frozen contract has advanced through additive v0.5 and v0.6 extensions.
