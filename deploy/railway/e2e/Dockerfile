@@ -37,7 +37,7 @@ COPY dev/jobs /opt/apex/jobs
 COPY dev/common /opt/apex/common
 COPY dev/scripts /opt/apex/scripts
 COPY deploy/railway/spark/start.sh /opt/apex/railway/start.sh
-RUN chmod +x /opt/apex/railway/start.sh && chown -R spark /opt/spark/conf
+RUN chmod +x /opt/apex/railway/start.sh && mkdir -p /opt/spark/conf && chown -R spark /opt/spark/conf
 ENV PYTHONPATH=/opt/apex
 COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /usr/local/bin/uv
 COPY engine /opt/apex/src/engine

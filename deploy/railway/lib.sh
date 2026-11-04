@@ -5,7 +5,7 @@ set -euo pipefail
 API=https://backboard.railway.com/graphql/v2
 PROJECT_ID=e970aeef-1f77-4f88-ad55-d7042a93fff7
 REPO=luanmorenommaciel/apex
-BRANCH=${APEX_RAILWAY_BRANCH:-railway-test-env}   # branch carrying deploy/railway/* wrappers (see PLAN.md §7)
+BRANCH=${APEX_RAILWAY_BRANCH:-railway-test-env}   # branch carrying deploy/railway/* wrappers (see docs/test-env.md "Redeploy")
 gql() { # gql '<query>' '<json vars>'
   local body; body=$(jq -nc --arg q "$1" --argjson v "${2:-{\}}" '{query:$q,variables:$v}')
   local out; out=$(curl -sS "$API" -H "Authorization: Bearer $RAILWAY_API_TOKEN" -H 'Content-Type: application/json' -d "$body")

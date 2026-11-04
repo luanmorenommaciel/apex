@@ -12,7 +12,11 @@ create() { # name sourceJson
   gql 'mutation($i:ServiceCreateInput!){serviceCreate(input:$i){id}}' \
     "$(jq -nc --arg p "$PROJECT_ID" --arg e "$ENV_ID" --arg n "$1" --argjson s "$2" --arg b "$BRANCH" \
        '{i:({projectId:$p,environmentId:$e,name:$n,source:$s} + (if $s.repo then {branch:$b} else {} end))}')" \
-    | jq -r .data.serviceCreate.id; }
+    | jq -r .data.serviceCreate.id
+  # serviceCreate ignores branch (deploys default branch); pin repo services to $BRANCH explicitly.
+  if echo "$2" | jq -e .repo >/dev/null; then id=$(svc_id "$1")
+    gql 'mutation($id:String!,$i:ServiceConnectInput!){serviceConnect(id:$id,input:$i){id}}' \
+      "$(jq -nc --arg id "$id" --arg r "$REPO" --arg b "$BRANCH" '{id:$id,i:{repo:$r,branch:$b}}')" >/dev/null; fi; }
 img()  { jq -nc --arg i "$1" '{image:$i}'; }
 repo() { jq -nc --arg r "$REPO" '{repo:$r}'; }
 inst() { # id instanceInputJson
@@ -44,8 +48,8 @@ id=$(create mongodb "$(img mongo:5.0.14-focal)")
 inst "$id" '{"startCommand":"mongod --bind_ip_all --ipv6","restartPolicyType":"ON_FAILURE"}'
 vol "$id" /data/db
 
-# 3 S3 store (MinIO; swap image to rustfs/rustfs if PR #197 merges) (+volume).
-id=$(create s3 "$(img minio/minio:latest)")
+# 3 S3 store (MinIO, pinned tag; swap to rustfs/rustfs if PR #197 merges) (+volume).
+id=$(create s3 "$(img minio/minio:RELEASE.2025-04-22T22-12-26Z)")
 vars "$id" "$(jq -nc --arg a "$S3_ACCESS_KEY" --arg s "$S3_SECRET_KEY" '{MINIO_ROOT_USER:$a,MINIO_ROOT_PASSWORD:$s}')"
 inst "$id" '{"startCommand":"minio server /data --address [::]:9000 --console-address [::]:9001","healthcheckPath":"/minio/health/ready","restartPolicyType":"ON_FAILURE"}'
 vol "$id" /data
@@ -60,7 +64,7 @@ inst "$id" '{"restartPolicyType":"ON_FAILURE"}'
 vol "$id" /var/lib/otelcol/queue
 
 # 5 s3-init one-shot (minio-init). restartPolicy NEVER; exits 0 after buckets exist. Re-run is idempotent.
-id=$(create s3-init "$(img minio/mc:latest)")
+id=$(create s3-init "$(img minio/mc:RELEASE.2025-04-16T18-13-26Z)")
 vars "$id" "$S3"
 inst "$id" "$(jq -nc '{restartPolicyType:"NEVER",startCommand:"/bin/sh -c \"until mc alias set local $S3_ENDPOINT $S3_ACCESS_KEY $S3_SECRET_KEY; do sleep 3; done && mc mb --ignore-existing local/$WAREHOUSE_BUCKET && mc mb --ignore-existing local/$LOGS_BUCKET && echo apex | mc pipe local/$LOGS_BUCKET/events/.keep && echo buckets ready\""}')"
 
@@ -71,7 +75,7 @@ id=$(create spark-worker "$(repo)"); vars "$id" "$SPARK"
 inst "$id" '{"startCommand":"/opt/apex/railway/start.sh worker","restartPolicyType":"ON_FAILURE","numReplicas":1}'
 id=$(create spark-history "$(repo)"); vars "$id" "$(jq -nc --argjson s "$SPARK" '$s+{SPARK_HISTORY_OPTS:"-Dspark.history.fs.logDirectory=s3a://spark-logs/events/ -Dspark.history.ui.port=18080"}')"
 inst "$id" '{"startCommand":"/opt/apex/railway/start.sh history","restartPolicyType":"ON_FAILURE"}'
-domain "$id" 18080 >/dev/null
+# private only (no public domain); reach it via `railway connect`/port-forward.
 
 # 9 Apex API :8099 (apex-mcp ships in the same image; it is stdio-only, so no standalone service).
 id=$(create apex-api "$(repo)")
@@ -92,9 +96,9 @@ vars "$id" "$(jq -nc --arg s "$(jq -c . "$(dirname "$0")/hyperdx/default-sources
 
 # 11 Front console (front/Dockerfile prod target, nginx, http mode via API).
 id=$(create console "$(repo)")
-vars "$id" "$(jq -nc --arg t "$APEX_API_TOKEN" '{RAILWAY_DOCKERFILE_PATH:"deploy/railway/console/Dockerfile",VITE_DATA_SOURCE:"http",VITE_APEX_API_TOKEN:$t,
+vars "$id" "$(jq -nc --arg t "$APEX_API_TOKEN" '{RAILWAY_DOCKERFILE_PATH:"deploy/railway/console/Dockerfile",DATA_SOURCE:"http",APEX_API_TOKEN:$t,
   APEX_API_UPSTREAM:"http://apex-api.railway.internal:8099",PORT:"80"}')"
-domain "$id" 80 >/dev/null
+# private only: the API token is rendered into /config.js, so no public domain.
 
 # 12 e2e-runner one-shot: runs the six-lane e2e against the services above, then exits.
 id=$(create e2e-runner "$(repo)")
