@@ -48,10 +48,12 @@ id=$(create mongodb "$(img mongo:5.0.14-focal)")
 inst "$id" '{"startCommand":"mongod --bind_ip_all --ipv6","restartPolicyType":"ON_FAILURE"}'
 vol "$id" /data/db
 
-# 3 S3 store (MinIO, pinned tag; swap to rustfs/rustfs if PR #197 merges) (+volume).
-id=$(create s3 "$(img minio/minio:RELEASE.2025-04-22T22-12-26Z)")
-vars "$id" "$(jq -nc --arg a "$S3_ACCESS_KEY" --arg s "$S3_SECRET_KEY" '{MINIO_ROOT_USER:$a,MINIO_ROOT_PASSWORD:$s}')"
-inst "$id" '{"startCommand":"minio server /data --address [::]:9000 --console-address [::]:9001","healthcheckPath":"/minio/health/ready","restartPolicyType":"ON_FAILURE"}'
+# 3 S3 store: RustFS (minio/minio and minio/mc can no longer be pulled; matches PR #197), pinned by digest (+volume).
+RUSTFS_IMAGE=rustfs/rustfs:1.0.3@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b
+AWSCLI_IMAGE=amazon/aws-cli:2.38.5@sha256:c8156a0e74e13929a42d7e60f0d4e14e7d28d980cd21822505d4bff80e5460c1
+id=$(create s3 "$(img $RUSTFS_IMAGE)")
+vars "$id" "$(jq -nc --arg a "$S3_ACCESS_KEY" --arg s "$S3_SECRET_KEY" '{RUSTFS_ACCESS_KEY:$a,RUSTFS_SECRET_KEY:$s,RUSTFS_VOLUMES:"/data",RUSTFS_ADDRESS:"[::]:9000",RUSTFS_CONSOLE_ENABLE:"false"}')"
+inst "$id" '{"healthcheckPath":"/health","restartPolicyType":"ON_FAILURE"}'
 vol "$id" /data
 
 # 4 OTel collector. Wrapper bakes infra/otel-collector-config.yaml. RAILWAY_RUN_UID=0 replaces queue-init
@@ -63,10 +65,10 @@ vars "$id" "$(jq -nc --argjson c "$CH_COMMON" --arg r "$REDACTION_SECRET_KEY" '$
 inst "$id" '{"restartPolicyType":"ON_FAILURE"}'
 vol "$id" /var/lib/otelcol/queue
 
-# 5 s3-init one-shot (minio-init). restartPolicy NEVER; exits 0 after buckets exist. Re-run is idempotent.
-id=$(create s3-init "$(img minio/mc:RELEASE.2025-04-16T18-13-26Z)")
-vars "$id" "$S3"
-inst "$id" "$(jq -nc '{restartPolicyType:"NEVER",startCommand:"/bin/sh -c \"until mc alias set local $S3_ENDPOINT $S3_ACCESS_KEY $S3_SECRET_KEY; do sleep 3; done && mc mb --ignore-existing local/$WAREHOUSE_BUCKET && mc mb --ignore-existing local/$LOGS_BUCKET && echo apex | mc pipe local/$LOGS_BUCKET/events/.keep && echo buckets ready\""}')"
+# 5 s3-init one-shot (AWS CLI against RustFS). restartPolicy NEVER; exits 0 after buckets exist. Idempotent.
+id=$(create s3-init "$(img $AWSCLI_IMAGE)")
+vars "$id" "$(jq -nc --argjson s "$S3" '$s+{AWS_ACCESS_KEY_ID:$s.S3_ACCESS_KEY,AWS_SECRET_ACCESS_KEY:$s.S3_SECRET_KEY,AWS_DEFAULT_REGION:"us-east-1",AWS_ENDPOINT_URL:$s.S3_ENDPOINT}')"
+inst "$id" "$(jq -nc '{restartPolicyType:"NEVER",startCommand:"/bin/sh -c \"set -e; until aws s3 ls >/dev/null 2>&1; do sleep 3; done; for b in $WAREHOUSE_BUCKET $LOGS_BUCKET; do aws s3api head-bucket --bucket $b 2>/dev/null || aws s3 mb s3://$b; done; echo apex | aws s3 cp - s3://$LOGS_BUCKET/events/.keep; echo buckets ready\""}')"
 
 # 6-8 Spark from dev/Dockerfile (via deploy/railway/spark wrapper that renders spark-defaults.conf from env).
 id=$(create spark-master "$(repo)"); vars "$id" "$SPARK"
