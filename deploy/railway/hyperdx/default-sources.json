@@ -1,0 +1,22 @@
+[
+  {
+    "from": {
+      "databaseName": "apex",
+      "tableName": "spark_events"
+    },
+    "kind": "log",
+    "name": "Spark Events",
+    "timestampValueExpression": "ts",
+    "displayedTimestampValueExpression": "ts",
+    "implicitColumnExpression": "plan_json",
+    "serviceNameExpression": "app_id",
+    "bodyExpression": "plan_json",
+    "eventAttributesExpression": "attributes",
+    "resourceAttributesExpression": "attributes",
+    "defaultTableSelectExpression": "ts,app_id,job_id,stage_id,task_duration_p50_ms,task_duration_p99_ms",
+    "severityTextExpression": "",
+    "traceIdExpression": "job_id",
+    "spanIdExpression": "",
+    "connection": "Apex ClickHouse"
+  }
+]
