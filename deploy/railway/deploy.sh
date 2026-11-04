@@ -86,10 +86,11 @@ vars "$id" "$(jq -nc --arg pw "$CLICKHOUSE_PASSWORD" --arg t "$APEX_API_TOKEN" '
   RAILWAY_DOCKERFILE_PATH:"deploy/railway/serve/Dockerfile"}')"
 inst "$id" '{"startCommand":"apex-api","healthcheckPath":"","restartPolicyType":"ON_FAILURE"}'   # no Railway healthcheck: it probes over IPv4 and uvicorn on :: is v6-only; e2e.sh checks /v1/health
 
-# 10 HyperDX (UI) -> ClickHouse + Mongo over private network; public domain on 8090.
+# 10 HyperDX (UI) -> ClickHouse + Mongo over private network; private, port 8090.
 id=$(create hyperdx "$(img hyperdx/hyperdx:2)")
-HDX_DOMAIN=$(domain "$id" 8090)
-vars "$id" "$(jq -nc --arg k "$HYPERDX_API_KEY" --arg pw "$CLICKHOUSE_PASSWORD" --arg d "https://$HDX_DOMAIN" '{HYPERDX_API_KEY:$k,HYPERDX_API_PORT:"8000",HYPERDX_APP_PORT:"8090",
+# Private only: HyperDX OSS allows open sign-up for the first visitor (no team yet), so no public domain.
+HDX_DOMAIN=hyperdx.railway.internal:8090
+vars "$id" "$(jq -nc --arg k "$HYPERDX_API_KEY" --arg pw "$CLICKHOUSE_PASSWORD" --arg d "http://$HDX_DOMAIN" '{HYPERDX_API_KEY:$k,HYPERDX_API_PORT:"8000",HYPERDX_APP_PORT:"8090",
   FRONTEND_URL:$d,HYPERDX_APP_URL:$d,NEXT_PUBLIC_SERVER_URL:$d,MONGO_URI:"mongodb://mongodb.railway.internal:27017/hyperdx",OPAMP_PORT:"4320",
   OTEL_SERVICE_NAME:"hdx-oss-api",USAGE_STATS_ENABLED:"false",PORT:"8090",
   DEFAULT_CONNECTIONS:([{name:"Apex ClickHouse",host:"http://clickhouse.railway.internal:8123",username:"apex",password:$pw}]|tojson)}')"

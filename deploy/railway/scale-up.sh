@@ -3,14 +3,18 @@
 source "$(dirname "$0")/lib.sh"
 trap '"$(dirname "$0")/scale-down.sh"' EXIT          # always scale down, even on failure
 # DeployV2 builds from the current instance config + branch HEAD (Redeploy would replay the old snapshot).
-deploy_now() { gql 'mutation($s:String!,$e:String!){serviceInstanceDeployV2(serviceId:$s,environmentId:$e)}' "{\"s\":\"$1\",\"e\":\"$ENV_ID\"}" | jq -r .data.serviceInstanceDeployV2; }
+# Repo services have no branch trigger, and DeployV2 without commitSha replays the last snapshot's commit,
+# so pin every repo build to the tracked branch HEAD. Image services ignore commitSha.
+HEAD_SHA=$(git ls-remote "https://github.com/$REPO.git" "refs/heads/$BRANCH" | cut -f1); : "${HEAD_SHA:?cannot resolve $BRANCH}"
+deploy_now() { gql 'mutation($s:String!,$e:String!,$c:String){serviceInstanceDeployV2(serviceId:$s,environmentId:$e,commitSha:$c)}' "{\"s\":\"$1\",\"e\":\"$ENV_ID\",\"c\":$(is_repo "$1" && echo "\"$HEAD_SHA\"" || echo null)}" | jq -r .data.serviceInstanceDeployV2; }
+is_repo() { gql 'query($s:String!,$e:String!){serviceInstance(serviceId:$s,environmentId:$e){source{repo}}}' "{\"s\":\"$1\",\"e\":\"$ENV_ID\"}" | jq -e '.data.serviceInstance.source.repo' >/dev/null; }
 dep_status() { gql 'query($d:String!){deployment(id:$d){status}}' "{\"d\":\"$1\"}" | jq -r .data.deployment.status; }
 logs_of() { gql 'query($d:String!){deploymentLogs(deploymentId:$d,limit:5000){message}}' "{\"d\":\"$1\"}" | jq -r '.data.deploymentLogs[].message'; }
 wait_log() { # depId regex tries — one-shots stay "SUCCESS" while running, so wait for their own marker
   for _ in $(seq 1 "$3"); do logs_of "$1" | grep -Eq "$2" && return 0; sleep 20; done; return 1; }
 wait_ok() { for _ in $(seq 1 180); do st=$(dep_status "$1"); case $st in SUCCESS) return 0;; FAILED|CRASHED) echo "$2 $st" >&2; return 1;; esac; sleep 10; done; echo "$2 timeout" >&2; return 1; }
 for n in "${ORDER[@]}"; do
-  d=$(deploy_now "$(svc_id "$n")"); echo "deploying $n" >&2
+  d=$(deploy_now "$(svc_id "$n")"); echo "deploying $n @ ${HEAD_SHA:0:7}" >&2
   wait_ok "$d" "$n"
   if [ "$n" = s3-init ]; then wait_log "$d" "buckets ready" 30 || { echo "s3-init: no buckets" >&2; exit 1; }; fi
 done

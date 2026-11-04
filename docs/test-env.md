@@ -46,10 +46,11 @@ Nothing secret is committed.
 
 ## URLs
 
-- HyperDX: https://hyperdx-production-c12c.up.railway.app (HyperDX login; only up during a test window)
-- Console and Spark History are **private** (no public domain): the console renders the API
-  token into `/config.js`. Reach them over the private network, e.g. `railway connect` or a
-  temporary domain you remove afterwards.
+No service has a public domain. The console renders the API token into `/config.js`, and
+HyperDX OSS lets the first visitor sign up (no team exists yet), so console, HyperDX
+(`hyperdx.railway.internal:8090`) and Spark History (`spark-history.railway.internal:18080`)
+stay on the private network. Reach them with `railway connect` / a port-forward, or add a
+temporary domain during a window and delete it afterwards.
 
 ## Run the end-to-end test
 
