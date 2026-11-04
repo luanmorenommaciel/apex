@@ -84,7 +84,7 @@ id=$(create apex-api "$(repo)")
 vars "$id" "$(jq -nc --arg pw "$CLICKHOUSE_PASSWORD" --arg t "$APEX_API_TOKEN" '{APEX_API_HOST:"::",APEX_API_PORT:"8099",PORT:"8099",APEX_API_TOKENS:$t,
   CLICKHOUSE_HOST:"clickhouse.railway.internal",CLICKHOUSE_PORT:"8123",CLICKHOUSE_USER:"apex",CLICKHOUSE_PASSWORD:$pw,
   RAILWAY_DOCKERFILE_PATH:"deploy/railway/serve/Dockerfile"}')"
-inst "$id" '{"startCommand":"apex-api","healthcheckPath":"/v1/health","restartPolicyType":"ON_FAILURE"}'
+inst "$id" '{"startCommand":"apex-api","healthcheckPath":"","restartPolicyType":"ON_FAILURE"}'   # no Railway healthcheck: it probes over IPv4 and uvicorn on :: is v6-only; e2e.sh checks /v1/health
 
 # 10 HyperDX (UI) -> ClickHouse + Mongo over private network; public domain on 8090.
 id=$(create hyperdx "$(img hyperdx/hyperdx:2)")
