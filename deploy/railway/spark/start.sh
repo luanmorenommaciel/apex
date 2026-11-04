@@ -13,12 +13,14 @@ HOST=${RAILWAY_PRIVATE_DOMAIN:-$(hostname)}
 export SPARK_LOCAL_HOSTNAME=$HOST SPARK_PUBLIC_DNS=$HOST
 export SPARK_LOCAL_IP=${SPARK_LOCAL_IP:-::}
 V6='-Djava.net.preferIPv6Addresses=true'
+# PySpark's own switch: with the JVM preferring IPv6 its local servers bind ::1, so Python must dial ::1
+# (default 127.0.0.1 => CANNOT_OPEN_SOCKET on collect()). Driver can't drop V6: the master listens on IPv6 only.
+export SPARK_PREFER_IPV6=true
+spark_env=${SPARK_CONF_DIR:-$SPARK_HOME/conf}/spark-env.sh; mkdir -p "$(dirname "$spark_env")"; echo 'export SPARK_PREFER_IPV6=true' > "$spark_env"
 export SPARK_DAEMON_JAVA_OPTS="${SPARK_DAEMON_JAVA_OPTS:-} $V6"
 export SPARK_HISTORY_OPTS="${SPARK_HISTORY_OPTS:-} $V6"
 DRIVER_PORT=${SPARK_DRIVER_PORT:-7078}; BM_PORT=${SPARK_BLOCKMANAGER_PORT:-7079}
 
-# Driver JVM: no preferIPv6Addresses. With it, the local PySpark data server binds ::1 while PySpark
-# connects to 127.0.0.1 (CANNOT_OPEN_SOCKET on collect()). Master/worker/executors keep it.
 conf=${SPARK_CONF_DIR:-$SPARK_HOME/conf}/spark-defaults.conf
 mkdir -p "$(dirname "$conf")"; umask 077
 cat > "$conf" <<CONF
@@ -46,8 +48,9 @@ spark.driver.bindAddress                    ::
 spark.driver.port                           ${DRIVER_PORT}
 spark.blockManager.port                     ${BM_PORT}
 spark.driver.blockManager.port              ${BM_PORT}
-spark.driver.extraJavaOptions               -Djava.net.preferIPv6Addresses=false
+spark.driver.extraJavaOptions               ${V6}
 spark.executor.extraJavaOptions             ${V6}
+spark.executorEnv.SPARK_PREFER_IPV6         true
 CONF
 
 cls() { exec "$SPARK_HOME/bin/spark-class" "$@"; }
