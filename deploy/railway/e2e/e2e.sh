@@ -3,6 +3,7 @@
 # scripts/e2e_six_lanes.py against the Railway ClickHouse/API. Every hostname comes from env.
 # Exit 0 = gate passed. Prints no credentials.
 set -euo pipefail
+trap 'echo "E2E_EXIT=$?"' EXIT   # scale-up.sh polls the log for this marker
 : "${SPARK_MASTER_URL:?}" "${CLICKHOUSE_HOST:?}" "${CLICKHOUSE_PASSWORD:?}" "${APEX_API_URL:?}"
 E2E_JOB=${E2E_JOB:-skew_join}
 JOB_ID=${E2E_JOB_ID:-railway-e2e-${E2E_JOB}-$(date -u +%Y%m%dT%H%M%S)}   # fresh id => no pre-existing findings
@@ -20,4 +21,4 @@ echo "== submit $E2E_JOB job_id=$JOB_ID -> $SPARK_MASTER_URL"
 echo "== wait ${SETTLE}s for OTLP -> ClickHouse"; sleep "$SETTLE"
 echo "== six-lane gate"
 cd "$SRC/engine"
-exec uv run --frozen --no-sync --extra dev --extra clickhouse python ../scripts/e2e_six_lanes.py --job-id "$JOB_ID"
+uv run --frozen --no-sync --extra dev --extra clickhouse python ../scripts/e2e_six_lanes.py --job-id "$JOB_ID"
