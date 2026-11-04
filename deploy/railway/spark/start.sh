@@ -17,6 +17,8 @@ export SPARK_DAEMON_JAVA_OPTS="${SPARK_DAEMON_JAVA_OPTS:-} $V6"
 export SPARK_HISTORY_OPTS="${SPARK_HISTORY_OPTS:-} $V6"
 DRIVER_PORT=${SPARK_DRIVER_PORT:-7078}; BM_PORT=${SPARK_BLOCKMANAGER_PORT:-7079}
 
+# Driver JVM: no preferIPv6Addresses. With it, the local PySpark data server binds ::1 while PySpark
+# connects to 127.0.0.1 (CANNOT_OPEN_SOCKET on collect()). Master/worker/executors keep it.
 conf=${SPARK_CONF_DIR:-$SPARK_HOME/conf}/spark-defaults.conf
 mkdir -p "$(dirname "$conf")"; umask 077
 cat > "$conf" <<CONF
@@ -44,7 +46,7 @@ spark.driver.bindAddress                    ::
 spark.driver.port                           ${DRIVER_PORT}
 spark.blockManager.port                     ${BM_PORT}
 spark.driver.blockManager.port              ${BM_PORT}
-spark.driver.extraJavaOptions               ${V6}
+spark.driver.extraJavaOptions               -Djava.net.preferIPv6Addresses=false
 spark.executor.extraJavaOptions             ${V6}
 CONF
 
