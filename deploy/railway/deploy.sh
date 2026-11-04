@@ -52,7 +52,7 @@ vol "$id" /data/db
 RUSTFS_IMAGE=rustfs/rustfs:1.0.3@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b
 AWSCLI_IMAGE=amazon/aws-cli:2.38.5@sha256:c8156a0e74e13929a42d7e60f0d4e14e7d28d980cd21822505d4bff80e5460c1
 id=$(create s3 "$(img $RUSTFS_IMAGE)")
-vars "$id" "$(jq -nc --arg a "$S3_ACCESS_KEY" --arg s "$S3_SECRET_KEY" '{RUSTFS_ACCESS_KEY:$a,RUSTFS_SECRET_KEY:$s,RUSTFS_VOLUMES:"/data",RUSTFS_ADDRESS:"[::]:9000",RUSTFS_CONSOLE_ENABLE:"false"}')"
+vars "$id" "$(jq -nc --arg a "$S3_ACCESS_KEY" --arg s "$S3_SECRET_KEY" '{RUSTFS_ACCESS_KEY:$a,RUSTFS_SECRET_KEY:$s,RUSTFS_VOLUMES:"/data",RUSTFS_ADDRESS:"[::]:9000",RUSTFS_CONSOLE_ENABLE:"false",RAILWAY_RUN_UID:"0"}')"
 inst "$id" '{"healthcheckPath":"/health","restartPolicyType":"ON_FAILURE"}'
 vol "$id" /data
 
@@ -81,7 +81,7 @@ inst "$id" '{"startCommand":"/opt/apex/railway/start.sh history","restartPolicyT
 
 # 9 Apex API :8099 (apex-mcp ships in the same image; it is stdio-only, so no standalone service).
 id=$(create apex-api "$(repo)")
-vars "$id" "$(jq -nc --arg pw "$CLICKHOUSE_PASSWORD" --arg t "$APEX_API_TOKEN" '{APEX_API_HOST:"::",APEX_API_PORT:"8099",APEX_API_TOKENS:$t,
+vars "$id" "$(jq -nc --arg pw "$CLICKHOUSE_PASSWORD" --arg t "$APEX_API_TOKEN" '{APEX_API_HOST:"::",APEX_API_PORT:"8099",PORT:"8099",APEX_API_TOKENS:$t,
   CLICKHOUSE_HOST:"clickhouse.railway.internal",CLICKHOUSE_PORT:"8123",CLICKHOUSE_USER:"apex",CLICKHOUSE_PASSWORD:$pw,
   RAILWAY_DOCKERFILE_PATH:"deploy/railway/serve/Dockerfile"}')"
 inst "$id" '{"startCommand":"apex-api","healthcheckPath":"/v1/health","restartPolicyType":"ON_FAILURE"}'
