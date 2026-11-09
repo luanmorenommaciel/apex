@@ -99,12 +99,12 @@ describe("a rejected query on every screen", () => {
     expect(text).not.toContain("PRIVATE");
   });
 
-  it("names the source that was resolved, never ClickHouse for the http kind", async () => {
+  it("names the source that was resolved", async () => {
     current.repo = rejecting(new ApiAuthError("token rejected", "/v1/runs"), "http");
-    expect(await mount("/runs", "/runs", <RunsScreen />)).not.toContain("ClickHouse");
+    expect(await mount("/runs", "/runs", <RunsScreen />)).toContain("apex-api");
     await act(async () => root.unmount());
     root = createRoot(host);
-    current.repo = rejecting(new Error("boom"), "clickhouse");
-    expect(await mount("/runs", "/runs", <RunsScreen />)).toContain("ClickHouse");
+    current.repo = rejecting(new Error("boom"), "fixtures");
+    expect(await mount("/runs", "/runs", <RunsScreen />)).toContain("the recorded run");
   });
 });

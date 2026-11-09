@@ -1,9 +1,5 @@
 interface ImportMetaEnv {
-  readonly VITE_CLICKHOUSE_URL?: string;
-  readonly VITE_CLICKHOUSE_DB?: string;
-  readonly VITE_CLICKHOUSE_USER?: string;
-  readonly VITE_CLICKHOUSE_PASSWORD?: string;
-  readonly VITE_DATA_SOURCE?: "auto" | "clickhouse" | "fixtures" | "http";
+  readonly VITE_DATA_SOURCE?: "http" | "fixtures";
   /**
    * Where the DEV SERVER forwards /v1. Server-side only: it never reaches the
    * bundle, so setting it cannot push the browser off its origin.

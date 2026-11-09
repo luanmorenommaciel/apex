@@ -59,8 +59,10 @@ const canonicalEvent: SparkEventContractV05 = {
 };
 
 describe("frozen contract", () => {
-  it("identifies the current contract and requires every additive task field", () => {
-    expect(CONTRACT_VERSION).toBe("0.5");
+  it("requires every additive task field of the current contract", () => {
+    // The version itself is pinned to CONTRACT.md by version.test.ts; a
+    // literal here is the restated copy that let the badge say v0.5.
+    expect(CONTRACT_VERSION).toMatch(/^\d+\.\d+$/);
     expect(canonicalEvent.task_duration_sample_count).toBe(3);
     expect(canonicalEvent.successful_task_shuffle_read_bytes_sample_count).toBe(3);
     expect(canonicalEvent.task_attempt_count).toBe(4);

@@ -3,10 +3,11 @@
  * are refused with a named error.
  *
  * The script is run for real under `sh`, with only the environment a container
- * would have. What it decides is: a store the deployment will actually use must
- * be configured, and a store it will not use must not be demanded. The image
- * defaults both upstreams to an unroutable address (nginx needs some value to
- * render its template), so that address means "not configured" here too.
+ * would have. Two modes exist (D-api-only): http, which warns when no API is
+ * configured, and fixtures, which needs nothing; anything else is refused by
+ * name. The image defaults the API upstream to an unroutable address (nginx
+ * needs some value to render its template), so that address means "not
+ * configured" here too.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -21,7 +22,6 @@ const SCRIPT = fileURLToPath(
 
 /** What the Dockerfile sets when the operator passes nothing. */
 const IMAGE_DEFAULTS = {
-  CLICKHOUSE_UPSTREAM: "http://127.0.0.1:1",
   APEX_API_UPSTREAM: "http://127.0.0.1:1",
 };
 
@@ -35,7 +35,7 @@ function boot(env: Record<string, string>) {
   dirs.push(dir);
   const out = join(dir, "config.js");
   const result = spawnSync("sh", [SCRIPT], {
-    // No inherited environment: the host's own CLICKHOUSE_* must not leak in.
+    // No inherited environment: the host's own APEX_* must not leak in.
     env: { PATH: process.env.PATH ?? "", ...IMAGE_DEFAULTS, ...env, APEX_CONFIG_OUT: out },
     encoding: "utf8",
   });
@@ -49,16 +49,16 @@ function boot(env: Record<string, string>) {
 }
 
 describe("data source http", () => {
-  it("boots with no CLICKHOUSE_UPSTREAM when the same-origin API upstream is set", () => {
-    // The documented HTTP-only deployment: the browser holds an API token and
-    // no database credential, and ClickHouse is never called.
+  it("boots when the same-origin API upstream is set", () => {
+    // The supported deployment: the browser holds an API token and no
+    // database credential.
     const r = boot({
       DATA_SOURCE: "http",
       APEX_API_UPSTREAM: "http://apex-api:8000",
       APEX_API_TOKEN: "tok",
     });
     expect(r.status).toBe(0);
-    expect(r.stderr).not.toContain("CLICKHOUSE_UPSTREAM");
+    expect(r.stderr).toBe("");
     expect(r.config).toContain('dataSource: "http"');
     expect(r.config).toContain('apiToken: "tok"');
     // Same-origin: no absolute apiUrl is written, so the bundle calls /v1 relative.
@@ -72,32 +72,12 @@ describe("data source http", () => {
   });
 
   it("boots but warns when no API is configured at all", () => {
-    // Not a ClickHouse problem, so not the ClickHouse error — and not fatal:
-    // the operator may be about to attach the upstream.
+    // Not fatal: the operator may be about to attach the upstream, and the
+    // bundle renders "no store answered" until then.
     const r = boot({ DATA_SOURCE: "http" });
     expect(r.status).toBe(0);
     expect(r.stderr).toContain("APEX_API_UPSTREAM");
-    expect(r.stderr).not.toContain("CLICKHOUSE_UPSTREAM is not set");
-  });
-});
-
-describe("data source clickhouse", () => {
-  it("refuses to start without CLICKHOUSE_UPSTREAM, and names the variable", () => {
-    const r = boot({ DATA_SOURCE: "clickhouse" });
-    expect(r.status).toBe(1);
-    expect(r.stderr).toContain("CLICKHOUSE_UPSTREAM is not set");
-    expect(r.config).toBeNull();
-  });
-
-  it("refuses even when the API is configured: it will not be used", () => {
-    const r = boot({ DATA_SOURCE: "clickhouse", APEX_API_UPSTREAM: "http://apex-api:8000" });
-    expect(r.status).toBe(1);
-    expect(r.stderr).toContain("CLICKHOUSE_UPSTREAM is not set");
-  });
-
-  it("boots once the upstream is given", () => {
-    const r = boot({ DATA_SOURCE: "clickhouse", CLICKHOUSE_UPSTREAM: "http://ch:8123" });
-    expect(r.status).toBe(0);
+    expect(r.stderr).toContain("no store answered");
   });
 });
 
@@ -109,48 +89,31 @@ describe("data source fixtures", () => {
   });
 });
 
-describe("data source auto (the default)", () => {
-  it("boots with the API alone: ClickHouse is only the fallback", () => {
-    const r = boot({ DATA_SOURCE: "auto", APEX_API_UPSTREAM: "http://apex-api:8000" });
-    expect(r.status).toBe(0);
-    expect(r.stderr).not.toContain("CLICKHOUSE_UPSTREAM is not set");
-    // It says what it will do when the API is down, rather than staying quiet.
-    expect(r.stderr).toContain("recorded run");
-  });
-
-  it("is what an unset DATA_SOURCE means", () => {
+describe("the default and the refusal", () => {
+  it("is http when DATA_SOURCE is unset", () => {
     const r = boot({ APEX_API_UPSTREAM: "http://apex-api:8000" });
     expect(r.status).toBe(0);
+    expect(r.stderr).toBe("");
+    // Unset emits no key: the bundle's own default, http, applies.
     expect(r.config).not.toContain("dataSource");
   });
 
-  it("is what an unrecognised DATA_SOURCE means, as it is in the bundle", () => {
-    const r = boot({ DATA_SOURCE: "bogus" });
-    expect(r.status).toBe(1);
-    expect(boot({ DATA_SOURCE: "bogus", APEX_API_UPSTREAM: "http://a:1000" }).status).toBe(0);
+  it("refuses an unrecognised DATA_SOURCE by name, rendering nothing", () => {
+    for (const value of ["clikhouse", "auto", "mysql"]) {
+      const r = boot({ DATA_SOURCE: value, APEX_API_UPSTREAM: "http://apex-api:8000" });
+      expect(r.status, value).toBe(1);
+      expect(r.stderr).toContain(`DATA_SOURCE='${value}' is not a data source`);
+      expect(r.config).toBeNull();
+    }
   });
 
-  it("boots with ClickHouse alone, as before", () => {
-    const r = boot({ CLICKHOUSE_UPSTREAM: "http://ch:8123" });
-    expect(r.status).toBe(0);
-    expect(r.stderr).toBe("");
-  });
-
-  it("boots with both", () => {
+  it("writes no database key into config.js, whatever the environment carries", () => {
     const r = boot({
-      CLICKHOUSE_UPSTREAM: "http://ch:8123",
-      APEX_API_UPSTREAM: "http://apex-api:8000",
+      APEX_API_UPSTREAM: "http://apex-api:8000", APEX_API_TOKEN: "t",
+      CLICKHOUSE_USER: "leak", CLICKHOUSE_PASSWORD: "leak", CLICKHOUSE_DB: "leak",
     });
     expect(r.status).toBe(0);
-    expect(r.stderr).toBe("");
-  });
-
-  it("refuses with neither configured — there is nothing to probe", () => {
-    const r = boot({});
-    expect(r.status).toBe(1);
-    expect(r.stderr).toContain("CLICKHOUSE_UPSTREAM is not set");
-    // The message offers the API path too, not only ClickHouse.
-    expect(r.stderr).toContain("APEX_API_UPSTREAM");
-    expect(r.stderr).toContain("DATA_SOURCE=fixtures");
+    expect(r.config).not.toMatch(/database|user|password/);
+    expect(r.config).toContain('apiToken: "t"');
   });
 });

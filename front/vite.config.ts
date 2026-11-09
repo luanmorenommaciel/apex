@@ -12,18 +12,11 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "0.0.0.0",
       port: 5173,
-      // ClickHouse's HTTP interface is reached through this proxy, so the browser
-      // stays same-origin and the database never needs add_http_cors_header.
+      // The Apex API is reached through this proxy: with no VITE_APEX_API_URL
+      // the console calls /v1 relative and this forwards it, so the API needs
+      // no CORS header and the browser never leaves its origin. No rewrite —
+      // the API serves /v1 itself. It is the console's only door (D-api-only).
       proxy: {
-        "/clickhouse": {
-          target: env.VITE_CLICKHOUSE_URL || "http://127.0.0.1:8123",
-          changeOrigin: true,
-          rewrite: (p) => p.replace(/^\/clickhouse/, ""),
-        },
-        // Same reason, same shape: with no VITE_APEX_API_URL the console calls
-        // /v1 relative and this forwards it, so the API needs no CORS header
-        // and the browser never leaves its origin. No rewrite — the API serves
-        // /v1 itself, unlike ClickHouse which serves at the root.
         "/v1": {
           // VITE_APEX_API_PROXY_TARGET, deliberately NOT VITE_APEX_API_URL.
           // The latter sets the browser's own apiUrl, so sharing one variable
