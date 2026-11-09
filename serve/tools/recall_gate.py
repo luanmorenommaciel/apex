@@ -254,11 +254,15 @@ def main() -> int:
 
         # -- the tool, end to end over the real store ----------------------
         server = create_server(store)
-        tool_names = [t.name for t in asyncio.run(server.list_tools())]
-        assert tool_names == [
-            "analyze_run", "compare_runs", "list_runs", "search_kb",
-            "recall_similar_runs", "suggest_fix",
-        ], tool_names
+        # This gate proves recall, not the whole tool surface: that is pinned
+        # once, in tests/test_server_tools.py. Asserting the full list here
+        # went stale every time a tool was added.
+        tools = {t.name: t for t in asyncio.run(server.list_tools())}
+        assert "recall_similar_runs" in tools, sorted(tools)
+        recall_tool = tools["recall_similar_runs"]
+        assert recall_tool.annotations and recall_tool.annotations.readOnlyHint, (
+            "recall_similar_runs must stay annotated read-only"
+        )
 
         raw = asyncio.run(
             server.call_tool("recall_similar_runs", {"job_id": CURRENT_JOB})
