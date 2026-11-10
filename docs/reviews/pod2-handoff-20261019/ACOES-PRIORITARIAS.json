@@ -1,0 +1,65 @@
+[
+  {
+    "topic": "Revisar a guarda de consistência do Engine",
+    "objects": [
+      155,
+      154
+    ],
+    "input": "PR #155 no head 561b27e e critérios da issue #154, sobre as implementações integradas #131/#139.",
+    "output": "Parecer da guarda bidirecional e identificação do residual: integração, evidência e/ou atualização do acompanhamento.",
+    "criterion": "A revisão identifica como coluna omitida ou extra é detectada e qual árvore receberá validação. A issue só será encerrada por decisão sobre seus critérios, não por existir link para a PR.",
+    "dependency": "Revisão estática independe de benchmark, browser ou de decisão global de infraestrutura. Checks do head falhos não demonstram por si uma asserção reprovada.",
+    "role": "Revisor de Engine e mantenedor, a confirmar.",
+    "class": "Revisão sem runtime",
+    "evidence": [
+      "https://api.github.com/repos/luanmorenommaciel/apex/pulls/155/files?per_page=100",
+      "https://api.github.com/repos/luanmorenommaciel/apex/commits/561b27e7d1914dddf4989bf04834a33da726a45f/check-runs?per_page=100",
+      "https://api.github.com/repos/luanmorenommaciel/apex/pulls/131",
+      "https://api.github.com/repos/luanmorenommaciel/apex/pulls/139",
+      "https://api.github.com/repos/luanmorenommaciel/apex/issues?state=open&per_page=100"
+    ],
+    "route": "mixed",
+    "publication_scope": "Proposta documental; não execução ou aceite."
+  },
+  {
+    "topic": "Confrontar a interface R9D com a contribuição do Pod 3",
+    "objects": [
+      167,
+      185
+    ],
+    "input": "Critério da issue #167 e PR #185 do Agmar/Pod 3 no head a5c2ca45, antes de abrir variante paralela.",
+    "output": "Mapa de argumentos ON/OFF, parâmetros aceitos, comando produzido e lacunas remanescentes. Separar os critérios #174 e #178.",
+    "criterion": "O mapa mostra EnvFile/AdditionalComposeFile em cada braço e propõe um controle que detecte argumento removido. Presença textual de knobs não é equivalência completa; benchmark não é inferido.",
+    "dependency": "Depende da interface candidata escolhida. Não exige resolver todas as políticas antes de comparar código; nenhuma execução de PowerShell é feita nesta revisão.",
+    "role": "Autores/revisores de Engine, Package/Harness e DEV/Pod 3, a confirmar.",
+    "class": "Revisão sem runtime",
+    "evidence": [
+      "https://api.github.com/repos/luanmorenommaciel/apex/issues/167",
+      "https://api.github.com/repos/luanmorenommaciel/apex/pulls/185/files?per_page=100",
+      "https://api.github.com/repos/luanmorenommaciel/apex/contents/dev/scripts/r9d_overhead_ab.py?ref=c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874",
+      "https://api.github.com/repos/luanmorenommaciel/apex/contents/dev/scripts/e2e_canonical.ps1?ref=c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874"
+    ],
+    "route": "mixed",
+    "publication_scope": "Proposta documental; não execução ou aceite."
+  },
+  {
+    "topic": "Desenhar um controle seguro do dispatcher PowerShell",
+    "objects": [
+      124,
+      128
+    ],
+    "input": "Issue #124 e plano de ação integrado da #128: DryRun retorna antes de executar Command.",
+    "output": "Especificação de teste com handlers inofensivos e controle negativo que troca Command mantendo Handler.",
+    "criterion": "Explicar por que o teste distingue o rótulo correto do comando realmente selecionado. Limitar efeitos e declarar o que não prova sobre Windows, Docker ou o fluxo E2E.",
+    "dependency": "O desenho não precisa iniciar ações do pacote. Implementar/executar o controle é trabalho posterior sob escopo próprio.",
+    "role": "Revisor do pacote/PowerShell e representante do Pod 2, a confirmar.",
+    "class": "Preparação sem runtime",
+    "evidence": [
+      "https://api.github.com/repos/luanmorenommaciel/apex/issues/124",
+      "https://api.github.com/repos/luanmorenommaciel/apex/contents/scripts/apex.ps1?ref=c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874",
+      "https://api.github.com/repos/luanmorenommaciel/apex/contents/tests/test_apex_initial_package.py?ref=c3c3ea3b7b8ac13751b6c9790a57ee39dbaec874"
+    ],
+    "route": "mixed",
+    "publication_scope": "Proposta documental; não execução ou aceite."
+  }
+]
