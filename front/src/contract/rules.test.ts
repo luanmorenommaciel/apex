@@ -210,6 +210,28 @@ describe("parseProposal", () => {
     expect(parseProposal(text)).toEqual({ kind: "invalid-overlay" });
   });
 
+  // The MCP door (serve/tests/test_proposal_source.py UNFAITHFUL_NUMBERS)
+  // rejects the same list: a number String() cannot render faithfully.
+  it.each([
+    ['{"spark.a":1e400}', "overflow to Infinity"],
+    ['{"spark.a":-1e400}', "overflow to -Infinity"],
+    ['{"spark.a":9007199254740993}', "integer JSON.parse would round"],
+    ['{"spark.a":9007199254740992}', "2**53"],
+    ['{"spark.a":-9007199254740992}', "-(2**53)"],
+    ['{"spark.a":1e20}', "1e20"],
+    ['{"spark.a":1.5e300}', "1.5e300"],
+    ['{"spark.a":"1","spark.b":18446744073709551616}', "2**64 beside a valid member"],
+  ])("rejects %s (%s) instead of rendering a changed value", (text) => {
+    expect(parseProposal(text)).toEqual({ kind: "invalid-overlay" });
+  });
+
+  it("keeps numbers up to MAX_SAFE_INTEGER exactly", () => {
+    expect(parseProposal('{"a":9007199254740991,"b":-9007199254740991,"c":0.5,"d":1e-7}')).toEqual({
+      kind: "overlay",
+      config: { a: "9007199254740991", b: "-9007199254740991", c: "0.5", d: "1e-7" },
+    });
+  });
+
   it("recognises the recorded shape: a unified diff", () => {
     const diff = [
       "--- a/conf/spark-defaults.conf",

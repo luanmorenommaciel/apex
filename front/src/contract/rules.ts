@@ -420,9 +420,23 @@ export function noOpGate(conf: JobConfRow[], key: string, proposed: string): Rul
  * Each format has an explicit outcome so callers never mistake a partial JSON
  * parse for a valid overlay. The no-op gate previously passed a literal "800"
  * typed into the screen, which meant it gated a value no lane had ever proposed.
+ *
+ * Three rules keep this door and the MCP door (serve/src/apex_mcp/models.py
+ * `read_overlay` / `VerificationView._parse_config`) reading the same overlay
+ * out of the same row:
+ *  1. Whitespace: `trim()` (WhiteSpace + LineTerminator) around the JSON; the
+ *     MCP door strips exactly that code-point set, not Python's `strip()` set.
+ *  2. `{}` proposes nothing: it is `empty-overlay`, never an `overlay` with
+ *     zero keys, so no gate or key list is built over it. MCP withholds its
+ *     diff for the same row.
+ *  3. Key order: Unicode code point, via `overlayEntries` — never
+ *     `Object.entries`, which puts integer-like keys first and whose default
+ *     sort compares UTF-16 code units.
+ * Both suites run contract/fixtures/proposal_parity.json over the real parsers.
  */
 export type ProposalParse =
   | { kind: "overlay"; config: Record<string, string> }
+  | { kind: "empty-overlay" }
   | { kind: "invalid-json" }
   | { kind: "invalid-overlay" }
   | { kind: "diff" }
@@ -444,6 +458,15 @@ export function parseProposal(text: string): ProposalParse {
     for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
       // Spark conf values are scalars. One invalid member invalidates the
       // whole overlay; dropping it would make this a partial, false proposal.
+      // A number is accepted only when String(v) is faithful to what was
+      // stored: an overflowing literal (1e400) parses to Infinity, and an
+      // integer beyond MAX_SAFE_INTEGER (9007199254740993) is silently rounded
+      // by JSON.parse. Neither is a Spark conf value; both invalidate the
+      // overlay. The MCP door (serve/src/apex_mcp/models.py
+      // `_js_scalar_string`) rejects exactly the same numbers.
+      if (typeof v === "number" && !(Number.isFinite(v) && Math.abs(v) <= Number.MAX_SAFE_INTEGER)) {
+        return { kind: "invalid-overlay" };
+      }
       if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
         // Assignment treats __proto__ specially on ordinary objects and would
         // silently discard the JSON member. Define an own data property so
@@ -455,6 +478,9 @@ export function parseProposal(text: string): ProposalParse {
         return { kind: "invalid-overlay" };
       }
     }
+    // An empty object is a row that proposes NOTHING. Reading it as a valid
+    // overlay with zero keys would let it pass as a real proposal.
+    if (Object.keys(out).length === 0) return { kind: "empty-overlay" };
     return { kind: "overlay", config: out };
   }
 
@@ -463,6 +489,36 @@ export function parseProposal(text: string): ProposalParse {
   if (isUnifiedDiff(text)) return { kind: "diff" };
 
   return { kind: "unknown" };
+}
+
+/**
+ * Compare two strings by Unicode code point — the order Python's `sorted()`
+ * and `json.dumps(sort_keys=True)` produce. The default JS comparison uses
+ * UTF-16 code units, which puts an astral key ("😀", U+1F600) BEFORE a
+ * high-BMP one ("\uffff") — the opposite of code-point order.
+ */
+export function compareCodePoints(a: string, b: string): number {
+  const ia = a[Symbol.iterator]();
+  const ib = b[Symbol.iterator]();
+  for (;;) {
+    const na = ia.next();
+    const nb = ib.next();
+    if (na.done || nb.done) return na.done ? (nb.done ? 0 : -1) : 1;
+    const ca = na.value.codePointAt(0) ?? 0;
+    const cb = nb.value.codePointAt(0) ?? 0;
+    if (ca !== cb) return ca - cb;
+  }
+}
+
+/**
+ * An overlay's [key, value] pairs in Unicode code-point key order — the order
+ * the verify lane writes and the MCP door lists. Every console list of
+ * overlay keys goes through this, never through `Object.entries`.
+ */
+export function overlayEntries(config: Record<string, string>): [string, string][] {
+  return Object.keys(config)
+    .sort(compareCodePoints)
+    .map((key) => [key, config[key]] as [string, string]);
 }
 
 function isUnifiedDiff(text: string): boolean {

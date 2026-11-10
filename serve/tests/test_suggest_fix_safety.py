@@ -336,7 +336,8 @@ def test_a_verification_for_a_different_finding_is_not_attached():
 
 
 def test_a_verification_of_a_different_overlay_says_so():
-    """A verdict on other settings does not transfer to these ones."""
+    """SRP-22: the verified overlay is the proposal, and the notes say it
+    differs from the recipe — the verdict is about exactly these settings."""
     suggestion = _suggest(
         findings=[_VERIFIED_FINDING],
         verifications=[
@@ -344,7 +345,12 @@ def test_a_verification_of_a_different_overlay_says_so():
         ],
     )
 
-    assert any("DIFFERENT overlay" in note for note in suggestion.notes)
+    assert suggestion.proposed_config == {"spark.executor.memory": "8g"}
+    assert any(
+        "verify lane's stored overlay" in note
+        and "differs from the heuristic recipe" in note
+        for note in suggestion.notes
+    )
 
 
 def test_the_heuristic_path_carries_no_verification():

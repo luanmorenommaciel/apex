@@ -307,7 +307,7 @@ SELECT
 FROM fix_verifications AS v
 LEFT JOIN slots s ON s.job_id = v.job_id
 WHERE v.finding_id = {finding:String}
-ORDER BY v.verified_at DESC
+ORDER BY v.verified_at DESC, v.verification_id ASC
 LIMIT 1
 `;
 

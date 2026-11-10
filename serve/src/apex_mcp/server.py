@@ -599,7 +599,8 @@ def create_server(store: ReadStore) -> FastMCP:
                 store.findings(job_id),
                 store.stages(job_id),
                 store.plan_transitions(job_id),
-                store.verifications(job_id, finding_id or ""),
+                # per CHOSEN finding, not a capped job-wide list (SRP-22)
+                verification_lookup=lambda fid: store.verifications(job_id, fid),
             )
         except Exception as exc:  # noqa: BLE001
             raise _fail(exc) from None

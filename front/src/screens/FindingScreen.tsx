@@ -5,7 +5,7 @@ import {
 import { ScreenHeader, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import {
-  assessStage, fmt, noOpGate, parseProposal, ratioOf, TAIL_SAMPLE,
+  assessStage, fmt, noOpGate, overlayEntries, parseProposal, ratioOf, TAIL_SAMPLE,
   VOLUME_FLOOR_BYTES_PER_TASK,
 } from "@/contract/rules";
 import { attributionIsAvailable } from "@/contract/rules";
@@ -198,7 +198,7 @@ export function FindingScreen() {
                   lane had necessarily made. */}
               {overlay ? (
                 <div className="flex flex-col gap-1">
-                  {Object.entries(overlay).map(([k, val]) => (
+                  {overlayEntries(overlay).map(([k, val]) => (
                     <Prose key={k} size="xs" className="text-sub">
                       <Mono className="text-dim">{k}</Mono> — {noOpGate(conf, k, val).reason}
                     </Prose>
@@ -209,7 +209,9 @@ export function FindingScreen() {
                   Nothing to gate:{" "}
                   <Mono className="text-body2">apex.fix_verifications</Mono>{" "}
                   {v
-                    ? "carries no readable conf overlay for this finding"
+                    ? proposal?.kind === "empty-overlay"
+                      ? "carries an empty overlay for this finding — nothing proposed"
+                      : "carries no readable conf overlay for this finding"
                     : "holds no row for this finding"}
                   , and the fix below is prose rather than a testable set of keys.
                 </Prose>
