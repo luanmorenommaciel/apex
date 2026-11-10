@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "unique_l1_ids": 23,
+  "status_counts": {
+    "ready": 21,
+    "done": 2
+  },
+  "local_links": 45,
+  "configuration_examples_parsed": 3,
+  "yaml_corrections": 3,
+  "converted_yaml_values_preserved": true,
+  "drafts_preserved": 7,
+  "runtime_executed": false,
+  "errors": []
+}
