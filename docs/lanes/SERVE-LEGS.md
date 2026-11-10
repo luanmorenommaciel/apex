@@ -26,8 +26,8 @@ feature below is judged against one question:
 ## Two structural facts that shape every leg
 
 1. **`create_server()` registers eight `@mcp.tool` and one MCP resource.** The
-   tools are listed above; `apex://runs` is the resource. Apex still defines no
-   prompts.
+   tools are listed above; `apex://runs` is the resource. Two MCP prompts,
+   `diagnose` and `fix`, now exist (P7.12).
 2. **Every tool takes a `job_id` the user must already possess.** `ReadStore` exposes
    `stages` / `findings` / `plan_transitions` / `search` (`ch.py:206-254`) — there is no
    "list runs", no lookup by `app_name` or time. **The lane can diagnose a run but cannot
@@ -197,7 +197,7 @@ verify lane's verdicts exactly the way it reads the engine lane's findings out o
 | F5.1 | `verify_fix(job_id, finding_id?)` → `FixVerdict` | **done** — reads `apex.fix_verifications`; reports the predicted range, any replayed measurement, the safety verdict and the confidence. Read-only. It reports a judgement; it does not make one |
 | F5.2 | Surface confidence provenance | **done** — `suggest_fix` now carries the verification for its finding. A fix the verify lane **refused** leads the warnings and gets **no diff**: proposing a fix verify refused is the worst output this lane can produce |
 | F5.3 | Ranked candidate fixes | still one recipe |
-| F5.4 | MCP **prompts** → `/apex:diagnose`, `/apex:fix` | not started |
+| F5.4 | MCP **prompts** → `diagnose`, `fix` (Claude Code: `/apex:diagnose (MCP)` in the `/` menu, or `/mcp__apex__diagnose`) | **done** (P7.12, SRP-23) — `verify_fix` before `suggest_fix`; the diff is never applied |
 
 **Three distinctions the surface must keep** (collapsing any of them loses the point):
 

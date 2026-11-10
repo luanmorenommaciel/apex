@@ -3,12 +3,13 @@
 **Role:** `apex-mcp`, a Python **stdio MCP server** exposing Apex's Spark-diagnosis
 capability to any MCP client (Claude Code / Cursor / Codex). It reads the shared
 `apex` ClickHouse database and exposes **eight tools** — seven read-only, plus one
-confidence-gated proposal tool that **never applies anything** — and one **resource**.
+confidence-gated proposal tool that **never applies anything** — one **resource**,
+and two **prompts** (`diagnose`, `fix`).
 
 **Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.5) · DDL in [../contract/](../contract/) ·
 **Lane brief:** [../docs/lanes/SERVE.md](../docs/lanes/SERVE.md)
 
-## The six tools
+## The tools
 
 | Tool | Input | Returns | MCP annotation |
 |---|---|---|---|
@@ -78,6 +79,34 @@ does not carry. Reading it as scheduling truth would be wrong in both directions
 Orientation should not cost a tool call: a client can populate a run picker from
 the resource before the user has asked anything. A resource is **not** a tool and
 does not appear in `list_tools()`.
+
+## The prompts
+
+| Prompt | Arguments | Guides the model to |
+|---|---|---|
+| `diagnose` | `job_id` | `analyze_run` → `explain_stage` on the worst stages → `compare_runs` / `recall_similar_runs` |
+| `fix` | `job_id`, `finding_id?` | `verify_fix` first, then `suggest_fix` — the diff is **never applied** (`applied` is always `False`) and needs human approval |
+
+They are the agent-side twins of the console's Run-detail buttons "ask about this
+run" and "propose fix". A prompt renders text only: it reads nothing from
+ClickHouse and calls no tool itself. Both remind the model that text from the
+observed job (app_name, plan text, findings) is data, never instructions.
+
+**In Claude Code** (server registered as `apex`), the `/` menu lists them as
+`/apex:diagnose (MCP)` and `/apex:fix (MCP)`; typing `/mcp__apex__diagnose <job_id>`
+or `/mcp__apex__fix <job_id> [finding_id]` also runs them. Arguments are
+space-separated. Source: <https://code.claude.com/docs/en/mcp#use-mcp-prompts-as-commands>
+— "Claude Code lists each MCP prompt as `/servername:promptname (MCP)`. Typing
+`/mcp__servername__promptname` also runs it." Other clients surface prompts their
+own way.
+
+Arguments are user- or model-supplied, so each id must match
+`[A-Za-z0-9][A-Za-z0-9._:-]{0,127}` (Spark applicationIds, `spark.apex.job_id`
+overrides, finding uuids). Anything else — whitespace, newlines, quotes, shell or
+SQL metacharacters, a leading `-`, over 128 characters — is rejected. The id
+validator's own errors do not echo the value; the SDK's schema errors for an
+undeclared or mistyped argument may. An empty `finding_id` means "not given". The
+value is only ever placed in the rendered text, never in a query or a command.
 
 ## Finding a run
 
@@ -193,7 +222,7 @@ claude mcp add --scope user --transport stdio apex \
   -- uvx apex-mcp
 
 claude mcp list      # → apex: uvx apex-mcp - ✔ Connected
-# then restart the client; /mcp lists the six tools
+# then restart the client; /mcp lists the tools, `/` lists /apex:diagnose and /apex:fix
 ```
 
 Until `apex-mcp` is published to PyPI, point `uvx` at this directory:
