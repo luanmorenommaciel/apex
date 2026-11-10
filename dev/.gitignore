@@ -5,6 +5,10 @@ out/*.log
 *.pyc
 __pycache__/
 
+# r9d overhead/soak artifacts — checkpoint and evidence manifest; a reviewed
+# manifest is committed explicitly with a `!` rule like the calibration JSONs.
+out/r9d-*.json
+
 # calibration run artifacts — regenerate with `make calibrate`.
 # The two runs cited as shipping evidence are committed explicitly.
 out/calibration-*.json

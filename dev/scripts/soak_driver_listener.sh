@@ -24,11 +24,23 @@ SAMPLES="out/driver-listener-soak-${STAMP}-containers.csv"
 [[ -f .env ]] || { echo "dev/.env missing; run: make env-spark41" >&2; exit 2; }
 mkdir -p out
 printf 'timestamp_utc,container,cpu_percent,mem_usage,mem_percent\n' >"$SAMPLES"
+# Containers are DISCOVERED from compose, never named literally: the project
+# name, a scaled worker count or a package overlay all change the names, and a
+# hard-coded `<project>-spark-master-1` would silently sample nothing.
+SAMPLE_CONTAINERS=()
+discover_containers() {
+  local ids
+  ids="$("${COMPOSE[@]}" ps -q spark-master spark-worker 2>/dev/null || true)"
+  SAMPLE_CONTAINERS=()
+  local id
+  for id in $ids; do SAMPLE_CONTAINERS+=("$id"); done
+  SAMPLE_CONTAINERS+=(apex-otel-collector)
+}
 sample() {
   local now
   now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   docker stats --no-stream --format '{{.Name}},{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}' \
-    apex-dev-spark-master-1 apex-dev-spark-worker-1 apex-otel-collector 2>/dev/null \
+    "${SAMPLE_CONTAINERS[@]}" 2>/dev/null \
     | sed "s/^/${now},/" >>"$SAMPLES" || true
 }
 sampler() { while kill -0 "$1" 2>/dev/null; do sample; sleep "$INTERVAL"; done; sample; }
@@ -37,6 +49,8 @@ sampler() { while kill -0 "$1" 2>/dev/null; do sample; sleep "$INTERVAL"; done; 
   echo "apex-otel-collector must be running" >&2; exit 2;
 }
 "${COMPOSE[@]}" up -d --wait --no-recreate >/dev/null
+discover_containers
+(( ${#SAMPLE_CONTAINERS[@]} > 1 )) || { echo "compose ps found no spark-master/spark-worker containers" >&2; exit 2; }
 
 set +e
 SUBMIT_CONF=(--conf spark.driver.host=spark-master --conf spark.driver.bindAddress=0.0.0.0)

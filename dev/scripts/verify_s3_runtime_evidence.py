@@ -11,6 +11,11 @@ import zstandard
 
 SENSITIVE_KEYS = {"fs.s3a.access.key", "fs.s3a.secret.key"}
 REDACTED = "*********(redacted)"
+PROVIDER_KEY = "fs.s3a.aws.credentials.provider"
+
+
+class EvidenceError(ValueError):
+    """The event log lacks a field the manifest must attest from the run itself."""
 
 
 def _read_zstd(path: Path) -> bytes:
@@ -47,15 +52,31 @@ def verify(
         raise ValueError("s3_secret_file_empty")
     spark_properties: dict[str, str] = {}
     hadoop_properties: dict[str, str] = {}
+    spark_version: str | None = None
 
     for line in blob.splitlines():
         if not line:
             continue
         event = json.loads(line)
-        if event.get("Event") != "SparkListenerEnvironmentUpdate":
+        kind = event.get("Event")
+        if kind == "SparkListenerLogStart":
+            version = event.get("Spark Version")
+            if isinstance(version, str) and version.strip():
+                spark_version = version.strip()
+            continue
+        if kind != "SparkListenerEnvironmentUpdate":
             continue
         spark_properties.update(_property_pairs(event, "Spark Properties"))
         hadoop_properties.update(_property_pairs(event, "Hadoop Properties"))
+
+    # The manifest attests what the RUN had, never a literal: both values must
+    # come from the event log or the manifest is not produced.
+    if spark_version is None:
+        raise EvidenceError("spark_version_missing_from_event_log")
+    provider = hadoop_properties.get(PROVIDER_KEY, "").strip()
+    if not provider:
+        raise EvidenceError("credentials_provider_missing_from_event_log")
+    credentials_provider = provider.rsplit(".", 1)[-1]
 
     hadoop_sensitive_values = {
         key: hadoop_properties[key]
@@ -88,8 +109,9 @@ def verify(
         "schema": "apex.r1.s3a_runtime_secrets.v1",
         "status": "passed" if passed else "failed",
         "app_id": app_id,
-        "spark_version": "4.1.2",
-        "credentials_provider": "EnvironmentVariableCredentialsProvider",
+        "spark_version": spark_version,
+        "credentials_provider": credentials_provider,
+        "credentials_provider_class": provider,
         "checks": checks,
         "secret_values_recorded": False,
     }

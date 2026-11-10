@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """R9D orchestrator: JAR on/off overhead A/B + driver/listener soak.
 
-Predeclared in docs/convergence/C54-R9D-OVERHEAD-SOAK-AB-PLANO-2026-07-31.md.
+Predeclared as plan C54 (R9D overhead/soak A/B, 2026-07-31); the surviving
+description of the arms, gates and thresholds is dev/VALIDATION.md.
 
 Metric separation (per C54):
 - PRIMARY: submit-to-exit duration of each spark-submit job, measured by the
@@ -17,7 +18,9 @@ Metric separation (per C54):
 
 - Checkpoints to dev/out/r9d-state.json after every unit; reruns skip
   completed units, so a timed-out run can resume.
-- Writes ONLY ignored local logs plus one sanitized evidence manifest.
+- Writes ONLY ignored local logs plus one sanitized evidence manifest under
+  dev/out (ignored; a reviewed copy is committed explicitly, like the two
+  calibration JSONs).
 - Never prints secrets: .apex/*.env values are only forwarded to subprocesses.
 """
 from __future__ import annotations
@@ -37,7 +40,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 DEV = ROOT / "dev"
 OUT = DEV / "out"
-EVIDENCE = ROOT / "evidence" / "r9d-overhead-soak-2026-07-31.json"
+EVIDENCE = OUT / "r9d-overhead-soak-2026-07-31.json"
 STATE = OUT / "r9d-state.json"
 
 REPS = int(os.environ.get("R9D_REPS", "10"))

@@ -36,6 +36,53 @@ class CanonicalE2EAssertionTests(unittest.TestCase):
     def test_skew_requires_ratio_above_ten(self):
         result = MODULE.evaluate("skew_join", [row(task_duration_p99_ms=101)])
         self.assertEqual(10.1, result["max_p99_p50_ratio"])
+        self.assertEqual("legacy_all_attempts", result["duration_sample_source"])
+
+    def test_skew_uses_successful_task_population_when_available(self):
+        # Legacy all-attempt fields would say 100x (a retried attempt inflated
+        # p99); the retry-safe successful sample says 20x. The contract picks
+        # the successful population.
+        result = MODULE.evaluate(
+            "skew_join",
+            [
+                row(
+                    task_duration_p50_ms=10,
+                    task_duration_p99_ms=1_000,
+                    successful_task_sample_count=100,
+                    successful_task_duration_p50_ms=10,
+                    successful_task_duration_p99_ms=200,
+                )
+            ],
+        )
+        self.assertEqual("successful_tasks", result["duration_sample_source"])
+        self.assertEqual(20.0, result["max_p99_p50_ratio"])
+
+    def test_skew_fails_when_successful_sample_is_flat_even_if_legacy_is_skewed(self):
+        with self.assertRaisesRegex(MODULE.AssertionFailure, "skew_ratio_not_above_10"):
+            MODULE.evaluate(
+                "skew_join",
+                [
+                    row(
+                        task_duration_p50_ms=10,
+                        task_duration_p99_ms=1_000,
+                        successful_task_sample_count=100,
+                        successful_task_duration_p50_ms=10,
+                        successful_task_duration_p99_ms=50,
+                    )
+                ],
+            )
+
+    def test_skew_skips_rows_with_zero_or_non_finite_p50(self):
+        result = MODULE.evaluate(
+            "skew_join",
+            [
+                row(stage_id=1, task_duration_p50_ms=0, task_duration_p99_ms=500),
+                row(stage_id=2, task_duration_p50_ms=float("nan"), task_duration_p99_ms=500),
+                row(stage_id=3, task_duration_p99_ms=120),
+            ],
+        )
+        self.assertEqual(12.0, result["max_p99_p50_ratio"])
+        self.assertEqual(3, result["stage_count"])
 
     def test_tail_outlier_requires_sparse_effective_duration_tail(self):
         result = MODULE.evaluate(

@@ -7,7 +7,10 @@
 #        waiting for every healthcheck green · (4) smoke Delta write/read on MinIO ·
 #        (5) event log landed in MinIO · (6) app visible in the History Server · teardown.
 #
-# Env: KEEP_UP=1 skips the final teardown (for debugging a failed run).
+# Env: KEEP_UP=1       skips the final teardown (for debugging a failed run).
+#      VERIFY_FRESH=1 destroys the MinIO volume before and after (true
+#                     fresh-clone proof). Default keeps the volume, so the
+#                     10M-row dataset and the event logs survive a doctor run.
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 cd "$(dirname "$0")/.."   # → dev/
@@ -22,7 +25,10 @@ step() { printf '\n\033[1m══ %s ══\033[0m\n' "$1"; }
 set -a; . ./.env; set +a
 
 KEEP_UP="${KEEP_UP:-0}"
-teardown() { [ "$KEEP_UP" = "1" ] || { echo; echo "tearing down…"; $COMPOSE down -v --remove-orphans >/dev/null 2>&1; }; }
+VERIFY_FRESH="${VERIFY_FRESH:-0}"
+# Volume removal only on an explicit fresh run; otherwise the named volume stays.
+down_args() { if [ "$VERIFY_FRESH" = "1" ]; then echo "down -v --remove-orphans"; else echo "down --remove-orphans"; fi; }
+teardown() { [ "$KEEP_UP" = "1" ] || { echo; echo "tearing down…"; $COMPOSE $(down_args) >/dev/null 2>&1; }; }
 trap teardown EXIT
 
 # ── 1: version quartet is internally consistent ─────────────────────────────
@@ -52,7 +58,7 @@ done
 
 # ── 3: clean start → build → up, waiting for all healthchecks green ──────────
 step "3/6  clean build + readiness-gated startup"
-$COMPOSE down -v --remove-orphans >/dev/null 2>&1
+$COMPOSE $(down_args) >/dev/null 2>&1
 if $COMPOSE up -d --build --wait --wait-timeout 300 >/dev/null 2>&1; then
   ok "all services reached healthy (compose --wait, dependency-ordered)"
 else
@@ -62,7 +68,7 @@ $COMPOSE ps --format '  {{.Service}}\t{{.State}}\t{{.Status}}'
 
 # ── 4: smoke Delta write/read on MinIO ──────────────────────────────────────
 step "4/6  smoke Delta write/read"
-$COMPOSE exec -T spark-master /opt/spark/bin/spark-submit \
+$COMPOSE exec -T spark-master /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit \
   --master spark://spark-master:7077 --deploy-mode client \
   /opt/apex/scripts/smoke_delta.py >out/smoke.log 2>&1
 if grep -q "APEX_SMOKE ok" out/smoke.log; then

@@ -8,7 +8,14 @@ cd "$(dirname "$0")/.."
 # into host paths before docker.exe receives them. It is harmless on Linux/macOS.
 export MSYS_NO_PATHCONV=1
 
+# Knobs (mirrored 1:1 by e2e_canonical.ps1 parameters):
+#   E2E_CANONICAL_REUSE_DEV=1      reuse the running dev cluster (ps1: -ReuseDev)
+#   E2E_CANONICAL_SKIP_GENERATE=1  keep the existing dataset        (ps1: -SkipGenerate)
+#   E2E_CANONICAL_BUILD=1          rebuild the image before `up`     (ps1: -Build)
+#   APEX_CANONICAL_DRIVER_HOST     advertised driver host            (ps1: -DriverHost)
+#   E2E_CANONICAL_COMPOSE_FILES    extra compose files, space-separated (ps1: -AdditionalComposeFile)
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.c3-otlp.yml)
+for extra in ${E2E_CANONICAL_COMPOSE_FILES:-}; do COMPOSE+=(-f "$extra"); done
 MASTER="spark://spark-master:7077"
 DRIVER_HOST="${APEX_CANONICAL_DRIVER_HOST:-spark-master}"
 REQUESTED_SCENARIOS=("$@")
@@ -28,19 +35,31 @@ for requested in "${REQUESTED_SCENARIOS[@]}"; do
 done
 
 # The collector is owned by collect; the persistent store is owned by infra.
+# Two valid topologies: collect's own container named apex-otel-collector, or
+# infra's collector attached to apex-collect-net under the apex-otel-collector
+# alias (tests/e2e/run.sh step 2). Both resolve to apex-otel-collector:4318
+# from inside the dev containers, which is all the plugin needs.
 docker network inspect apex-collect-net >/dev/null 2>&1 || {
   echo "apex-collect-net is missing - start collect connected to infra first"; exit 2;
 }
-[ "$(docker inspect -f '{{.State.Running}}' apex-otel-collector 2>/dev/null || true)" = "true" ] || {
-  echo "apex-otel-collector is not running - start collect/infra first"; exit 2;
+collector_available() {
+  [ "$(docker inspect -f '{{.State.Running}}' apex-otel-collector 2>/dev/null || true)" = "true" ] && return 0
+  docker network inspect apex-collect-net \
+    -f '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep 'apex-infra-otel-collector' >/dev/null \
+    && [ "$(docker inspect -f '{{.State.Running}}' apex-infra-otel-collector 2>/dev/null || true)" = "true" ]
+}
+collector_available || {
+  echo "no collector reachable as apex-otel-collector on apex-collect-net - start collect, or alias infra's collector (tests/e2e/run.sh step 2)"; exit 2;
 }
 
 export APEX_OTLP_ENDPOINT="http://apex-otel-collector:4318"
 
 submit_job() {
   local scenario="$1" job="$2" log="out/e2e-canonical-${scenario}.log" aqe="$3" fix="$4" safe="$5" driver_mem="$6"
+  # Every submit runs through the S3 wrapper, which exports the compose file
+  # secrets as AWS env credentials; no value ever appears on the command line.
   local -a submit_args=(
-    /opt/spark/bin/spark-submit --master "$MASTER"
+    /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit --master "$MASTER"
     --conf spark.plugins=apex.ApexPlugin
     --conf spark.apex.otlp.endpoint="$APEX_OTLP_ENDPOINT"
     --conf spark.driver.host="$DRIVER_HOST"
@@ -112,10 +131,26 @@ step "1/6 verify shared canonical platform"
 ok "collector and overlay network are available"
 
 step "2/6 start only the dev stack on the C3 overlay"
+# The image is rebuilt only on request (E2E_CANONICAL_BUILD=1). A missing image
+# fails fast with the build hint instead of a silent five-minute compose build.
+image_present() {
+  local image
+  image="$("${COMPOSE[@]}" config --format json 2>/dev/null \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["spark-master"]["image"])' 2>/dev/null)"
+  [ -n "$image" ] && docker image inspect "$image" >/dev/null 2>&1
+}
 if [ "${E2E_CANONICAL_REUSE_DEV:-0}" = "1" ]; then
   ok "reusing already healthy dev cluster"
-elif "${COMPOSE[@]}" up -d --build --wait --wait-timeout 300; then
-  ok "dev cluster healthy"
+elif [ "${E2E_CANONICAL_BUILD:-0}" = "1" ]; then
+  if "${COMPOSE[@]}" build && "${COMPOSE[@]}" up -d --wait --wait-timeout 300; then
+    ok "dev image rebuilt and cluster healthy"
+  else
+    bad "dev cluster did not become healthy after rebuild"
+  fi
+elif ! image_present; then
+  bad "dev image is missing - run 'make build' or set E2E_CANONICAL_BUILD=1"
+elif "${COMPOSE[@]}" up -d --wait --wait-timeout 300; then
+  ok "dev cluster healthy (existing image)"
 else
   bad "dev cluster did not become healthy"
 fi
@@ -124,7 +159,7 @@ step "3/6 generate deterministic skewed data"
 if [ "${E2E_CANONICAL_SKIP_GENERATE:-0}" = "1" ]; then
   ok "reusing existing deterministic data"
 else
-  "${COMPOSE[@]}" exec -T spark-master /opt/spark/bin/spark-submit --master "$MASTER" \
+  "${COMPOSE[@]}" exec -T spark-master /bin/sh /opt/apex/scripts/with-s3-credentials.sh /opt/spark/bin/spark-submit --master "$MASTER" \
     --conf spark.plugins=apex.ApexPlugin --conf spark.apex.otlp.endpoint="$APEX_OTLP_ENDPOINT" \
     --conf spark.driver.host="$DRIVER_HOST" --conf spark.driver.bindAddress=0.0.0.0 \
     /opt/apex/jobs/generate_data.py >out/e2e-canonical-generate-data.log 2>&1
