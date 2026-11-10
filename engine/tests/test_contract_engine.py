@@ -279,6 +279,83 @@ def test_retry_pressure_validation_requires_complete_coherent_integer_counters()
     assert "invalid_retry_measurements" in text_result["issues"]
 
 
+def _retry_finding(details):
+    return Finding(
+        job_id="job-1",
+        stage_id=22,
+        type=FindingType.RETRY_PRESSURE,
+        severity=Severity.INFO,
+        evidence="scheduler retry budget consumed",
+        impact="retry pressure observed",
+        fix="correlate task-end reasons",
+        confidence_score=0.95,
+        detected_by="retry_pressure_watcher",
+        details=details,
+    )
+
+
+def test_retry_pressure_validation_accepts_task_result_lost_shape():
+    """SRP-36: real driver_oom stage 22 (app-20261022191720-0005,
+    app-20261022204209-0004). TaskResultLost attempts end FINISHED, so
+    TaskInfo.failed stays false while countTowardsTaskFailures is true:
+    counted (3) exceeds failed (0). The contract keeps the counters
+    independent, so this is coherent evidence, not a forgery."""
+    result = validate_finding(
+        _retry_finding(
+            {
+                "task_attempt_count": 188,
+                "task_failed_attempt_count": 0,
+                "task_counted_failure_attempt_count": 3,
+            }
+        )
+    )
+    assert result["accepted"] is True, result["issues"]
+
+
+def test_retry_pressure_validation_rejects_failed_above_attempts():
+    result = validate_finding(
+        _retry_finding(
+            {
+                "task_attempt_count": 2,
+                "task_failed_attempt_count": 5,
+                "task_counted_failure_attempt_count": 1,
+            }
+        )
+    )
+    assert result["accepted"] is False
+    assert "incoherent_retry_measurements" in result["issues"]
+
+
+def test_driver_oom_stage_22_reaches_accepted_retry_pressure_through_analyze_events():
+    """The stored stage-22 row from the driver_oom runs, end to end."""
+    event = clean_event(
+        job_id="driver-oom-job",
+        app_id="app-20261022204209-0004",
+        stage_id=22,
+        task_count=200,
+        successful_task_sample_count=188,
+        task_attempt_count=188,
+        task_failed_attempt_count=0,
+        task_counted_failure_attempt_count=3,
+        task_killed_attempt_count=0,
+        task_speculative_attempt_count=0,
+    )
+
+    result = analyze_events([event])
+    assert not any(
+        rejected["finding"].type is FindingType.RETRY_PRESSURE
+        for rejected in result["rejected"]
+    )
+    retry_findings = [f for f in result["findings"] if f.type is FindingType.RETRY_PRESSURE]
+    assert len(retry_findings) == 1
+    assert retry_findings[0].stage_id == 22
+    assert retry_findings[0].details == {
+        "task_attempt_count": 188,
+        "task_failed_attempt_count": 0,
+        "task_counted_failure_attempt_count": 3,
+    }
+
+
 def test_retry_pressure_validation_rejects_zero_counted_failures():
     finding = Finding(
         job_id="job-1",

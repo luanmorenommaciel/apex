@@ -349,6 +349,29 @@ def test_retry_pressure_flags_counted_failures_at_info():
     assert "3" in finding.evidence and "62" in finding.evidence
 
 
+def test_retry_pressure_task_result_lost_shape_passes_validation():
+    """SRP-36: the real driver_oom stage-22 counters. TaskResultLost attempts
+    finish with TaskInfo.failed=false but count towards task failures, so
+    counted (3) > failed (0); the finding must still pass the validator."""
+    finding = retry_pressure.evaluate(
+        stage(
+            stage_id=22,
+            task_count=200,
+            successful_task_sample_count=188,
+            task_attempt_count=188,
+            task_failed_attempt_count=0,
+            task_counted_failure_attempt_count=3,
+            task_killed_attempt_count=0,
+            task_speculative_attempt_count=0,
+        )
+    )
+    assert finding is not None
+    assert finding.stage_id == 22
+    assert "attempts with TaskInfo.failed = 0" in finding.evidence
+    validation = validate_finding(finding)
+    assert validation["accepted"] is True, validation["issues"]
+
+
 def test_retry_pressure_ignores_failures_that_never_counted():
     """B-2: killed/speculative attempts can be > 0 without ever hitting the
     scheduler's budget — that is not retry pressure."""
