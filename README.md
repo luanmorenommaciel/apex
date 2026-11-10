@@ -216,7 +216,7 @@ engine 114 (+2 skipped) · serve 93 · memory 40 (+7 skipped) · verify 105 · g
 apex_35(2.12) 9 · apex_35(2.13) 9 · apex_40 9 · apex_41 9                          =  36 Scala
 ```
 
-Tests needing live ClickHouse **skip** rather than fail, so this is green with no infrastructure running. Each lane is a separate project with its own dependency set, so a single root `pytest` cannot work — the Makefile shells into each lane with `uv`, which also bootstraps a clean clone.
+Tests needing live ClickHouse **skip** rather than fail, so this is green with no infrastructure running. Each Python lane is a separate project with its own dependency set, so a single root `pytest` cannot work. `make test` runs the four Python lanes, the root gate, and the Scala jar locally; it uses `uv` per Python lane and reports a missing local `sbt` as a failure.
 
 | Command | What it proves |
 |---|---|
@@ -225,7 +225,7 @@ Tests needing live ClickHouse **skip** rather than fail, so this is green with n
 | `make verify-ddl` | every ClickHouse table matches its contract DDL *(needs infra)* |
 | `make verify-e2e JOB=<app-id>` | all six lanes agree on one real job *(needs infra)* |
 
-**The six-lane gate has passed live against real Spark jobs** — [committed evidence](docs/e2e/evidence/six-lane-gate-app-20260729180235-0044.json), [full narrative](docs/e2e/CANONICAL_GATE.md). CI runs every lane plus the jar on **both JDK 17 and 21** on every push.
+**The six-lane gate has passed live against real Spark jobs** — [committed evidence](docs/e2e/evidence/six-lane-gate-app-20260729180235-0044.json), [full narrative](docs/e2e/CANONICAL_GATE.md). The default CI runs the front, Python lanes, and repository checks for changes to `main`; Markdown-only changes are ignored. Jar changes run on JDK 21 in PRs, and its JDK 17/21 matrix remains scheduled and manually runnable.
 
 ---
 
