@@ -184,6 +184,9 @@ async def live_mcp_probe(job_id: str) -> dict[str, Any]:
     serve_source = str(ROOT / "serve" / "src")
     current_path = child_env.get("PYTHONPATH", "")
     child_env["PYTHONPATH"] = os.pathsep.join(filter(None, (serve_source, current_path)))
+    # apex-mcp reads ClickHouse only on explicit opt-in (P7.1). This gate
+    # compares against ClickHouse directly, so it opts in unless told otherwise.
+    child_env.setdefault("APEX_MCP_BACKEND", "clickhouse")
     server = StdioServerParameters(command=sys.executable, args=["-c", "from apex_mcp.server import main; main()"], env=child_env)
     async with stdio_client(server) as (reader, writer):
         async with ClientSession(reader, writer) as session:

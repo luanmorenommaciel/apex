@@ -105,6 +105,16 @@ claude mcp list   # → apex: uvx --from … apex-mcp - ✔ Connected
 `uvx` launched with an immediate EOF wrote **0 bytes to stdout**; all
 diagnostics appeared on stderr.
 
+> **Current configuration (P7.1).** The command above is the record of what
+> ran at the time, not current usage. Since P7.1, apex-mcp reads through the
+> Apex API by default and selects ClickHouse only on an explicit opt-in, so the
+> same command today needs `--env APEX_MCP_BACKEND=clickhouse`; with
+> `CLICKHOUSE_*` alone every tool answers `apex_mcp_unconfigured`. To read
+> through the API instead, pass `--env APEX_API_URL=http://127.0.0.1:8099
+> --env APEX_API_TOKEN="${APEX_API_TOKEN}"`, drop the `CLICKHOUSE_*` flags, and
+> **drop `APEX_MCP_BACKEND=clickhouse`** — when set, that variable wins over
+> `APEX_API_URL`. See [README.md](README.md#configuration).
+
 ## Security properties asserted
 
 `tests/test_injection_hardening.py` builds a finding whose `evidence`, `impact`,

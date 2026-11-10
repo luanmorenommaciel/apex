@@ -184,7 +184,17 @@ answer as no history.
 ```bash
 # Claude Code — flags BEFORE the server name, `--` before the spawn command.
 # (Flags placed after the name are silently ignored.)
+#
+# Through the Apex API (the default path — no database credential on the
+# client; the API holds it):
 claude mcp add --scope user --transport stdio apex \
+  --env APEX_API_URL=http://127.0.0.1:8099 \
+  --env APEX_API_TOKEN="${APEX_API_TOKEN}" \
+  -- uvx apex-mcp
+
+# Direct ClickHouse (local development only — an explicit opt-in):
+claude mcp add --scope user --transport stdio apex \
+  --env APEX_MCP_BACKEND=clickhouse \
   --env CLICKHOUSE_HOST=127.0.0.1 \
   --env CLICKHOUSE_PORT=8123 \
   --env CLICKHOUSE_USER=apex \
@@ -208,6 +218,40 @@ session start — the config is committed, the secret is not.
 
 ## Configuration
 
+apex-mcp reads through the **Apex API** (`apex-api`, see [RUNBOOK.md](RUNBOOK.md))
+by default; direct ClickHouse is an explicit opt-in for local development.
+
+| Variable | Default | Notes |
+|---|---|---|
+| `APEX_MCP_BACKEND` | *(unset)* | `api` or `clickhouse`. Unset ⇒ `api` when `APEX_API_URL` is set, otherwise **unconfigured**. `clickhouse` wins over `APEX_API_URL`. |
+| `APEX_API_URL` | *(none)* | The API **root**, e.g. `http://127.0.0.1:8099` (a trailing `/v1` is accepted). http or https; no `user:password@` part, and a port, if given, in 1-65535 — otherwise `apex_api_unconfigured`. Plain http to a non-loopback host logs a warning: the token travels unencrypted. |
+| `APEX_API_TOKEN` | *(none)* | Bearer token; must be one of the API's `APEX_API_TOKENS`. Never logged, never echoed. |
+| `APEX_API_TIMEOUT_S` | `30` | Per-request timeout, seconds. |
+
+With neither `APEX_API_URL` nor `APEX_MCP_BACKEND=clickhouse`, the server still
+starts and lists its tools, and every call answers `apex_mcp_unconfigured: …`
+naming the variables to set. **Setting `CLICKHOUSE_*` alone no longer selects
+ClickHouse.** API failures reach the model as short codes only
+(`apex_api_unavailable`, `apex_api_timeout`, `apex_api_unauthorized`,
+`apex_api_not_found`, `apex_api_invalid_request`, `apex_api_bad_response`,
+`apex_api_failed`) — never the URL, host, port or token; the detail goes to
+stderr. A store error the API reports keeps its code (`clickhouse_unavailable`,
+`clickhouse_access_denied`, …) but never the API's text: the message is fixed
+here and points at the **API process's** `CLICKHOUSE_*`, not this server's; an
+unknown code answers `apex_api_failed`. A `job_id` containing `/` cannot be
+addressed over HTTP and answers `apex_api_not_found`. A negative or non-finite
+`noise_floor_pct` is sent as no floor (the API would refuse it), and the
+answer — including direct mode's "an invalid noise floor was supplied" note —
+matches direct mode exactly.
+
+The HTTP client keeps httpx's default `trust_env`: `HTTP_PROXY` /
+`HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY` and `SSL_CERT_FILE` / `SSL_CERT_DIR`
+in the server's environment apply to API calls — a proxy configured there sees
+the bearer token on plain-http calls.
+
+The `CLICKHOUSE_*` variables below apply to `APEX_MCP_BACKEND=clickhouse` and
+to the API process itself, which always reads ClickHouse directly.
+
 | Variable | Default | Notes |
 |---|---|---|
 | `CLICKHOUSE_HOST` | `127.0.0.1` | infra lane's ClickHouse |
@@ -218,8 +262,9 @@ session start — the config is committed, the secret is not.
 | `CLICKHOUSE_SECURE` | `false` | `true` for TLS |
 | `APEX_LOG_LEVEL` | `INFO` | logs go to **stderr** only |
 
-The connection is built lazily, so the server still starts and lists its tools
-when ClickHouse is down; the failure surfaces per call as a sanitized message.
+Both connections are built lazily, so the server still starts and lists its
+tools when the API or ClickHouse is down; the failure surfaces per call as a
+sanitized message.
 
 ## Run and verify locally
 
