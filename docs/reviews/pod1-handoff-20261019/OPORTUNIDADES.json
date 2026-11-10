@@ -1,0 +1,101 @@
+[
+  {
+    "topic": "Revisar arquitetura API-only",
+    "existing_destination": "#182; S03/S06/S23/NOV-05",
+    "known_and_limit": "PR do Agmar candidata a centralizar SQL no Serve, atualizar badge v0.6 e endurecer a Console. Rótulo Pod1.",
+    "proposed_next_step": "Revisão Front por camadas: data layer, configuração/token, nginx/CSP, loading/cache/abort e acessibilidade; separar intenção de falha comprovada.",
+    "proposed_acceptance": "Parecer por superfície e decisão dos autores/revisores; não prometer aceite dos 65 arquivos por revisão focal.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  },
+  {
+    "topic": "Preservar controles na integração",
+    "existing_destination": "#158/#159/#156",
+    "known_and_limit": "R1: teste front_query removido; R2: _two_doors usa console_statements/QUERIES_TS removidos na 182.",
+    "proposed_next_step": "Escolher ordem de integração e portar os dois usos; manter casos Serve aditivo/legado, empate errado, seleção inválida e cleanup.",
+    "proposed_acceptance": "Controles continuam discriminando erro na árvore escolhida; conflito textual não foi demonstrado.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  },
+  {
+    "topic": "Prova HTTP no navegador",
+    "existing_destination": "#172; S03/S04",
+    "known_and_limit": "Há relatos úteis de HTTP/TestClient/jsdom/curl e stack, cada um com limites. Nenhum equivale automaticamente a browser real via nginx.",
+    "proposed_next_step": "Preparar protocolo com árvore/imagem, DATA_SOURCE=http, token/perfil, rotas e estados; depois observar casos acordados em ambiente autorizado.",
+    "proposed_acceptance": "Caso mostra request por nginx, resposta e estado visual; vazio/erro/indisponibilidade não viram zero medido ou fallback silencioso.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  },
+  {
+    "topic": "Custódia do token e exposição",
+    "existing_destination": "#171; S06/DEC-08",
+    "known_and_limit": "Na182, config.js leva apiToken ao browser; não constitui identidade por usuário.",
+    "proposed_next_step": "Comparar perfis local, compartilhado e protegido por proxy; escolher exposição de docs/OpenAPI e custódia sem registrar credenciais nos documentos.",
+    "proposed_acceptance": "Decisão por perfil e plano de verificação; não inventar requisito universal de autenticação nova para todo estudo.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  },
+  {
+    "topic": "Fronteira e sequência do Ask",
+    "existing_destination": "#122; X01/S07",
+    "known_and_limit": "API da 129 é base integrada; fluxo Ask completo e contrato não estão entregues por consequência.",
+    "proposed_next_step": "Reutilizar comparação API existente/fachada/adiamento do Pod3; time registrar proceed/defer/reject, escopo e responsáveis.",
+    "proposed_acceptance": "Contrato e sequência da fatia escolhida, sem declarar BFF obrigatório ou serviço novo por antecipação.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  },
+  {
+    "topic": "Atribuição e piso de ruído",
+    "existing_destination": "#117/#115; F02/F04/F09/F10/F11/F17/X02",
+    "known_and_limit": "Resolver offline 126 existe; consumer Front ainda não demonstra atribuição pública. Piso/unidade/igualdade/escritor são decisões diferentes.",
+    "proposed_next_step": "Escolher um consumidor e uma fatia de contrato; preservar ausência/zero, direção e proveniência; alinhar produtor/storage/Serve antes de habilitar indicador no Front.",
+    "proposed_acceptance": "Critério observável por identidade e unidade; não remover todos os sentinelas nem exigir três PRs como regra.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  },
+  {
+    "topic": "TAIL_OUTLIER compreensível",
+    "existing_destination": "#166; F13/F16/F18/S17",
+    "known_and_limit": "RETRY_PRESSURE foi integrado; tipo aberto não significa perda silenciosa por faltar enum.",
+    "proposed_next_step": "Mostrar finding de cauda sem afirmar causa skew; testar consumidor concreto e distinguir explicação, recipe e veredito.",
+    "proposed_acceptance": "Caso TAIL_OUTLIER e tipo desconhecido com narrativa honesta; não reabrir 137 nem misturar higiene do gate 123.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  },
+  {
+    "topic": "Predictor: trabalho medido e estimado",
+    "existing_destination": "#179; L10/F20/F21",
+    "known_and_limit": "Coluna executor_run_time_ms existe; isso não prova valor útil em todo registro. #142/#145 são evolução Verify compartilhada.",
+    "proposed_next_step": "Separar correção de comentário e estudo do modelo W; coordenar guarda literal da matriz quando mexer em texto fixado por teste.",
+    "proposed_acceptance": "Comparar medido/estimado/ausente e fallback com unidade explícita; sem trocar fórmula por parecer documental.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  },
+  {
+    "topic": "Matriz e contrato atuais",
+    "existing_destination": "#165/#180; NOV-05/L13",
+    "known_and_limit": "Contrato v0.6 e badge 0.5 na main;182 oferece badge candidato. Matriz registra corte histórico antigo.",
+    "proposed_next_step": "Atualizar só superfícies atuais, mantendo histórico e teste junto; não redesenhar semântica da telemetria por divergência textual.",
+    "proposed_acceptance": "Mapa produtor→transporte→consumidor e status declared/observed/runtime_unproven, com SHA.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  },
+  {
+    "topic": "Topologia e proveniência visual",
+    "existing_destination": "#108, interface #106; F15",
+    "known_and_limit": "Estudo existente; implementação de grafo MCP não é predecessor universal de estudo visual.",
+    "proposed_next_step": "Protótipo documental ou projeção estática com declared/observed/derived, sem pedir acesso privilegiado só para explorar.",
+    "proposed_acceptance": "Pergunta de uso e pequena demonstração conceitual; nenhuma entrega de grafo runtime inferida.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  },
+  {
+    "topic": "Regra SQL de recusas",
+    "existing_destination": "#182; interface Serve",
+    "known_and_limit": "Corpo relata seis stages sintéticos e refused_count=3 em CH24.8; TS replica booleanos e teste Python fixa fragmentos.",
+    "proposed_next_step": "Conferir primeiro os artefatos da execução live já relatada; propor fixture/oráculo adicional somente para eventual garantia que o time considere necessária.",
+    "proposed_acceptance": "Execução da CTE com resultado independente é prova distinta de igualdade entre portas da mesma query.",
+    "owner": "a confirmar",
+    "new_issue_created": false
+  }
+]
