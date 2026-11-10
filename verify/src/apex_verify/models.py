@@ -35,10 +35,10 @@ CONFIDENCE_MEDIUM_MAX = 0.85
 # 0.74 lands mid-MEDIUM. A refusal is not subject to this cap.
 PREDICTED_IMPROVEMENT_SCORE_CAP = 0.74
 
-# The work total is estimated from (p50, p99, task_count) because
-# `executor_run_time_ms` exists in engine's in-memory StageEvent but is NOT a
-# column in apex.spark_events (verified against system.columns). Any prediction
-# resting on the work estimate is therefore bracketed, never point-valued.
+# The work total is estimated from (p50, p99, task_count). Migration 039 adds
+# executor_run_time_ms to spark_events, but StageObservation does not consume
+# that field. Column availability alone does not validate it as this model's W.
+# Predictions resting on the work estimate remain bracketed, not point-valued.
 WORK_IS_ESTIMATED = True
 
 

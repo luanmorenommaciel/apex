@@ -163,7 +163,19 @@ def _validate(manifest: dict[str, Any]) -> None:
         "infra/sql/039_executor_runtime_additive.sql",
         "engine/src/apex_engine/clickhouse.py",
     ]
-    assert "NOT a\n# column in apex.spark_events" in _text("verify/src/apex_verify/models.py")
+    # The manifest preserves the historical claim; current code must not be
+    # forced to retain that stale sentence. Verify the still-estimated model
+    # independently of the wording used to explain it.
+    model = ast.parse(_text("verify/src/apex_verify/models.py"))
+    estimated = next(node for node in model.body if isinstance(node, ast.Assign)
+                     and any(isinstance(t, ast.Name) and t.id == "WORK_IS_ESTIMATED"
+                             for t in node.targets))
+    assert isinstance(estimated.value, ast.Constant) and estimated.value.value is True
+    observation = next(node for node in model.body
+                       if isinstance(node, ast.ClassDef) and node.name == "StageObservation")
+    fields = {node.target.id for node in observation.body
+              if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)}
+    assert "executor_run_time_ms" not in fields
     for source in runtime_drift["contradicted_by"]:
         assert "executor_run_time_ms" in _text(source)
 

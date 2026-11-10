@@ -74,9 +74,10 @@ Rearranged, this **is** contract rule 1: `tail-bound ⟺ p99/p50 > (n−1)/(slot
 cancels; there is no tunable constant. A regression model would have needed training data and
 could not have produced a *provable* zero.
 
-`W` is not measured — `executor_run_time_ms` is **not** a column in `apex.spark_events` (verified
-against `system.columns`) — so `W` is **bracketed** between two task-distribution models and the
-prediction is an **interval**. Agreement at both ends is what makes a verdict quotable.
+`W` is estimated from stage quantiles and task count. Migration `039` adds
+`executor_run_time_ms` to `apex.spark_events`, but the current `StageObservation` and
+predictor do not consume it. The column's presence alone does not validate it as measured W.
+`W` remains **bracketed** between two task-distribution models and the prediction is an **interval**. Agreement at both ends is what makes a verdict quotable.
 
 ### The safety gate, derived from OptiSpark with two corrections
 
