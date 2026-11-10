@@ -20,6 +20,9 @@
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
+  file_storage:                        # crash-safe sending queue (at-least-once), same as collect
+    directory: /var/lib/otelcol/queue  # named volume, chowned to the collector uid by queue-init
+    create_directory: true
 
 receivers:
   otlp:
@@ -55,7 +58,7 @@ exporters:
     endpoint: tcp://apex-infra-clickhouse:9000?compress=lz4&async_insert=0&deduplicate_blocks_in_dependent_materialized_views=1
     database: apex
     username: ${env:CLICKHOUSE_USER}
-    password: ${env:CLICKHOUSE_PASSWORD}
+    password: ${file:/run/secrets/clickhouse_password}   # compose secret; a missing file is a hard config error, never an empty password
     ttl: 720h                            # cosmetic under create_schema:false — real TTL is in the DDL
     create_schema: false                 # infra owns partitioning/TTL; no collector races DDL
     traces_table_name: otel_traces       # reshape MVs read this table
@@ -64,6 +67,7 @@ exporters:
       enabled: true
       num_consumers: 10
       queue_size: 10000
+      storage: file_storage              # persist the queue to disk -> survives a restart mid-outage
     retry_on_failure:
       enabled: true
       initial_interval: 5s
@@ -71,7 +75,7 @@ exporters:
       max_elapsed_time: 300s
 
 service:
-  extensions: [health_check]
+  extensions: [health_check, file_storage]
   pipelines:
     traces:
       receivers: [otlp]

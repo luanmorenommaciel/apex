@@ -1,13 +1,30 @@
 # Apex infra · the REAL, persistent ClickStack — the canonical data platform the whole
-# pipeline stores into and visualizes from. Four services:
+# pipeline stores into and visualizes from. Four long-running services and two one-shots:
 #
 #   otel-collector ──native:9000──> clickhouse <──HTTP:8123── hyperdx(app) ──state──> mongodb
 #        ▲ OTLP :4318                (apex DB, contract schema + rollups + reshape MVs)
-#        │
+#        │                                ▲ ddl-migrate (re-applies sql/ on every up)
 #   jar / collect  (a POSTed apex.stage span -> otel_traces -> MV -> spark_events)
+#   queue-init (chowns the collector's persistent queue volume once)
 #
 # MongoDB is REQUIRED: HyperDX stores dashboards/sources/connections/users in Mongo, NOT in
 # ClickHouse. The all-in-one image loses that on restart — this compose stack persists it.
+#
+# IMAGES ARE PINNED BY DIGEST (tag@sha256). A tag is a moving pointer; the digest is the
+# build that was tested. Bump = change the tag AND the digest together (.env.example says how).
+# Every long-running service restarts unless-stopped and carries a memory limit, so the
+# OOM killer the root README warns about hits the one container that overgrew, not all four.
+#
+# NO DEFAULT CREDENTIALS, AND NO ADMIN PASSWORD IN ANY CONTAINER ENVIRONMENT.
+# CLICKHOUSE_PASSWORD and HYPERDX_API_KEY come from .env; scripts/preflight.sh (run by
+# `make up`) refuses placeholders and renders the gitignored runtime files this compose
+# consumes: secrets/clickhouse_password (ClickHouse reads it via CLICKHOUSE_PASSWORD_FILE,
+# the collector via ${file:...}), .local/users.d/apex-hyperdx.xml (a READ-ONLY user
+# apex_hdx, password stored as sha256) and .local/hyperdx.env (HyperDX's connection as
+# that user). `docker inspect` of no apex-infra-* container shows the admin password.
+# LOOPBACK BY DEFAULT. Every published port binds to ${BIND_HOST:-127.0.0.1}; other lanes
+# reach these services over the Docker network by container name, never via a host port,
+# so nothing on the LAN sees a no-password console user or an admin ClickHouse.
 #
 # Host ports are parametrized via .env (CONTRACT Port Map defaults live in .env.example).
 # On the shared dev host the stray oteru-collector squats 8123/9000/4318, so the local .env
@@ -36,25 +53,36 @@ name: apex-infra
 services:
   # ── ClickHouse: canonical store (contract schema applied on first init from ./sql) ──
   clickhouse:
-    image: clickhouse/clickhouse-server:24.8
+    image: clickhouse/clickhouse-server:24.8.14.39@sha256:1ffa82edee000a42c09313bd9f1293d94c570aee74babc1b3ca9983a35fa597b
     container_name: apex-infra-clickhouse
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${CLICKHOUSE_MEM_LIMIT:-4g}
     environment:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-apex_local_dev}
+      CLICKHOUSE_PASSWORD_FILE: /run/secrets/clickhouse_password   # never CLICKHOUSE_PASSWORD: it would show in docker inspect
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-apex}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    secrets:
+      - clickhouse_password
     ports:
-      - "${CLICKHOUSE_HTTP_HOST_PORT:-8123}:8123"     # HTTP  (human/tool + HyperDX reach-in)
-      - "${CLICKHOUSE_NATIVE_HOST_PORT:-9000}:9000"   # native TCP (collector + reach-in)
+      - "${BIND_HOST:-127.0.0.1}:${CLICKHOUSE_HTTP_HOST_PORT:-8123}:8123"     # HTTP  (human/tool + HyperDX reach-in)
+      - "${BIND_HOST:-127.0.0.1}:${CLICKHOUSE_NATIVE_HOST_PORT:-9000}:9000"   # native TCP (collector + reach-in)
     ulimits:
       nofile: { soft: 262144, hard: 262144 }
     volumes:
       - ch-data:/var/lib/clickhouse
-      # Contract DDL auto-applied on first boot in filename order: db, contract tables,
-      # rollup+MV, skew, otel landing table, plan_transitions, reshape MVs.
+      # sql/ auto-applied on FIRST boot only (filename order); ddl-migrate re-applies it on every up.
       - ./sql:/docker-entrypoint-initdb.d:ro
+      # apex_hdx (HyperDX's read-only user), rendered by scripts/preflight.sh with a sha256 hash
+      - ./.local/users.d/apex-hyperdx.xml:/etc/clickhouse-server/users.d/apex-hyperdx.xml:ro
+      # backups disk for BACKUP/RESTORE (scripts/backup.sh, scripts/restore.sh)
+      - ./config.d/backups.xml:/etc/clickhouse-server/config.d/backups.xml:ro
+      - ch-backups:/var/lib/clickhouse/backups
     healthcheck:
-      test: ["CMD", "clickhouse-client", "--user", "${CLICKHOUSE_USER:-apex}", "--password", "${CLICKHOUSE_PASSWORD:-apex_local_dev}", "--query", "SELECT 1"]
+      test: ["CMD-SHELL", "clickhouse-client --user \"${CLICKHOUSE_USER:-apex}\" --password \"$$(cat /run/secrets/clickhouse_password)\" --query 'SELECT 1'"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -66,16 +94,56 @@ services:
         # never uses it — see the shared-network alias rule at the top of this file.
         aliases: [apex-infra-clickhouse]
 
+  # ── DDL migrate: one-shot, EVERY `up`. initdb.d only runs on a fresh volume; this applies
+  # sql/ (idempotent) after clickhouse is healthy and before the consumers start, so a
+  # running store converges on the repo's DDL without a volume wipe or a remembered command.
+  ddl-migrate:
+    image: clickhouse/clickhouse-server:24.8.14.39@sha256:1ffa82edee000a42c09313bd9f1293d94c570aee74babc1b3ca9983a35fa597b   # same image: ships clickhouse-client
+    container_name: apex-infra-ddl-migrate
+    restart: "no"   # one-shot: hyperdx and otel-collector wait for service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    entrypoint: ["/bin/bash", "/apply_ddl.sh"]
+    environment:
+      APPLY_DDL_MODE: container
+      CLICKHOUSE_HOST: apex-infra-clickhouse
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
+      INFRA_SECRETS_DIR: /run/secrets
+      INFRA_ENV_FILE: /nonexistent
+      SQL_DIR: /sql
+    secrets:
+      - clickhouse_password
+    volumes:
+      - ./sql:/sql:ro
+      - ./scripts/apply_ddl.sh:/apply_ddl.sh:ro
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      apex:
+        aliases: [apex-infra-ddl-migrate]
+
   # ── MongoDB: HyperDX application state (dashboards/sources/connections/users) ──
   mongodb:
-    image: mongo:5.0.14-focal
+    # 5.0 line: what HyperDX's own compose ships (mongo:5.0.32-focal as of 2.43). A major
+    # upgrade on a live volume is a separate decision, not a pin bump.
+    image: mongo:5.0.32-focal@sha256:3b6c281e1c0825d34b28e503b0bc97174132a283eeb79d402bd3893944cf9fd7
     container_name: apex-infra-mongodb
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${MONGO_MEM_LIMIT:-1g}
     ports:
-      - "${MONGO_HOST_PORT:-27017}:27017"
+      - "${BIND_HOST:-127.0.0.1}:${MONGO_HOST_PORT:-27017}:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      # mongosh exits 0 whatever ping printed; grep for a lone `1` is what makes a false
+      # ping, a hung server or a connection error fail the check instead of passing it.
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\" | grep -qx 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -94,17 +162,24 @@ services:
     # HyperDX v2 app image (the one the official v2 compose uses, supports MONGO_URI +
     # DEFAULT_CONNECTIONS/DEFAULT_SOURCES) is docker.hyperdx.io/hyperdx/hyperdx, mirrored on
     # Docker Hub as hyperdx/hyperdx. Override via HDX_IMAGE / HDX_IMAGE_VERSION in .env.
-    image: ${HDX_IMAGE:-hyperdx/hyperdx}:${HDX_IMAGE_VERSION:-2}
+    # Tag and digest move together: override HDX_IMAGE_VERSION only with HDX_IMAGE_DIGEST.
+    image: ${HDX_IMAGE:-hyperdx/hyperdx}:${HDX_IMAGE_VERSION:-2.43.1}@${HDX_IMAGE_DIGEST:-sha256:a9db02b18730846726979a8a948f8439b21988f46a319a9114eae62e136414d9}
     container_name: apex-infra-hyperdx
+    deploy:
+      resources:
+        limits:
+          memory: ${HYPERDX_MEM_LIMIT:-2g}
     depends_on:
       clickhouse:
         condition: service_healthy
+      ddl-migrate:
+        condition: service_completed_successfully   # the schema is current before the UI reads it
       mongodb:
-        condition: service_started
+        condition: service_healthy   # it stores every dashboard/source/user there; started != answering
     ports:
-      - "${HYPERDX_APP_HOST_PORT:-8090}:${HYPERDX_APP_PORT:-8090}"     # UI  (Port Map: 8090, NOT 8080)
-      - "${HYPERDX_API_HOST_PORT:-8000}:${HYPERDX_API_PORT:-8000}"     # API (browser -> NEXT_PUBLIC_SERVER_URL)
-      - "${HYPERDX_OPAMP_HOST_PORT:-4320}:${HYPERDX_OPAMP_PORT:-4320}" # OpAMP (Port Map: 4320)
+      - "${BIND_HOST:-127.0.0.1}:${HYPERDX_APP_HOST_PORT:-8090}:${HYPERDX_APP_PORT:-8090}"     # UI  (Port Map: 8090, NOT 8080)
+      - "${BIND_HOST:-127.0.0.1}:${HYPERDX_API_HOST_PORT:-8000}:${HYPERDX_API_PORT:-8000}"     # API (browser -> NEXT_PUBLIC_SERVER_URL)
+      - "${BIND_HOST:-127.0.0.1}:${HYPERDX_OPAMP_HOST_PORT:-4320}:${HYPERDX_OPAMP_PORT:-4320}" # OpAMP (Port Map: 4320)
     environment:
       FRONTEND_URL: http://localhost:${HYPERDX_APP_PORT:-8090}
       HYPERDX_API_KEY: ${HYPERDX_API_KEY:?set HYPERDX_API_KEY in .env}
@@ -113,34 +188,68 @@ services:
       HYPERDX_APP_URL: http://localhost
       HYPERDX_LOG_LEVEL: ${HYPERDX_LOG_LEVEL:-info}
       MONGO_URI: mongodb://apex-infra-mongodb:27017/hyperdx
-      NEXT_PUBLIC_SERVER_URL: http://127.0.0.1:${HYPERDX_API_PORT:-8000}
+      NEXT_PUBLIC_SERVER_URL: http://127.0.0.1:${HYPERDX_API_HOST_PORT:-8000}   # what the BROWSER dials: the host port
       OPAMP_PORT: ${HYPERDX_OPAMP_PORT:-4320}
       OTEL_SERVICE_NAME: hdx-oss-api
       USAGE_STATS_ENABLED: ${USAGE_STATS_ENABLED:-false}
-      DEFAULT_CONNECTIONS: '[{"name":"Apex ClickHouse","host":"http://apex-infra-clickhouse:8123","username":"${CLICKHOUSE_USER:-apex}","password":"${CLICKHOUSE_PASSWORD:-apex_local_dev}"}]'
       DEFAULT_SOURCES: '[{"from":{"databaseName":"apex","tableName":"spark_events"},"kind":"log","name":"Spark Events","timestampValueExpression":"ts","displayedTimestampValueExpression":"ts","implicitColumnExpression":"plan_json","serviceNameExpression":"app_id","bodyExpression":"plan_json","eventAttributesExpression":"attributes","resourceAttributesExpression":"attributes","defaultTableSelectExpression":"ts,app_id,job_id,stage_id,task_duration_p50_ms,task_duration_p99_ms","severityTextExpression":"","traceIdExpression":"job_id","spanIdExpression":"","connection":"Apex ClickHouse"}]'
+      # DEFAULT_CONNECTIONS lives in .local/hyperdx.env (rendered by preflight): the
+      # connection is the read-only apex_hdx user, so this container never holds the
+      # admin password. required:false keeps `docker compose config` usable before preflight.
+    env_file:
+      - path: ./.local/hyperdx.env
+        required: false
     restart: unless-stopped
     networks:
       apex:
         aliases: [apex-infra-hyperdx]
 
+  # ── One-shot: a fresh named volume is root-owned, but the contrib collector runs as uid 10001
+  # and must write the file_storage queue. Chown once, then the collector starts non-root
+  # (same pattern as collect/docker-compose.yml).
+  queue-init:
+    image: busybox:1.36@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+    container_name: apex-infra-queue-init
+    restart: "no"   # one-shot: otel-collector waits for service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+    command: ["sh", "-c", "mkdir -p /var/lib/otelcol/queue && chown -R 10001:10001 /var/lib/otelcol"]
+    volumes:
+      - otel-queue:/var/lib/otelcol/queue
+    networks:
+      apex:
+        aliases: [apex-infra-queue-init]
+
   # ── OTel Collector: OTLP ingestion -> apex.otel_traces (contrib; interop-identical to collect) ──
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.156.0
+    image: otel/opentelemetry-collector-contrib:0.156.0@sha256:125bdbeb7590cc1952c5b3430ecf14063568980c2c93d5b38676cc0446ed8108
     container_name: apex-infra-otel-collector
+    deploy:
+      resources:
+        limits:
+          memory: ${COLLECTOR_MEM_LIMIT:-2560m}   # memory_limiter caps the pipeline at 2048 MiB (+spike 512)
     command: ["--config", "/etc/otelcol-contrib/config.yaml"]
     environment:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-apex}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-apex_local_dev}
+      # no CLICKHOUSE_PASSWORD here: the config reads ${file:/run/secrets/clickhouse_password}
+    secrets:
+      - clickhouse_password
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - otel-queue:/var/lib/otelcol/queue           # crash-safe sending queue (file_storage)
     ports:
-      - "${OTLP_HTTP_HOST_PORT:-4318}:4318"           # OTLP/HTTP receiver (jar/collect -> infra)
-      - "${OTLP_GRPC_HOST_PORT:-4317}:4317"           # OTLP/gRPC receiver (optional)
-      - "${COLLECTOR_HEALTH_HOST_PORT:-13133}:13133"  # health_check extension
+      - "${BIND_HOST:-127.0.0.1}:${OTLP_HTTP_HOST_PORT:-4318}:4318"           # OTLP/HTTP receiver (jar/collect -> infra)
+      - "${BIND_HOST:-127.0.0.1}:${OTLP_GRPC_HOST_PORT:-4317}:4317"           # OTLP/gRPC receiver (optional)
+      - "${BIND_HOST:-127.0.0.1}:${COLLECTOR_HEALTH_HOST_PORT:-13133}:13133"  # health_check extension
     depends_on:
       clickhouse:
         condition: service_healthy
+      ddl-migrate:
+        condition: service_completed_successfully   # never insert before the MVs and their targets exist
+      queue-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       apex:
@@ -152,4 +261,10 @@ networks:
 
 volumes:
   ch-data:
+  ch-backups:
   mongo-data:
+  otel-queue:
+
+secrets:
+  clickhouse_password:
+    file: ./secrets/clickhouse_password   # rendered from .env by scripts/preflight.sh; gitignored

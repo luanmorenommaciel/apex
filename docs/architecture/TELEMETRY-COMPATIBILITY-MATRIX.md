@@ -80,7 +80,8 @@ O teste lê este JSON e compara seus fatos com arquivos independentes da base.
       "infra/sql/037_task_shuffle_volume_additive.sql",
       "infra/sql/038_scheduler_failure_semantics_additive.sql",
       "infra/sql/039_executor_runtime_additive.sql"
-    ]
+    ],
+    "resync": "infra/sql/040_mv_spark_events_resync.sql"
   },
   "drifts": [
     {
@@ -117,7 +118,8 @@ Não é correto atribuir todo o reshape a `020`.
 | --- | --- |
 | `infra/sql/020_mv_reshape.sql` | Shape inicial: cria `apex.mv_spark_events` para `apex.spark_events` e rota traces de stage. |
 | `infra/sql/021_mv_job_conf.sql` | Cadeia separada para `apex.job_conf`. |
-| `infra/sql/034_stage_duration_max_additive.sql` até `infra/sql/039_executor_runtime_additive.sql` | Evolução cumulativa v0.5: cada migração atualiza `apex.mv_spark_events`; `039` acrescenta `executor_run_time_ms`. |
+| `infra/sql/034_stage_duration_max_additive.sql` até `infra/sql/039_executor_runtime_additive.sql` | Evolução cumulativa v0.5 em volumes pré-existentes: cada migração só faz `ADD COLUMN`; `039` acrescenta `executor_run_time_ms`. |
+| `infra/sql/040_mv_spark_events_resync.sql` | A ÚNICA substituição da query de `apex.mv_spark_events` (`MODIFY QUERY`) para volumes pré-existentes; byte-igual ao `020` e ao `collect/ddl/30` (`tests/infra/test_mv_single_query.py`). |
 
 ## Contrato declarado versus implementação observada
 

@@ -11,6 +11,41 @@ are corrections to Apex's own earlier claims.
 
 ## [Unreleased]
 
+### Changed — infra lane hardening (operators: read this before the next `up`)
+
+- **Credentials are required, never defaulted.** `infra/.env` must set `CLICKHOUSE_PASSWORD`,
+  `HYPERDX_API_KEY` (64 hex), `HYPERDX_ADMIN_EMAIL` and `HYPERDX_ADMIN_PASSWORD`; `apex_local_dev`
+  and `change-me*` are refused. Start the stack with **`make -C infra up`**: it runs
+  `scripts/preflight.sh` (renders the gitignored `infra/secrets/` and `infra/.local/`), then
+  `docker compose up -d --wait`, then `scripts/hyperdx_bootstrap.sh` (registers HyperDX's first
+  user through the API, which seeds the connection and the Spark Events source).
+- **The admin password is a secret file.** ClickHouse reads `CLICKHOUSE_PASSWORD_FILE`, the
+  collector `${file:...}`; HyperDX connects as the read-only `apex_hdx` user. No `apex-infra-*`
+  container has the admin password in its environment. The console's `apex_ro` is granted the
+  seven tables it queries instead of `apex.*`.
+- **Host ports bind to `127.0.0.1`** unless `BIND_HOST` says otherwise. Other lanes already
+  reach infra by container name over the Docker network.
+- **The collect C3 overlay needs `APEX_INFRA_CLICKHOUSE_PASSWORD`** (infra's password); it no
+  longer inherits collect's throwaway default, which silently dropped telemetry against the
+  canonical store. The root README reads it from `infra/secrets/clickhouse_password`.
+- **`verify.sh` and `tests/e2e/run.sh` need `APEX_CLUSTER_SLOTS`** (the cluster width; the dev
+  lab is 8): the canonical skew SQL moved to `infra/sql/050_skew.sql` and judges a stage by
+  CONTRACT.md rule 1, `p99/p50 > (n_tasks−1)/(slots−1)`, on the successful-task population —
+  the fixed 5×/4× thresholds are gone. Unknown width ⇒ NULL verdict, never a guess.
+- **Retention changed.** Raw `otel_traces`/`otel_logs` keep **14 days** (down from 90; every span
+  is reshaped into the contract tables, which keep 90); `findings` and `fix_verifications` gain a
+  365-day TTL. `infra/sql/042` applies this to existing volumes on the next `up`.
+- **Schema converges on every `up`.** A one-shot `ddl-migrate` service re-applies `infra/sql/`
+  after ClickHouse is healthy and before HyperDX and the collector start. `make verify-ddl` now
+  compares every table **and** MV clause by clause (engine, keys, TTL, settings, MV query) from
+  `infra/scripts/ddl_manifest.txt`; a new `infra` CI job boots a fresh store from `sql/`.
+- **Images are pinned by digest** (ClickHouse 24.8.14.39, Mongo 5.0.32, HyperDX 2.43.1,
+  collector 0.156.0); every service restarts `unless-stopped` with a memory limit; HyperDX waits
+  for a *healthy* Mongo; the infra collector's queue persists on a volume (`file_storage`).
+- **Backups:** `make -C infra backup` / `make -C infra restore FILE=... INTO=<db>`.
+- The rollup `spark_jobs_1m` carries every contract v0.5 column (`quantilesIf__successful_*`,
+  `sum__task_*_count`, …); `infra/sql/041` adds them on existing volumes.
+
 ### Changed
 
 - The frozen contract has advanced through additive v0.5 and v0.6 extensions.

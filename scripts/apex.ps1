@@ -61,6 +61,28 @@ function New-SecureHex {
     return [Convert]::ToHexString($buffer).ToLowerInvariant()
 }
 
+function Get-InfraDdlObjects {
+    # Object names from infra/scripts/ddl_manifest.txt (column 1, `apex.` stripped).
+    $manifest = Join-Path $script:Root 'infra/scripts/ddl_manifest.txt'
+    return @(Get-Content -LiteralPath $manifest |
+        Where-Object { $_ -notmatch '^\s*#' -and $_ -match '\S' } |
+        ForEach-Object { (($_ -split '\s+')[0]) -replace '^apex\.', '' })
+}
+
+function Get-ExistingInfraPassword {
+    # The admin password lives in a secret FILE (rendered by infra/scripts/preflight.sh),
+    # never in the container environment. Adopt the one an existing stack already uses.
+    $hostFile = Join-Path $script:Root 'infra/secrets/clickhouse_password'
+    if (Test-Path -LiteralPath $hostFile) {
+        return (Get-Content -Raw -LiteralPath $hostFile).Trim()
+    }
+    $value = & docker exec apex-infra-clickhouse cat /run/secrets/clickhouse_password 2>$null
+    if ($LASTEXITCODE -eq 0 -and $value) {
+        return "$value".Trim()
+    }
+    return $null
+}
+
 function Get-ExistingContainerEnvValue {
     param(
         [string]$Container,
@@ -164,8 +186,7 @@ function Initialize-RuntimeConfiguration {
     # An existing named volume was initialized with the container credential.
     # Adopt it silently on first package bootstrap instead of rotating it behind
     # ClickHouse's back. Fresh installations always receive a random secret.
-    $clickHousePassword = Get-ExistingContainerEnvValue `
-        -Container 'apex-infra-clickhouse' -Name 'CLICKHOUSE_PASSWORD'
+    $clickHousePassword = Get-ExistingInfraPassword
     if ([string]::IsNullOrWhiteSpace($clickHousePassword)) {
         $clickHousePassword = New-SecureHex
     }
@@ -175,6 +196,8 @@ function Initialize-RuntimeConfiguration {
         -Values @{
             CLICKHOUSE_PASSWORD = $clickHousePassword
             HYPERDX_API_KEY = New-SecureHex
+            HYPERDX_ADMIN_EMAIL = 'apex-admin@localhost.invalid'
+            HYPERDX_ADMIN_PASSWORD = "Apex-$(New-SecureHex -Bytes 8)-Ok!"   # HyperDX policy: upper+lower+special
         }
 
     $clickHousePassword = Get-EnvValue -Path $script:InfraEnv -Name 'CLICKHOUSE_PASSWORD'
@@ -183,6 +206,7 @@ function Initialize-RuntimeConfiguration {
         -Example (Join-Path $script:Root 'collect/.env.example') `
         -Values @{
             CLICKHOUSE_PASSWORD = $clickHousePassword
+            APEX_INFRA_CLICKHOUSE_PASSWORD = $clickHousePassword   # the C3 overlay refuses collect's default
             REDACTION_SECRET_KEY = New-SecureHex
         }
 
@@ -484,23 +508,29 @@ function Invoke-Doctor {
         throw "Expected Spark 4.0.1, configured $sparkVersion."
     }
 
+    # Every object infra/scripts/ddl_manifest.txt names (tables AND materialized views) —
+    # the same list verify.sh, verify_ddl.py and tests/e2e/run.sh use; never a literal here.
+    $expectedObjects = Get-InfraDdlObjects
+    $nameList = ($expectedObjects | ForEach-Object { "'$_'" }) -join ', '
     $schemaSql = @"
 SELECT count()
 FROM system.tables
 WHERE database = 'apex'
-  AND name IN ('spark_events', 'plan_transitions', 'findings')
+  AND name IN ($nameList)
 "@
+    # The password is a FILE inside the container (CLICKHOUSE_PASSWORD_FILE), never an env var.
     $tableCount = (
         $schemaSql |
             docker exec -i apex-infra-clickhouse sh -lc `
-                'clickhouse-client --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD"'
+                'clickhouse-client --user "$CLICKHOUSE_USER" --password "$(cat /run/secrets/clickhouse_password)"'
     ).Trim()
-    if ($LASTEXITCODE -ne 0 -or $tableCount -ne '3') {
-        throw "Canonical ClickHouse schema is incomplete (required tables=$tableCount/3)."
+    $expectedCount = $expectedObjects.Count
+    if ($LASTEXITCODE -ne 0 -or $tableCount -ne "$expectedCount") {
+        throw "Canonical ClickHouse schema is incomplete (objects=$tableCount/$expectedCount per infra/scripts/ddl_manifest.txt)."
     }
 
     Show-Status
-    Write-Host 'APEX_DOCTOR=ready spark=4.0.1 schema=3/3 secrets=local' -ForegroundColor Green
+    Write-Host "APEX_DOCTOR=ready spark=4.0.1 schema=$tableCount/$expectedCount secrets=local" -ForegroundColor Green
 }
 
 function Start-Package {
@@ -514,6 +544,18 @@ function Start-Package {
     $devCompose = Join-Path $script:Root 'dev/docker-compose.yml'
     $devOverlay = Join-Path $script:Root 'dev/docker-compose.c3-otlp.yml'
     $devPackageOverlay = Join-Path $script:Root 'dev/docker-compose.package.yml'
+
+    Write-Step 'Rendering infra secrets (preflight: refuses defaults, writes secrets/ + .local/)'
+    # The compose consumes the password as a secret FILE and HyperDX as a read-only user;
+    # infra/scripts/preflight.sh renders both from the runtime env (same step `make up` runs).
+    $env:INFRA_ENV_FILE = $script:InfraEnv
+    try {
+        Invoke-Checked -FilePath 'bash' -Arguments @(
+            (Join-Path $script:Root 'infra/scripts/preflight.sh')
+        )
+    } finally {
+        Remove-Item Env:INFRA_ENV_FILE -ErrorAction SilentlyContinue
+    }
 
     Write-Step 'Validating lane Compose contracts'
     Invoke-LaneCompose @($infraCompose) $script:InfraEnv @('config', '--quiet')

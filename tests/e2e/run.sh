@@ -5,28 +5,36 @@
 #
 # Integration-only glue — it does NOT modify any lane. What it does:
 #   1. Brings up infra's canonical ClickStack (ClickHouse + HyperDX + Mongo + collector).
-#   2. Network glue: publishes infra's collector under the contracted DNS name
-#      `apex-otel-collector` on the external `apex-collect-net`, so dev's C3/C4
-#      overlay targets it verbatim. (If collect's real collector is already running,
-#      the glue is skipped and collect's collector is used instead — same contract.)
+#   2. Network glue: joins infra's collector to the external `apex-collect-net` under
+#      its OWN container name only (apex-infra-otel-collector) — never under collect's
+#      `apex-otel-collector` alias, which infra/docker-compose.yml rule 3 forbids because
+#      that alias once made infra's collector an impostor for collect's. The OTLP host
+#      the job targets is resolved once: collect's collector when it is running,
+#      infra's otherwise.
 #   3. Builds/starts the dev lane (plugin jar is baked from ../jar by dev's Dockerfile).
 #   4. Runs the instrumented skew pathology: spark.plugins=apex.ApexPlugin,
-#      spark.apex.otlp.endpoint=http://apex-otel-collector:4318, AQE on (CONTRACT §Activation).
+#      spark.apex.otlp.endpoint=<the resolved collector>, AQE on (CONTRACT §Activation).
 #   5. Asserts in infra's ClickHouse, threaded by ONE job_id:
 #        spark_events rows landed · plan_transitions has the AQE decision ·
-#        sql/005 skew query flags the run · plan_json carries no literals/PII.
-#   6. Best-effort: proves HyperDX's chart engine returns the job (needs the first
-#      user registered; skipped otherwise).
+#        sql/050 skew query judges a stage tail-bound at APEX_CLUSTER_SLOTS · plan_json
+#        carries no literals/PII.
+#   6. Registers HyperDX's first user through the API (infra/scripts/hyperdx_bootstrap.sh)
+#      and proves HyperDX's chart engine returns the job.
 #
-# Usage:  tests/e2e/run.sh            # leaves stacks up so you can open HyperDX :8090
+# Usage:  APEX_CLUSTER_SLOTS=8 tests/e2e/run.sh   # leaves stacks up so you can open HyperDX :8090
 #         TEARDOWN=1 tests/e2e/run.sh # tear both stacks down at the end (keeps volumes)
 #         SKIP_BUILD=1 tests/e2e/run.sh  # reuse the existing apex-spark:local image
+#         DEV_EXTRA_COMPOSE_FILES="/abs/path/overlay.yml" tests/e2e/run.sh   # host-local dev overlays
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INFRA="$ROOT/infra"
 DEV="$ROOT/dev"
-DEV_COMPOSE=(docker compose -f "$DEV/docker-compose.yml" -f "$DEV/docker-compose.c3-otlp.yml" --project-directory "$DEV")
+DEV_COMPOSE=(docker compose -f "$DEV/docker-compose.yml" -f "$DEV/docker-compose.c3-otlp.yml")
+# Host-local overlays (space-separated), e.g. a gitignored .apex/dev-minio-fallback.yml when
+# the pinned MinIO images no longer pull on this machine. Never a lane file.
+for extra in ${DEV_EXTRA_COMPOSE_FILES:-}; do DEV_COMPOSE+=(-f "$extra"); done
+DEV_COMPOSE+=(--project-directory "$DEV")
 
 FAIL=0
 ok()   { printf '  \033[32mPASS\033[0m %s\n' "$1"; }
@@ -38,43 +46,77 @@ command -v docker  >/dev/null || die "docker is required"
 command -v curl    >/dev/null || die "curl is required"
 command -v python3 >/dev/null || die "python3 is required"
 [ -f "$INFRA/.env" ] || die "infra/.env missing — copy infra/.env.example and set HYPERDX_API_KEY"
+[ -n "${APEX_CLUSTER_SLOTS:-}" ] || die "APEX_CLUSTER_SLOTS is required: the closed-form skew verdict (CONTRACT.md rule 1) needs the cluster width and never guesses it (dev lab = 8 worker cores, dev/README.md)"
+
+# Skew query (A) exactly as infra/sql/050_skew.sql states it, with APEX_CLUSTER_SLOTS
+# written into the marker line (same extraction as infra/scripts/verify.sh).
+skew_query_a() {
+  sed -n '/^-- (A)/,/^-- (B)/p' "$INFRA/sql/050_skew.sql" \
+    | sed '/^-- (B)/d' \
+    | sed "s/^WITH NULL AS operator_slots/WITH ${APEX_CLUSTER_SLOTS} AS operator_slots/" \
+    | sed 's/--.*$//' \
+    | sed 's/;[[:space:]]*$//'
+}
 
 # ClickHouse creds come from infra's env (defaults mirror the compose defaults).
 CH_USER=$(grep -E '^CLICKHOUSE_USER='     "$INFRA/.env" | tail -1 | cut -d= -f2); CH_USER=${CH_USER:-apex}
-CH_PASS=$(grep -E '^CLICKHOUSE_PASSWORD=' "$INFRA/.env" | tail -1 | cut -d= -f2); CH_PASS=${CH_PASS:-apex_local_dev}
+CH_PASS=$(grep -E '^CLICKHOUSE_PASSWORD=' "$INFRA/.env" | tail -1 | cut -d= -f2)
+[ -n "$CH_PASS" ] || CH_PASS=$(cat "$INFRA/secrets/clickhouse_password" 2>/dev/null || true)
+[ -n "$CH_PASS" ] || die "CLICKHOUSE_PASSWORD is empty in infra/.env and infra/secrets/ is not rendered — run 'make -C infra up'"
 ch() { docker exec apex-infra-clickhouse clickhouse-client --user "$CH_USER" --password "$CH_PASS" -q "$1"; }
+# Host ports come from infra/.env too (a dev host may shift them off the canonical band).
+infra_port() { local v; v=$(grep -E "^$1=" "$INFRA/.env" | tail -1 | cut -d= -f2); echo "${v:-$2}"; }
+COLLECTOR_HEALTH_PORT=$(infra_port COLLECTOR_HEALTH_HOST_PORT 13133)
+HDX_UI_PORT=$(infra_port HYPERDX_APP_HOST_PORT 8090)
+HDX_API_PORT=$(infra_port HYPERDX_API_HOST_PORT 8000)
 
 step "1/6 infra up (canonical ClickStack)"
 (cd "$INFRA" && docker compose up -d --wait) || die "infra stack failed to come up healthy"
-for t in spark_events plan_transitions findings otel_traces; do
+# Every object infra/scripts/ddl_manifest.txt names (tables AND materialized views) —
+# the same list verify.sh, verify_ddl.py and scripts/apex.ps1 use; never a literal here.
+for t in $(awk '!/^#/ && NF { sub(/^apex\./, "", $1); print $1 }' "$INFRA/scripts/ddl_manifest.txt"); do
   ch "EXISTS TABLE apex.$t" | grep -q 1 && ok "apex.$t exists" || bad "apex.$t missing"
 done
-curl -sf -m 5 http://localhost:13133/ >/dev/null && ok "collector health :13133" || bad "collector health"
-curl -sf -m 5 -o /dev/null http://localhost:8090/ && ok "HyperDX UI :8090" || bad "HyperDX UI :8090"
+curl -sf -m 5 "http://localhost:${COLLECTOR_HEALTH_PORT}/" >/dev/null && ok "collector health :${COLLECTOR_HEALTH_PORT}" || bad "collector health :${COLLECTOR_HEALTH_PORT}"
+curl -sf -m 5 -o /dev/null "http://localhost:${HDX_UI_PORT}/" && ok "HyperDX UI :${HDX_UI_PORT}" || bad "HyperDX UI :${HDX_UI_PORT}"
 
-step "2/6 network glue: apex-otel-collector alias on apex-collect-net"
+step "2/6 network glue: infra collector on apex-collect-net (own name only, no alias)"
 docker network create apex-collect-net >/dev/null 2>&1 || true
 if [ "$(docker inspect -f '{{.State.Running}}' apex-otel-collector 2>/dev/null)" = "true" ]; then
-  ok "collect's own collector is running — using it (no alias needed)"
+  OTLP_HOST=apex-otel-collector
+  ok "collect's own collector is running — the job targets $OTLP_HOST"
 else
+  OTLP_HOST=apex-infra-otel-collector
   if docker network inspect apex-collect-net -f '{{range .Containers}}{{.Name}} {{end}}' | grep -q apex-infra-otel-collector; then
-    ok "infra collector already aliased on apex-collect-net"
+    ok "infra collector already on apex-collect-net"
   else
-    docker network connect --alias apex-otel-collector apex-collect-net apex-infra-otel-collector \
-      && ok "infra collector joined apex-collect-net as apex-otel-collector" \
-      || die "could not alias infra collector onto apex-collect-net"
+    # No --alias: the container name is the only name infra's collector may answer to
+    # on a foreign network (infra/docker-compose.yml, shared-network alias rule 3).
+    docker network connect apex-collect-net apex-infra-otel-collector \
+      && ok "infra collector joined apex-collect-net as $OTLP_HOST" \
+      || die "could not join infra collector to apex-collect-net"
   fi
 fi
+OTLP_ENDPOINT="http://${OTLP_HOST}:4318"
 
 step "3/6 dev lane up (plugin baked from ../jar)"
 [ -f "$DEV/.env" ] || (cd "$DEV" && python3 scripts/ensure_env.py .env.example .env) || die "could not create dev/.env"
+# dev's Spark services read the MinIO credentials from compose secret FILES (dev/secrets/,
+# gitignored); scripts/apex.ps1 writes them from dev/.env, so the runner does the same.
+if [ ! -s "$DEV/secrets/apex_s3_access_key" ] || [ ! -s "$DEV/secrets/apex_s3_secret_key" ]; then
+  mkdir -p "$DEV/secrets"
+  grep -E '^MINIO_ROOT_USER=' "$DEV/.env" | tail -1 | cut -d= -f2- | tr -d '\n' > "$DEV/secrets/apex_s3_access_key"
+  grep -E '^MINIO_ROOT_PASSWORD=' "$DEV/.env" | tail -1 | cut -d= -f2- | tr -d '\n' > "$DEV/secrets/apex_s3_secret_key"
+  [ -s "$DEV/secrets/apex_s3_access_key" ] && [ -s "$DEV/secrets/apex_s3_secret_key" ] || die "could not derive dev/secrets/ from dev/.env (MINIO_ROOT_USER/PASSWORD)"
+  ok "dev/secrets/ written from dev/.env"
+fi
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
   (cd "$DEV" && docker compose build) || die "dev image build failed"
 fi
 "${DEV_COMPOSE[@]}" up -d --wait || die "dev cluster failed to come up healthy"
 "${DEV_COMPOSE[@]}" exec -T spark-master sh -c \
-  'curl -s -m 5 -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{}" http://apex-otel-collector:4318/v1/traces' \
-  | grep -q 200 && ok "dev → apex-otel-collector:4318 reachable" || bad "dev cannot reach the collector"
+  "curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' ${OTLP_ENDPOINT}/v1/traces" \
+  | grep -q 200 && ok "dev → ${OTLP_HOST}:4318 reachable" || bad "dev cannot reach the collector at ${OTLP_HOST}"
 
 step "4/6 run instrumented pathology: skew_join, ApexPlugin, AQE on (CONTRACT §Activation)"
 LOG=$(mktemp)
@@ -86,7 +128,7 @@ LOG=$(mktemp)
   /opt/spark/bin/spark-submit --master spark://spark-master:7077 \
   --conf spark.driver.host=spark-master --conf spark.driver.bindAddress=0.0.0.0 \
   --conf spark.plugins=apex.ApexPlugin \
-  --conf spark.apex.otlp.endpoint=http://apex-otel-collector:4318 \
+  --conf spark.apex.otlp.endpoint="${OTLP_ENDPOINT}" \
   --conf spark.apex.aqe.enabled=true \
   /opt/apex/jobs/skew_join.py >"$LOG" 2>&1
 RC=$?
@@ -108,8 +150,8 @@ TRANS=$(ch "SELECT count() FROM apex.plan_transitions WHERE job_id='$JOB_ID'")
   && ok "plan_transitions: $TRANS AQE decision(s): $(ch "SELECT groupArray(concat(transition_type,'/',confidence)) FROM apex.plan_transitions WHERE job_id='$JOB_ID'")" \
   || bad "no plan_transitions for $JOB_ID (AQE fired nothing — see dev's c4-aqe-skewsplit calibration)"
 
-SKEW=$(ch "SELECT count() FROM (SELECT stage_id FROM apex.spark_events WHERE job_id='$JOB_ID' GROUP BY stage_id HAVING argMax(task_duration_p99_ms,ts)/nullIf(argMax(task_duration_p50_ms,ts),0) > 5)")
-[ "${SKEW:-0}" -gt 0 ] && ok "skew watcher (sql/005 A): $SKEW stage(s) flagged > 5x" || bad "skew query flags nothing for $JOB_ID"
+SKEW=$(ch "SELECT count() FROM ($(skew_query_a)) WHERE job_id='$JOB_ID' AND tail_bound = 1")
+[ "${SKEW:-0}" -gt 0 ] && ok "skew watcher (sql/050 A): $SKEW tail-bound stage(s) at ${APEX_CLUSTER_SLOTS} slots" || bad "skew query finds no tail-bound stage for $JOB_ID at ${APEX_CLUSTER_SLOTS} slots"
 
 FP=$(ch "SELECT countDistinct(plan_fingerprint) FROM apex.spark_events WHERE job_id='$JOB_ID' AND plan_fingerprint != ''")
 [ "${FP:-0}" -gt 0 ] && ok "plan_fingerprint present ($FP distinct plans)" || bad "no plan_fingerprint captured"
@@ -117,22 +159,21 @@ FP=$(ch "SELECT countDistinct(plan_fingerprint) FROM apex.spark_events WHERE job
 PII=$(ch "SELECT countIf(match(plan_json, '= [0-9]{2,}|@|/opt/|hot_key')) FROM apex.spark_events WHERE job_id='$JOB_ID'")
 [ "${PII:-1}" -eq 0 ] && ok "redaction: plan_json carries no literals/paths/emails" || bad "plan_json redaction leak in $PII row(s)"
 
-step "6/6 HyperDX query engine sees the job (best-effort — needs registered first user)"
-if [ "$(curl -sf -m 5 http://localhost:8000/installation)" = '{"isTeamExisting":true}' ] \
-   && docker exec apex-infra-mongodb mongosh --quiet --eval 'quit(0)' >/dev/null 2>&1; then
-  UKEY=$(docker exec apex-infra-mongodb mongosh --quiet hyperdx --eval 'print(db.users.findOne({}).accessKey)' 2>/dev/null)
-  SRC=$(docker exec apex-infra-mongodb mongosh --quiet hyperdx --eval 'print(db.sources.findOne({name:"Spark Events"})._id.toString())' 2>/dev/null)
-  if [ -n "$UKEY" ] && [ -n "$SRC" ]; then
-    NOW=$(python3 -c 'import time; print(int(time.time()*1000))')
-    HDX=$(curl -s -m 20 -X POST -H "Authorization: Bearer $UKEY" -H "Content-Type: application/json" \
-      http://localhost:8000/api/v2/charts/series \
-      -d '{"startTime":'$((NOW-6*3600*1000))',"endTime":'$NOW',"series":[{"type":"table","sourceId":"'$SRC'","aggFn":"max","field":"task_duration_p99_ms","where":"","groupBy":["job_id"]}]}')
-    echo "$HDX" | grep -q "$JOB_ID" && ok "HyperDX charts/series returns $JOB_ID" || bad "HyperDX charts/series missing $JOB_ID: $(echo "$HDX" | head -c 200)"
-  else
-    echo "  SKIP — could not read accessKey/source from Mongo"
-  fi
+step "6/6 HyperDX query engine sees the job"
+# The first user is registered through the API (infra/scripts/hyperdx_bootstrap.sh reads
+# HYPERDX_ADMIN_EMAIL/PASSWORD from infra/.env); creating the team seeds the connection and
+# the Spark Events source, so this step asserts instead of skipping.
+"$INFRA/scripts/hyperdx_bootstrap.sh" && ok "HyperDX first user registered (or already present)" || bad "HyperDX bootstrap failed (set HYPERDX_ADMIN_EMAIL/HYPERDX_ADMIN_PASSWORD in infra/.env)"
+UKEY=$(docker exec apex-infra-mongodb mongosh --quiet hyperdx --eval 'print(db.users.findOne({}).accessKey)' 2>/dev/null)
+SRC=$(docker exec apex-infra-mongodb mongosh --quiet hyperdx --eval 'print(db.sources.findOne({name:"Spark Events"})._id.toString())' 2>/dev/null)
+if [ -n "$UKEY" ] && [ -n "$SRC" ]; then
+  NOW=$(python3 -c 'import time; print(int(time.time()*1000))')
+  HDX=$(curl -s -m 20 -X POST -H "Authorization: Bearer $UKEY" -H "Content-Type: application/json" \
+    "http://localhost:${HDX_API_PORT}/api/v2/charts/series" \
+    -d '{"startTime":'$((NOW-6*3600*1000))',"endTime":'$NOW',"series":[{"type":"table","sourceId":"'$SRC'","aggFn":"max","field":"task_duration_p99_ms","where":"","groupBy":["job_id"]}]}')
+  echo "$HDX" | grep -q "$JOB_ID" && ok "HyperDX charts/series returns $JOB_ID" || bad "HyperDX charts/series missing $JOB_ID: $(echo "$HDX" | head -c 200)"
 else
-  echo "  SKIP — no team registered yet: open http://localhost:8090, register, re-run"
+  bad "could not read the access key or the Spark Events source from Mongo after bootstrap"
 fi
 
 if [ "${TEARDOWN:-0}" = "1" ]; then
@@ -144,7 +185,7 @@ fi
 printf '\n'
 if [ $FAIL -eq 0 ]; then
   printf '\033[32m✔ P0 E2E GREEN\033[0m — job_id %s threaded dev → jar → collector → ClickHouse → HyperDX\n' "$JOB_ID"
-  printf '  Inspect: http://localhost:8090 (HyperDX) · clickhouse-client on :9000 · job logs in dev/out/\n'
+  printf '  Inspect: http://localhost:%s (HyperDX) · clickhouse-client on :9000 · job logs in dev/out/\n' "$HDX_UI_PORT"
 else
   printf '\033[31m✘ P0 E2E FAILED\033[0m — see FAIL lines above (job_id %s)\n' "${JOB_ID:-unknown}"
 fi

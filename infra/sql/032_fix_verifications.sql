@@ -65,4 +65,5 @@ CREATE TABLE IF NOT EXISTS apex.fix_verifications (
 )
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(verified_at)
-ORDER BY (job_id, finding_id, verified_at);
+ORDER BY (job_id, finding_id, verified_at)
+TTL toDateTime(verified_at) + INTERVAL 365 DAY;   -- infra-owned retention (verify/ddl carries no TTL)

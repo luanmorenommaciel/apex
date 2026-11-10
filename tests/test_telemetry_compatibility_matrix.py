@@ -138,8 +138,14 @@ def _validate(manifest: dict[str, Any]) -> None:
     assert mv_chain["v05_evolution"] == V05_MV_EVOLUTION
     assert "CREATE MATERIALIZED VIEW IF NOT EXISTS apex.mv_spark_events" in _text(mv_chain["initial"])
     assert "apex.job_conf" in _text(mv_chain["job_conf"])
+    # Since the infra hardening the additive migrations only ADD COLUMNs; the one in-place
+    # query replacement for pre-existing volumes lives in the resync file, byte-equal to 020.
     for migration in mv_chain["v05_evolution"]:
-        assert "ALTER TABLE apex.mv_spark_events MODIFY QUERY" in _text(migration)
+        assert "ADD COLUMN IF NOT EXISTS" in _text(migration)
+        assert "ALTER TABLE apex.mv_spark_events MODIFY QUERY" not in _text(migration)
+    assert mv_chain["resync"] == "infra/sql/040_mv_spark_events_resync.sql"
+    assert "ALTER TABLE apex.mv_spark_events MODIFY QUERY" in _text(mv_chain["resync"])
+    assert "executor_run_time_ms" in _text(mv_chain["resync"])
     assert "executor_run_time_ms" in _text("infra/sql/039_executor_runtime_additive.sql")
 
     assert "PROPOSED v0.4" in _text("contract/job_conf.ddl.sql")

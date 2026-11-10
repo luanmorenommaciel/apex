@@ -4,6 +4,12 @@
 services:
   otel-collector:
     environment:
+      # infra's password, REQUIRED, through a variable only the operator sets: the base
+      # compose and .env.example default CLICKHOUSE_PASSWORD for the throwaway store, and
+      # against the canonical store that default is exactly how telemetry vanished silently
+      # (the collector authenticates with the wrong password, drops every span, logs it once).
+      # Pass infra/secrets/clickhouse_password (rendered by infra's preflight).
+      CLICKHOUSE_PASSWORD: ${APEX_INFRA_CLICKHOUSE_PASSWORD:?set APEX_INFRA_CLICKHOUSE_PASSWORD to infra's password (cat ../infra/secrets/clickhouse_password) - the C3 overlay refuses collect's default}
       CLICKHOUSE_ENDPOINT: tcp://apex-infra-clickhouse:9000?compress=lz4&async_insert=0&deduplicate_blocks_in_dependent_materialized_views=1
     networks:
       apex: {}

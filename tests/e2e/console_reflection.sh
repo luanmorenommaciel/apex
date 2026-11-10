@@ -45,7 +45,8 @@ set -a; . "$INFRA/.env"; set +a
 export CLICKHOUSE_HOST=127.0.0.1
 export CLICKHOUSE_PORT="${CLICKHOUSE_HTTP_HOST_PORT:-8123}"
 export CLICKHOUSE_USER="${CLICKHOUSE_USER:-apex}"
-export CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:-apex_local_dev}"
+export CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:-$(cat "$(dirname "${BASH_SOURCE[0]}")/../../infra/secrets/clickhouse_password" 2>/dev/null || true)}"
+[ -n "$CLICKHOUSE_PASSWORD" ] || { echo "CLICKHOUSE_PASSWORD is required (infra/.env + infra/scripts/preflight.sh render infra/secrets/clickhouse_password; there is no default)"; exit 2; }
 export CLICKHOUSE_DATABASE="${CLICKHOUSE_DB:-apex}"
 export UV_PYTHON="${UV_PYTHON:-3.12}"
 ch() { docker exec apex-infra-clickhouse clickhouse-client --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" -q "$1"; }
