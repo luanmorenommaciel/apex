@@ -13,7 +13,8 @@ import type {
 import * as fx from "./fixtures";
 import * as Q from "./queries";
 import { ping, query } from "./clickhouse";
-import { apiGet, apiPing } from "./http";
+import { ApiError, apiGet, apiPing } from "./http";
+import { clampTopK, KB_UNAVAILABLE_REASON, toKbHits, type KbSearch } from "./kb";
 import { runtimeConfig } from "./runtimeConfig";
 import { toWireTimestamp, withWireTimestamps } from "./timestamp";
 
@@ -73,6 +74,12 @@ export interface Repository {
   findings(jobId: string): Promise<FindingRow[]>;
   transitions(jobId: string): Promise<PlanTransitionRow[]>;
   fixVerification(findingId: string): Promise<FixVerificationRow | null>;
+  /**
+   * The MCP `search_kb` tool. Only the API can run it: other sources resolve
+   * to `{ state: "unavailable" }`, never to an empty hit list. The query is
+   * trimmed and must be non-empty; topK is clamped to serve's [1, 50].
+   */
+  searchKb(query: string, topK?: number): Promise<KbSearch>;
 }
 
 const relativeAge = (iso: string): string => {
@@ -185,6 +192,9 @@ export class ClickHouseRepository implements Repository {
     const rows = await query<Record<string, unknown>>(Q.FIX_VERIFICATIONS, { finding: findingId });
     return rows[0] ? toFixVerification(rows[0]) : null;
   }
+  async searchKb(): Promise<KbSearch> {
+    return { state: "unavailable", reason: KB_UNAVAILABLE_REASON };
+  }
 }
 
 /**
@@ -277,6 +287,11 @@ export class FixtureRepository implements Repository {
   async fixVerification(findingId: string) {
     return fx.fixVerifications.find((f) => f.finding_id === findingId) ?? null;
   }
+  async searchKb(): Promise<KbSearch> {
+    // The recording holds no search index; ranking its rows here would show a
+    // score no other surface computes.
+    return { state: "unavailable", reason: KB_UNAVAILABLE_REASON };
+  }
 }
 
 /**
@@ -363,6 +378,21 @@ export class HttpRepository implements Repository {
       `/v1/findings/${encodeURIComponent(findingId)}/verification`,
     );
     return data ? toFixVerification(data) : null;
+  }
+
+  async searchKb(query: string, topK?: number): Promise<KbSearch> {
+    const q = query.trim();
+    // An empty query is never sent: the tool would answer "no searchable
+    // tokens", which a caller could mistake for "nothing matched".
+    if (!q) throw new RangeError("searchKb needs a non-empty query");
+    const path = "/v1/diagnostics/search";
+    const { data } = await apiGet<unknown>(path, { q, top_k: clampTopK(topK) });
+    // A 404 here is not "no hits" — the route itself is missing (an API older
+    // than search_kb, or a proxy not forwarding it). Report it as a failure.
+    if (data === null) {
+      throw new ApiError(404, "this API exposes no /v1/diagnostics/search route", path);
+    }
+    return { state: "ok", result: toKbHits(data) };
   }
 }
 

@@ -23,7 +23,7 @@ function rejecting(error: Error, kind: Repository["kind"] = "http"): Repository 
   return {
     kind, listRuns: fail, run: fail, baselineCandidates: fail, planShapes: fail,
     shapeRuns: fail, planSample: fail, stages: fail, jobConf: fail, findings: fail,
-    transitions: fail, fixVerification: fail,
+    transitions: fail, fixVerification: fail, searchKb: fail,
   };
 }
 
