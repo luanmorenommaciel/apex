@@ -17,6 +17,7 @@ import json
 import os
 import sys
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
 
 import clickhouse_connect
@@ -74,6 +75,55 @@ def describe(client, table: str) -> set[str]:
     return {row[0] for row in client.query(f"DESCRIBE apex.{table}").result_rows}
 
 
+def remove_fixture_rows(client) -> None:
+    """Remove exact owned IDs, waiting for mutations and trying every table.
+
+    Inserts use the client's session database; cleanup must use that same
+    database. The optional rollup is an incremental MV target: deleting its
+    spark_events source rows does not delete the derived rows.
+    """
+    failed = []
+    tables = ["spark_events", "findings", "plan_transitions"]
+    try:
+        if int(client.command("EXISTS TABLE spark_jobs_1m")):
+            tables.append("spark_jobs_1m")
+    except Exception:
+        # Discovery failure must not prevent cleanup of the seeded tables.
+        failed.append("spark_jobs_1m discovery")
+    for table in tables:
+        try:
+            client.command(
+                f"ALTER TABLE {table} DELETE WHERE job_id IN "
+                "({before:String}, {after:String})",
+                parameters={"before": BEFORE_JOB_ID, "after": AFTER_JOB_ID},
+                settings={"mutations_sync": 2},
+            )
+        except Exception:
+            # Driver errors may contain credentials. Report only our fixed
+            # table names, and continue with the other owned fixture tables.
+            failed.append(table)
+    if failed:
+        raise RuntimeError("fixture_cleanup_failed: " + ", ".join(failed)) from None
+
+
+@contextmanager
+def fixture_scope(client):
+    """Cover even partial inserts; retain the primary error if cleanup fails."""
+    primary_error = None
+    try:
+        yield
+    except BaseException as exc:
+        primary_error = exc
+        raise
+    finally:
+        try:
+            remove_fixture_rows(client)
+        except Exception as cleanup_error:
+            if primary_error is None:
+                raise
+            print(str(cleanup_error), file=sys.stderr)
+
+
 def main() -> int:
     client = clickhouse_connect.get_client(
         host=os.getenv("CLICKHOUSE_HOST", "127.0.0.1"),
@@ -98,6 +148,14 @@ def main() -> int:
     )
     additive_present = sorted(ADDITIVE_FINDINGS & findings_columns)
 
+    with fixture_scope(client):
+        report = exercise_fixture(client, findings_columns, additive_present)
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+def exercise_fixture(client, findings_columns, additive_present) -> dict:
+    """Existing contract checks; main owns fixture lifetime and PASS output."""
     # -- fixture (writes belong to the gate, never to the server) ----------
     now = datetime.now(timezone.utc)
     older = now.replace(microsecond=0)
@@ -233,15 +291,8 @@ def main() -> int:
     filtered = store.runs(app_name=by_job[AFTER_JOB_ID]["app_name"])
     assert {r["job_id"] for r in filtered} >= {AFTER_JOB_ID}
 
-    # -- cleanup: the gate removes only its own fixture rows ---------------
-    for table in ("spark_events", "findings", "plan_transitions"):
-        client.command(
-            f"ALTER TABLE apex.{table} DELETE WHERE job_id IN "
-            "({before:String}, {after:String})",
-            parameters={"before": BEFORE_JOB_ID, "after": AFTER_JOB_ID},
-        )
 
-    print(json.dumps({
+    return {
         "gate": "serve-read-only",
         "runs": {
             "listed": len(listed),
@@ -286,8 +337,7 @@ def main() -> int:
             },
         },
         "status": "passed",
-    }, indent=2, sort_keys=True))
-    return 0
+    }
 
 
 if __name__ == "__main__":
