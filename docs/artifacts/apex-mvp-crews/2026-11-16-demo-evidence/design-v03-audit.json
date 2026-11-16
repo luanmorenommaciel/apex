@@ -1,0 +1,114 @@
+{
+  "version": "0.3",
+  "deck_sha256": "957ff5ccbf5350e7cceb0f292c94481339803abec706c7ebf24cf2c8c223748d",
+  "main_slides": 17,
+  "appendix_slides": 3,
+  "slides": [
+    {
+      "slide": 1,
+      "audience_words": 37
+    },
+    {
+      "slide": 2,
+      "audience_words": 93
+    },
+    {
+      "slide": 3,
+      "audience_words": 79
+    },
+    {
+      "slide": 4,
+      "audience_words": 70
+    },
+    {
+      "slide": 5,
+      "audience_words": 93
+    },
+    {
+      "slide": 6,
+      "audience_words": 64
+    },
+    {
+      "slide": 7,
+      "audience_words": 71
+    },
+    {
+      "slide": 8,
+      "audience_words": 72
+    },
+    {
+      "slide": 9,
+      "audience_words": 63
+    },
+    {
+      "slide": 10,
+      "audience_words": 86
+    },
+    {
+      "slide": 11,
+      "audience_words": 87
+    },
+    {
+      "slide": 12,
+      "audience_words": 57
+    },
+    {
+      "slide": 13,
+      "audience_words": 14
+    },
+    {
+      "slide": 14,
+      "audience_words": 74
+    },
+    {
+      "slide": 15,
+      "audience_words": 53
+    },
+    {
+      "slide": 16,
+      "audience_words": 81
+    },
+    {
+      "slide": 17,
+      "audience_words": 25
+    },
+    {
+      "slide": 18,
+      "audience_words": 69
+    },
+    {
+      "slide": 19,
+      "audience_words": 112
+    },
+    {
+      "slide": 20,
+      "audience_words": 71
+    }
+  ],
+  "contrast_ratios": {
+    "body_on_canvas": 9.17,
+    "body_on_raised": 7.38,
+    "dim_on_canvas": 6.59,
+    "dim_on_raised": 5.3,
+    "sub_on_canvas": 7.59,
+    "sub_on_raised": 6.11,
+    "spark-light_on_canvas": 8.11,
+    "spark-light_on_raised": 6.53
+  },
+  "screenshot": {
+    "source": "https://github.com/luanmorenommaciel/apex/blob/716ce8bc88ddd96fb54f69ed1900bc4b3d578eb1/docs/e2e/evidence/l7-20261028/post-engine-console.png",
+    "date": "2026-10-28",
+    "sha256": "da9f94c6983f09a1515f791ec36438c2cb0330b048a40056043fd5ffccac1a85",
+    "display": "uncropped, embedded, historical local-integration evidence"
+  },
+  "limits": [
+    "Projector, PDF and offline-font rendering not checked",
+    "No separate presenter window added",
+    "Current live diagnosis and fix replay not revalidated by design work"
+  ],
+  "counter_format": {
+    "presentation": "1 / 17 … 17 / 17",
+    "appendix": "Apêndice 1 / 3 … Apêndice 3 / 3",
+    "progress": "relative to the current section"
+  }
+}

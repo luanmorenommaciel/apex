@@ -1,0 +1,42 @@
+{
+  "deck_sha256": "957ff5ccbf5350e7cceb0f292c94481339803abec706c7ebf24cf2c8c223748d",
+  "checks": [
+    {
+      "name": "20 slides and working hash entry",
+      "status": "pass"
+    },
+    {
+      "name": "all slides reachable with matching hash and counter",
+      "status": "pass"
+    },
+    {
+      "name": "closing slide does not advance into appendix",
+      "status": "pass"
+    },
+    {
+      "name": "appendix opens deliberately and Escape returns",
+      "status": "pass"
+    },
+    {
+      "name": "notes drawer toggles and Escape hides it",
+      "status": "pass"
+    },
+    {
+      "name": "embedded source image byte-matches published evidence",
+      "status": "pass"
+    },
+    {
+      "name": "image click/key wiring without slide advance (native dialog API stubbed)",
+      "status": "pass"
+    },
+    {
+      "name": "visible evidence boundaries remain in the main slides",
+      "status": "pass"
+    },
+    {
+      "name": "no runtime errors during navigation",
+      "status": "pass"
+    }
+  ],
+  "scope": "DOM runtime checks in JSDOM; native dialog API stubbed for event-wiring checks. Not pixel layout, browser-native dialog, projector or real integration proof"
+}

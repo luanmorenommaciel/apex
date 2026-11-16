@@ -1,0 +1,42 @@
+{
+  "source_sha": "0cc8bac1ec62724f4035865fbd95d6ec5463b1c9",
+  "scope": "initialize/list_tools/list_resources/list_prompts only; no diagnostic tool calls; no database; no LLM",
+  "tools": [
+    {
+      "name": "analyze_run",
+      "readOnlyHint": true
+    },
+    {
+      "name": "explain_stage",
+      "readOnlyHint": true
+    },
+    {
+      "name": "compare_runs",
+      "readOnlyHint": true
+    },
+    {
+      "name": "list_runs",
+      "readOnlyHint": true
+    },
+    {
+      "name": "search_kb",
+      "readOnlyHint": true
+    },
+    {
+      "name": "recall_similar_runs",
+      "readOnlyHint": true
+    },
+    {
+      "name": "verify_fix",
+      "readOnlyHint": true
+    },
+    {
+      "name": "suggest_fix",
+      "readOnlyHint": false
+    }
+  ],
+  "resources": [
+    "apex://runs"
+  ],
+  "prompts": []
+}

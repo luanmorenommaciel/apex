@@ -260,6 +260,7 @@ The plugin cross-builds four `(Spark, Scala)` cells; every one is tested in CI.
 | [docs/e2e/](docs/e2e/) | End-to-end entry points and recorded runs |
 | [docs/e2e/TAIL_OUTLIER_RUNTIME_GATE.md](docs/e2e/TAIL_OUTLIER_RUNTIME_GATE.md) | Tail-outlier runtime proof, boundaries, and remaining release gates |
 | [docs/architecture/ADR-INDEX.md](docs/architecture/ADR-INDEX.md) | Index of the architecture decision records, by their existing IDs |
+| [Crew MVP presentation](docs/artifacts/apex-mvp-crews/README.md) | HTML deck, guided demo plan, evidence boundaries, and presentation checks |
 | [CHANGELOG.md](CHANGELOG.md) | What shipped — and what each fix cost to learn |
 
 Every lane also carries its own `README.md` with as-built detail.

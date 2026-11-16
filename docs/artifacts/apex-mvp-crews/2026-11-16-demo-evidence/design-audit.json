@@ -1,0 +1,142 @@
+{
+  "deck_sha256": "763181643c45d99b0081da25cd41b2adc78dd7a31aeebcc2b3414c40518d593c",
+  "slide_count": 19,
+  "canvas": [
+    1280,
+    720
+  ],
+  "slides": [
+    {
+      "slide": 1,
+      "audience_word_count": 37,
+      "card_count": 0,
+      "has_notes": true
+    },
+    {
+      "slide": 2,
+      "audience_word_count": 93,
+      "card_count": 0,
+      "has_notes": true
+    },
+    {
+      "slide": 3,
+      "audience_word_count": 79,
+      "card_count": 3,
+      "has_notes": true
+    },
+    {
+      "slide": 4,
+      "audience_word_count": 70,
+      "card_count": 3,
+      "has_notes": false
+    },
+    {
+      "slide": 5,
+      "audience_word_count": 93,
+      "card_count": 2,
+      "has_notes": false
+    },
+    {
+      "slide": 6,
+      "audience_word_count": 115,
+      "card_count": 2,
+      "has_notes": true
+    },
+    {
+      "slide": 7,
+      "audience_word_count": 104,
+      "card_count": 6,
+      "has_notes": true
+    },
+    {
+      "slide": 8,
+      "audience_word_count": 115,
+      "card_count": 0,
+      "has_notes": true
+    },
+    {
+      "slide": 9,
+      "audience_word_count": 113,
+      "card_count": 3,
+      "has_notes": false
+    },
+    {
+      "slide": 10,
+      "audience_word_count": 128,
+      "card_count": 2,
+      "has_notes": true
+    },
+    {
+      "slide": 11,
+      "audience_word_count": 116,
+      "card_count": 3,
+      "has_notes": true
+    },
+    {
+      "slide": 12,
+      "audience_word_count": 97,
+      "card_count": 3,
+      "has_notes": true
+    },
+    {
+      "slide": 13,
+      "audience_word_count": 14,
+      "card_count": 0,
+      "has_notes": false
+    },
+    {
+      "slide": 14,
+      "audience_word_count": 96,
+      "card_count": 3,
+      "has_notes": true
+    },
+    {
+      "slide": 15,
+      "audience_word_count": 67,
+      "card_count": 2,
+      "has_notes": true
+    },
+    {
+      "slide": 16,
+      "audience_word_count": 82,
+      "card_count": 3,
+      "has_notes": true
+    },
+    {
+      "slide": 17,
+      "audience_word_count": 25,
+      "card_count": 0,
+      "has_notes": false
+    },
+    {
+      "slide": 18,
+      "audience_word_count": 69,
+      "card_count": 2,
+      "has_notes": true
+    },
+    {
+      "slide": 19,
+      "audience_word_count": 112,
+      "card_count": 0,
+      "has_notes": true
+    }
+  ],
+  "images": [
+    "APEX",
+    "APEX"
+  ],
+  "contrast_ratios": {
+    "body_on_canvas": 6.59,
+    "body_on_raised": 5.3,
+    "bright_on_canvas": 13.35,
+    "dim_on_canvas": 3.76,
+    "dim_on_raised": 3.03,
+    "sub_on_raised": 4.02
+  },
+  "validation_limits": [
+    "No projector or room-distance check",
+    "No PDF export checked",
+    "Fonts-offline fallback not visually checked",
+    "Representative screenshots inspected; sequential slide navigation checked through accessibility"
+  ]
+}
