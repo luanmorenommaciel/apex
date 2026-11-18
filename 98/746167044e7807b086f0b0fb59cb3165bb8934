@@ -1,0 +1,23 @@
+docs/artifacts/apex-mvp-crews/2026-11-09-apresentacao-mvp-deck.html
+  s_c178897ba14f35::t_89122c24d67f59 291-305,363-375
+docs/artifacts/apex-mvp-crews/2026-11-16-demo-evidence/design-final-checks.json
+  s_c178897ba14f35::t_4b110699fabca0 2
+docs/artifacts/apex-mvp-crews/validate-deck.mjs
+  s_c178897ba14f35::t_d1f9d518bf4488 62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "98746167044e7807b086f0b0fb59cb3165bb8934",
+  "prompts": {},
+  "sessions": {
+    "s_c178897ba14f35": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "155f065e-bd5a-4e5c-b741-e122a8d89e9d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
