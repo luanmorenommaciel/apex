@@ -288,6 +288,21 @@ tr.break td { color:var(--sub); font-style:italic; }
 <div class="note">Imagem pública do PR #207, head 716ce8bc, docs/e2e/evidence/l7-20261028/post-engine-console.png. Preservada inteira, sem recorte; os callouts apontam áreas, não validam cada frase mostrada pela UI. A revisão de 02/11 registra limitações de labels e políticas. Não confundir esta captura histórica de skew com a demo em fixtures de SPILL. O job mostrado é app-20261028201044-0002. Status de Ask/Search KB e inventário de tools no apêndice. A imagem original pode ser aberta clicando nela; voltar à apresentação depois.</div>
 </section>
 
+<!-- 10 · Demo -->
+<section class="slide has-top">
+<div class="topbar"><span>APEX <span class="sec" style="margin-left:18px">Demo</span></span><span class="pill">fluxo completo · 15 min</span></div>
+<div class="label spark">Demo</div><h2>Do job Spark ao finding no Console</h2>
+<div class="steps">
+<div class="step"><span class="num">1</span><h3>Gerar os jobs</h3><p>Rodar o Spark com o plugin do Apex ativo.</p></div>
+<div class="step"><span class="num">2</span><h3>Spark History</h3><p>Ver os jobs e stages que acabaram de rodar.</p></div>
+<div class="step"><span class="num">3</span><h3>ClickHouse</h3><p>Consultar os eventos que a telemetria gravou.</p></div>
+<div class="step"><span class="num">4</span><h3>Console</h3><p>Ver o mesmo job refletido: finding, Compare e Memory.</p></div>
+</div><p class="lead" style="margin-top:38px">A mesma execução, do Spark até a investigação.</p>
+<div class="status-strip">Plano B: a mesma navegação no Console com fixtures rotuladas. Nenhuma correção é aplicada durante a demo.</div>
+<div class="footer"><span>APEX · MVP</span><span class="who">AGMAR</span></div>
+<div class="note">Proposta do Agmar no weekly de 17/11, no mesmo formato da reunião de alinhamento de melhorias: geração dos jobs, Spark History, query no ClickHouse e reflexo na UI. Preparar o ambiente e o job antes da sessão; não montar infraestrutura no palco. Plano B, conferido em 16/11 na main 0cc8bac: cd front, npm ci, VITE_DATA_SOURCE=fixtures npm run dev. Job app-20260803014217-0071, stage 25, finding f-7c41e9 (SPILL), Compare com app-20260802231455-0069, depois /memory. Se cair para fixtures, avisar que os dados são ilustrativos. Não anunciar ganho de performance nem correção aplicada.</div>
+</section>
+
 <!-- 9 · MCP hoje -->
 <section class="slide has-top">
 <div class="topbar"><span>APEX <span class="sec" style="margin-left:18px">MCP</span></span><span class="pill">checagem de conexão · 16/11</span></div>
@@ -305,21 +320,6 @@ prompts          0</pre></div></div>
 </div><div class="status-strip">Meta: o MCP faz o que a UI faz. Hoje cerca de metade das funcionalidades da UI já está no MCP; alguns PRs seguem abertos.</div>
 <div class="footer"><span>APEX · MVP</span><span class="who">SIDYMAR</span></div>
 <div class="note">Status de ~50% e meta de paridade: relato do Sidymar no weekly de 17/11, não uma medição. Saída resumida do recibo mcp-discovery.json, main 0cc8bac, cliente SDK stdio real. Nenhuma tool de diagnóstico chamada, nenhum banco ou LLM. readOnlyHint é metadado, não teste independente de mutação. A main usa ClickHouse direto; MCP via API (#195) e prompts (#194) ainda abertos em 16/11. Cliente e argumentos devem ser ensaiados. Inventário completo no apêndice; não inventar uma resposta de diagnóstico como se tivesse sido executada.</div>
-</section>
-
-<!-- 10 · Demo -->
-<section class="slide has-top">
-<div class="topbar"><span>APEX <span class="sec" style="margin-left:18px">Demo</span></span><span class="pill">fluxo completo · 15 min</span></div>
-<div class="label spark">Demo</div><h2>Do job Spark ao finding no Console</h2>
-<div class="steps">
-<div class="step"><span class="num">1</span><h3>Gerar os jobs</h3><p>Rodar o Spark com o plugin do Apex ativo.</p></div>
-<div class="step"><span class="num">2</span><h3>Spark History</h3><p>Ver os jobs e stages que acabaram de rodar.</p></div>
-<div class="step"><span class="num">3</span><h3>ClickHouse</h3><p>Consultar os eventos que a telemetria gravou.</p></div>
-<div class="step"><span class="num">4</span><h3>Console</h3><p>Ver o mesmo job refletido: finding, Compare e Memory.</p></div>
-</div><p class="lead" style="margin-top:38px">A mesma execução, do Spark até a investigação.</p>
-<div class="status-strip">Plano B: a mesma navegação no Console com fixtures rotuladas. Nenhuma correção é aplicada durante a demo.</div>
-<div class="footer"><span>APEX · MVP</span><span class="who">AGMAR</span></div>
-<div class="note">Proposta do Agmar no weekly de 17/11, no mesmo formato da reunião de alinhamento de melhorias: geração dos jobs, Spark History, query no ClickHouse e reflexo na UI. Preparar o ambiente e o job antes da sessão; não montar infraestrutura no palco. Plano B, conferido em 16/11 na main 0cc8bac: cd front, npm ci, VITE_DATA_SOURCE=fixtures npm run dev. Job app-20260803014217-0071, stage 25, finding f-7c41e9 (SPILL), Compare com app-20260802231455-0069, depois /memory. Se cair para fixtures, avisar que os dados são ilustrativos. Não anunciar ganho de performance nem correção aplicada.</div>
 </section>
 
 <!-- 11 · Provas -->
@@ -347,19 +347,6 @@ prompts          0</pre></div></div>
 <div class="note">O fluxo ao vivo da demo depende do ambiente que o Agmar preparar; ensaiar antes e manter o plano B com fixtures. Consulta GitHub em 16/11: #192/#193/#194/#195/#200 abertos; #191 é plano mergeado, não implementação. Exploração por convidados e onboarding imediato ficam fora do escopo. Não prometer paridade completa de política. Critérios completos no plano v0.3.</div>
 </section>
 
-<!-- 14 · Walkthrough -->
-<section class="slide has-top">
-<div class="topbar"><span>APEX <span class="sec" style="margin-left:18px">Conversa sobre o caso</span></span><span class="pill">perguntas da plateia</span></div>
-<div class="label spark">Conversa sobre o caso</div><h2>Qual seria o próximo passo?</h2>
-<ol class="question-list">
-<li><span class="num">1</span><div><strong>A evidência sustenta o finding?</strong><p>Retomamos o stage e as métricas da mesma execução.</p></div></li>
-<li><span class="num">2</span><div><strong>O que a baseline acrescenta?</strong><p>Comparamos o contexto e o que o histórico ainda não explica.</p></div></li>
-<li><span class="num">3</span><div><strong>O que falta medir antes de corrigir?</strong><p>Transformamos uma hipótese em critérios para o próximo teste.</p></div></li>
-</ol>
-<div class="footer"><span>APEX · MVP</span><span class="who">SIDYMAR · AGMAR</span></div>
-<div class="note">Abre o bloco de perguntas (cerca de 10 min). Agmar opera a UI, Sidymar responde sobre o MCP. Mesmo caso da demo. Substitui walkthrough livre da v0.1. Se a pergunta exigir outro job, anotar para depois. Sem aplicação de proposta no palco; não improvisar dados ou veredito.</div>
-</section>
-
 <!-- 15 · Roadmap -->
 <section class="slide has-top">
 <div class="topbar"><span>APEX <span class="sec" style="margin-left:18px">Roadmap</span></span><span class="pill">próximos passos</span></div>
@@ -371,6 +358,19 @@ prompts          0</pre></div></div>
 </div>
 <div class="footer"><span>APEX · MVP</span><span class="who">SIDYMAR</span></div>
 <div class="note">Itens planejados, sem prazo assumido. Weekly de 17/11: primeiro fechar o MCP com paridade à UI; depois a equipe decide o rumo do Apex. P7.2, Ask/P7.11 e protótipo HTTP/P7.14 permanecem decisões da equipe. Comentário em PR e Slack seguem na visão de produto, não entregues nesta sessão.</div>
+</section>
+
+<!-- 14 · Walkthrough -->
+<section class="slide has-top">
+<div class="topbar"><span>APEX <span class="sec" style="margin-left:18px">Conversa sobre o caso</span></span><span class="pill">perguntas da plateia</span></div>
+<div class="label spark">Conversa sobre o caso</div><h2>Qual seria o próximo passo?</h2>
+<ol class="question-list">
+<li><span class="num">1</span><div><strong>A evidência sustenta o finding?</strong><p>Retomamos o stage e as métricas da mesma execução.</p></div></li>
+<li><span class="num">2</span><div><strong>O que a baseline acrescenta?</strong><p>Comparamos o contexto e o que o histórico ainda não explica.</p></div></li>
+<li><span class="num">3</span><div><strong>O que falta medir antes de corrigir?</strong><p>Transformamos uma hipótese em critérios para o próximo teste.</p></div></li>
+</ol>
+<div class="footer"><span>APEX · MVP</span><span class="who">SIDYMAR · AGMAR</span></div>
+<div class="note">Abre o bloco de perguntas (cerca de 10 min). Agmar opera a UI, Sidymar responde sobre o MCP. Mesmo caso da demo. Substitui walkthrough livre da v0.1. Se a pergunta exigir outro job, anotar para depois. Sem aplicação de proposta no palco; não improvisar dados ou veredito.</div>
 </section>
 
 <!-- 16 · O pedido -->

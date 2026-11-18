@@ -59,7 +59,7 @@ check('image click/key wiring without slide advance (native dialog API stubbed)'
 });
 check('visible evidence boundaries remain in the main slides',()=>{
   const slides=[...d.querySelectorAll('.slide')];
-  for (const [index,expected] of [[7,'Captura real · 28/10/2026'],[8,'alguns PRs seguem abertos'],[9,'Plano B'],[10,'zero replays']])assert(slides[index].textContent.includes(expected));
+  for (const [index,expected] of [[7,'Captura real · 28/10/2026'],[8,'Plano B'],[9,'alguns PRs seguem abertos'],[10,'zero replays']])assert(slides[index].textContent.includes(expected));
 });
 check('no runtime errors during navigation',()=>assert.deepEqual(issues,[]));
 const receipt={deck_sha256:createHash('sha256').update(html).digest('hex'),checks:results,scope:'DOM runtime checks in JSDOM; native dialog API stubbed for event-wiring checks. Not pixel layout, browser-native dialog, projector or real integration proof'};
