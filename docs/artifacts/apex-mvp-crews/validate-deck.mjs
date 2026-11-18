@@ -16,24 +16,24 @@ const results=[];
 function check(name, fn) { fn(); results.push({name,status:'pass'}); }
 function active(){ return [...d.querySelectorAll('.slide')].findIndex(s=>s.classList.contains('active'))+1; }
 function key(value){d.dispatchEvent(new w.KeyboardEvent('keydown',{key:value,bubbles:true,cancelable:true}));}
-check('20 slides and working hash entry',()=>{assert.equal(d.querySelectorAll('.slide').length,20);assert.equal(active(),8);});
+check('19 slides and working hash entry',()=>{assert.equal(d.querySelectorAll('.slide').length,19);assert.equal(active(),8);});
 check('all slides reachable with matching hash and counter',()=>{
   key('Home');
-  for(let n=1;n<=20;n++){
+  for(let n=1;n<=19;n++){
     assert.equal(active(),n);
     assert.equal(w.location.hash,'#'+n);
-    assert.equal(d.querySelector('#hud').textContent,n<=17 ? n+' / 17' : 'Apêndice '+(n-17)+' / 3');
-    const expectedProgress=n<=17 ? n/17*100 : (n-17)/3*100;
+    assert.equal(d.querySelector('#hud').textContent,n<=16 ? n+' / 16' : 'Apêndice '+(n-16)+' / 3');
+    const expectedProgress=n<=16 ? n/16*100 : (n-16)/3*100;
     assert(Math.abs(parseFloat(d.querySelector('#progress').style.width)-expectedProgress)<0.001);
-    if(n===17) key('a'); else if(n<20) key('ArrowRight');
+    if(n===16) key('a'); else if(n<19) key('ArrowRight');
   }
 });
 check('closing slide does not advance into appendix',()=>{
-  key('Escape');assert.equal(active(),17);
-  key('ArrowRight');assert.equal(active(),17);
-  d.body.dispatchEvent(new w.MouseEvent('click',{bubbles:true,clientX:900}));assert.equal(active(),17);
+  key('Escape');assert.equal(active(),16);
+  key('ArrowRight');assert.equal(active(),16);
+  d.body.dispatchEvent(new w.MouseEvent('click',{bubbles:true,clientX:900}));assert.equal(active(),16);
 });
-check('appendix opens deliberately and Escape returns',()=>{key('a');assert.equal(active(),18);key('ArrowRight');assert.equal(active(),19);key('Escape');assert.equal(active(),17);});
+check('appendix opens deliberately and Escape returns',()=>{key('a');assert.equal(active(),17);key('ArrowRight');assert.equal(active(),18);key('Escape');assert.equal(active(),16);});
 check('notes drawer toggles and Escape hides it',()=>{key('Home');key('n');assert(d.querySelector('#notes').classList.contains('on'));key('Escape');assert(!d.querySelector('#notes').classList.contains('on'));});
 check('embedded source image byte-matches published evidence',()=>{
   const src=d.querySelector('[data-image-zoom] img').getAttribute('src');
@@ -59,12 +59,12 @@ check('image click/key wiring without slide advance (native dialog API stubbed)'
 });
 check('visible evidence boundaries remain in the main slides',()=>{
   const slides=[...d.querySelectorAll('.slide')];
-  for (const [index,expected] of [[7,'Captura real · 28/10/2026'],[8,'ainda depende de ensaio'],[9,'dados ilustrativos'],[10,'zero replays']])assert(slides[index].textContent.includes(expected));
+  for (const [index,expected] of [[7,'Captura real · 28/10/2026'],[8,'alguns PRs seguem abertos'],[9,'Plano B'],[10,'zero replays']])assert(slides[index].textContent.includes(expected));
 });
 check('no runtime errors during navigation',()=>assert.deepEqual(issues,[]));
 const receipt={deck_sha256:createHash('sha256').update(html).digest('hex'),checks:results,scope:'DOM runtime checks in JSDOM; native dialog API stubbed for event-wiring checks. Not pixel layout, browser-native dialog, projector or real integration proof'};
 if (process.argv.includes('--write-receipt')) {
-  writeFileSync(folder+'2026-11-16-demo-evidence/design-v03-checks.json',JSON.stringify(receipt,null,2)+'\n');
+  writeFileSync(folder+'2026-11-16-demo-evidence/design-final-checks.json',JSON.stringify(receipt,null,2)+'\n');
 }
 console.log(JSON.stringify(receipt,null,2));
 dom.window.close();
