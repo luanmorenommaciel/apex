@@ -37,6 +37,7 @@ RUN_ROW = {
     "task_time_ms": 91000, "plan_fingerprint": "a" * 64, "shape_count": 2,
     "shaped_stage_count": 30, "config_source": "observed",
     "conf_executor_instances": 8, "conf_shuffle_partitions": 200,
+    "refused_count": 2,
 }
 
 

@@ -1,0 +1,54 @@
+name: jar
+
+# The Scala jar (build.sbt publishes four (Spark, Scala) cells).
+#
+#   pull_request / push main touching jar/** -> sbt test on JDK 21 only.
+#   weekly (Mon 06:00 UTC) + workflow_dispatch -> JDK 17 and 21. The two
+#   Spark 4.x cells cannot run on JDK 11, and this is the only place all four
+#   cells are covered on both JDKs.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "jar/**"
+      - ".github/workflows/jar.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "jar/**"
+      - ".github/workflows/jar.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: jar-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  jar:
+    name: jar (JDK ${{ matrix.jdk }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: ["17", "21"]
+        # JDK 17 only on the weekly/manual run; PRs and pushes use JDK 21.
+        exclude:
+          - jdk: ${{ (github.event_name == 'pull_request' || github.event_name == 'push') && '17' || 'none' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.jdk }}
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - name: sbt test (all 4 cross-build cells)
+        working-directory: jar
+        run: sbt -batch test
