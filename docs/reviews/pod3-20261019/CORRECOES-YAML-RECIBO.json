@@ -1,0 +1,57 @@
+[
+  {
+    "path": "tasks/.plans/l2-discover.yaml",
+    "source_sha256": "5dd498062cbada07c78d0101cdcdcb8a0670b29493487daf6099491560089ab3",
+    "fixed_sha256": "efee72a91e2a5d36f93444a5945f682f4efe2e9716ebc59cd6a32429e8332331",
+    "conversions": [
+      {
+        "key": "command",
+        "value": "( cd serve && uv run python -c \"from apex_mcp import ch; s=ch.RUNS_SQL; assert 'GROUP BY job_id' in s, s; assert 'ts >=' in s or 'ts>' in s, 'unbounded scan: no ts predicate'; assert '{' in s, 'no bound parameter'\" )",
+        "original_line": 53
+      }
+    ],
+    "yaml_parse": "PASS",
+    "scalar_text_preserved": true,
+    "commands_executed": false
+  },
+  {
+    "path": "tasks/.plans/serve-api-e2e.yaml",
+    "source_sha256": "75083b6d5cac2a6969ba7baf9e11013cf6f8e4c08807a0b8fb2e9e6996caa327",
+    "fixed_sha256": "36e3fbf9075255bcbd6f29f25d5ea86eef6826c68b5e20391c23932790d41397",
+    "conversions": [
+      {
+        "key": "command",
+        "value": "( set -a; . infra/.env; set +a; export CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT=\"${CLICKHOUSE_HTTP_HOST_PORT:-8123}\" CLICKHOUSE_DATABASE=\"${CLICKHOUSE_DB:-apex}\"; JOB=$(docker exec apex-infra-clickhouse clickhouse-client --user \"$CLICKHOUSE_USER\" --password \"$CLICKHOUSE_PASSWORD\" -q \"SELECT job_id FROM apex.spark_events GROUP BY job_id ORDER BY max(ts) DESC LIMIT 1\"); cd serve && uv run --extra dev python ../scripts/e2e_six_lanes.py --job-id \"$JOB\" | grep '\"status\": \"passed\"' >/dev/null )",
+        "original_line": 101
+      }
+    ],
+    "yaml_parse": "PASS",
+    "scalar_text_preserved": true,
+    "commands_executed": false
+  },
+  {
+    "path": "tasks/.plans/serve-api.yaml",
+    "source_sha256": "70a5463e7bf313ae9d2619321a34ebc99ad093226eca08660d19498413c4e770",
+    "fixed_sha256": "90129bbc161d28b2737da16edd2f03d206bd9211915dcd2a5590677dd41bcfd3",
+    "conversions": [
+      {
+        "key": "context",
+        "value": "apex-mcp already depends on the SDK-bundled FastMCP, which is Starlette and uvicorn underneath, so FastAPI adds no new runtime. ch.py already has _sanitize() and server.py has _fail() - the API needs the same guarantee at the HTTP boundary, not a second sanitizer with different rules. app.py discovers routers under apex_api/routes/ rather than importing them by name, so the diagnostic and resource units add a file each instead of all three editing app.py. Auth belongs here rather than in a follow-up unit: a service that is open between two tasks has been open in someone's environment. Tokens come from server configuration, never a committed file, and /v1/health is the one route probe-able without one, because a liveness check that needs a secret is not a liveness check.",
+        "original_line": 20
+      },
+      {
+        "key": "context",
+        "value": "front/src/data/repository.ts is the contract - ELEVEN methods plus a `kind` property, whose return types the screens already consume. The response shapes must match those types, because the acceptance test on the other side is that no screen changes. This task also carries two query ports the readstore task missed: `listRuns` and `fixVerification` were mapped to ReadStore.runs() and ReadStore.verifications() by NAME, but those return different projections - runs() has no task_time_ms or finding_count, and verifications() requires a job_id and derives none of rule 2's columns. RUN_LIST and FIX_VERIFICATIONS therefore land in ch.py here, which is why this task writes it.",
+        "original_line": 225
+      },
+      {
+        "key": "context",
+        "value": "http.ts already produces a relative /v1 path when apiUrl is empty, so the client half is done - what is missing is the two proxies and the two config keys. Leaving apiUrl set remains supported for a direct cross-origin call, which then DOES need CORS on the API and is documented as such rather than silently broken. The entrypoint must keep emitting no key for an unset variable, because an emitted empty string is a real value the bundle would take over its own default. APEX_API_UPSTREAM is defaulted in the DOCKERFILE, not the entrypoint: the image's own 20-envsubst-on-templates.sh runs before 30-apex-console-config.sh, so a default exported there would arrive too late, and NGINX_ENVSUBST_FILTER must be widened or the placeholder survives into the served config and nginx refuses to start.",
+        "original_line": 409
+      }
+    ],
+    "yaml_parse": "PASS",
+    "scalar_text_preserved": true,
+    "commands_executed": false
+  }
+]
