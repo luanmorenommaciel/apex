@@ -50,7 +50,8 @@ units:
         expected_duration_sec: 30
       - id: eval_3
         description: the runs SQL bounds by ts so partitions can prune
-        command: ( cd serve && uv run python -c "from apex_mcp import ch; s=ch.RUNS_SQL; assert 'GROUP BY job_id' in s, s; assert 'ts >=' in s or 'ts>' in s, 'unbounded scan: no ts predicate'; assert '{' in s, 'no bound parameter'" )
+        command: >-
+          ( cd serve && uv run python -c "from apex_mcp import ch; s=ch.RUNS_SQL; assert 'GROUP BY job_id' in s, s; assert 'ts >=' in s or 'ts>' in s, 'unbounded scan: no ts predicate'; assert '{' in s, 'no bound parameter'" )
         verifies: [B-1, B-3]
         terminal: true
         expected_duration_sec: 15

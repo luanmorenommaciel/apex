@@ -98,7 +98,8 @@ units:
         expected_duration_sec: 60
       - id: eval_2
         description: LIVE - needs infra up and an analysed job - the gate passes on the newest job
-        command: ( set -a; . infra/.env; set +a; export CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT="${CLICKHOUSE_HTTP_HOST_PORT:-8123}" CLICKHOUSE_DATABASE="${CLICKHOUSE_DB:-apex}"; JOB=$(docker exec apex-infra-clickhouse clickhouse-client --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" -q "SELECT job_id FROM apex.spark_events GROUP BY job_id ORDER BY max(ts) DESC LIMIT 1"); cd serve && uv run --extra dev python ../scripts/e2e_six_lanes.py --job-id "$JOB" | grep '"status": "passed"' >/dev/null )
+        command: >-
+          ( set -a; . infra/.env; set +a; export CLICKHOUSE_HOST=127.0.0.1 CLICKHOUSE_PORT="${CLICKHOUSE_HTTP_HOST_PORT:-8123}" CLICKHOUSE_DATABASE="${CLICKHOUSE_DB:-apex}"; JOB=$(docker exec apex-infra-clickhouse clickhouse-client --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" -q "SELECT job_id FROM apex.spark_events GROUP BY job_id ORDER BY max(ts) DESC LIMIT 1"); cd serve && uv run --extra dev python ../scripts/e2e_six_lanes.py --job-id "$JOB" | grep '"status": "passed"' >/dev/null )
         verifies: [B-2]
         terminal: true
         expected_duration_sec: 120
