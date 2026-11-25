@@ -1,0 +1,19 @@
+{
+  "job_id": "app-20261028201044-0002",
+  "gate": "six-lane-canonical-e2e",
+  "first_status": "passed",
+  "repeat_status": "passed",
+  "lanes": {
+    "collect": "passed",
+    "dev": "passed",
+    "engine": "passed",
+    "infra": "passed",
+    "jar": "passed",
+    "serve": "degraded"
+  },
+  "stage_rows": 20,
+  "accepted_findings": 4,
+  "llm_calls": 0,
+  "first_written_rows": 4,
+  "repeat_written_rows": 0
+}

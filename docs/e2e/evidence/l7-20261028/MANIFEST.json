@@ -1,0 +1,21 @@
+{
+  "date_utc": "2026-10-28T20:20:44Z",
+  "scope": "local disposable integration; no GitHub or official branch changes",
+  "base_main_sha": "0e84c10b0a950e5b59421fbf768e8352c7ee6b52",
+  "source_pr_heads": {
+    "182": "74fdb0791825aa89c419694ec71f2aa3e6ea4d74",
+    "194": "a477c80d4f2a86462547f3af042267b6fd8088f9",
+    "195": "333d1164f8e58d61196abf08e1ec7757cdd011e4",
+    "197": "5696785638c6dabe7148a752a20b4226f3d89ef2"
+  },
+  "local_candidate_commit": "e800f6195760ecafa79ec40165e4f55cf8468a58",
+  "local_candidate_tree": "0683db0f637dfc2efb647fe353e15e82de6d48bd",
+  "local_merge_resolutions": [
+    "serve/src/apex_mcp/server.py: kept prompts import and API client imports",
+    "CHANGELOG.md: retained both P7.1 and RustFS entries"
+  ],
+  "job_ids": {
+    "width_unknown": "app-20261028200655-0001",
+    "width_8_slots": "app-20261028201044-0002"
+  }
+}

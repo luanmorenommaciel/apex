@@ -1,0 +1,20 @@
+{
+  "job_id": "app-20261028201044-0002",
+  "paths_compared": [
+    "FastAPI /diagnosis?detail=full",
+    "MCP stdio via FastAPI",
+    "MCP stdio via direct ClickHouse"
+  ],
+  "complete_payload_equality": true,
+  "canonicalization": "json.dumps(payload,sort_keys=True,separators=(',',':')).encode()",
+  "canonical_sha256": "79129da6c1671b15a7e2de9431642e62e547afa6378786ebdb2336473b5b8360",
+  "stage_count": 20,
+  "finding_count": 4,
+  "symptom_count": 3,
+  "status_after_engine": "degraded",
+  "status_before_engine_api": "degraded",
+  "pre_engine_findings": 0,
+  "post_engine_console_label": "DEGRADED",
+  "pre_engine_console_label": "HEALTHY",
+  "note": "Full diagnostic payloads remain in local custody and are not published."
+}
