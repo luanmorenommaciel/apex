@@ -31,7 +31,7 @@ build: env ## Build the Spark image (S3A + Delta jars baked in)
 up: env ## Start the cluster and wait until every service is healthy
 	$(COMPOSE) up -d --wait
 
-down: ## Stop the cluster (keep the MinIO volume)
+down: ## Stop the cluster (keep the S3 store volume)
 	$(COMPOSE) down
 
 clean: ## Stop and remove volumes — full from-scratch reset

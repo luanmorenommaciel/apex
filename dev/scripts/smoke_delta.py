@@ -1,4 +1,4 @@
-"""Apex dev-env smoke probe — proves Delta write/read on MinIO + event-log emission.
+"""Apex dev-env smoke probe — proves Delta write/read on the local S3 store + event-log emission.
 
 This is NOT a pathology job; it is the health check that `make verify` runs to prove the
 cluster works end to end. The real reusable SparkSession factory is common/session.py (T5);
