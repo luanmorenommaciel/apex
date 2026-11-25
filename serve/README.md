@@ -6,7 +6,7 @@ capability to any MCP client (Claude Code / Cursor / Codex). It reads the shared
 confidence-gated proposal tool that **never applies anything** — one **resource**,
 and two **prompts** (`diagnose`, `fix`).
 
-**Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.5) · DDL in [../contract/](../contract/) ·
+**Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.6) · DDL in [../contract/](../contract/) ·
 **Lane brief:** [../docs/lanes/SERVE.md](../docs/lanes/SERVE.md)
 
 ## The tools
@@ -172,8 +172,7 @@ applied yet: the table is probed once, and its absence reports
 the contract **v0.3 additive** tables the memory lane writes — `apex.plan_memory`
 (one L2-normalised embedding per plan shape) and `apex.run_outcomes` (one row
 per shape per run: the config it ran under, and how it went) — and imports
-nothing from that lane. The tables are the integration surface, which is why
-this package still depends only on `mcp`, `clickhouse-connect` and `pydantic`.
+nothing from that lane. The tables are the integration surface. This package imports no code from another Apex lane; its runtime dependencies also include the HTTP transport packages FastAPI and Uvicorn.
 
 ```
 recall_similar_runs(job_id="app-…")                      # what has this shape done before?
@@ -200,9 +199,7 @@ the top one as the best configuration is exactly the mistake this rule exists to
 prevent.
 
 `config_source` is `observed`, `zest-seed` or `unknown`, and never defaults to
-`observed`. Apex captures no SparkConf today, so most rows are honestly
-`unknown` and carry an explicit `config_unavailable` note rather than six nulls
-a reader could skim as "defaults".
+`observed`. Apex captures the `job_conf` entries observed for a run, but it does not synthesize missing Spark defaults. Rows without captured configuration remain honestly `unknown` and carry an explicit `config_unavailable` note rather than six nulls a reader could skim as "defaults".
 
 These tables are **additive**: a deployment without them gets
 `status="memory_unavailable"` — no history to *read*, which is not the same
@@ -295,8 +292,7 @@ See [`VALIDATION.md`](VALIDATION.md) for recorded results.
   a pre-v0.3 cluster degrades to "not assessed" instead of erroring.
 - **Lanes integrate through ClickHouse, not imports.** serve reads the verify
   lane's verdicts out of `apex.fix_verifications` exactly the way it reads the
-  engine lane's findings out of `apex.findings`. serve still depends only on
-  `mcp`, `clickhouse-connect` and `pydantic`.
+  engine lane's findings out of `apex.findings`.
 
 ## Security
 
