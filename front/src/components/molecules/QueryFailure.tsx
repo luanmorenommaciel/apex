@@ -4,7 +4,6 @@ import type { Repository } from "@/data/repository";
 
 /** How a failure notice names the source — by the kind that was RESOLVED. */
 const SOURCE_NAME: Record<Repository["kind"], string> = {
-  clickhouse: "ClickHouse",
   http: "apex-api",
   fixtures: "the recorded run",
 };
