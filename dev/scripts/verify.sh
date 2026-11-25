@@ -4,8 +4,8 @@
 # Fresh clone → `cp .env.example .env && make verify` must pass on any host.
 #
 # Steps: (1) .env quartet consistent · (2) all 4 JARs reachable · (3) clean build+up
-#        waiting for every healthcheck green · (4) smoke Delta write/read on MinIO ·
-#        (5) event log landed in MinIO · (6) app visible in the History Server · teardown.
+#        waiting for every healthcheck green · (4) smoke Delta write/read on the S3 store ·
+#        (5) event log landed in the S3 store · (6) app visible in the History Server · teardown.
 #
 # Env: KEEP_UP=1 skips the final teardown (for debugging a failed run).
 # ─────────────────────────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ else
 fi
 $COMPOSE ps --format '  {{.Service}}\t{{.State}}\t{{.Status}}'
 
-# ── 4: smoke Delta write/read on MinIO ──────────────────────────────────────
+# ── 4: smoke Delta write/read on the S3 store ─────────────────────────────────
 step "4/6  smoke Delta write/read"
 $COMPOSE exec -T spark-master /opt/spark/bin/spark-submit \
   --master spark://spark-master:7077 --deploy-mode client \
@@ -71,9 +71,11 @@ else
   bad "smoke job did not report success (see out/smoke.log)"; tail -5 out/smoke.log | sed 's/^/      /'
 fi
 
-# ── 5: event log object actually landed in MinIO ────────────────────────────
-step "5/6  event log in MinIO (s3a://$LOGS_BUCKET/events/)"
-LOGS=$($COMPOSE exec -T minio sh -c "mc alias set local http://localhost:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD >/dev/null 2>&1; mc ls --recursive local/$LOGS_BUCKET/events/ 2>/dev/null" | grep -v '\.keep' || true)
+# ── 5: event log object actually landed in the S3 store ──────────────────────
+step "5/6  event log in the S3 store (s3a://$LOGS_BUCKET/events/)"
+# The store (RustFS) ships no mc; list through the init service's AWS CLI image.
+LOGS=$($COMPOSE run --rm --no-deps --entrypoint aws minio-init \
+  --endpoint-url http://minio:9000 s3 ls --recursive "s3://$LOGS_BUCKET/events/" 2>/dev/null | grep -v '\.keep' || true)
 if [ -n "$LOGS" ]; then
   ok "event log present:"; echo "$LOGS" | sed 's/^/      /'
 else

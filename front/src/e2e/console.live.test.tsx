@@ -33,9 +33,6 @@ const LIVE = Boolean(API_URL && API_TOKEN && JOB_ID);
 // node's fetch reaches it without a proxy; the browser would go same-origin.
 vi.mock("@/data/runtimeConfig", () => ({
   runtimeConfig: {
-    database: "apex",
-    user: "apex_ro",
-    password: "",
     dataSource: "http",
     apiUrl: (process.env.APEX_E2E_API_URL ?? "").replace(/\/+$/, ""),
     apiToken: process.env.APEX_E2E_API_TOKEN ?? "",
