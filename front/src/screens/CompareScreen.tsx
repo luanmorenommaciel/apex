@@ -4,7 +4,7 @@ import { Card, Label, Mono, Pill, Prose } from "@/components/atoms";
 import { DataTable, KpiCard, ScreenHeader, type Column, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
 import { fmt } from "@/contract/rules";
-import { useAsync, useRepository } from "@/data/useRepository";
+import { useRead, useRepository } from "@/data/useRepository";
 import type { SparkEventRow } from "@/contract/types";
 
 
@@ -25,21 +25,18 @@ export function CompareScreen() {
   // named explicitly or chosen as the newest OTHER run that ran one of this
   // run's plan shapes. Nothing is hardcoded: a fixed pair was why this screen
   // rendered 0.0x deltas against a live store that had never seen those jobs.
-  const runsQ = useAsync(() => repo.listRuns(50), [repo]);
+  const runsQ = useRead(repo, ["listRuns", 50]);
   const currentJob = params.get("current") ?? runsQ.data?.[0]?.job_id ?? "";
 
-  const candidatesQ = useAsync(
-    () => (currentJob ? repo.baselineCandidates(currentJob) : Promise.resolve([])),
-    [repo, currentJob],
-  );
+  const candidatesQ = useRead(repo, currentJob ? ["baselineCandidates", currentJob] : null);
   const baselineJob = params.get("baseline") ?? candidatesQ.data?.[0]?.job_id ?? "";
 
-  const curRunQ = useAsync(() => (currentJob ? repo.run(currentJob) : Promise.resolve(null)), [repo, currentJob]);
-  const baseRunQ = useAsync(() => (baselineJob ? repo.run(baselineJob) : Promise.resolve(null)), [repo, baselineJob]);
-  const curQ = useAsync(() => (currentJob ? repo.stages(currentJob) : Promise.resolve([])), [repo, currentJob]);
-  const baseQ = useAsync(() => (baselineJob ? repo.stages(baselineJob) : Promise.resolve([])), [repo, baselineJob]);
-  const curF = useAsync(() => (currentJob ? repo.findings(currentJob) : Promise.resolve([])), [repo, currentJob]);
-  const baseF = useAsync(() => (baselineJob ? repo.findings(baselineJob) : Promise.resolve([])), [repo, baselineJob]);
+  const curRunQ = useRead(repo, currentJob ? ["run", currentJob] : null);
+  const baseRunQ = useRead(repo, baselineJob ? ["run", baselineJob] : null);
+  const curQ = useRead(repo, currentJob ? ["stages", currentJob] : null);
+  const baseQ = useRead(repo, baselineJob ? ["stages", baselineJob] : null);
+  const curF = useRead(repo, currentJob ? ["findings", currentJob] : null);
+  const baseF = useRead(repo, baselineJob ? ["findings", baselineJob] : null);
 
   const cur = useMemo(() => curQ.data ?? [], [curQ.data]);
   const base = useMemo(() => baseQ.data ?? [], [baseQ.data]);

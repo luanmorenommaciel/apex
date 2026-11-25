@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pathlib
 import re
 
 import pytest
@@ -827,7 +826,7 @@ def test_memory_reads_short_circuit_on_empty_input():
 
 
 # --------------------------------------------------------------------------
-# Console reads ported out of front/src/data/queries.ts.
+# Console reads: ch.py's own statements, the API's contract with the console.
 #
 # These ran in the BROWSER against a credential that shipped to every visitor.
 # The port's acceptance criterion is that the console's rendered numbers do not
@@ -995,7 +994,7 @@ def test_run_list_returns_the_console_rollup():
     assert ReadStore(client).run_list(limit=10) == [row]
 
     sql, parameters = client.calls[-1]
-    for column in ("task_time_ms", "finding_count", "shape_count", "config_source"):
+    for column in ("task_time_ms", "finding_count", "shape_count", "config_source", "refused_count"):
         assert column in sql, f"the console needs {column} and runs() has none"
     assert parameters["limit"] == 10
     # The limit is clamped, not trusted — a caller cannot ask for the table.
@@ -1223,6 +1222,23 @@ def test_run_rollup_marks_a_missed_shapes_join():
         assert "ifNull(s." not in sql, "an ifNull on the shapes side never fires on a miss"
 
 
+def test_run_rollup_counts_refusals_over_the_loudest_five():
+    """refused_count is the console's rules 1, 6 and 7 in SQL, both forms.
+
+    The CTE ranks the latest attempt of every stage by p99/p50, keeps the
+    five loudest, and counts those not reportable; an unknown cluster width
+    is a refusal, never an assumed width, and the join sentinel keeps a
+    missed join at -1 rather than a measured zero.
+    """
+    for sql in (ch.RUN_ONE_SQL, ch.RUN_LIST_SQL):
+        assert "refused AS (" in sql
+        assert "WHERE loudness <= 5" in sql
+        assert "countIf(NOT reportable) AS refused_count" in sql
+        assert "if(r.counted = 1, toInt64(r.refused_count), -1)" in sql
+        assert "c.slots IS NOT NULL AND c.slots > 1 AND st.ratio > (st.task_count - 1) / (c.slots - 1)" in sql
+        assert "st.bytes_per_task >= 1048576" in sql
+
+
 def test_run_rollup_carries_no_settings_clause():
     """apex_ro is readonly = 1; a per-query SETTINGS would be refused in the browser."""
     for sql in (ch.RUN_ONE_SQL, ch.RUN_LIST_SQL):
@@ -1230,20 +1246,12 @@ def test_run_rollup_carries_no_settings_clause():
         assert "SETTINGS" not in without_comments.upper()
 
 
-QUERIES_TS = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "data" / "queries.ts"
-
-
-def test_run_rollup_matches_the_console_sql():
-    """One rollup, two hosts: ch.py and queries.ts must be the same statement.
-
-    Compared with comments and whitespace removed. Both name their tables
-    unqualified, so there is nothing else to normalise.
-    """
-    source = QUERIES_TS.read_text()
-    body = source.split("const runRollup = (where: string, tail: string) => `", 1)[1]
-    body = body.split("\n`;", 1)[0].replace("${where}", "").replace("${tail}", "")
-
-    def normalise(text: str) -> str:
-        return re.sub(r"\s+", " ", re.sub(r"--[^\n]*", "", text)).strip()
-
-    assert normalise(body) == normalise(ch._run_rollup_sql("", ""))
+def test_run_rollup_is_one_body_with_two_literals():
+    """RUN_ONE and RUN_LIST are the same statement, differing only in the
+    filter and the ordering literals this module passes - so the two forms
+    cannot drift into two answers to "what is this run"."""
+    assert ch.RUN_ONE_SQL == ch._run_rollup_sql("WHERE job_id = {job_id:String}", "LIMIT 1")
+    assert ch.RUN_LIST_SQL == ch._run_rollup_sql("", "ORDER BY b.started_at DESC LIMIT {limit:UInt32}")
+    body = ch._run_rollup_sql("", "")
+    assert body.count("FROM spark_events") == 2, "base and the refusal CTE both take the filter"
+    assert "{job_id:String}" not in body and "{limit:UInt32}" not in body
