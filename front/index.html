@@ -13,12 +13,9 @@
          that falls through to import.meta.env. See src/data/runtimeConfig.ts. -->
     <script src="/config.js"></script>
     <link rel="icon" type="image/png" href="/apex-star.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Archivo+Black&display=swap"
-      rel="stylesheet"
-    />
+    <!-- No font stylesheet here: the three families are bundled from
+         @fontsource packages (src/main.tsx), so the page names no third-party
+         host and renders the same offline. -->
   </head>
   <body class="bg-canvas">
     <div id="root"></div>

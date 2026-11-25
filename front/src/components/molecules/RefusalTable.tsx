@@ -69,9 +69,21 @@ export function RefusalTable({
         return (
           <div
             key={s.stage_id}
-            onClick={() => onSelect?.(s.stage_id)}
+            role={onSelect ? "button" : undefined}
+            tabIndex={onSelect ? 0 : undefined}
+            onClick={onSelect ? () => onSelect(s.stage_id) : undefined}
+            onKeyDown={
+              onSelect
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelect(s.stage_id);
+                    }
+                  }
+                : undefined
+            }
             className={`grid grid-cols-[64px_70px_104px_56px_112px_1fr] px-3.5 py-2.5 border-b border-edge last:border-b-0 items-center font-mono text-[11px] text-body2 ${
-              onSelect ? "cursor-pointer hover:bg-edge/40" : ""
+              onSelect ? "cursor-pointer hover:bg-edge/40 focus-visible:outline focus-visible:outline-1 focus-visible:outline-spark" : ""
             } ${a.refusal?.code === "post_intervention" ? "bg-withheld/[0.06]" : ""}`}
           >
             <span className={a.refusal?.code === "post_intervention" ? "text-withheld" : ""}>

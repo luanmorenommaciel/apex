@@ -138,18 +138,19 @@ The walk above checks status codes, and status codes are what passed while
 three routes returned the wrong projection. A 200 says a route answered; it
 does not say the console can render what came back.
 
-`tools/console_parity_gate.py` issues every statement the console sends
-**twice** — as the browser does, over ClickHouse HTTP as `apex_ro`, and through
-the API — and fails unless both doors return the same rows. It reads the
-statements out of `front/src/data/queries.ts`, so it compares against what the
-console actually sends rather than against a copy.
+`tools/console_parity_gate.py` issues every statement the API serves the
+console **twice** — as raw SQL over ClickHouse HTTP as a read-only user, and
+through the API — and fails unless both doors return the same rows. The
+statements are `ch.py`'s own: since 2026-10-19 the console carries no SQL and
+reads through the API alone, so the raw door proves what ClickHouse returns
+for each statement and the API door proves what the API makes of it.
 
 **What the infra stack needs first**
 
 | Need | How | Without it |
 |---|---|---|
 | The store is up with the contract applied | step 1 | nothing runs. If only `plan_memory` / `run_outcomes` are missing, the memory checks print `NOT EXERCISED` |
-| The console's read-only user | `cd front && make ch-user` | the browser door is `apex_ro`; every browser-side statement is refused and the gate fails on its first line |
+| A read-only reference user | `docker exec -i <clickhouse> clickhouse-client --user apex --password <pw> --multiquery < tools/sql/01-parity-readonly-user.sql` | the raw door is `apex_ro` with `readonly = 1`; without it every raw-SQL statement is refused and the gate fails on its first line |
 | The environment names the store | the `CLICKHOUSE_*` variables from step 2, `CLICKHOUSE_DATABASE` included | the gate connects to `127.0.0.1:8123`, database `apex` — wrong on a host where `infra/.env` moved the port (the shared dev host uses 28123) |
 | A user that may write, for the default mode | `CLICKHOUSE_USER=apex` locally | the gate seeds its own rows and deletes them; on a store nobody may write to, use `--job-id` |
 
@@ -163,7 +164,7 @@ uv run python tools/console_parity_gate.py
 | Mode | What it does |
 |---|---|
 | *(default)* | Seeds its own rows under job ids carrying a random suffix, runs every check, and removes exactly those rows — the arrangement `tools/read_only_gate.py` already uses. Exercises everything. |
-| `--job-id <id>` | Writes **nothing**. Compares the two doors on a run the store already holds. A behaviour that run's data cannot exercise prints `NOT EXERCISED`, which is not a pass. |
+| `--job-id <id>` | Writes **nothing**. Compares the raw door and the API on a run the store already holds. A behaviour that run's data cannot exercise prints `NOT EXERCISED`, which is not a pass. |
 | `--api-url http://127.0.0.1:8099 --api-token $TOK` | The API door is the **running service** from step 2 instead of an in-process app. This is the one that signs off a deployment; combine it with either mode above. |
 
 On infra's own seed (`infra/scripts/seed.sh`) use
