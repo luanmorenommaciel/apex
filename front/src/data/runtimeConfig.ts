@@ -2,57 +2,38 @@
  * Deployment configuration, resolved at RUNTIME rather than baked at build.
  *
  * Vite inlines every `import.meta.env.VITE_*` reference into the bundle, so an
- * image built once could otherwise only ever reach one database, as one user,
- * in one mode — a new endpoint, a renamed database or a rotated credential all
- * meant rebuilding and republishing the assets. The production image writes
- * `/config.js` from its own environment at container start
- * (`docker-entrypoint.d/30-apex-console-config.sh`) and `index.html` loads it as
- * a classic script, which runs before the deferred module bundle. One image
- * therefore serves every deployment.
+ * image built once could otherwise only ever reach one API, with one token,
+ * in one mode. The production image writes `/config.js` from its own
+ * environment at container start (`docker-entrypoint.d/30-apex-console-config.sh`)
+ * and `index.html` loads it as a classic script, which runs before the
+ * deferred module bundle. One image therefore serves every deployment.
  *
  * Resolution order, first DEFINED wins:
  *   1. `window.__APEX_CONFIG__` — what the container was started with
  *   2. `import.meta.env.VITE_*` — the dev server and a plain `npm run build`
  *   3. the defaults below
  *
- * A key the deployment did not set is OMITTED by the entrypoint rather than
- * written empty, so `""` stays a real value: `apex_ro` is created IDENTIFIED
- * WITH no_password and its empty password must not fall through to a default.
- *
- * This changes WHO sets the credential, not who can read it. It still ships to
- * every browser, which is why `contract/01-readonly-user.sql` grants SELECT and
- * nothing else. See the README — "Querying ClickHouse from the browser".
- *
- * The `http` data source is the way out of that: against the Apex API the
- * browser carries an API token instead of a database user, and the API decides
- * what it may see. `database`, `user` and `password` are then unused.
+ * The console reads through the Apex API alone (D-api-only, 2026-10-19): the
+ * browser carries an API token and never a database user, and no SQL. The
+ * token still ships to every visitor — a client-side console cannot hide a
+ * credential — but it is a credential for the API, scoped, rotated and
+ * revoked per consumer, and it cannot read a table nobody exposed a route for.
  */
-const DATA_SOURCES = ["auto", "clickhouse", "fixtures", "http"] as const;
+const DATA_SOURCES = ["http", "fixtures"] as const;
 
 export type DataSource = (typeof DATA_SOURCES)[number];
 
 export interface RuntimeConfig {
-  database: string;
-  user: string;
-  password: string;
   dataSource: DataSource;
-  /** Base URL of the Apex API. Empty means no API is configured. */
+  /** Base URL of the Apex API. Empty means same-origin: /v1 is proxied here. */
   apiUrl: string;
-  /**
-   * Bearer token for that API. Still ships to the browser — a client-side
-   * console cannot hide a credential — but it is a credential for the API and
-   * never for the store, so it can be scoped, rotated and revoked per
-   * consumer, and it cannot read a table nobody exposed a route for.
-   */
+  /** Bearer token for that API. */
   apiToken: string;
 }
 
 declare global {
   interface Window {
     __APEX_CONFIG__?: {
-      database?: string;
-      user?: string;
-      password?: string;
       dataSource?: string;
       apiUrl?: string;
       apiToken?: string;
@@ -67,15 +48,12 @@ declare global {
  */
 const deployed = typeof window === "undefined" ? undefined : window.__APEX_CONFIG__;
 
-/** An unrecognised value behaves as "auto", which pings and falls back rather
- *  than committing to a store it has not reached. */
+/** The image entrypoint refuses an unknown value by name; the bundle, which
+ *  cannot refuse, reads anything unrecognised as the default, http. */
 const asDataSource = (v: string | undefined): DataSource =>
-  (DATA_SOURCES as readonly string[]).includes(v ?? "") ? (v as DataSource) : "auto";
+  (DATA_SOURCES as readonly string[]).includes(v ?? "") ? (v as DataSource) : "http";
 
 export const runtimeConfig: RuntimeConfig = {
-  database: deployed?.database ?? import.meta.env.VITE_CLICKHOUSE_DB ?? "apex",
-  user: deployed?.user ?? import.meta.env.VITE_CLICKHOUSE_USER ?? "apex_ro",
-  password: deployed?.password ?? import.meta.env.VITE_CLICKHOUSE_PASSWORD ?? "",
   dataSource: asDataSource(deployed?.dataSource ?? import.meta.env.VITE_DATA_SOURCE),
   apiUrl: deployed?.apiUrl ?? import.meta.env.VITE_APEX_API_URL ?? "",
   apiToken: deployed?.apiToken ?? import.meta.env.VITE_APEX_API_TOKEN ?? "",

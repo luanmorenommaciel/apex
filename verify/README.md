@@ -2,7 +2,7 @@
 
 **Role:** decide whether a recommended fix would actually work — and say so honestly when it
 would not, or when the answer cannot be certified at this scale.
-**Obeys:** [`../CONTRACT.md`](../CONTRACT.md) (v0.5) · **Full brief:** [`../docs/lanes/VERIFY.md`](../docs/lanes/VERIFY.md)
+**Obeys:** [`../CONTRACT.md`](../CONTRACT.md) (v0.6) · **Full brief:** [`../docs/lanes/VERIFY.md`](../docs/lanes/VERIFY.md)
 **Extension:** [`CONTRACT-EXTENSION-v0.3.md`](CONTRACT-EXTENSION-v0.3.md) (`apex.fix_verifications`, ratified)
 **Exit criterion (met):** predicts a fix's effect analytically, replays it on the bench, and
 emits `mechanism_confirmed` / `runtime_certified` / `runtime_unresolved` as separate verdicts —
@@ -53,10 +53,7 @@ tail-bound  ⟺  p99/p50 > (n_tasks − 1) / (slots − 1)
 
 Volume cancels out. There is no tunable constant.
 
-`W` is **not measured**: `executor_run_time_ms` exists in engine's in-memory `StageEvent` but is
-**not** a column in `apex.spark_events` (verified against `system.columns`). So `W` is bracketed
-between two task-distribution models and the prediction is reported as an **interval** — when
-both ends agree, the verdict is safe to quote.
+`executor_run_time_ms` is present in `apex.spark_events` as of the v0.5 schema. The Verify predictor does not yet read that column, so it brackets `W` between two task-distribution models and reports the prediction as an **interval** — when both ends agree, the verdict is safe to quote.
 
 ### ② REPLAY — `replay.py`, two-arm measurement
 
