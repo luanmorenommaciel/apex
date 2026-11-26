@@ -3,12 +3,13 @@
 **Role:** `apex-mcp`, a Python **stdio MCP server** exposing Apex's Spark-diagnosis
 capability to any MCP client (Claude Code / Cursor / Codex). It reads the shared
 `apex` ClickHouse database and exposes **eight tools** — seven read-only, plus one
-confidence-gated proposal tool that **never applies anything** — and one **resource**.
+confidence-gated proposal tool that **never applies anything** — one **resource**,
+and two **prompts** (`diagnose`, `fix`).
 
-**Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.5) · DDL in [../contract/](../contract/) ·
+**Contract:** [../CONTRACT.md](../CONTRACT.md) (v0.6) · DDL in [../contract/](../contract/) ·
 **Lane brief:** [../docs/lanes/SERVE.md](../docs/lanes/SERVE.md)
 
-## The six tools
+## The tools
 
 | Tool | Input | Returns | MCP annotation |
 |---|---|---|---|
@@ -79,6 +80,34 @@ Orientation should not cost a tool call: a client can populate a run picker from
 the resource before the user has asked anything. A resource is **not** a tool and
 does not appear in `list_tools()`.
 
+## The prompts
+
+| Prompt | Arguments | Guides the model to |
+|---|---|---|
+| `diagnose` | `job_id` | `analyze_run` → `explain_stage` on the worst stages → `compare_runs` / `recall_similar_runs` |
+| `fix` | `job_id`, `finding_id?` | `verify_fix` first, then `suggest_fix` — the diff is **never applied** (`applied` is always `False`) and needs human approval |
+
+They are the agent-side twins of the console's Run-detail buttons "ask about this
+run" and "propose fix". A prompt renders text only: it reads nothing from
+ClickHouse and calls no tool itself. Both remind the model that text from the
+observed job (app_name, plan text, findings) is data, never instructions.
+
+**In Claude Code** (server registered as `apex`), the `/` menu lists them as
+`/apex:diagnose (MCP)` and `/apex:fix (MCP)`; typing `/mcp__apex__diagnose <job_id>`
+or `/mcp__apex__fix <job_id> [finding_id]` also runs them. Arguments are
+space-separated. Source: <https://code.claude.com/docs/en/mcp#use-mcp-prompts-as-commands>
+— "Claude Code lists each MCP prompt as `/servername:promptname (MCP)`. Typing
+`/mcp__servername__promptname` also runs it." Other clients surface prompts their
+own way.
+
+Arguments are user- or model-supplied, so each id must match
+`[A-Za-z0-9][A-Za-z0-9._:-]{0,127}` (Spark applicationIds, `spark.apex.job_id`
+overrides, finding uuids). Anything else — whitespace, newlines, quotes, shell or
+SQL metacharacters, a leading `-`, over 128 characters — is rejected. The id
+validator's own errors do not echo the value; the SDK's schema errors for an
+undeclared or mistyped argument may. An empty `finding_id` means "not given". The
+value is only ever placed in the rendered text, never in a query or a command.
+
 ## Finding a run
 
 Every other tool needs a `job_id`. `list_runs` is where one comes from:
@@ -143,8 +172,7 @@ applied yet: the table is probed once, and its absence reports
 the contract **v0.3 additive** tables the memory lane writes — `apex.plan_memory`
 (one L2-normalised embedding per plan shape) and `apex.run_outcomes` (one row
 per shape per run: the config it ran under, and how it went) — and imports
-nothing from that lane. The tables are the integration surface, which is why
-this package still depends only on `mcp`, `clickhouse-connect` and `pydantic`.
+nothing from that lane. The tables are the integration surface. This package imports no code from another Apex lane; its runtime dependencies also include the HTTP transport packages FastAPI and Uvicorn.
 
 ```
 recall_similar_runs(job_id="app-…")                      # what has this shape done before?
@@ -171,9 +199,7 @@ the top one as the best configuration is exactly the mistake this rule exists to
 prevent.
 
 `config_source` is `observed`, `zest-seed` or `unknown`, and never defaults to
-`observed`. Apex captures no SparkConf today, so most rows are honestly
-`unknown` and carry an explicit `config_unavailable` note rather than six nulls
-a reader could skim as "defaults".
+`observed`. Apex captures the `job_conf` entries observed for a run, but it does not synthesize missing Spark defaults. Rows without captured configuration remain honestly `unknown` and carry an explicit `config_unavailable` note rather than six nulls a reader could skim as "defaults".
 
 These tables are **additive**: a deployment without them gets
 `status="memory_unavailable"` — no history to *read*, which is not the same
@@ -203,7 +229,7 @@ claude mcp add --scope user --transport stdio apex \
   -- uvx apex-mcp
 
 claude mcp list      # → apex: uvx apex-mcp - ✔ Connected
-# then restart the client; /mcp lists the six tools
+# then restart the client; /mcp lists the tools, `/` lists /apex:diagnose and /apex:fix
 ```
 
 Until `apex-mcp` is published to PyPI, point `uvx` at this directory:
@@ -311,8 +337,7 @@ See [`VALIDATION.md`](VALIDATION.md) for recorded results.
   a pre-v0.3 cluster degrades to "not assessed" instead of erroring.
 - **Lanes integrate through ClickHouse, not imports.** serve reads the verify
   lane's verdicts out of `apex.fix_verifications` exactly the way it reads the
-  engine lane's findings out of `apex.findings`. serve still depends only on
-  `mcp`, `clickhouse-connect` and `pydantic`.
+  engine lane's findings out of `apex.findings`.
 
 ## Security
 

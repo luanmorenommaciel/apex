@@ -6,7 +6,7 @@ stack (ClickHouse `127.0.0.1:8123`, database `apex`) holding the real P0 run
 
 ## Scope
 
-`apex-mcp` — stdio MCP server, eight tools and one resource:
+`apex-mcp` — stdio MCP server, eight tools, one resource and two prompts:
 
 | Tool | Kind |
 |---|---|
@@ -18,6 +18,13 @@ stack (ClickHouse `127.0.0.1:8123`, database `apex`) holding the real P0 run
 | `search_kb(query, top_k)` | read-only |
 | `verify_fix(job_id, finding_id?)` | read-only |
 | `suggest_fix(job_id, finding_id?, min_confidence)` | proposal only — writes nothing |
+| `diagnose(job_id)` *(prompt)* | renders text only — reads nothing |
+| `fix(job_id, finding_id?)` *(prompt)* | renders text only — never applies a diff |
+
+> The two prompts (P7.12) postdate the live run recorded above. They are covered
+> offline by `tests/test_server_prompts.py`, including a real-stdio round trip.
+> The prompt assertions added to `tools/mcp_stdio_gate.py` have **not** yet been
+> run against live ClickHouse.
 
 The three read tools issue `SELECT`s exclusively. `suggest_fix` performs no
 filesystem, git or database write; it returns a diff as data. No lane code
@@ -43,6 +50,7 @@ uv build                                   # wheel + sdist
 | `tests/test_suggest_fix_safety.py` | `applied=False` on every path, confidence gate, diff shape |
 | `tests/test_injection_hardening.py` | indirect prompt injection, info disclosure |
 | `tests/test_server_tools.py` | tool surface, annotations, stdout cleanliness |
+| `tests/test_server_prompts.py` | prompt surface, argument allowlist, never-applied wording |
 
 ### `tools/read_only_gate.py` — live ClickHouse, `status: passed`
 

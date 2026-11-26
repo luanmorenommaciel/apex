@@ -14,6 +14,10 @@ Eight tools:
   verify_fix          (read-only)  what the verify lane concluded -> FixVerdict
   suggest_fix         (NOT read-only, and still writes nothing) -> FixSuggestion
 
+Two prompts (prompts.py; in Claude Code: /apex:diagnose, /mcp__apex__diagnose):
+  diagnose(job_id)              analyze_run -> explain_stage -> compare/recall
+  fix(job_id, finding_id?)      verify_fix -> suggest_fix; the diff is never applied
+
 Every tool but recall_similar_runs reasons about ONE run. `recall_similar_runs`
 is the first that reasons across them, over the contract v0.3 memory tables.
 
@@ -38,7 +42,7 @@ from typing import Literal, NoReturn, Protocol
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
-from . import ch, diagnose
+from . import ch, diagnose, prompts
 from .api_client import (
     API_TIMEOUT_VAR,
     API_TOKEN_VAR,
@@ -738,6 +742,7 @@ def _build_server(tools: ToolBackend) -> FastMCP:
         except Exception as exc:  # noqa: BLE001
             raise _fail(exc) from None
 
+    prompts.register(mcp)
     return mcp
 
 

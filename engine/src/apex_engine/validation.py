@@ -123,11 +123,15 @@ def _finite_number(value: object) -> bool:
 
 
 def _retry_pressure_issues(details: dict[str, object]) -> list[str]:
-    """Require Spark's three nested scheduler counters as typed evidence.
+    """Require Spark's three scheduler counters as typed evidence.
 
-    `counted` is a subset of failed attempts, and failed attempts are a subset
-    of all task-end events. The validator deliberately reasons only from these
-    structured counters; finding prose is not evidence.
+    Per CONTRACT.md the failed (`TaskInfo.failed`) and counted
+    (`countTowardsTaskFailures`) counters are independent, so neither is
+    required to contain the other: a `TaskResultLost` attempt ends in the
+    FINISHED state (`failed=false`) yet still counts towards task failures.
+    Both are incremented on task-end events, so each is bounded by the attempt
+    count. The validator deliberately reasons only from these structured
+    counters; finding prose is not evidence.
     """
     keys = (
         "task_attempt_count",
@@ -144,7 +148,7 @@ def _retry_pressure_issues(details: dict[str, object]) -> list[str]:
     attempts, failed, counted = values
     if counted == 0:
         return ["missing_counted_task_failures"]
-    if not counted <= failed <= attempts:
+    if counted > attempts or failed > attempts:
         return ["incoherent_retry_measurements"]
     return []
 
