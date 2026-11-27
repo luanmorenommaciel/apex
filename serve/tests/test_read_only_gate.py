@@ -96,8 +96,10 @@ class StubStore:
     def runs(self, *, app_name=None, **_kwargs):
         if app_name == "' OR 1=1 --":
             return []
-        return [{"job_id": job, "stage_count": 1, "app_name": "gate", "last_ts": 1}
-                for job in (gate.BEFORE_JOB_ID, gate.AFTER_JOB_ID)]
+        # One instant for both, so the gate's order check (P7.5: first_ts DESC,
+        # job_id ASC) is met by the job_id tie-break, as the store returns it.
+        return [{"job_id": job, "stage_count": 1, "app_name": "gate", "first_ts": 1, "last_ts": 1}
+                for job in sorted((gate.BEFORE_JOB_ID, gate.AFTER_JOB_ID))]
 
 
 @pytest.fixture

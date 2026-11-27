@@ -1,17 +1,231 @@
 // @vitest-environment jsdom
+/**
+ * P7.5 — the runs list filters on the SERVER and pages by offset.
+ *
+ * The screen no longer filters the 50 rows it was handed: it asks the store
+ * for the runs matching job_id prefix / plan fingerprint / has findings, and
+ * turns pages with offset. These tests drive the mounted screen and read what
+ * it asked the repository for.
+ */
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { FixtureRepository, type Repository } from "@/data/repository";
 import * as fx from "@/data/fixtures";
-import { RunsScreen } from "./RunsScreen";
+import { FixtureRepository, type Repository, type RunListFilters } from "@/data/repository";
+import { RUNS_FILTER_DEBOUNCE_MS, RUNS_PAGE_SIZE, RunsScreen } from "./RunsScreen";
 
 const current = vi.hoisted(() => ({ repo: null as Repository | null }));
 vi.mock("@/data/useRepository", async (original) => ({
   ...await original<typeof import("@/data/useRepository")>(),
   useRepository: () => current.repo,
 }));
+
+let host: HTMLDivElement;
+let root: Root;
+let router: ReturnType<typeof createMemoryRouter> | null = null;
+let listRuns: ReturnType<typeof vi.fn<(limit?: number, filters?: RunListFilters) => ReturnType<Repository["listRuns"]>>>;
+
+/** A full page of copies of the recording, so "next" has somewhere to go. */
+const page = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({ ...fx.runs[i % fx.runs.length], job_id: `job-${i}` }));
+
+const settle = () => act(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+});
+
+async function mount() {
+  router = createMemoryRouter([{ path: "/runs", element: <RunsScreen /> }], { initialEntries: ["/runs"] });
+  await act(async () => {
+    root.render(<RouterProvider router={router!} />);
+  });
+  await settle();
+}
+
+function type(label: string, value: string) {
+  const input = host.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  act(() => {
+    setter.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+
+async function click(text: string) {
+  const button = [...host.querySelectorAll("button")].find((b) => b.textContent?.includes(text))!;
+  await act(async () => button.click());
+  await settle();
+}
+
+const button = (text: string) =>
+  [...host.querySelectorAll("button")].find((b) => b.textContent?.includes(text))!;
+
+const lastFilters = () => listRuns.mock.calls.at(-1)?.[1];
+
+beforeEach(() => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  host = document.createElement("div");
+  document.body.append(host);
+  root = createRoot(host);
+  const repo = new FixtureRepository();
+  listRuns = vi.fn(async () => page(RUNS_PAGE_SIZE));
+  current.repo = Object.assign(repo, { listRuns }) as unknown as Repository;
+});
+
+afterEach(async () => {
+  await act(async () => root.unmount());
+  router?.dispose();
+  host.remove();
+});
+
+describe("RunsScreen (server-side filters, offset paging)", () => {
+  it("asks for the first page with no filters", async () => {
+    await mount();
+    expect(listRuns).toHaveBeenCalledTimes(1);
+    expect(listRuns.mock.calls[0][0]).toBe(50);
+    expect(lastFilters()).toEqual({
+      offset: 0, jobIdPrefix: undefined, planFingerprint: undefined, hasFindings: undefined,
+    });
+    expect(button("prev").disabled).toBe(true);
+    expect(button("next").disabled).toBe(false);
+  });
+
+  it("sends the job_id prefix to the store once typing settles", async () => {
+    await mount();
+    type("job_id prefix", "app-2026");
+    type("job_id prefix", "app-20260803");
+    expect(listRuns).toHaveBeenCalledTimes(1); // debounced, not per keystroke
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, RUNS_FILTER_DEBOUNCE_MS + 50));
+    });
+    await settle();
+    expect(listRuns).toHaveBeenCalledTimes(2);
+    expect(lastFilters()).toMatchObject({ jobIdPrefix: "app-20260803", offset: 0 });
+  });
+
+  it("sends the plan fingerprint to the store", async () => {
+    await mount();
+    type("plan fingerprint", ` ${fx.PLAN_FINGERPRINT} `);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, RUNS_FILTER_DEBOUNCE_MS + 50));
+    });
+    await settle();
+    expect(lastFilters()).toMatchObject({ planFingerprint: fx.PLAN_FINGERPRINT });
+  });
+
+  it("'findings only' asks the store for has_findings=true; 'all' clears it", async () => {
+    await mount();
+    await click("findings only");
+    expect(lastFilters()).toMatchObject({ hasFindings: true, offset: 0 });
+    await click("all");
+    // Back to the unfiltered first page, which useRead still holds: no new
+    // request, and the store was only ever asked for has_findings=true once.
+    expect(listRuns.mock.calls.map(([, f]) => f?.hasFindings)).toEqual([undefined, true]);
+    expect(button("all").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("pages with offset, and a filter change starts again from the first page", async () => {
+    await mount();
+    await click("next");
+    expect(lastFilters()).toMatchObject({ offset: 50 });
+    await click("next");
+    expect(lastFilters()).toMatchObject({ offset: 100 });
+    await click("prev");
+    // Page 2 again is answered from useRead's cache, not re-asked.
+    expect(listRuns).toHaveBeenCalledTimes(3);
+    expect(host.textContent).toContain("51–100");
+    await click("findings only");
+    expect(lastFilters()).toMatchObject({ offset: 0, hasFindings: true });
+    expect(listRuns.mock.calls.map(([, f]) => f?.offset)).toEqual([0, 50, 100, 0]);
+  });
+
+  it("disables next on a short page — it is the last one", async () => {
+    listRuns.mockImplementation(async () => page(3));
+    await mount();
+    expect(button("next").disabled).toBe(true);
+    expect(host.textContent).toContain("3 runs");
+  });
+
+  it("keeps prev/next after a later-page rejection and prev restores the earlier page", async () => {
+    listRuns.mockImplementation(async (_limit, filters) => {
+      if (filters?.offset === RUNS_PAGE_SIZE) throw new Error("later page rejected");
+      return page(RUNS_PAGE_SIZE);
+    });
+    await mount();
+    expect(host.textContent).toContain("job-0");
+    await click("next");
+    expect(lastFilters()).toMatchObject({ offset: RUNS_PAGE_SIZE });
+    expect(host.textContent).toContain("query failed");
+    expect(button("prev")).toBeDefined();
+    expect(button("next")).toBeDefined();
+    expect(button("prev").disabled).toBe(false);
+    await click("prev");
+    // The failure is not cached; the first page is, so prev re-asks nothing.
+    expect(listRuns.mock.calls.map(([, filters]) => filters?.offset)).toEqual([0, RUNS_PAGE_SIZE]);
+    expect(host.textContent).not.toContain("query failed");
+    expect(host.textContent).toContain("job-0");
+    expect(host.textContent).toContain(`job-${RUNS_PAGE_SIZE - 1}`);
+    expect(button("prev").disabled).toBe(true);
+    expect(button("next").disabled).toBe(false);
+  });
+
+  it("stops 'next' where the store's offset cap stops paging", async () => {
+    await mount();
+    for (let i = 0; i < 200; i += 1) await click("next");
+    // 200 pages of 50 = offset 10 000, the cap; another page would be refused.
+    expect(lastFilters()).toMatchObject({ offset: 10_000 });
+    expect(button("next").disabled).toBe(true);
+    // 200 real page turns, each a fresh useRead entry: ~1.6 s locally and past
+    // vitest's 5 s default on a CI runner, so this one test gets more room.
+  }, 30_000);
+
+  it("labels an empty page without an impossible range", async () => {
+    listRuns.mockImplementation(async () => []);
+    await mount();
+    expect(host.textContent).toContain("no runs");
+    expect(host.textContent).not.toMatch(/\b0 runs · /);
+    expect(host.textContent).not.toContain("50–50");
+  });
+
+  it("does not claim a 7-day window for the recording, which has none", async () => {
+    await mount();
+    expect(host.textContent).toContain("from the recording");
+    expect(host.textContent).not.toContain("last 7 days");
+    current.repo = Object.assign(current.repo!, { kind: "http" as const });
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await mount();
+    expect(host.textContent).toContain("active in the last 7 days");
+  });
+
+  it("keeps the filters on screen when the store rejects the query", async () => {
+    listRuns.mockImplementation(async () => {
+      throw new Error("rejected");
+    });
+    await mount();
+    expect(host.textContent).toContain("query failed");
+    expect(host.querySelector('input[aria-label="job_id prefix"]')).not.toBeNull();
+    expect(host.querySelector('input[aria-label="plan fingerprint"]')).not.toBeNull();
+    // Correcting the input retries the query.
+    listRuns.mockImplementation(async () => page(1));
+    type("job_id prefix", "job-");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, RUNS_FILTER_DEBOUNCE_MS + 50));
+    });
+    await settle();
+    expect(lastFilters()).toMatchObject({ jobIdPrefix: "job-" });
+    expect(host.textContent).not.toContain("query failed");
+  });
+
+  it("renders the rows the store returned, without filtering them again", async () => {
+    listRuns.mockImplementation(async () => page(2).map((r) => ({ ...r, finding_count: 0 })));
+    await mount();
+    await click("findings only");
+    // The store answered; the screen does not second-guess it by dropping rows.
+    expect(host.textContent).toContain("job-0");
+    expect(host.textContent).toContain("job-1");
+  });
+});
 
 /** FixtureRepository with ONE read rejecting on a message that must never render. */
 function failing(method: keyof Repository): Repository {
@@ -25,68 +239,13 @@ function failing(method: keyof Repository): Repository {
   }) as unknown as Repository;
 }
 
-let host: HTMLDivElement;
-let root: Root;
-let router: ReturnType<typeof createMemoryRouter> | null = null;
-const text = () => host.textContent ?? "";
-
-async function mount(repo: Repository = new FixtureRepository()) {
-  current.repo = repo;
-  router = createMemoryRouter([{ path: "/runs", element: <RunsScreen /> }], { initialEntries: ["/runs"] });
-  await act(async () => { root.render(<RouterProvider router={router!} />); });
-  await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-}
-
-async function type(value: string) {
-  const input = host.querySelector("input");
-  expect(input).not.toBeNull();
-  // React listens for the native input event and reads the value React did
-  // not set itself, so the prototype setter is used rather than the instance.
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
-  await act(async () => {
-    setter.call(input, value);
-    input!.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-}
-
-beforeEach(() => {
-  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
-});
-afterEach(async () => {
-  await act(async () => root.unmount());
-  router?.dispose();
-  host.remove();
-});
-
-describe("RunsScreen against the recorded run", () => {
-  it("lists every recorded run with its app name and status", async () => {
-    await mount();
-    for (const run of fx.runs) {
-      expect(text()).toContain(run.job_id);
-      expect(text()).toContain(run.app_name);
-    }
-    expect(text()).toContain(`${fx.runs.length} most recent applications`);
-    expect(text()).not.toContain("querying");
-  });
-
-  it("filters the list by what is typed", async () => {
-    await mount();
-    await type("sessionize");
-    expect(text()).toContain("app-20260802194030-0068");
-    expect(text()).not.toContain(fx.CURRENT_JOB);
-    expect(text()).toContain(`1 of ${fx.runs.length}`);
-    await type("");
-    expect(text()).toContain(fx.CURRENT_JOB);
-  });
-
+describe("RunsScreen failure reporting", () => {
   it("reports a rejected listRuns by source, never by message", async () => {
-    await mount(failing("listRuns"));
-    expect(text()).toContain("apex-api");
-    expect(text()).toContain("query failed");
-    expect(text()).not.toContain("PRIVATE");
-    expect(text()).not.toContain("No rows match this filter");
+    current.repo = failing("listRuns");
+    await mount();
+    expect(host.textContent).toContain("apex-api");
+    expect(host.textContent).toContain("query failed");
+    expect(host.textContent).not.toContain("PRIVATE");
+    expect(host.textContent).not.toContain("No rows match this filter");
   });
 });

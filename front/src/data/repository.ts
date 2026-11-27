@@ -53,11 +53,42 @@ export interface BaselineCandidate {
   observed_at: WireTimestamp;
 }
 
+/**
+ * Server-side filters for the run list (P7.5). Every one is optional and an
+ * absent or empty value means "no filter". The same names, defaults and
+ * semantics as the API's GET /v1/runs and the MCP's list_runs, so the same
+ * arguments list the same runs on every door.
+ */
+export interface RunListFilters {
+  /** Runs with any event in the last N hours. Default 168 (one week). */
+  sinceHours?: number;
+  /** Rows to skip, over started_at DESC, job_id ASC. Default 0. */
+  offset?: number;
+  /** job_id starts with this. */
+  jobIdPrefix?: string;
+  /** The run executed this plan shape (any of its run_outcomes rows). */
+  planFingerprint?: string;
+  /** true: only runs with findings; false: only runs without. */
+  hasFindings?: boolean;
+  /** Exact app_name. */
+  appName?: string;
+}
+
+/** The shared defaults — ch.py's DEFAULT_RUNS_LIMIT / DEFAULT_SINCE_HOURS. */
+export const RUN_LIST_DEFAULTS = { limit: 50, sinceHours: 168, offset: 0 } as const;
+/** The largest offset the store accepts (ch.py MAX_RUNS_OFFSET); past it the API answers 422. */
+export const RUN_LIST_MAX_OFFSET = 10_000;
+
 export interface Repository {
   readonly kind: "fixtures" | "http";
   // Every read takes a trailing AbortSignal: useRead() cancels a request its
   // screen no longer waits for. FixtureRepository ignores it.
-  listRuns(limit?: number, signal?: AbortSignal): Promise<(RunSummary & { age?: string })[]>;
+  /** Newest-started first. `listRuns(50)` keeps its old meaning, now within a 7-day window. */
+  listRuns(
+    limit?: number,
+    filters?: RunListFilters,
+    signal?: AbortSignal,
+  ): Promise<(RunSummary & { age?: string })[]>;
   /** One run's summary row. null when the job is unknown — never a synthesised zero. */
   run(jobId: string, signal?: AbortSignal): Promise<(RunSummary & { age?: string }) | null>;
   /** Other runs that executed at least one of this run's plan shapes, newest first. */
@@ -181,6 +212,17 @@ const toFixVerification = (r: Record<string, unknown>): FixVerificationRow => ({
   proposed_diff: String(r.proposed_diff ?? ""),
 });
 
+/**
+ * Every plan shape a recorded run executed: its stages' fingerprints plus the
+ * run's own. The server matches a run on ANY of its run_outcomes rows (one per
+ * shape), not only the dominant one RunSummary carries, so the recording is
+ * matched the same way, over the per-stage shapes it does carry.
+ */
+const runShapes = (fx: Fixtures, r: { job_id: string; plan_fingerprint: string }): Set<string> =>
+  new Set([r.plan_fingerprint, ...(fx.stagesByJob[r.job_id] ?? []).map((s) => s.plan_fingerprint)]
+    // "n/a" is the recording's own word for "no shape", never a shape.
+    .filter((fp): fp is string => Boolean(fp) && fp !== "n/a"));
+
 /** The recording's module, loaded on first use and never from the entry chunk. */
 type Fixtures = typeof import("./fixtures");
 
@@ -200,9 +242,24 @@ export class FixtureRepository implements Repository {
 
   // The recording keeps the form it was captured in; it becomes a row here,
   // in the wire format, like a row from any other source.
-  async listRuns() {
+  /**
+   * The recording, filtered and paged the way the API's run list is: same
+   * filters, same offset/limit. Two things differ, both because it is a fixed
+   * past snapshot: the time window is NOT applied (it would empty the
+   * recording), and rows keep their RECORDED order — every recorded started_at
+   * is the same instant, so the job_id tie-break would reshuffle a list whose
+   * order the walkthrough (and the verify screen's first-run pick) relies on.
+   */
+  async listRuns(limit: number = RUN_LIST_DEFAULTS.limit, filters: RunListFilters = {}) {
     const fx = await this.load();
-    return wireRows(fx.runs, "started_at");
+    const offset = Math.max(0, filters.offset ?? RUN_LIST_DEFAULTS.offset);
+    const matching = fx.runs
+      .filter((r) =>
+        (!filters.appName || r.app_name === filters.appName) &&
+        r.job_id.startsWith(filters.jobIdPrefix ?? "") &&
+        (!filters.planFingerprint || runShapes(fx, r).has(filters.planFingerprint)) &&
+        (filters.hasFindings === undefined || (r.finding_count > 0) === filters.hasFindings));
+    return wireRows(matching.slice(offset, offset + Math.max(1, limit)), "started_at");
   }
   async run(jobId: string) {
     const fx = await this.load();
@@ -267,8 +324,22 @@ export class FixtureRepository implements Repository {
 export class HttpRepository implements Repository {
   readonly kind = "http" as const;
 
-  async listRuns(limit = 50, signal?: AbortSignal) {
-    const { data } = await apiGet<RunRollupRow[]>("/v1/runs", { limit }, signal);
+  async listRuns(
+    limit: number = RUN_LIST_DEFAULTS.limit,
+    filters: RunListFilters = {},
+    signal?: AbortSignal,
+  ) {
+    // Only what was asked for travels: the route's defaults ARE the shared
+    // defaults, so an unfiltered call stays /v1/runs?limit=N.
+    const { data } = await apiGet<RunRollupRow[]>("/v1/runs", {
+      limit,
+      since_hours: filters.sinceHours,
+      offset: filters.offset || undefined,
+      app_name: filters.appName || undefined,
+      job_id_prefix: filters.jobIdPrefix || undefined,
+      plan_fingerprint: filters.planFingerprint || undefined,
+      has_findings: filters.hasFindings === undefined ? undefined : String(filters.hasFindings),
+    }, signal);
     return (data ?? []).map(toRunSummary);
   }
 

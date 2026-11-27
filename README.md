@@ -88,8 +88,18 @@ cd ../engine && uv run --extra clickhouse python -m apex_engine <app-id>
 Then point any MCP client at `serve/` and ask about the run:
 
 ```bash
-claude mcp add --scope project apex -- uvx --from ./serve apex-mcp
+# Through the Apex API (the default path; see serve/RUNBOOK.md to start it):
+claude mcp add --scope project \
+  --env APEX_API_URL=http://127.0.0.1:8099 --env APEX_API_TOKEN="${APEX_API_TOKEN}" \
+  apex -- uvx --from ./serve apex-mcp
+
+# Or straight to ClickHouse for local development (an explicit opt-in):
+claude mcp add --scope project --env APEX_MCP_BACKEND=clickhouse \
+  apex -- uvx --from ./serve apex-mcp
 ```
+
+With neither, the server starts but every tool answers `apex_mcp_unconfigured`.
+See [`serve/README.md`](serve/README.md#configuration).
 
 > **Try it without a Spark cluster.** `cd dev && make up && make run-pathology JOB=skew_join` builds a Spark + Delta + MinIO lab and generates a job with a *known* pathology, so you can exercise the plugin and the History Server locally. On its own this does **not** export telemetry anywhere real — `dev`'s Spark cluster only reaches ClickHouse once it's wired to `collect`/`infra`, below.
 

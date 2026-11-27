@@ -52,6 +52,15 @@ class _Populated(FakeClient):
 
     def query(self, query: str, parameters: dict | None = None) -> FakeResult:
         parameters = parameters or {}
+        # RUNS_SQL, the only read bounded by `since_hours` (P7.5). Checked
+        # before the table matches: its shape filter names run_outcomes.
+        if "since_hours" in parameters:
+            self.calls.append((query, parameters))
+            return FakeResult([{
+                "job_id": "j", "app_id": "app-j", "app_name": "nightly_etl",
+                "first_ts": "2026-09-27 10:00:00", "last_ts": "2026-09-27 10:05:00",
+                "stage_count": 1, "spill_disk_bytes": 0, "worst_p99_ms": 460,
+            }])
         if "system.tables" in query:
             self.calls.append((query, parameters))
             return FakeResult([{"name": name} for name in MEMORY_TABLES])
@@ -70,13 +79,6 @@ class _Populated(FakeClient):
                 _outcome_row("prior-1", 90_000, "2026-09-20 10:00:00"),
                 _outcome_row("prior-2", 120_000, "2026-09-21 10:00:00"),
             ])
-        if "since" in parameters:  # RUNS_SQL, the only read bounded by `since`
-            self.calls.append((query, parameters))
-            return FakeResult([{
-                "job_id": "j", "app_id": "app-j", "app_name": "nightly_etl",
-                "first_ts": "2026-09-27 10:00:00", "last_ts": "2026-09-27 10:05:00",
-                "stage_count": 1, "spill_disk_bytes": 0, "worst_p99_ms": 460,
-            }])
         return super().query(query, parameters)
 
 
@@ -106,7 +108,10 @@ def _vectors(job: str) -> dict[str, tuple[dict[str, Any], str, str]]:
             {"job_id": job, "finding_id": None, "min_confidence": 0.75},
             "POST", f"/v1/runs/{job}/fix-suggestion",
         ),
-        "list_runs": ({"limit": 20, "since_hours": 168, "app_name": ""}, "GET", "/v1/diagnostics/runs"),
+        "list_runs": (
+            {"limit": 20, "since_hours": 168, "app_name": ""},
+            "GET", "/v1/diagnostics/runs?limit=20&since_hours=168",
+        ),
         "search_kb": ({"query": "skew", "top_k": 5}, "GET", "/v1/diagnostics/search?q=skew"),
     }
 

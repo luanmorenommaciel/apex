@@ -220,7 +220,7 @@ def test_runs_aggregates_one_row_per_job():
     assert runs[0]["stage_count"] == 4
     sql, _ = client.calls[0]
     assert "GROUP BY job_id" in sql
-    assert "ORDER BY last_ts DESC" in sql
+    assert "ORDER BY first_ts DESC, job_id ASC" in sql
 
 
 def test_runs_filters_by_app_name():
@@ -258,8 +258,10 @@ def test_runs_bounds_the_scan_on_ts():
     store.runs(since_hours=24)
 
     sql, parameters = client.calls[0]
-    assert "ts >= {since:DateTime}" in sql
-    assert parameters["since"]
+    # Hours, not a client-computed timestamp: ClickHouse evaluates now(), so
+    # the browser door and the API door cannot disagree about the window.
+    assert "w.ts >= now() - toIntervalHour({since_hours:UInt32})" in sql
+    assert parameters["since_hours"] == 24
 
 
 def test_runs_clamps_a_caller_supplied_limit():
@@ -1251,7 +1253,10 @@ def test_run_rollup_is_one_body_with_two_literals():
     filter and the ordering literals this module passes - so the two forms
     cannot drift into two answers to "what is this run"."""
     assert ch.RUN_ONE_SQL == ch._run_rollup_sql("WHERE job_id = {job_id:String}", "LIMIT 1")
-    assert ch.RUN_LIST_SQL == ch._run_rollup_sql("", "ORDER BY b.started_at DESC LIMIT {limit:UInt32}")
+    assert ch.RUN_LIST_SQL == ch._run_rollup_sql(
+        "WHERE " + ch.RUN_MEMBERSHIP + ch.RUN_SHAPE_FILTER,
+        "ORDER BY b.started_at DESC, b.job_id ASC " + ch.RUN_PAGE,
+    )
     body = ch._run_rollup_sql("", "")
     assert body.count("FROM spark_events") == 2, "base and the refusal CTE both take the filter"
     assert "{job_id:String}" not in body and "{limit:UInt32}" not in body
