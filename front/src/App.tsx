@@ -3,6 +3,7 @@ import { Shell } from "@/components/layout/Shell";
 import { AskScreen } from "@/screens/AskScreen";
 import { CompareScreen } from "@/screens/CompareScreen";
 import { FindingScreen } from "@/screens/FindingScreen";
+import { KbSearchScreen } from "@/screens/KbSearchScreen";
 import { MemoryScreen } from "@/screens/MemoryScreen";
 import { RunDetailScreen } from "@/screens/RunDetailScreen";
 import { RunsScreen } from "@/screens/RunsScreen";
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/compare" element={<CompareScreen />} />
         <Route path="/memory" element={<MemoryScreen />} />
         <Route path="/verify" element={<VerifyScreen />} />
+        <Route path="/search" element={<KbSearchScreen />} />
         <Route path="*" element={<Navigate to="/runs" replace />} />
       </Routes>
     </Shell>

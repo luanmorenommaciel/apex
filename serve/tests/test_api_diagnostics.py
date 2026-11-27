@@ -102,6 +102,25 @@ def test_diagnosis_route_matches_the_tool():
         assert field in body
 
 
+def test_search_route_takes_the_console_query_and_matches_the_tool():
+    """The console's ``searchKb`` sends ``q`` and ``top_k``; both must land.
+
+    ``RESOURCE_ROUTES["searchKb"]`` points at this route, so the parameter
+    names the front sends are part of the contract, not an accident.
+    """
+    resp = build().get(
+        "/v1" + TOOL_ROUTES["search_kb"][1],
+        params={"q": "skew", "top_k": 7},
+        headers=AUTH,
+    )
+    assert resp.status_code == 200
+
+    server = create_server(ReadStore(fake_client()))
+    direct = asyncio.run(server.call_tool("search_kb", {"query": "skew", "top_k": 7}))
+    expected = direct[1] if isinstance(direct, tuple) else direct
+    assert resp.json() == expected
+
+
 def test_tuple_and_dict_results_are_both_normalised():
     """call_tool is typed Sequence[ContentBlock] | dict; both must work."""
     from apex_api.routes.diagnostics import _structured
