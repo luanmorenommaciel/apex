@@ -175,7 +175,9 @@ describe("RunsScreen (server-side filters, offset paging)", () => {
     // 200 pages of 50 = offset 10 000, the cap; another page would be refused.
     expect(lastFilters()).toMatchObject({ offset: 10_000 });
     expect(button("next").disabled).toBe(true);
-  });
+    // 200 real page turns, each a fresh useRead entry: ~1.6 s locally and past
+    // vitest's 5 s default on a CI runner, so this one test gets more room.
+  }, 30_000);
 
   it("labels an empty page without an impossible range", async () => {
     listRuns.mockImplementation(async () => []);
