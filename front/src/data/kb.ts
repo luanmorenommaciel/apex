@@ -6,10 +6,9 @@
  * The types below mirror `KbHit` / `KbHits` in serve/src/apex_mcp/models.py.
  *
  * Only the API can answer it. The search runs server-side over apex.findings
- * and the redacted plan text; neither the browser-side ClickHouse path nor the
- * recording has a twin of it, and a client-side imitation would rank rows by a
- * scorer nobody else uses. So those sources report `unavailable` rather than
- * an empty hit list — "this source cannot search" is not "nothing matched".
+ * and the redacted plan text; the recording (fixtures) has no twin of it, and a
+ * client-side imitation would rank rows by a scorer nobody else uses. So it
+ * reports `unavailable` rather than an empty hit list — "this source cannot search" is not "nothing matched".
  */
 
 export interface KbHit {

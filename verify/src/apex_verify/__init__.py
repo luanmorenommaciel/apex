@@ -69,4 +69,4 @@ __all__ = [
     "slots_from_conf",
     "verdict_from_replay",
 ]
-__version__ = "0.3.0"
+__version__ = "0.1.0"

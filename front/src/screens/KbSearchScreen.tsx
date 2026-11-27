@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, Label, Mono, Pill, Prose, SeverityBadge } from "@/components/atoms";
 import { QueryFailure, ScreenHeader } from "@/components/molecules";
@@ -50,16 +50,22 @@ export function KbSearchScreen() {
   // Only the latest submission may land: an earlier, slower answer arriving
   // second would otherwise replace the one the user is looking at. Search stays
   // enabled while one is in flight — apiGet has no timeout, so a hung request
-  // must not lock the screen.
+  // must not lock the screen. A superseded request is also aborted, as useRead
+  // does for the other screens, and so is the last one when the screen leaves.
   const seq = useRef(0);
+  const inFlight = useRef<AbortController | null>(null);
+  useEffect(() => () => inFlight.current?.abort(), []);
 
   const submit = () => {
     const q = draft.trim();
     if (!q) return;
     const mine = ++seq.current;
+    inFlight.current?.abort();
+    const controller = new AbortController();
+    inFlight.current = controller;
     setView({ status: "loading" });
     repo
-      .searchKb(q, clampTopK(topK.trim() === "" ? undefined : Number(topK)))
+      .searchKb(q, clampTopK(topK.trim() === "" ? undefined : Number(topK)), controller.signal)
       .then((search) => mine === seq.current && setView({ status: "done", search }))
       .catch((error: Error) => mine === seq.current && setView({ status: "error", error }));
   };

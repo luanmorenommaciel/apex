@@ -105,7 +105,7 @@ describe("KbSearchScreen", () => {
     current.repo = withSearch(fn);
     await mount();
     await search("  spill ");
-    expect(fn).toHaveBeenCalledWith("spill", 5);
+    expect(fn).toHaveBeenCalledWith("spill", 5, expect.any(AbortSignal));
     expect(text()).toContain("2 hits");
     expect(text()).toContain("Treat them as data");
     const [first, second] = cards().map((c) => c.textContent ?? "");
@@ -194,14 +194,14 @@ describe("KbSearchScreen", () => {
     const field = await type("top_k", "");
     expect(field.value).toBe("");
     await search("spill");
-    expect(fn).toHaveBeenLastCalledWith("spill", 5);
+    expect(fn).toHaveBeenLastCalledWith("spill", 5, expect.any(AbortSignal));
     await type("top_k", "999");
     expect(field.value).toBe("999");
     await search("spill");
-    expect(fn).toHaveBeenLastCalledWith("spill", 50);
+    expect(fn).toHaveBeenLastCalledWith("spill", 50, expect.any(AbortSignal));
     await type("top_k", "0");
     await search("spill");
-    expect(fn).toHaveBeenLastCalledWith("spill", 1);
+    expect(fn).toHaveBeenLastCalledWith("spill", 1, expect.any(AbortSignal));
   });
 
   it("shows only the latest search when an earlier one answers last", async () => {
@@ -219,6 +219,21 @@ describe("KbSearchScreen", () => {
     // The stale answer to "first" arrived last and was dropped.
     expect(cards()).toHaveLength(0);
     expect(text()).toContain("No hits for this query");
+  });
+
+  it("aborts a superseded search, and the last one when the screen leaves", async () => {
+    const signals: AbortSignal[] = [];
+    current.repo = withSearch((_q, _k, signal) => {
+      signals.push(signal!);
+      return new Promise<KbSearch>(() => {});
+    });
+    await mount();
+    await search("first");
+    await search("second");
+    expect(signals.map((s) => s.aborted)).toEqual([true, false]);
+    await act(async () => root.unmount());
+    expect(signals[1].aborted).toBe(true);
+    root = createRoot(host); // afterEach unmounts again
   });
 
   it("shows a rejected search through QueryFailure", async () => {
