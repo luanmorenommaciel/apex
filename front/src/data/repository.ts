@@ -1,18 +1,16 @@
 /**
  * The seam between the console and its data.
  *
- * ClickHouseRepository queries the database from the browser (the choice for
- * this bench). FixtureRepository serves the recorded run. Swapping in an
- * HttpRepository against serve/ means implementing this one interface — no
- * screen changes, because no screen knows where a row came from.
+ * HttpRepository reads through serve/'s apex-api - the console's only door
+ * since 2026-10-19 (D-api-only); the browser holds an API token and never a
+ * database user, and carries no SQL. FixtureRepository serves the recorded
+ * run when a deployment asks for it by name. No screen knows where a row came
+ * from, which is what lets the two share every screen.
  */
 import type {
   FindingRow, FixVerificationRow, JobConfRow, PlanTransitionRow,
   RunSummary, SparkEventRow, WireTimestamp,
 } from "@/contract/types";
-import * as fx from "./fixtures";
-import * as Q from "./queries";
-import { ping, query } from "./clickhouse";
 import { apiGet, apiPing } from "./http";
 import { runtimeConfig } from "./runtimeConfig";
 import { toWireTimestamp, withWireTimestamps } from "./timestamp";
@@ -82,24 +80,30 @@ export const RUN_LIST_DEFAULTS = { limit: 50, sinceHours: 168, offset: 0 } as co
 export const RUN_LIST_MAX_OFFSET = 10_000;
 
 export interface Repository {
-  readonly kind: "clickhouse" | "fixtures" | "http";
+  readonly kind: "fixtures" | "http";
+  // Every read takes a trailing AbortSignal: useRead() cancels a request its
+  // screen no longer waits for. FixtureRepository ignores it.
   /** Newest-started first. `listRuns(50)` keeps its old meaning, now within a 7-day window. */
-  listRuns(limit?: number, filters?: RunListFilters): Promise<(RunSummary & { age?: string })[]>;
+  listRuns(
+    limit?: number,
+    filters?: RunListFilters,
+    signal?: AbortSignal,
+  ): Promise<(RunSummary & { age?: string })[]>;
   /** One run's summary row. null when the job is unknown — never a synthesised zero. */
-  run(jobId: string): Promise<(RunSummary & { age?: string }) | null>;
+  run(jobId: string, signal?: AbortSignal): Promise<(RunSummary & { age?: string }) | null>;
   /** Other runs that executed at least one of this run's plan shapes, newest first. */
-  baselineCandidates(jobId: string): Promise<BaselineCandidate[]>;
+  baselineCandidates(jobId: string, signal?: AbortSignal): Promise<BaselineCandidate[]>;
   /** Plan shapes the memory lane knows, most-run first. */
-  planShapes(): Promise<PlanShape[]>;
+  planShapes(signal?: AbortSignal): Promise<PlanShape[]>;
   /** Every run of one shape, oldest first — the history rule 3 reasons over. */
-  shapeRuns(fingerprint: string): Promise<ShapeRun[]>;
+  shapeRuns(fingerprint: string, signal?: AbortSignal): Promise<ShapeRun[]>;
   /** The memory lane's redacted plan exemplar for a shape. null when unindexed. */
-  planSample(fingerprint: string): Promise<string | null>;
-  stages(jobId: string): Promise<SparkEventRow[]>;
-  jobConf(jobId: string): Promise<JobConfRow[]>;
-  findings(jobId: string): Promise<FindingRow[]>;
-  transitions(jobId: string): Promise<PlanTransitionRow[]>;
-  fixVerification(findingId: string): Promise<FixVerificationRow | null>;
+  planSample(fingerprint: string, signal?: AbortSignal): Promise<string | null>;
+  stages(jobId: string, signal?: AbortSignal): Promise<SparkEventRow[]>;
+  jobConf(jobId: string, signal?: AbortSignal): Promise<JobConfRow[]>;
+  findings(jobId: string, signal?: AbortSignal): Promise<FindingRow[]>;
+  transitions(jobId: string, signal?: AbortSignal): Promise<PlanTransitionRow[]>;
+  fixVerification(findingId: string, signal?: AbortSignal): Promise<FixVerificationRow | null>;
 }
 
 const relativeAge = (iso: string): string => {
@@ -113,10 +117,9 @@ const relativeAge = (iso: string): string => {
  * Rows from any source, with the named timestamp fields in the wire format.
  *
  * Every repository returns through this, so a timestamp reads the same
- * whichever door it came through: ClickHouse's JSON writes
- * `2026-09-20 10:00:00.123`, the recording holds that same form, and the API
- * writes `2026-09-20T10:00:00.123`. The API's is the format; the other two are
- * brought to it here, the one place all three pass.
+ * whichever door it came through: the recording holds ClickHouse's own
+ * `2026-09-20 10:00:00.123`, and the API writes `2026-09-20T10:00:00.123`.
+ * The API's is the format; the recording is brought to it here.
  */
 const wireRows = <T extends object>(rows: T[], ...fields: (keyof T)[]): T[] =>
   rows.map((row) => withWireTimestamps(row, fields));
@@ -131,6 +134,8 @@ interface RunRollupRow {
   plan_fingerprint: string; shape_count: number; shaped_stage_count: number;
   config_source: string;
   conf_executor_instances: number | null; conf_shuffle_partitions: number | null;
+  /** Absent from a door that predates the column; -1 renders as a dash. */
+  refused_count?: number;
 }
 
 /** ClickHouse renders Nullable(Int32) as JSON null; anything else is a real value. */
@@ -140,9 +145,10 @@ const nullableInt = (v: number | null): number | null =>
 /** -1 is the query's sentinel for "this run is not indexed", not a measurement. */
 const notIndexed = (v: number): number | null => (Number(v) < 0 ? null : Number(v));
 
-// refused_count is DERIVED, never stored: it is the count of stages the engine
-// evaluated for a tail claim and declined. Computing it needs the stage rows,
-// so the list shows it per-run only once opened.
+// refused_count is DERIVED, never stored: among the five loudest p99/p50
+// ratios of the run, the stages evaluated for a tail claim and refused. The
+// rollup's `refused` CTE computes it through both doors with the arithmetic
+// of rules.ts assessStage(); -1 means a door did not compute it.
 const toRunSummary = (r: RunRollupRow): RunSummary & { age?: string } => ({
   job_id: r.job_id,
   app_name: r.app_name,
@@ -150,7 +156,7 @@ const toRunSummary = (r: RunRollupRow): RunSummary & { age?: string } => ({
   wall_clock_ms: null, // not captured by the contract — see RunSummary
   task_time_ms: notIndexed(r.task_time_ms),
   finding_count: Number(r.finding_count),
-  refused_count: -1, // -1 renders as "—", never as zero
+  refused_count: r.refused_count === undefined || r.refused_count === null ? -1 : Number(r.refused_count),
   // Nothing in the contract counts model invocations. null renders as "—";
   // 0 asserted that Apex had answered this run for free without checking.
   llm_calls: null,
@@ -165,76 +171,17 @@ const toRunSummary = (r: RunRollupRow): RunSummary & { age?: string } => ({
   age: relativeAge(r.started_at),
 });
 
-export class ClickHouseRepository implements Repository {
-  readonly kind = "clickhouse" as const;
-
-  async listRuns(limit: number = RUN_LIST_DEFAULTS.limit, filters: RunListFilters = {}) {
-    // Every placeholder RUN_LIST names must be bound, so the defaults are sent
-    // explicitly here; the values are bound by ClickHouse, never formatted in.
-    const rows = await query<RunRollupRow>(Q.RUN_LIST, {
-      limit,
-      since_hours: filters.sinceHours ?? RUN_LIST_DEFAULTS.sinceHours,
-      offset: filters.offset ?? RUN_LIST_DEFAULTS.offset,
-      app_name: filters.appName ?? "",
-      job_id_prefix: filters.jobIdPrefix ?? "",
-      plan_fingerprint: filters.planFingerprint ?? "",
-      has_findings: filters.hasFindings === undefined ? -1 : filters.hasFindings ? 1 : 0,
-    });
-    return rows.map(toRunSummary);
-  }
-
-  async run(jobId: string) {
-    const rows = await query<RunRollupRow>(Q.RUN_ONE, { job: jobId });
-    return rows[0] ? toRunSummary(rows[0]) : null;
-  }
-
-  async baselineCandidates(jobId: string) {
-    return wireRows(await query<BaselineCandidate>(Q.RUNS_SHARING_SHAPE, { job: jobId }), "observed_at");
-  }
-
-  async planShapes() {
-    return wireRows(await query<PlanShape>(Q.PLAN_SHAPES), "first_run", "last_run");
-  }
-  async shapeRuns(fingerprint: string) {
-    return wireRows(await query<ShapeRun>(Q.SHAPE_RUNS, { fingerprint }), "observed_at");
-  }
-  async planSample(fingerprint: string) {
-    if (!fingerprint) return null;
-    const rows = await query<{ sample_plan_json: string }>(Q.PLAN_SAMPLE, { fingerprint });
-    // An empty exemplar is not an exemplar: the row exists but carries no text,
-    // which is "the memory lane indexed no plan", not "the plan is blank".
-    return rows[0]?.sample_plan_json || null;
-  }
-
-  async stages(jobId: string) {
-    return wireRows(await query<SparkEventRow>(Q.LATEST_STAGES, { job: jobId }), "ts");
-  }
-  async jobConf(jobId: string) {
-    return wireRows(await query<JobConfRow>(Q.JOB_CONF, { job: jobId }), "ts");
-  }
-  async findings(jobId: string) {
-    return wireRows(await query<FindingRow>(Q.FINDINGS, { job: jobId }), "ts");
-  }
-  async transitions(jobId: string) {
-    return wireRows(await query<PlanTransitionRow>(Q.PLAN_TRANSITIONS, { job: jobId }), "ts");
-  }
-  async fixVerification(findingId: string) {
-    const rows = await query<Record<string, unknown>>(Q.FIX_VERIFICATIONS, { finding: findingId });
-    return rows[0] ? toFixVerification(rows[0]) : null;
-  }
-}
-
 /**
  * One verification row, however it arrived.
  *
- * The projection — in SQL against ClickHouse, in ch.py behind the API — has
+ * The projection - FIX_VERIFICATION_SQL in ch.py behind the API - has
  * already renamed the columns, flipped the sign and applied rule 2. What it
  * cannot supply it returns as NULL, and that travels through as null:
  * mechanism_confirmed has no column at all, and the individual replay
  * durations were never stored, only the two arms\' medians.
  *
- * Shared by both repositories so the two paths cannot disagree about what a
- * verification means.
+ * One mapper for the API's row, so the console cannot disagree with itself
+ * about what a verification means.
  */
 const toFixVerification = (r: Record<string, unknown>): FixVerificationRow => ({
   fix_id: String(r.fix_id),
@@ -271,39 +218,56 @@ const toFixVerification = (r: Record<string, unknown>): FixVerificationRow => ({
  * shape), not only the dominant one RunSummary carries, so the recording is
  * matched the same way, over the per-stage shapes it does carry.
  */
-const runShapes = (r: { job_id: string; plan_fingerprint: string }): Set<string> =>
+const runShapes = (fx: Fixtures, r: { job_id: string; plan_fingerprint: string }): Set<string> =>
   new Set([r.plan_fingerprint, ...(fx.stagesByJob[r.job_id] ?? []).map((s) => s.plan_fingerprint)]
     // "n/a" is the recording's own word for "no shape", never a shape.
     .filter((fp): fp is string => Boolean(fp) && fp !== "n/a"));
 
+/** The recording's module, loaded on first use and never from the entry chunk. */
+type Fixtures = typeof import("./fixtures");
+
 export class FixtureRepository implements Repository {
   readonly kind = "fixtures" as const;
+
+  // The 1,600-line recording is imported DYNAMICALLY so Vite emits it as its
+  // own chunk (dist/assets/fixtures-*.js) that only this repository fetches.
+  // Statically imported it sat in the entry bundle of every deployment,
+  // including the http ones that never read a row of it.
+  // Memoised: one fetch per instance, and constructing the instance loads
+  // nothing — the default RepoContext value is one of these.
+  private loaded: Promise<Fixtures> | null = null;
+  private load(): Promise<Fixtures> {
+    return (this.loaded ??= import("./fixtures"));
+  }
 
   // The recording keeps the form it was captured in; it becomes a row here,
   // in the wire format, like a row from any other source.
   /**
-   * The recording, filtered and paged the way RUN_LIST is: same filters, same
-   * offset/limit. Two things differ, both because it is a fixed past snapshot:
-   * the time window is NOT applied (it would empty the recording), and rows
-   * keep their RECORDED order — every recorded started_at is the same instant,
-   * so RUN_LIST's job_id tie-break would reshuffle a list whose order the
-   * walkthrough (and the verify screen's first-run pick) relies on.
+   * The recording, filtered and paged the way the API's run list is: same
+   * filters, same offset/limit. Two things differ, both because it is a fixed
+   * past snapshot: the time window is NOT applied (it would empty the
+   * recording), and rows keep their RECORDED order — every recorded started_at
+   * is the same instant, so the job_id tie-break would reshuffle a list whose
+   * order the walkthrough (and the verify screen's first-run pick) relies on.
    */
   async listRuns(limit: number = RUN_LIST_DEFAULTS.limit, filters: RunListFilters = {}) {
+    const fx = await this.load();
     const offset = Math.max(0, filters.offset ?? RUN_LIST_DEFAULTS.offset);
     const matching = fx.runs
       .filter((r) =>
         (!filters.appName || r.app_name === filters.appName) &&
         r.job_id.startsWith(filters.jobIdPrefix ?? "") &&
-        (!filters.planFingerprint || runShapes(r).has(filters.planFingerprint)) &&
+        (!filters.planFingerprint || runShapes(fx, r).has(filters.planFingerprint)) &&
         (filters.hasFindings === undefined || (r.finding_count > 0) === filters.hasFindings));
     return wireRows(matching.slice(offset, offset + Math.max(1, limit)), "started_at");
   }
   async run(jobId: string) {
+    const fx = await this.load();
     const found = fx.runs.find((r) => r.job_id === jobId);
     return found ? withWireTimestamps(found, ["started_at"]) : null;
   }
   async baselineCandidates(jobId: string) {
+    const fx = await this.load();
     // The recording holds one comparable pair, and it is the pair the README's
     // walkthrough describes. Anything else would be inventing shared history.
     const other = jobId === fx.CURRENT_JOB ? fx.BASELINE_JOB
@@ -315,46 +279,56 @@ export class FixtureRepository implements Repository {
                   observed_at: toWireTimestamp(r.started_at) }] : [];
   }
   async planShapes() {
+    const fx = await this.load();
     return wireRows(fx.planShapes, "first_run", "last_run");
   }
   async shapeRuns(fingerprint: string) {
+    const fx = await this.load();
     return fingerprint === fx.PLAN_FINGERPRINT ? wireRows(fx.shapeRuns, "observed_at") : [];
   }
   async planSample(fingerprint: string) {
+    const fx = await this.load();
     // Only the recorded shape has an exemplar. Returning it for any fingerprint
     // would show one run's plan as though it belonged to another.
     return fingerprint === fx.PLAN_FINGERPRINT ? fx.REDACTED_PLAN.join("\n") : null;
   }
   async stages(jobId: string) {
+    const fx = await this.load();
     return wireRows(fx.stagesByJob[jobId] ?? [], "ts");
   }
   async jobConf(jobId: string) {
+    const fx = await this.load();
     return wireRows(fx.jobConfByJob[jobId] ?? [], "ts");
   }
   async findings(jobId: string) {
+    const fx = await this.load();
     return wireRows(fx.findingsByJob[jobId] ?? [], "ts");
   }
   async transitions(jobId: string) {
+    const fx = await this.load();
     return wireRows(fx.transitionsByJob[jobId] ?? [], "ts");
   }
   async fixVerification(findingId: string) {
+    const fx = await this.load();
     return fx.fixVerifications.find((f) => f.finding_id === findingId) ?? null;
   }
 }
 
 /**
- * The console against the Apex API.
+ * The console against the Apex API - its one door.
  *
- * Implementing this interface is the whole change — no screen knows where a
- * row came from, which is what `clickhouse.ts` meant by calling the Repository
- * the seam. The rows the API returns are the same projections `queries.ts`
- * produced, now computed server-side, so the mappers below are the ones
- * ClickHouseRepository already uses.
+ * The rows the API returns are the projections ch.py computes server-side
+ * (serve/src/apex_mcp/ch.py), so the mappers above turn them into the
+ * console's row types and nothing here holds a statement of its own.
  */
 export class HttpRepository implements Repository {
   readonly kind = "http" as const;
 
-  async listRuns(limit: number = RUN_LIST_DEFAULTS.limit, filters: RunListFilters = {}) {
+  async listRuns(
+    limit: number = RUN_LIST_DEFAULTS.limit,
+    filters: RunListFilters = {},
+    signal?: AbortSignal,
+  ) {
     // Only what was asked for travels: the route's defaults ARE the shared
     // defaults, so an unfiltered call stays /v1/runs?limit=N.
     const { data } = await apiGet<RunRollupRow[]>("/v1/runs", {
@@ -365,97 +339,106 @@ export class HttpRepository implements Repository {
       job_id_prefix: filters.jobIdPrefix || undefined,
       plan_fingerprint: filters.planFingerprint || undefined,
       has_findings: filters.hasFindings === undefined ? undefined : String(filters.hasFindings),
-    });
+    }, signal);
     return (data ?? []).map(toRunSummary);
   }
 
-  async run(jobId: string) {
+  async run(jobId: string, signal?: AbortSignal) {
     // 404 arrives as null: the API uses it for "no run with that id", which is
     // an absence this method is typed to report, not a fault.
-    const { data } = await apiGet<RunRollupRow>(`/v1/runs/${encodeURIComponent(jobId)}`);
+    const { data } = await apiGet<RunRollupRow>(`/v1/runs/${encodeURIComponent(jobId)}`, undefined, signal);
     return data ? toRunSummary(data) : null;
   }
 
-  async baselineCandidates(jobId: string) {
+  async baselineCandidates(jobId: string, signal?: AbortSignal) {
     const { data } = await apiGet<BaselineCandidate[]>(
-      `/v1/runs/${encodeURIComponent(jobId)}/baseline-candidates`,
+      `/v1/runs/${encodeURIComponent(jobId)}/baseline-candidates`, undefined, signal,
     );
     return wireRows(data ?? [], "observed_at");
   }
 
-  async planShapes() {
-    const { data } = await apiGet<PlanShape[]>("/v1/plans");
+  async planShapes(signal?: AbortSignal) {
+    const { data } = await apiGet<PlanShape[]>("/v1/plans", undefined, signal);
     return wireRows(data ?? [], "first_run", "last_run");
   }
 
-  async shapeRuns(fingerprint: string) {
+  async shapeRuns(fingerprint: string, signal?: AbortSignal) {
     const { data } = await apiGet<ShapeRun[]>(
-      `/v1/plans/${encodeURIComponent(fingerprint)}/runs`,
+      `/v1/plans/${encodeURIComponent(fingerprint)}/runs`, undefined, signal,
     );
     return wireRows(data ?? [], "observed_at");
   }
 
-  async planSample(fingerprint: string) {
+  async planSample(fingerprint: string, signal?: AbortSignal) {
     if (!fingerprint) return null;
     const { data } = await apiGet<string | null>(
-      `/v1/plans/${encodeURIComponent(fingerprint)}/sample`,
+      `/v1/plans/${encodeURIComponent(fingerprint)}/sample`, undefined, signal,
     );
     // An empty exemplar is not an exemplar: the shape was indexed with no plan
     // text, which is not the same as a blank plan.
     return data || null;
   }
 
-  async stages(jobId: string) {
+  async stages(jobId: string, signal?: AbortSignal) {
     const { data } = await apiGet<SparkEventRow[]>(
-      `/v1/runs/${encodeURIComponent(jobId)}/stages`,
+      `/v1/runs/${encodeURIComponent(jobId)}/stages`, undefined, signal,
     );
     return wireRows(data ?? [], "ts");
   }
 
-  async jobConf(jobId: string) {
-    const { data } = await apiGet<JobConfRow[]>(`/v1/runs/${encodeURIComponent(jobId)}/conf`);
+  async jobConf(jobId: string, signal?: AbortSignal) {
+    const { data } = await apiGet<JobConfRow[]>(`/v1/runs/${encodeURIComponent(jobId)}/conf`, undefined, signal);
     return wireRows(data ?? [], "ts");
   }
 
-  async findings(jobId: string) {
+  async findings(jobId: string, signal?: AbortSignal) {
     const { data } = await apiGet<FindingRow[]>(
-      `/v1/runs/${encodeURIComponent(jobId)}/findings`,
+      `/v1/runs/${encodeURIComponent(jobId)}/findings`, undefined, signal,
     );
     return wireRows(data ?? [], "ts");
   }
 
-  async transitions(jobId: string) {
+  async transitions(jobId: string, signal?: AbortSignal) {
     const { data } = await apiGet<PlanTransitionRow[]>(
-      `/v1/runs/${encodeURIComponent(jobId)}/transitions`,
+      `/v1/runs/${encodeURIComponent(jobId)}/transitions`, undefined, signal,
     );
     return wireRows(data ?? [], "ts");
   }
 
-  async fixVerification(findingId: string) {
+  async fixVerification(findingId: string, signal?: AbortSignal) {
     const { data } = await apiGet<Record<string, unknown>>(
-      `/v1/findings/${encodeURIComponent(findingId)}/verification`,
+      `/v1/findings/${encodeURIComponent(findingId)}/verification`, undefined, signal,
     );
     return data ? toFixVerification(data) : null;
   }
 }
 
+/**
+ * The API was asked at boot and gave no HTTP answer at all.
+ *
+ * Thrown by resolveRepository() so the provider renders it in place of the
+ * app (P-boot-probe, accepted 2026-10-19). A 401 is NOT this: the API exists
+ * and refused, which every screen reports through QueryFailure.
+ */
+export class StoreUnreachableError extends Error {
+  constructor(readonly probed: { name: string; path: string }[]) {
+    super(`no store answered: ${probed.map((p) => p.path).join(", ")}`);
+    this.name = "StoreUnreachableError";
+  }
+}
+
 export async function resolveRepository(): Promise<Repository> {
-  // Runtime, so a single production image can be started against fixtures,
-  // pinned to ClickHouse, or left to probe — without a rebuild.
-  const mode = runtimeConfig.dataSource;
-  if (mode === "fixtures") return new FixtureRepository();
-  if (mode === "clickhouse") return new ClickHouseRepository();
-  // Pinned to the API. NOT probed and NOT fallen back from: falling back to
-  // ClickHouse because the API refused would quietly restore the browser-side
-  // database credential this data source exists to remove.
-  if (mode === "http") return new HttpRepository();
-  // auto: prefer the API whenever one answers, because that is the deployment
-  // that no longer needs a database user at all. Probed UNCONDITIONALLY: in the
-  // supported same-origin setup apiUrl is deliberately empty (the dev server
-  // and nginx forward /v1 and the bundle never learns the target), so an empty
-  // apiUrl is not evidence that there is no API. apiPing() asks the same origin
-  // in that case. Once chosen, a 401 from the API surfaces as an error — there
-  // is no path from HttpRepository back to ClickHouse.
+  // Runtime, so a single production image can be started against the API or
+  // the recording - without a rebuild. There is no other door (D-api-only).
+  if (runtimeConfig.dataSource === "fixtures") return new FixtureRepository();
+  // http: probed ONCE at boot. apiPing() answers true for the API's own
+  // liveness body and for a 401 (the API exists and refused); anything else -
+  // a refused connection, a 502 from a proxy whose upstream is absent - is no
+  // API, and the console says so rather than mounting screens that would each
+  // fail in their own words. In the supported same-origin setup apiUrl is
+  // empty and the probe asks this origin's /v1/health.
   if (await apiPing()) return new HttpRepository();
-  return (await ping()) ? new ClickHouseRepository() : new FixtureRepository();
+  throw new StoreUnreachableError([
+    { name: "the Apex API", path: `${runtimeConfig.apiUrl.replace(/\/+$/, "")}/v1/health` },
+  ]);
 }

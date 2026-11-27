@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Mono, Pill, StatusPill } from "@/components/atoms";
 import { DataTable, KpiCard, ScreenHeader, type Column, QueryFailure } from "@/components/molecules";
 import { Page } from "@/components/layout/Shell";
-import { fmt } from "@/contract/rules";
+import { fmt, TAIL_SAMPLE } from "@/contract/rules";
 import { RUN_LIST_DEFAULTS, RUN_LIST_MAX_OFFSET, type RunListFilters } from "@/data/repository";
-import { useAsync, useRepository } from "@/data/useRepository";
+import { useRead, useRepository } from "@/data/useRepository";
 import type { RunSummary } from "@/contract/types";
 
 type Row = RunSummary & { age?: string };
@@ -55,10 +55,9 @@ export function RunsScreen() {
     planFingerprint: planFingerprint || undefined,
     hasFindings,
   };
-  const { data, loading, error } = useAsync(
-    () => repo.listRuns(RUNS_PAGE_SIZE, filters),
-    [repo, offset, jobIdPrefix, planFingerprint, hasFindings],
-  );
+  // useRead keys on the serialised spec, so each page and filter set is its
+  // own cached read, and a superseded one is aborted when it is let go.
+  const { data, loading, error } = useRead(repo, ["listRuns", RUNS_PAGE_SIZE, filters]);
   const runs = useMemo(() => data ?? [], [data]);
   const filtered = jobIdPrefix !== "" || planFingerprint !== "" || hasFindings !== undefined;
   // A full page may have a successor; a short one is the last. The store
@@ -141,6 +140,7 @@ export function RunsScreen() {
         <button
           key={f}
           type="button"
+          aria-pressed={filter === f}
           onClick={() => setFilter(f)}
           className={`px-2.5 py-[7px] bg-raised border rounded-sm transition-colors ${
             filter === f ? "border-edge2 text-bright" : "border-edge text-sub hover:text-body2"
@@ -207,8 +207,8 @@ export function RunsScreen() {
         subtitle={
           loading
             ? "querying…"
-            // The window is real now: RUN_LIST lists runs with an event in the
-            // last 168 hours (P7.5). Totals below are over THIS page.
+            // The window is real now: the run list holds runs with an event in
+            // the last 168 hours (P7.5). Totals below are over THIS page.
             : `${pageLabel}, newest started first, ${windowLabel} · ${totals.affected} carrying an open finding`
         }
         right={controls}
@@ -222,7 +222,7 @@ export function RunsScreen() {
           value={fmt.countOrDash(totals.refused)}
           note={
             totals.refused === null
-              ? "not derivable list-wide — open a run"
+              ? "not computed by this door — open a run"
               : `stages with a tail, no claim · ${totals.refusedRuns} of ${runs.length} runs`
           }
           accent="edge"
@@ -265,8 +265,8 @@ export function RunsScreen() {
           <div className="flex items-center gap-2.5">
             <Mono className="text-sub">REFUSED</Mono>
             <span>
-              counts stages that carried a p99/p50 tail and produced no finding. A rising number is
-              the system working, not failing.
+              counts, among the {TAIL_SAMPLE} loudest p99/p50 ratios of each run, the stages evaluated
+              for a tail claim and refused. A rising number is the system working, not failing.
             </span>
           </div>
         }

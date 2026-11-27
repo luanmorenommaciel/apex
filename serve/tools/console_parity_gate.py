@@ -1,10 +1,14 @@
 """Live gate: the console's rows, the same through both doors.
 
-Every statement the console issues is run TWICE against a real ClickHouse — as
-the browser does, over the HTTP interface as the read-only user, and through
-the Apex API — and the two must return the same rows. A status code cannot
-satisfy this: status codes are what passed while three routes returned the
-wrong projection.
+Every statement the API serves the console is run TWICE against a real
+ClickHouse — as raw SQL over the HTTP interface as a read-only user, the way
+the console's browser door once sent it, and through the Apex API — and the
+two must return the same rows. A status code cannot satisfy this: status
+codes are what passed while three routes returned the wrong projection.
+
+The statements are ch.py's own (D-api-only, 2026-10-19: the console carries
+no SQL and reads through the API alone), so the raw door proves what
+ClickHouse returns for them and the API door proves what the API makes of it.
 
 It also proves the behaviours only a live store can show, because the fill,
 the type check and the ordering are ClickHouse's and no fake has them:
@@ -16,7 +20,10 @@ the type check and the ordering are ClickHouse's and no fake has them:
 3. findings come back ``confidence_score DESC`` when that differs from ts ASC;
 4. an execution re-planned three times is ONE transition, carrying the last;
 5. every timestamp leaves the API in the wire format the console declares;
-6. (P7.5) the run list — default, filtered and paged — is the same rows in the
+6. ``refused_count`` over a seeded six-stage run equals the count rules 1, 6
+   and 7 refuse, through both doors - the expected value is fixed here and in
+   front/src/contract/refusedCount.test.ts against ``assessStage()``;
+7. (P7.5) the run list — default, filtered and paged — is the same rows in the
    same order through both doors, and the MCP's list_runs
    (/v1/diagnostics/runs) names the same job_ids in the same order as the
    console's /v1/runs for the same arguments.
@@ -56,47 +63,43 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
+# The wire timestamp format is the console's contract with the API and stays
+# in the console; the SQL does not.
 FRONT_DATA = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "data"
-QUERIES_TS = FRONT_DATA / "queries.ts"
 TIMESTAMP_TS = FRONT_DATA / "timestamp.ts"
 
-# clickhouse.ts converts by DECLARED type, because ClickHouse quotes 64-bit
-# integers in JSON and apex_ro may not switch that off. Same pattern, so the
-# gate sees the rows the console's screens see.
+# ClickHouse quotes 64-bit integers in JSON and a readonly user may not switch
+# that off, so the raw door converts by DECLARED type - what the console's
+# browser client did - and the gate compares numbers with numbers.
 _NUMERIC = re.compile(r"^(Nullable\()?(U?Int(8|16|32|64|128|256)|Float(32|64)|Decimal)")
 
 PASS, FAIL, SKIP = "PASS", "FAIL", "NOT EXERCISED"
 
 
 # --------------------------------------------------------------------------
-# The console's own statements, read from its source
+# The statements the API serves the console, from their one home
 # --------------------------------------------------------------------------
-def console_statements(source: str) -> dict[str, str]:
-    """Every exported statement in queries.ts, as the browser sends it.
+def serve_statements(findings_columns: set[str]) -> dict[str, str]:
+    """ch.py's console statements, keyed by the names this gate reports.
 
-    Read, not restated: a copy kept here would compare the API against the
-    gate's idea of the console rather than against the console.
+    ``findings_columns`` is what apex.findings actually has on this store,
+    so the findings statement is the one the API would pick there.
     """
+    from apex_mcp import ch
 
-    def unescape(text: str) -> str:
-        return text.replace("\\`", "`")
-
-    statements = {
-        match.group(1): unescape(match.group(2))
-        for match in re.finditer(r"export const (\w+) = `(.*?)`;", source, re.S)
+    return {
+        "RUN_LIST": ch.RUN_LIST_SQL,
+        "RUN_ONE": ch.RUN_ONE_SQL,
+        "LATEST_STAGES": ch.CONSOLE_STAGES_SQL,
+        "JOB_CONF": ch.JOB_CONF_SQL,
+        "FINDINGS": ch._console_findings_sql(findings_columns),
+        "PLAN_TRANSITIONS": ch.CONSOLE_PLAN_TRANSITIONS_SQL,
+        "RUNS_SHARING_SHAPE": ch.BASELINE_CANDIDATES_SQL,
+        "PLAN_SHAPES": ch.PLAN_SHAPES_SQL,
+        "SHAPE_RUNS": ch.SHAPE_RUNS_SQL,
+        "PLAN_SAMPLE": ch.PLAN_SAMPLE_SQL,
+        "FIX_VERIFICATIONS": ch.FIX_VERIFICATION_SQL,
     }
-    rollup = re.search(
-        r"const runRollup = \(where: string, tail: string\) => `(.*?)\n`;", source, re.S
-    )
-    if rollup:
-        body = unescape(rollup.group(1))
-        for match in re.finditer(
-            r'export const (\w+) = runRollup\(\s*"([^"]*)",\s*"([^"]*)",?\s*\);', source
-        ):
-            statements[match.group(1)] = body.replace("${where}", match.group(2)).replace(
-                "${tail}", match.group(3)
-            )
-    return statements
 
 
 def wire_pattern(source: str) -> re.Pattern[str]:
@@ -192,7 +195,11 @@ class DoorError(RuntimeError):
 
 
 def browser_query(store: Store, sql: str, params: dict[str, Any]) -> list[dict[str, Any]]:
-    """One statement, sent the way clickhouse.ts sends it."""
+    """One statement as raw SQL over ClickHouse HTTP, as a readonly user.
+
+    Named for the door it replaces: this is how the console's browser client
+    sent SQL before the console read through the API alone.
+    """
     query = {
         "database": store.database,
         "default_format": "JSON",
@@ -325,6 +332,7 @@ class Fixture:
     other_fingerprint: str
     finding_high: str
     finding_low: str
+    refused: str = ""
     job_ids: list[str] = field(default_factory=list)
 
 
@@ -340,13 +348,40 @@ def new_fixture() -> Fixture:
         other_fingerprint=digest(f"parity-gate-other-{run}"),
         finding_high=f"parity-gate-hi-{run}",
         finding_low=f"parity-gate-lo-{run}",
+        refused=f"parity-gate-refused-{run}",
     )
-    fixture.job_ids = [fixture.indexed, fixture.baseline, fixture.unindexed]
+    fixture.job_ids = [fixture.indexed, fixture.baseline, fixture.unindexed, fixture.refused]
     return fixture
 
 
+# The seeded run behind check 6, and why its refused_count is REFUSED_EXPECTED.
+# p50 is 100 ms on every stage, so p99 is the ratio x100; job_conf gives
+# 8 instances x 4 cores = 32 slots, so rule 1's bar for 200 tasks is
+# (200 - 1) / (32 - 1) = 6.42. The five loudest ratios are stages 1, 3, 4, 5, 6
+# (stage 2 at 1.2x is not sampled):
+#   stage 1  15.0x  4 GB / 200 tasks = 20 MiB/task, above the floor, 15 > 6.42 -> reportable
+#   stage 3   9.0x  2 tasks                                    -> refused, rule 6 (not a distribution)
+#   stage 4   8.0x  1000 B / 200 tasks = 5 B/task             -> refused, under the 1 MiB floor
+#   stage 5   7.0x  20 MiB/task, 7 > 6.42                       -> reportable
+#   stage 6   6.0x  20 MiB/task, 6 < 6.42                       -> refused, rule 1 (work-bound)
+# front/src/contract/refusedCount.test.ts holds the same six rows to
+# assessStage(); this gate holds the CTE's answer, through both doors, to it.
+REFUSED_STAGES: list[tuple[int, int, int, int]] = [
+    # stage_id, task_count, shuffle_read_bytes, task_duration_p99_ms
+    (1, 200, 4_000_000_000, 1500),
+    (2, 200, 4_000_000_000, 120),
+    (3, 2, 4_000_000, 900),
+    (4, 200, 1_000, 800),
+    (5, 200, 4_000_000_000, 700),
+    (6, 200, 4_000_000_000, 600),
+]
+REFUSED_CONF = {"spark.executor.instances": "8", "spark.executor.cores": "4",
+                "spark.sql.shuffle.partitions": "200"}
+REFUSED_EXPECTED = 3
+
+
 def seed(client: Any, fx: Fixture) -> None:
-    """Rows that exercise all five live-only behaviours. Recent, because the
+    """Rows that exercise all six live-only behaviours. Recent, because the
     contract tables carry a 90-day TTL on ts."""
     # .123 so a millisecond survives both doors; one row at .000 so the fixed
     # width is exercised too — isoformat() wrote no fraction at all for that.
@@ -369,6 +404,14 @@ def seed(client: Any, fx: Fixture) -> None:
             event(fx.indexed, 2, 1, base + timedelta(seconds=90), fx.fingerprint, p99=450),
             event(fx.baseline, 1, 0, whole - timedelta(hours=1), fx.fingerprint),
             event(fx.unindexed, 1, 0, base + timedelta(minutes=10), fx.other_fingerprint),
+            # Check 6: the six stages above, one row each, no shape (the rollup
+            # must still count refusals for a run the memory lane never saw).
+            *[
+                [fx.refused, f"app-{fx.refused}", "parity-gate", stage, 0,
+                 base + timedelta(minutes=15, seconds=stage),
+                 read, 0, 0, 0, 0, 0, 0, 0, tasks, 100, p99, "0" * 64, "", {}]
+                for stage, tasks, read, p99 in REFUSED_STAGES
+            ],
         ],
         column_names=[
             "job_id", "app_id", "app_name", "stage_id", "stage_attempt", "ts",
@@ -412,7 +455,9 @@ def seed(client: Any, fx: Fixture) -> None:
         "job_conf",
         [[fx.indexed, f"app-{fx.indexed}", "parity-gate",
           {"spark.executor.cores": "4", "spark.executor.instances": "8",
-           "spark.sql.shuffle.partitions": "200"}, base]],
+           "spark.sql.shuffle.partitions": "200"}, base],
+         [fx.refused, f"app-{fx.refused}", "parity-gate", dict(REFUSED_CONF),
+          base + timedelta(minutes=15)]],
         column_names=["job_id", "app_id", "app_name", "conf", "ts"],
     )
     outcome_columns = [
@@ -552,23 +597,26 @@ def compare_doors(
     the same check apart in the report.
     """
     from apex_api.wire import wire
+    from apex_mcp.ch import ReadStore
 
     enc = urllib.parse.quote
     plan: list[tuple[str, str, dict[str, Any], str, str | None]] = [
-        # name, console statement, its parameters, the API path, tie-break key
+        # name, statement, its bindings (serve's names, and the limits the
+        # API itself applies), the API path, tie-break key
         # The run lists compare IN ORDER (no tie-break key): since P7.5 the
         # order is started_at DESC, job_id ASC on both doors, and an order
         # that differs is a failure, not noise to sort away.
         *[(name, "RUN_LIST", params, f"/v1/runs?{run_list_query(params)}", None)
           for name, params in run_list_cases(prefix or job, fingerprint)],
-        ("run", "RUN_ONE", {"job": job}, f"/v1/runs/{enc(job)}", None),
-        ("stages", "LATEST_STAGES", {"job": job}, f"/v1/runs/{enc(job)}/stages", None),
-        ("conf", "JOB_CONF", {"job": job}, f"/v1/runs/{enc(job)}/conf", None),
-        ("findings", "FINDINGS", {"job": job}, f"/v1/runs/{enc(job)}/findings", None),
-        ("transitions", "PLAN_TRANSITIONS", {"job": job}, f"/v1/runs/{enc(job)}/transitions", None),
-        ("baseline-candidates", "RUNS_SHARING_SHAPE", {"job": job},
+        ("run", "RUN_ONE", {"job_id": job}, f"/v1/runs/{enc(job)}", None),
+        ("stages", "LATEST_STAGES", {"job_id": job}, f"/v1/runs/{enc(job)}/stages", None),
+        ("conf", "JOB_CONF", {"job_id": job}, f"/v1/runs/{enc(job)}/conf", None),
+        ("findings", "FINDINGS", {"job_id": job}, f"/v1/runs/{enc(job)}/findings", None),
+        ("transitions", "PLAN_TRANSITIONS", {"job_id": job}, f"/v1/runs/{enc(job)}/transitions", None),
+        ("baseline-candidates", "RUNS_SHARING_SHAPE",
+         {"job_id": job, "limit": ReadStore.MAX_BASELINE_CANDIDATES},
          f"/v1/runs/{enc(job)}/baseline-candidates", "job_id"),
-        ("plans", "PLAN_SHAPES", {}, "/v1/plans", "plan_fingerprint"),
+        ("plans", "PLAN_SHAPES", {"limit": ReadStore.MAX_SHAPES}, "/v1/plans", "plan_fingerprint"),
     ]
     if fingerprint:
         plan += [
@@ -578,7 +626,7 @@ def compare_doors(
              f"/v1/plans/{enc(fingerprint)}/sample", None),
         ]
     if finding:
-        plan.append(("verification", "FIX_VERIFICATIONS", {"finding": finding},
+        plan.append(("verification", "FIX_VERIFICATIONS", {"finding_id": finding},
                      f"/v1/findings/{enc(finding)}/verification", None))
 
     seen: dict[str, Any] = {}
@@ -588,7 +636,7 @@ def compare_doors(
         label = f"{name}{suffix}  [{statement}]"
         sql = statements.get(statement)
         if sql is None:
-            report.add(FAIL, label, "the console no longer exports this statement")
+            report.add(FAIL, label, "ch.py no longer carries this statement")
             continue
         try:
             browser = browser_query(store, sql, params)
@@ -663,6 +711,7 @@ def cross_door_order(
 def live_only(
     report: Report, store: Store, api: Api, statements: dict[str, str],
     pattern: re.Pattern[str], seen: dict[str, Any], *, job: str, unindexed_job: str | None,
+    refused_job: str | None = None,
 ) -> None:
     """What only a live store can show. Each check says what it proves."""
     from apex_api.wire import TIMESTAMP_FIELDS
@@ -681,7 +730,7 @@ def live_only(
         want = {"task_time_ms": -1, "shaped_stage_count": -1, "plan_fingerprint": "",
                 "config_source": "unknown", "shape_count": 0}
         status, via_api = api.get(f"/v1/runs/{urllib.parse.quote(candidate)}")
-        via_browser = browser_query(store, statements["RUN_ONE"], {"job": candidate})
+        via_browser = browser_query(store, statements["RUN_ONE"], {"job_id": candidate})
         problems = []
         for door, row in (("api", via_api if status == 200 else None),
                           ("browser", via_browser[0] if via_browser else None)):
@@ -758,6 +807,27 @@ def live_only(
         report.add(FAIL if bad else PASS, "timestamps in the wire format",
                    "; ".join(bad[:4]) or f"{checked} timestamps match {pattern.pattern}")
 
+    # 6 · refused_count ------------------------------------------------------
+    # The rollup's refused CTE is rules 1, 6 and 7 in SQL. Both doors run it;
+    # the expected count is fixed with its derivation beside REFUSED_STAGES,
+    # and the console's test holds the same rows to assessStage().
+    if not refused_job:
+        report.add(SKIP, "refused_count on a seeded six-stage run",
+                   "needs the seeded run; --job-id compares an existing run and seeds nothing")
+    else:
+        status, via_api = api.get(f"/v1/runs/{urllib.parse.quote(refused_job)}")
+        via_browser = browser_query(store, statements["RUN_ONE"], {"job_id": refused_job})
+        got = {
+            "api": (via_api or {}).get("refused_count") if status == 200 else None,
+            "browser": via_browser[0].get("refused_count") if via_browser else None,
+        }
+        wrong = {door: value for door, value in got.items() if value != REFUSED_EXPECTED}
+        report.add(FAIL if wrong else PASS, "refused_count on a seeded six-stage run",
+                   f"{REFUSED_EXPECTED} through both doors — a 2-task stage, an under-floor stage "
+                   "and a work-bound stage refused; two reportable"
+                   if not wrong else
+                   f"expected {REFUSED_EXPECTED}, got " + ", ".join(f"{d}={v!r}" for d, v in wrong.items()))
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
@@ -778,14 +848,23 @@ def main(argv: list[str] | None = None) -> int:
         console_password=os.getenv("APEX_CONSOLE_PASSWORD", ""),
         secure=os.getenv("CLICKHOUSE_SECURE", "").lower() in {"1", "true", "yes"},
     )
-    statements = console_statements(QUERIES_TS.read_text())
     pattern = wire_pattern(TIMESTAMP_TS.read_text())
     api = remote_api(args.api_url, args.api_token) if args.api_url else in_process_api(store)
     report = Report()
 
     print(f"store    {store.http_url}  database {store.database}")
-    print(f"browser  ClickHouse HTTP as {store.console_user}, the way front/src/data/clickhouse.ts sends it")
+    print(f"raw sql  ClickHouse HTTP as {store.console_user} (readonly), ch.py's own statements")
     print(f"api      {api.label}")
+    # The findings statement depends on which additive columns this store has;
+    # ask the store, as the API's ReadStore does.
+    present = {
+        str(row["name"]) for row in browser_query(
+            store,
+            "SELECT name FROM system.columns WHERE database = {database:String} AND table = 'findings'",
+            {"database": store.database},
+        )
+    }
+    statements = serve_statements(present)
 
     fixture: Fixture | None = None
     admin = None
@@ -825,7 +904,8 @@ def main(argv: list[str] | None = None) -> int:
         print()
         cross_door_order(report, api, prefix=prefix, fingerprint=fingerprint)
         print()
-        live_only(report, store, api, statements, pattern, seen, job=job, unindexed_job=unindexed)
+        live_only(report, store, api, statements, pattern, seen, job=job, unindexed_job=unindexed,
+                  refused_job=fixture.refused if fixture is not None else None)
     finally:
         if fixture is not None and admin is not None:
             remove(admin, fixture)

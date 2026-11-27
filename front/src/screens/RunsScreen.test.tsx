@@ -118,7 +118,10 @@ describe("RunsScreen (server-side filters, offset paging)", () => {
     await click("findings only");
     expect(lastFilters()).toMatchObject({ hasFindings: true, offset: 0 });
     await click("all");
-    expect(lastFilters()?.hasFindings).toBeUndefined();
+    // Back to the unfiltered first page, which useRead still holds: no new
+    // request, and the store was only ever asked for has_findings=true once.
+    expect(listRuns.mock.calls.map(([, f]) => f?.hasFindings)).toEqual([undefined, true]);
+    expect(button("all").getAttribute("aria-pressed")).toBe("true");
   });
 
   it("pages with offset, and a filter change starts again from the first page", async () => {
@@ -128,9 +131,12 @@ describe("RunsScreen (server-side filters, offset paging)", () => {
     await click("next");
     expect(lastFilters()).toMatchObject({ offset: 100 });
     await click("prev");
-    expect(lastFilters()).toMatchObject({ offset: 50 });
+    // Page 2 again is answered from useRead's cache, not re-asked.
+    expect(listRuns).toHaveBeenCalledTimes(3);
+    expect(host.textContent).toContain("51–100");
     await click("findings only");
     expect(lastFilters()).toMatchObject({ offset: 0, hasFindings: true });
+    expect(listRuns.mock.calls.map(([, f]) => f?.offset)).toEqual([0, 50, 100, 0]);
   });
 
   it("disables next on a short page — it is the last one", async () => {
@@ -154,7 +160,8 @@ describe("RunsScreen (server-side filters, offset paging)", () => {
     expect(button("next")).toBeDefined();
     expect(button("prev").disabled).toBe(false);
     await click("prev");
-    expect(listRuns.mock.calls.map(([, filters]) => filters?.offset)).toEqual([0, RUNS_PAGE_SIZE, 0]);
+    // The failure is not cached; the first page is, so prev re-asks nothing.
+    expect(listRuns.mock.calls.map(([, filters]) => filters?.offset)).toEqual([0, RUNS_PAGE_SIZE]);
     expect(host.textContent).not.toContain("query failed");
     expect(host.textContent).toContain("job-0");
     expect(host.textContent).toContain(`job-${RUNS_PAGE_SIZE - 1}`);
@@ -215,5 +222,28 @@ describe("RunsScreen (server-side filters, offset paging)", () => {
     // The store answered; the screen does not second-guess it by dropping rows.
     expect(host.textContent).toContain("job-0");
     expect(host.textContent).toContain("job-1");
+  });
+});
+
+/** FixtureRepository with ONE read rejecting on a message that must never render. */
+function failing(method: keyof Repository): Repository {
+  const error = Object.assign(new Error("PRIVATE response body"), { name: "PRIVATE name" });
+  return new Proxy(new FixtureRepository(), {
+    get(target, prop, receiver) {
+      if (prop === "kind") return "http";
+      if (prop === method) return () => Promise.reject(error);
+      return Reflect.get(target, prop, receiver);
+    },
+  }) as unknown as Repository;
+}
+
+describe("RunsScreen failure reporting", () => {
+  it("reports a rejected listRuns by source, never by message", async () => {
+    current.repo = failing("listRuns");
+    await mount();
+    expect(host.textContent).toContain("apex-api");
+    expect(host.textContent).toContain("query failed");
+    expect(host.textContent).not.toContain("PRIVATE");
+    expect(host.textContent).not.toContain("No rows match this filter");
   });
 });

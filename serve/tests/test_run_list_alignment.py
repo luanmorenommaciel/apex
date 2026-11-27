@@ -102,14 +102,15 @@ def test_the_window_prunes_on_ts_but_aggregates_cover_every_event():
         assert not re.search(r"(?<![\w.])ts\s*>=", sql)
 
 
-def test_the_browser_sends_the_same_run_list_statement():
-    """queries.ts RUN_LIST, assembled as the gate assembles it, IS RUN_LIST_SQL."""
+def test_the_console_runs_the_same_run_list_statement():
+    """The console reads only through the API (#182); the gate runs the very
+    statement GET /v1/runs runs, so there is no second copy to drift."""
     spec = importlib.util.spec_from_file_location("console_parity_gate_p75", GATE_PATH)
     gate = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = gate
     spec.loader.exec_module(gate)
-    statements = gate.console_statements(gate.QUERIES_TS.read_text())
-    assert _normalise(statements["RUN_LIST"]) == _normalise(ch.RUN_LIST_SQL)
+    statements = gate.serve_statements(set(ch._FINDINGS_ADDITIVE))
+    assert statements["RUN_LIST"] is ch.RUN_LIST_SQL
 
 
 # --------------------------------------------------------------------------

@@ -8,6 +8,10 @@ It does not say *why* the attempt failed — that reason lives in sanitized
 Reporting the counted-vs-observed split as a fact, at INFO, is the honest
 scope; anything stronger would be guessing at a root cause this counter
 cannot support.
+
+The counted and `TaskInfo.failed` counters are independent: counted can exceed
+failed, e.g. a `TaskResultLost` attempt ends FINISHED (`failed=false`) but is
+still charged against the failure budget.
 """
 
 from __future__ import annotations
@@ -46,7 +50,7 @@ def evaluate(stage: StageAggregate, ctx: JobContext | None = None) -> Finding | 
         confidence_score=0.95,
         evidence=(
             f"scheduler-counted task failures = {counted} "
-            f"of {attempts} observed attempts; failed attempts observed = {observed_failed}"
+            f"of {attempts} observed attempts; attempts with TaskInfo.failed = {observed_failed}"
         ),
         impact=(
             "The stage consumed Spark's task-failure budget; this counter "
