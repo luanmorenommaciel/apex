@@ -9,9 +9,16 @@ Verifies what only a real client can verify:
   * every tool returns schema-valid structured output,
   * `suggest_fix` reports `applied=False` / `requires_human_approval=True`.
 
-Run against a live ClickHouse:
+Run against a live ClickHouse (direct mode, the explicit opt-in):
     uv run python tools/mcp_stdio_gate.py
     APEX_GATE_JOB_ID=app-... uv run python tools/mcp_stdio_gate.py
+
+Or through a running Apex API (API mode — the production path):
+    APEX_API_URL=http://127.0.0.1:8099 APEX_API_TOKEN=... \
+        uv run python tools/mcp_stdio_gate.py
+
+The backend is APEX_MCP_BACKEND when set; otherwise "api" when APEX_API_URL is
+set, else "clickhouse". The server no longer reaches ClickHouse unless told to.
 """
 
 from __future__ import annotations
@@ -60,8 +67,12 @@ async def main() -> int:
     job_id = os.getenv("APEX_GATE_JOB_ID", "")
     baseline_id = os.getenv("APEX_GATE_BASELINE_ID", "")
 
+    backend = os.getenv("APEX_MCP_BACKEND") or (
+        "api" if os.getenv("APEX_API_URL") else "clickhouse"
+    )
     environment = {
         **os.environ,
+        "APEX_MCP_BACKEND": backend,
         "CLICKHOUSE_HOST": os.getenv("CLICKHOUSE_HOST", "127.0.0.1"),
         "CLICKHOUSE_PORT": os.getenv("CLICKHOUSE_PORT", "8123"),
         "CLICKHOUSE_USER": os.getenv("CLICKHOUSE_USER", "apex"),
@@ -209,6 +220,7 @@ async def main() -> int:
         json.dumps(
             {
                 "gate": "serve-stdio-mcp",
+                "backend": backend,
                 "job_id": job_id,
                 "tools": tool_metadata,
                 "prompts": {

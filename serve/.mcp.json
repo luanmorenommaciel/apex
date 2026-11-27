@@ -7,7 +7,10 @@
     "commit the config, never the secret. A required var with no value and no",
     "${VAR:-default} fails to parse, so the password carries a dev default.",
     "Replace 'uvx --from ./serve apex-mcp' with plain 'uvx apex-mcp' once the",
-    "package is published to PyPI."
+    "package is published to PyPI.",
+    "Local dev reads ClickHouse directly (APEX_MCP_BACKEND=clickhouse, an explicit",
+    "opt-in). To read through the Apex API instead, set APEX_MCP_BACKEND=api and",
+    "add APEX_API_URL and APEX_API_TOKEN; see serve/README.md#configuration."
   ],
   "mcpServers": {
     "apex": {
@@ -15,6 +18,7 @@
       "command": "uvx",
       "args": ["--from", "./serve", "apex-mcp"],
       "env": {
+        "APEX_MCP_BACKEND": "${APEX_MCP_BACKEND:-clickhouse}",
         "CLICKHOUSE_HOST": "${CLICKHOUSE_HOST:-127.0.0.1}",
         "CLICKHOUSE_PORT": "${CLICKHOUSE_PORT:-8123}",
         "CLICKHOUSE_USER": "${CLICKHOUSE_USER:-apex}",

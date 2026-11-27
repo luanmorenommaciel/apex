@@ -42,6 +42,15 @@ Operator-facing, for anyone who deploys `front/`:
 - `apex-mcp` now exposes eight tools: `list_runs`, `analyze_run`,
   `explain_stage`, `compare_runs`, `search_kb`, `recall_similar_runs`,
   `verify_fix`, and `suggest_fix`.
+- **`apex-mcp` reads through the Apex API by default (P7.1).** Set
+  `APEX_API_URL` and `APEX_API_TOKEN` and every tool and `apex://runs` is
+  served by the API's `/v1` diagnostic routes; the verdict is computed once,
+  in the API process. Direct ClickHouse is now an explicit opt-in,
+  `APEX_MCP_BACKEND=clickhouse` — **`CLICKHOUSE_*` alone no longer selects
+  it.** With neither configured the server still starts and lists its tools,
+  and each call answers `apex_mcp_unconfigured`. API failures reach the model
+  as fixed `apex_api_*` codes; no URL, host, port or token. `httpx` is now a
+  direct runtime dependency of `apex-mcp`.
 - The `dev` lane's local S3 store is now **RustFS 1.0.3** (pinned by digest), because
   the pinned `minio/minio` and `minio/mc` images can no longer be pulled and a clean
   clone could not start the cluster. The service keeps the name `minio` and the

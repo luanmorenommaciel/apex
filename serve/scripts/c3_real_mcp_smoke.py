@@ -16,7 +16,13 @@ async def main() -> None:
     server = StdioServerParameters(
         command=sys.executable,
         args=["-c", "from apex_mcp.server import main; main()"],
-        env=dict(os.environ),
+        # Direct ClickHouse is an explicit opt-in; API mode when APEX_API_URL
+        # is set. An explicit APEX_MCP_BACKEND always wins.
+        env={
+            **os.environ,
+            "APEX_MCP_BACKEND": os.getenv("APEX_MCP_BACKEND")
+            or ("api" if os.getenv("APEX_API_URL") else "clickhouse"),
+        },
     )
     async with stdio_client(server) as (reader, writer):
         async with ClientSession(reader, writer) as session:
