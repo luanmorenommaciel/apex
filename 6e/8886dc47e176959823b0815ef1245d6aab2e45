@@ -1,0 +1,19 @@
+front/src/screens/RunsScreen.test.tsx
+  s_887ee29de12a88::t_6bc1bfe34d81b8 178-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6e8886dc47e176959823b0815ef1245d6aab2e45",
+  "prompts": {},
+  "sessions": {
+    "s_887ee29de12a88": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26f8aa45-053f-4a8f-ac11-46c31b78061a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
