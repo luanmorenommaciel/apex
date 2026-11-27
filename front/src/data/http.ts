@@ -1,12 +1,9 @@
 /**
- * The Apex API client.
+ * The Apex API client - the console's one door (D-api-only, 2026-10-19).
  *
- * This is the exit `clickhouse.ts` named: "swap ClickHouseRepository for an
- * HTTP client against serve/ — the Repository interface is the seam". What
- * changes underneath is WHAT the browser holds. Against ClickHouse it carries
- * a database credential and sends SQL; against this it carries an API token
- * and sends a path. A token can be scoped, rotated and revoked per consumer,
- * and it cannot read a table nobody exposed a route for.
+ * The browser carries an API token and sends a path; it never carries a
+ * database credential and never sends SQL. A token can be scoped, rotated and
+ * revoked per consumer, and it cannot read a table nobody exposed a route for.
  *
  * The token still reaches the browser — that is unavoidable for a client-side
  * console — so it is a credential for the API and never for the store, and the
@@ -32,9 +29,8 @@ export class ApiError extends Error {
  * An unauthenticated or wrongly-authenticated call.
  *
  * Distinguished from every other failure because the caller must NOT treat it
- * as "the API is unavailable, fall back". Falling back to ClickHouse on a 401
- * would silently restore the browser-side database credential this layer
- * exists to remove.
+ * as "the API is unavailable": the API exists and refused, which the screens
+ * report by name.
  */
 export class ApiAuthError extends ApiError {
   constructor(detail: string, path: string) {
@@ -78,11 +74,14 @@ export interface ApiResult<T> {
 export async function apiGet<T>(
   path: string,
   params?: Record<string, string | number | undefined>,
+  signal?: AbortSignal,
 ): Promise<ApiResult<T | null>> {
   const target = url(path, params);
   let response: Response;
   try {
-    response = await fetch(target, { headers: headers() });
+    // The signal is the screen's: a read it stopped waiting for is cancelled
+    // at the socket, not merely ignored when it lands.
+    response = await fetch(target, { headers: headers(), signal });
   } catch (cause) {
     throw new ApiError(0, `the API could not be reached (${String(cause)})`, path);
   }

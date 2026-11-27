@@ -674,21 +674,14 @@ def _order_by(sql: str) -> str:
 
 
 def test_every_door_breaks_verified_at_ties_on_verification_id():
-    import pathlib
-    import re
-
+    # Since #182 the console reads only through the Apex API, whose
+    # /v1/findings/{id}/verification route runs FIX_VERIFICATION_SQL; there is
+    # no browser-side query left to keep in step.
     from apex_mcp import ch
-
-    queries_ts = (
-        pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "data" / "queries.ts"
-    ).read_text()
-    match = re.search(r"export const FIX_VERIFICATIONS = `(.*?)`;", queries_ts, re.S)
-    assert match, "front/src/data/queries.ts no longer exports FIX_VERIFICATIONS"
 
     expected = "verified_at DESC, verification_id ASC"
     assert _order_by(ch.VERIFICATIONS_SQL) == expected  # MCP suggest_fix source
-    assert _order_by(ch.FIX_VERIFICATION_SQL) == expected  # console API door
-    assert _order_by(match.group(1)) == expected  # console browser door
+    assert _order_by(ch.FIX_VERIFICATION_SQL) == expected  # console, via the API
 
 
 def test_a_same_millisecond_tie_picks_the_row_the_console_picks():

@@ -148,6 +148,15 @@ silenciosamente.
 
 ### Drift Verify: `executor_run_time_ms`
 
+**Current correction — 2026-10-22:** the obsolete column-absence claim has been
+removed from Verify's comments, prediction explanation and lane brief. Migration
+`039` declares the column; the current `StageObservation` and predictor still do
+not consume it, and `WORK_IS_ESTIMATED` remains true. This is a wording correction,
+not adoption of measured work or proof that a deployed database has applied DDL.
+The JSON drift entry and original observation below remain historical evidence.
+
+**Original observation (preserved):**
+
 `verify/src/apex_verify/models.py` e `verify/src/apex_verify/predict.py` ainda
 afirmam que `executor_run_time_ms` não é coluna de `apex.spark_events`. A
 afirmação está desatualizada: `infra/sql/039_executor_runtime_additive.sql`

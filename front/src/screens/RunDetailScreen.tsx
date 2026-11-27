@@ -13,7 +13,7 @@ import {
   readSlots, ruleFiveSkewAbsence, ruleTwoRuntimeResolvable, TAIL_SAMPLE,
 } from "@/contract/rules";
 import { severityRank } from "@/contract/types";
-import { useAsync, useRepository } from "@/data/useRepository";
+import { useRead, useRepository } from "@/data/useRepository";
 
 export function RunDetailScreen() {
   const { jobId = "" } = useParams();
@@ -25,11 +25,13 @@ export function RunDetailScreen() {
   // run selected nothing and silently fell through to stages[0].
   const [picked, setPicked] = useState<number | null>(null);
 
-  const runQ = useAsync(() => repo.run(jobId), [repo, jobId]);
-  const stagesQ = useAsync(() => repo.stages(jobId), [repo, jobId]);
-  const confQ = useAsync(() => repo.jobConf(jobId), [repo, jobId]);
-  const findingsQ = useAsync(() => repo.findings(jobId), [repo, jobId]);
-  const transQ = useAsync(() => repo.transitions(jobId), [repo, jobId]);
+  // Keyed reads: Finding and Compare ask for the same ["stages", jobId]
+  // and share the request and its cached answer with this screen.
+  const runQ = useRead(repo, ["run", jobId]);
+  const stagesQ = useRead(repo, ["stages", jobId]);
+  const confQ = useRead(repo, ["jobConf", jobId]);
+  const findingsQ = useRead(repo, ["findings", jobId]);
+  const transQ = useRead(repo, ["transitions", jobId]);
 
   const run = runQ.data ?? null;
   const stages = useMemo(() => stagesQ.data ?? [], [stagesQ.data]);
@@ -67,24 +69,15 @@ export function RunDetailScreen() {
 
   // The proposal and the floor both live on the verification row, so the
   // withheld panel and the recommended fix are read rather than written here.
-  const fixQ = useAsync(
-    () => (finding ? repo.fixVerification(finding.finding_id) : Promise.resolve(null)),
-    [repo, finding?.finding_id],
-  );
+  const fixQ = useRead(repo, finding ? ["fixVerification", finding.finding_id] : null);
 
   // The run's shape identity, from the run row when the memory lane indexed it,
   // otherwise from a stage that carried a fingerprint.
   const fingerprint =
     run?.plan_fingerprint || stages.find((s) => s.plan_fingerprint)?.plan_fingerprint || "";
 
-  const planQ = useAsync(
-    () => (fingerprint ? repo.planSample(fingerprint) : Promise.resolve(null)),
-    [repo, fingerprint],
-  );
-  const shapeQ = useAsync(
-    () => (fingerprint ? repo.shapeRuns(fingerprint) : Promise.resolve([])),
-    [repo, fingerprint],
-  );
+  const planQ = useRead(repo, fingerprint ? ["planSample", fingerprint] : null);
+  const shapeQ = useRead(repo, fingerprint ? ["shapeRuns", fingerprint] : null);
 
   const slots = readSlots(conf);
   const appName = run?.app_name ?? stages[0]?.app_name ?? "";
@@ -334,7 +327,7 @@ export function RunDetailScreen() {
             <div className="bg-[#1a1d1e] border border-edge rounded-sm p-4 flex gap-5">
               <div className="flex-1 min-w-0 font-mono text-xs leading-[1.85] text-body">
                 {/* Was `REDACTED_PLAN` imported straight from the fixture module
-                    and rendered even when the repository was ClickHouse, with
+                    and rendered whatever the repository was, with
                     two lines highlighted by array index. The real source is the
                     memory lane's own exemplar column. */}
                 {planQ.loading ? (
