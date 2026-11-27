@@ -1,0 +1,251 @@
+.github/CODEOWNERS
+  s_887ee29de12a88::t_75830d320f49b7 1-15
+.github/workflows/ci.yml
+  s_887ee29de12a88::t_8034b8c6077b8d 71,73,90-92,99
+.gitignore
+  s_887ee29de12a88::t_e83db27586b48a 52
+CHANGELOG.md
+  s_887ee29de12a88::t_7e2a9bfb5beea5 14-36,54-60
+Makefile
+  s_887ee29de12a88::t_675144f89a79ee 135-142,149
+README.md
+  s_887ee29de12a88::t_d319186030477a 229,238
+deploy/railway/clickhouse/Dockerfile
+  s_887ee29de12a88::t_95bd3001eaed6f 1-4
+deploy/railway/console/Dockerfile
+  s_887ee29de12a88::t_90ab9f0a7b6f01 1-19
+deploy/railway/deploy.sh
+  s_887ee29de12a88::t_040057c5d4d995 1-111
+deploy/railway/e2e/Dockerfile
+  s_887ee29de12a88::t_403538b31d2dd8 1-52
+deploy/railway/e2e/e2e.sh
+  s_887ee29de12a88::t_442b545c941689 1-33
+deploy/railway/hyperdx/default-sources.json
+  s_887ee29de12a88::t_085902fc812949 1-22
+deploy/railway/lib.sh
+  s_887ee29de12a88::t_9d019f9b516f97 1-22
+deploy/railway/otel-collector/Dockerfile
+  s_887ee29de12a88::t_3d8c6f1f4d75d1 1-15
+deploy/railway/scale-down.sh
+  s_887ee29de12a88::t_3500d01ced17c0 1-10
+deploy/railway/scale-up.sh
+  s_887ee29de12a88::t_beb7c8810b2b04 1-26
+deploy/railway/serve/Dockerfile
+  s_887ee29de12a88::t_8ff6c8fa6ab839 1-11
+deploy/railway/spark/Dockerfile
+  s_887ee29de12a88::t_576f0b6df8d910 1-44
+deploy/railway/spark/start.sh
+  s_887ee29de12a88::t_789c381add3b97 1-66
+dev/.env.example
+  s_887ee29de12a88::t_0b22b9b4c7b3bf 38-45
+dev/Makefile
+  s_887ee29de12a88::t_f4c59e48308373 34
+dev/README.md
+  s_887ee29de12a88::t_a1502bf313ef6d 3,65-67,176-177
+dev/docker-compose.yml
+  s_887ee29de12a88::t_9d0afc4485ea09 46-50,52,54-58,64,66,74,77-82,85-91
+dev/scripts/smoke_delta.py
+  s_887ee29de12a88::t_e5fcb14ef3ed23 1
+dev/scripts/verify.sh
+  s_887ee29de12a88::t_797932554e6fda 7-8,63,74-78
+docs/architecture/TELEMETRY-COMPATIBILITY-MATRIX.md
+  s_887ee29de12a88::t_b601fda31aa3e2 151-159
+docs/lanes/DEV.md
+  s_887ee29de12a88::t_f848de1f53aed0 166
+docs/lanes/SERVE-LEGS.md
+  s_887ee29de12a88::t_9f00534f96509e 7-8,29-30,200,295-402,429
+docs/lanes/VERIFY.md
+  s_887ee29de12a88::t_1bcce64d68e0f7 77-80
+docs/test-env.md
+  s_887ee29de12a88::t_745f8d21b664f3 1-95
+engine/src/apex_engine/validation.py
+  s_887ee29de12a88::t_c1084dc1c6c18a 126-134,151
+engine/src/apex_engine/watchers/retry_pressure.py
+  s_887ee29de12a88::t_55fbc2f66f5b8e 11-14,53
+engine/tests/test_contract_engine.py
+  s_887ee29de12a88::t_fc1f077bbaa746 282-358
+engine/tests/test_sql_columns_exist_in_ddl.py
+  s_887ee29de12a88::t_ce90d981c5b85e 27-31,145-166
+engine/tests/test_watchers.py
+  s_887ee29de12a88::t_06d2c2814ca0b4 352-374
+front/.env.example
+  s_887ee29de12a88::t_08d75531e9c1c0 1-5,8-9,18-22,26-29
+front/.nvmrc
+  s_887ee29de12a88::t_9958e6a22c37c8 1
+front/Dockerfile
+  s_887ee29de12a88::t_8067ea38572fad 2-4,13,23,25-26,30-32,37-38
+front/Makefile
+  s_887ee29de12a88::t_e24ada8f59a0c1 9-10,12-17,21,30,33,54-55
+front/README.md
+  s_887ee29de12a88::t_f202250f899335 4-10,13-16,19-20,22-25,28-32,36-37,40,45,52-53,57-81,85-86,90-91,94-95,101-103,149,151-155,159,161,164-179,191,193-194,221-225,247
+front/docker-compose.yml
+  s_887ee29de12a88::t_facd2e5f584045 1,3-4,6-9,22-23,26-32
+front/docker-entrypoint.d/30-apex-console-config.sh
+  s_887ee29de12a88::t_d8b7d10b092b5d 7-8,10-13,15-17,19-21,24-25,28-32,37,39-45,54-58,74-75
+front/engines.test.ts
+  s_887ee29de12a88::t_1b05d121a43ddf 1-4,7-10,12-13,15-17,19,21-24,26-37,41-42,45-53
+front/eslint.config.js
+  s_887ee29de12a88::t_3cbc030a55d7cf 2,28-37
+front/index.html
+  s_887ee29de12a88::t_b4a9db948b24cd 16-18
+front/nginx.conf
+  s_887ee29de12a88::t_12e0feeaa65310 1-14,20-47,55-70,78-80,82-86,90-92
+front/package-lock.json
+  s_887ee29de12a88::t_855803dd3f378a 17-19,26,35-37,645-674,1612-1721,1732-1748,1786-1821,1928-1977,2067-2073,2143-2149,2179-2232,2265-2300,2325-2339,2347-2353,2367-2370,2373-2428,2431-2433,2436-2548,2627-2687,2949-2964,3004-3047,3058-3114,3128-3569,3573-3574,3578-3580,3583-3586,3590-3593,3597-3606,3609-3612,3616-3619,3622-3625,3628-3630,3632-3635,3638-3641,3644-3647,3649-3652,3655-3658,3662-3664,3667-3670,3673-3676,3680,3689-3692,3696-3699,3702-3705,3709,3712-3715,3718-3721,3724-3727,3729-3732,3735-3738,3863-3878,3889-3908,4252-4261,4394-4475,4508-4526,4646-4655,4946-4989,5088-5143,5184-5232,5256-5331,5363-5451,5723-5799,5838-5856,6207-6295
+front/package.json
+  s_887ee29de12a88::t_824e463e744adc 6-8,24-26,33,35,42-46
+front/src/components/atoms/Card.tsx
+  s_887ee29de12a88::t_65443327465058 1,24,26-40,43
+front/src/components/molecules/DataTable.tsx
+  s_887ee29de12a88::t_df97e4ee0ae609 26,28,33,45-48,52-64,66,71
+front/src/components/molecules/NavBar.test.tsx
+  s_887ee29de12a88::t_e8cff62a7f0e67 50-55
+front/src/components/molecules/NavBar.tsx
+  s_887ee29de12a88::t_512c0b06a8e617 10,33,52-54,57
+front/src/components/molecules/RefusalTable.tsx
+  s_887ee29de12a88::t_77dee5af6c74a7 72-84,86
+front/src/components/molecules/StoreUnreachable.tsx
+  s_887ee29de12a88::t_75d7fc9d7b519b 1-40
+front/src/components/molecules/index.ts
+  s_887ee29de12a88::t_6088c06c10570b 13
+front/src/contract/refusedCount.test.ts
+  s_887ee29de12a88::t_14ba92befec222 1-102
+front/src/contract/rules.test.ts
+  s_887ee29de12a88::t_a1a86b41236f08 62-65
+front/src/contract/rules.ts
+  s_887ee29de12a88::t_21e2038d8a9fda 603-617
+front/src/contract/types.ts
+  s_887ee29de12a88::t_ec68ed266e5a61 2-7,13,18
+front/src/contract/version.test.ts
+  s_887ee29de12a88::t_ce8150f88b7295 1-2,4,6-12,14-21
+front/src/data/entrypoint.test.ts
+  s_887ee29de12a88::t_32178dfa521bea 6-10,38,52-54,61,75-76,80,92-93,96-97,101-107,110,112-113,116-117
+front/src/data/env.d.ts
+  s_887ee29de12a88::t_70b1cb121c665f 2
+front/src/data/fixtures.ts
+  s_887ee29de12a88::t_95ddb2eb4a1ec3 5
+front/src/data/http.ts
+  s_887ee29de12a88::t_d4c2f99fe7435b 2,4-6,32-33,77,82-84
+front/src/data/httpRepository.test.ts
+  s_887ee29de12a88::t_0ea6315529fae4 26,58-61,65,68-70,73,77-78,82-84,86,89-91
+front/src/data/repository.ts
+  s_887ee29de12a88::t_73fb1a4c50602d 4-8,83-85,87-91,93,95,97,99,101-106,120-122,137-138,148-151,159,177,183-184,221,226-228,232-242,246-251,254,260,265,270,282,286,290,296,300,304,308,312,318,320-322,327-331,342,346,349,353,355,360-361,365,367,372,375,382,384,389-390,394,396,401,403,408,410,416-429,431-439,441-443
+front/src/data/resolveRepository.test.ts
+  s_887ee29de12a88::t_1e00c5efd02c5c 1-63
+front/src/data/runList.test.ts
+  s_887ee29de12a88::t_871fbcc99edef4 2,4-7,9,11,13-14
+front/src/data/runtimeConfig.ts
+  s_887ee29de12a88::t_39d762473ef6d7 5-9,16-20,22,28,30,51-52,54
+front/src/data/timestamp.ts
+  s_887ee29de12a88::t_142aa6dedf47ba 9
+front/src/data/useAsync.test.tsx
+  s_887ee29de12a88::t_bcacb2180e4516 1-148
+front/src/data/useRepository.tsx
+  s_887ee29de12a88::t_c9583477b52d23 2,4-7,13,16-25,30-32,45-163,166-171,173-181,184,186,188
+front/src/main.tsx
+  s_887ee29de12a88::t_41a1816da25405 6-17
+front/src/screens/CompareScreen.test.tsx
+  s_887ee29de12a88::t_44eeeb97587181 1-76
+front/src/screens/CompareScreen.tsx
+  s_887ee29de12a88::t_510952bfb4f88f 7,28,31,34-39
+front/src/screens/FindingScreen.test.tsx
+  s_887ee29de12a88::t_90c1fe26fb1869 1-81
+front/src/screens/FindingScreen.tsx
+  s_887ee29de12a88::t_5874fa0ba7df9d 13,22-27,32,40
+front/src/screens/MemoryScreen.test.tsx
+  s_887ee29de12a88::t_ecd814e0c86397 1-78
+front/src/screens/MemoryScreen.tsx
+  s_887ee29de12a88::t_c4a5ff45334266 6,33,39
+front/src/screens/QueryFailure.test.tsx
+  s_887ee29de12a88::t_09e96521ba9fd3 102,104,107-108
+front/src/screens/RunDetailScreen.test.tsx
+  s_887ee29de12a88::t_ab751b21344abc 1-83
+front/src/screens/RunDetailScreen.tsx
+  s_887ee29de12a88::t_ce675d5a0e5a1e 16,28-34,72,79-80,330
+front/src/screens/RunsScreen.test.tsx
+  s_887ee29de12a88::t_65e5b33314e7f1 121-124,134-136,139,163-164,227-249
+front/src/screens/RunsScreen.tsx
+  s_887ee29de12a88::t_72779957e94490 6,8,58-60,143,210-211,225,268-269
+front/src/screens/a11y.test.tsx
+  s_887ee29de12a88::t_d105d8fbac793f 1-94
+front/vite.config.ts
+  s_887ee29de12a88::t_ac0fa50d227acd 15-18
+serve/README.md
+  s_887ee29de12a88::t_0a3fe8cf378a23 6-7,9,12,91-118,183,210,240,348
+serve/RUNBOOK.md
+  s_887ee29de12a88::t_3b98df43874268 141-146,153,167
+serve/VALIDATION.md
+  s_887ee29de12a88::t_0faad426f4fba2 9,21-27,53
+serve/src/apex_mcp/ch.py
+  s_887ee29de12a88::t_50b5eaddeddce2 100-102,409-410,416-417,434-436,470-522,539-541,543-545
+serve/src/apex_mcp/prompts.py
+  s_887ee29de12a88::t_cfd22a43305d2b 1-172
+serve/src/apex_mcp/server.py
+  s_887ee29de12a88::t_b14829b03ebdb7 17-20,45,803
+serve/tests/test_api_resources.py
+  s_887ee29de12a88::t_3d1eee3949f8e6 40
+serve/tests/test_ch.py
+  s_887ee29de12a88::t_cf91f0d5089034 831,999,1227-1243,1251-1262
+serve/tests/test_console_parity_gate.py
+  s_887ee29de12a88::t_ab270c7768e761 37-42,46-52,62,64-67,155-157,197-199,257-303
+serve/tests/test_console_reads.py
+  s_887ee29de12a88::t_99aae5456d9202 12-14,72-84,149-150,152
+serve/tests/test_projection_parity.py
+  s_887ee29de12a88::t_0ac2f0afd84890 1-8,22-27,30-42
+serve/tests/test_read_only_gate.py
+  s_887ee29de12a88::t_30aa53a9bcbb76 1-236
+serve/tests/test_run_list_alignment.py
+  s_887ee29de12a88::t_92087b551c2ae7 105-107,112-113
+serve/tests/test_search_kb_plan_json_parity.py
+  s_887ee29de12a88::t_e93df4dd3e58bb 1-118
+serve/tests/test_server_prompts.py
+  s_887ee29de12a88::t_6d2fd7f9060560 1-281
+serve/tests/test_tool_transport_parity.py
+  s_887ee29de12a88::t_ee41f1f46ee4de 1-229
+serve/tests/test_tool_transport_parity_same_args.py
+  s_887ee29de12a88::t_b964fa105b7c9e 1-72
+serve/tests/test_wheel_check.py
+  s_887ee29de12a88::t_b0b1d522a84848 1-108
+serve/tools/check_wheel.py
+  s_887ee29de12a88::t_7cd4a10a271aee 1-172
+serve/tools/console_parity_gate.py
+  s_887ee29de12a88::t_720aab1391bb84 3-11,23-26,66-67,71-73,80,82-83,85-86,88-101,198-202,335,351,353,357-382,384,407-414,458-460,600,604-605,611-617,619,629,639,714,733,810-830,856,858-867,907-908
+serve/tools/mcp_stdio_gate.py
+  s_887ee29de12a88::t_2ecf5ec813fa5e 7-8,51-54,140-162,241-245
+serve/tools/read_only_gate.py
+  s_887ee29de12a88::t_504dbda41aac0b 20,78-126,151-158,301,346
+serve/tools/recall_gate.py
+  s_887ee29de12a88::t_351d26ec2f48fe 257-265
+serve/tools/sql/01-parity-readonly-user.sql
+  s_887ee29de12a88::t_67662bd960c375 1,3-7,9-12
+tests/test_apex_package_dispatch.py
+  s_887ee29de12a88::t_ead651176b943f 1-149
+tests/test_telemetry_compatibility_matrix.py
+  s_887ee29de12a88::t_bb20fae5267cb2 166-178
+verify/README.md
+  s_887ee29de12a88::t_9ef68de22383cd 5,56
+verify/src/apex_verify/__init__.py
+  s_887ee29de12a88::t_390c49d19e3af8 72
+verify/src/apex_verify/models.py
+  s_887ee29de12a88::t_a134bbd4680b9b 38-41
+verify/src/apex_verify/predict.py
+  s_887ee29de12a88::t_1278ecc47bd772 19-23,159
+verify/tests/test_version_identity.py
+  s_887ee29de12a88::t_12c02fec494532 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6b746750a520412523e97b4c14370fb224105869",
+  "prompts": {},
+  "sessions": {
+    "s_887ee29de12a88": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26f8aa45-053f-4a8f-ac11-46c31b78061a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sidymar Prexedes <sprexedes@hotmail.com>"
+    }
+  }
+}
