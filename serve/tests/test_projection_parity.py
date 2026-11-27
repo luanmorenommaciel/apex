@@ -38,5 +38,6 @@ def test_rule_two_lives_in_the_projection():
     assert "-v.predicted_delta_pct AS predicted_saving_pct" in sql
     # Nothing stores whether the fix fired: NULL, never derived from the safety verdict.
     assert "CAST(NULL AS Nullable(UInt8)) AS mechanism_confirmed" in sql
-    # The newest verification for the finding, one row.
-    assert sql.endswith("ORDER BY v.verified_at DESC LIMIT 1")
+    # The newest verification for the finding, one row; a same-instant tie
+    # resolves on verification_id, the order suggest_fix reads (SRP-22).
+    assert sql.endswith("ORDER BY v.verified_at DESC, v.verification_id ASC LIMIT 1")
